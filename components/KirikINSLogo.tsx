@@ -73,7 +73,7 @@ const KirikINSLogo: React.FC<KirikINSLogoProps> = ({ className = '', size = 'lar
               Kirik
             </text>
 
-            {/* Part 2: INS - Royal Blue Fill with vertical rotation */}
+            {/* Part 2: INS - Solid Royal Blue Fill with circular rotation */}
             <g className="rotate-ins" style={{ transformBox: 'fill-box', transformOrigin: 'center' }}>
                 <text 
                   x={insStartX} 
@@ -82,8 +82,6 @@ const KirikINSLogo: React.FC<KirikINSLogoProps> = ({ className = '', size = 'lar
                   fontWeight="400" 
                   fontSize={fontSize} 
                   fill="#4169E1"
-                  stroke="white"
-                  strokeWidth="0.5"
                   style={{ textShadow: '0 0 8px rgba(65, 105, 225, 0.8)' }}
                 >
                   INS

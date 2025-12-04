@@ -40,7 +40,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
 
   useEffect(() => {
     if (isAppLoading) {
-      const fullText = "The Legacy of some Crackheads...";
+      const fullText = "Legacy of Few Kirukkans";
       let currentIndex = 0;
       
       const startDelay = setTimeout(() => {

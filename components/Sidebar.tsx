@@ -182,7 +182,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
                  onChange={handleLogoUpload} 
                />
              </div>
-             <span className="text-xl font-black tracking-tight leading-none" style={{ WebkitTextStroke: '0.5px white' }}>
+             <span className="text-xl font-black tracking-tight leading-none">
                <span className="text-white">INDIAN</span><br/>
                <span className="text-[#4169E1]">STRIKERS</span>
              </span>
