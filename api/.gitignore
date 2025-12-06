@@ -1,0 +1,10 @@
+# Root env files (frontend)
+.env
+.env.*.local
+
+# Backend env
+api/.env
+
+# Node
+node_modules/
+dist/
