@@ -15,7 +15,8 @@ import {
   Home,
   Image,
   Clock,
-  Upload
+  Upload,
+  Settings
 } from 'lucide-react';
 import { UserRole, Match } from '../types';
 import KirikINSLogo from './KirikINSLogo';
@@ -118,6 +119,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
     { to: '/memories', icon: <Image size={20} />, label: 'Memories' },
   ];
 
+  if (userRole === 'admin') {
+      links.push({ to: '/users', icon: <Settings size={20} />, label: 'User Management' });
+  }
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -184,6 +189,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
              </div>
              <span className="text-xl font-black tracking-tight leading-none">
                <span className="text-white">INDIAN</span><br/>
+               {/* Removed text stroke for simpler styling as requested previously */}
                <span className="text-[#4169E1]">STRIKERS</span>
              </span>
           </div>

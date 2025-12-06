@@ -12,6 +12,7 @@ import OpponentTeams from './components/OpponentTeams';
 import Scorecard from './components/Scorecard';
 import Memories from './components/Memories';
 import SplashScreen from './components/SplashScreen';
+import UserManagement from './components/UserManagement';
 import { Player, Match, UserRole, OpponentTeam } from '../types';
 import { getPlayers, savePlayers, getMatches, saveMatches, getOpponents, saveOpponents, getTeamLogo, saveTeamLogo } from './services/storageService';
 import { Menu, BrainCircuit } from 'lucide-react';
@@ -107,6 +108,8 @@ const AppContent: React.FC<{
             />
             <Route path="/scorecard" element={<Scorecard opponents={opponents} players={players} matches={matches} />} />
             <Route path="/memories" element={<Memories userRole={userRole} />} />
+            {/* User Management Route - Only visible if admin (sidebar hides link, route acts as standard) */}
+            <Route path="/users" element={userRole === 'admin' ? <UserManagement /> : <Navigate to="/home" />} />
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </div>

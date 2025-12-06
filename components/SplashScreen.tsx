@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Users, Ticket, Lock, Loader2, ChevronRight, X, User } from 'lucide-react';
 import { UserRole } from '../types';
 import KirikINSLogo from './KirikINSLogo';
+import { getAppUsers } from '../services/storageService';
 
 interface SplashScreenProps {
   onComplete: (role: UserRole) => void;
@@ -92,21 +93,19 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
     setTimeout(() => {
       setIsAuthenticating(false);
       
-      let isValid = false;
-      const normalizedUser = userId.trim().toLowerCase();
+      const normalizedUser = userId.trim();
+      
+      // Get users from storage
+      const users = getAppUsers();
+      
+      const matchedUser = users.find(u => 
+        u.username.toLowerCase() === normalizedUser.toLowerCase() && 
+        u.password === password && 
+        u.role === selectedRole
+      );
 
-      if (selectedRole === 'admin') {
-         if (normalizedUser === 'admin' && password === 'admin123') {
-           isValid = true;
-         }
-      } else if (selectedRole === 'member') {
-         if (normalizedUser === 'member' && password === 'member123') {
-           isValid = true;
-         }
-      }
-
-      if (isValid && selectedRole) {
-        initiateAppEntry(selectedRole);
+      if (matchedUser) {
+        initiateAppEntry(matchedUser.role);
       } else {
         setError('Invalid User ID or Password.');
       }
@@ -244,7 +243,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-white capitalize">{selectedRole} Login</h3>
-                  {/* Removed hint text as requested previously */}
                 </div>
               </div>
 

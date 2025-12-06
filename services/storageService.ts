@@ -1,5 +1,5 @@
 
-import { Player, Match, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingStrategy, TournamentTableEntry } from '../types';
+import { Player, Match, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser } from '../types';
 
 const PLAYERS_KEY = 'indian_strikers_players';
 const MATCHES_KEY = 'indian_strikers_matches';
@@ -7,6 +7,26 @@ const OPPONENTS_KEY = 'indian_strikers_opponents';
 const STRATEGIES_KEY = 'indian_strikers_strategies';
 const TEAM_LOGO_KEY = 'indian_strikers_logo';
 const TOURNAMENT_TABLE_KEY = 'indian_strikers_tournament_table';
+const USERS_KEY = 'indian_strikers_users';
+
+const SEED_USERS: AppUser[] = [
+  {
+    id: '1',
+    name: 'System Admin',
+    username: 'admin',
+    password: 'admin123',
+    role: 'admin',
+    avatarUrl: 'https://ui-avatars.com/api/?name=Admin&background=2563eb&color=fff'
+  },
+  {
+    id: '2',
+    name: 'Club Member',
+    username: 'member',
+    password: 'member123',
+    role: 'member',
+    avatarUrl: 'https://ui-avatars.com/api/?name=Member&background=059669&color=fff'
+  }
+];
 
 const SEED_PLAYERS: Player[] = [
   {
@@ -373,7 +393,6 @@ export const saveStrategies = (strategies: FieldingStrategy[]) => {
 };
 
 export const getTeamLogo = (): string => {
-  // Return stored logo or empty string (which will trigger placeholder in UI)
   return localStorage.getItem(TEAM_LOGO_KEY) || '';
 };
 
@@ -393,4 +412,17 @@ export const getTournamentTable = (): TournamentTableEntry[] => {
 
 export const saveTournamentTable = (table: TournamentTableEntry[]) => {
   localStorage.setItem(TOURNAMENT_TABLE_KEY, JSON.stringify(table));
+};
+
+export const getAppUsers = (): AppUser[] => {
+  const stored = localStorage.getItem(USERS_KEY);
+  if (!stored) {
+    localStorage.setItem(USERS_KEY, JSON.stringify(SEED_USERS));
+    return SEED_USERS;
+  }
+  return JSON.parse(stored);
+};
+
+export const saveAppUsers = (users: AppUser[]) => {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
 };

@@ -22,6 +22,15 @@ export enum BowlingStyle {
   NONE = 'None'
 }
 
+export interface AppUser {
+  id: string;
+  name: string;
+  username: string; // The User ID used for login
+  password: string;
+  role: UserRole;
+  avatarUrl?: string;
+}
+
 export interface BattingStats {
   matches: number;
   innings: number;
