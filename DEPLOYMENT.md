@@ -45,7 +45,7 @@ We will host the React app on Vercel.
     *   Add the following:
         *   `VITE_SUPABASE_URL`: (Your Supabase Project URL)
         *   `VITE_SUPABASE_ANON_KEY`: (Your Supabase Anon Key)
-        *   `VITE_API_URL`: **(IMPORTANT)** Paste the Render Backend URL from step 2 (e.g., `https://ins-api.onrender.com/api`).
+        *   `VITE_API_URL`: `https://indianstrikers.onrender.com/api` (Ensure you add `/api` at the end).
         *   `VITE_FRONTEND_URL`: `https://indianstrikers.club` (or `http://localhost:3000` for dev, but this is for prod).
 4.  **Deploy:** Click **Deploy**.
 
