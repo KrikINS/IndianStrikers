@@ -5,7 +5,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import PlayerList from './components/PlayerList';
 import MatchSchedule from './components/MatchSchedule';
-import AICoach from './components/AICoach';
+
 import MatchSelection from './components/MatchSelection';
 import FieldingMap from './components/FieldingMap';
 import OpponentTeams from './components/OpponentTeams';
@@ -14,16 +14,16 @@ import Memories from './components/Memories';
 import SplashScreen from './components/SplashScreen';
 import UserManagement from './components/UserManagement';
 import { Player, Match, UserRole, OpponentTeam } from './types';
-import { getPlayers, savePlayers, getMatches, saveMatches, getOpponents, saveOpponents, getTeamLogo, saveTeamLogo } from './services/storageService';
-import { Menu, BrainCircuit } from 'lucide-react';
+import { getPlayers, addPlayer, updatePlayer, deletePlayer, getMatches, addMatch, updateMatch, getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo } from './services/storageService';
+import { Menu } from 'lucide-react';
 import KirikINSLogo from './components/KirikINSLogo';
 
-const AppContent: React.FC<{ 
-  players: Player[], 
-  matches: Match[], 
+const AppContent: React.FC<{
+  players: Player[],
+  matches: Match[],
   opponents: OpponentTeam[],
   userRole: UserRole,
-  onAddPlayer: (p: Player) => void, 
+  onAddPlayer: (p: Player) => void,
   onUpdatePlayer: (p: Player) => void,
   onDeletePlayer: (id: string) => void,
   onAddOpponent: (t: OpponentTeam) => void,
@@ -36,21 +36,21 @@ const AppContent: React.FC<{
   onUpdateLogo: (url: string) => void
 }> = ({ players, matches, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onAddMatch, onUpdateMatch, onSignOut, teamLogo, onUpdateLogo }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [showAICoach, setShowAICoach] = useState(false);
+
   const location = useLocation();
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        toggle={() => setSidebarOpen(!isSidebarOpen)} 
-        userRole={userRole} 
+      <Sidebar
+        isOpen={isSidebarOpen}
+        toggle={() => setSidebarOpen(!isSidebarOpen)}
+        userRole={userRole}
         onSignOut={onSignOut}
         teamLogo={teamLogo}
         onUpdateLogo={onUpdateLogo}
         matches={matches}
       />
-      
+
       <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
         <header className="md:hidden bg-slate-900 border-b border-slate-800 p-3 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-2">
@@ -67,44 +67,44 @@ const AppContent: React.FC<{
 
         <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
           <Routes>
-            <Route path="/home" element={<Dashboard players={players} matches={matches} />} />
-            <Route 
-              path="/roster" 
+            <Route path="/home" element={<Dashboard players={players} matches={matches} userRole={userRole} />} />
+            <Route
+              path="/roster"
               element={
-                <PlayerList 
-                  players={players} 
+                <PlayerList
+                  players={players}
                   userRole={userRole}
-                  onAddPlayer={onAddPlayer} 
+                  onAddPlayer={onAddPlayer}
                   onUpdatePlayer={onUpdatePlayer}
                   onDeletePlayer={onDeletePlayer}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/matches" 
+            <Route
+              path="/matches"
               element={
-                <MatchSchedule 
-                  matches={matches} 
+                <MatchSchedule
+                  matches={matches}
                   opponents={opponents}
                   onAddMatch={onAddMatch}
                   onUpdateMatch={onUpdateMatch}
                   userRole={userRole}
                 />
-              } 
+              }
             />
             <Route path="/selection" element={<MatchSelection players={players} userRole={userRole} matches={matches} teamLogo={teamLogo} />} />
             <Route path="/fielding" element={<FieldingMap />} />
-            <Route 
-              path="/opponents" 
+            <Route
+              path="/opponents"
               element={
-                <OpponentTeams 
-                  teams={opponents} 
-                  onAddTeam={onAddOpponent} 
+                <OpponentTeams
+                  teams={opponents}
+                  onAddTeam={onAddOpponent}
                   onUpdateTeam={onUpdateOpponent}
                   onDeleteTeam={onDeleteOpponent}
                   userRole={userRole}
                 />
-              } 
+              }
             />
             <Route path="/scorecard" element={<Scorecard opponents={opponents} players={players} matches={matches} />} />
             <Route path="/memories" element={<Memories userRole={userRole} />} />
@@ -114,30 +114,7 @@ const AppContent: React.FC<{
           </Routes>
         </div>
 
-        {/* AI Coach FAB */}
-        <div className="fixed bottom-4 right-4 z-40 md:bottom-8 md:right-8">
-           <button 
-             onClick={() => setShowAICoach(!showAICoach)}
-             className="bg-blue-600 hover:bg-blue-700 text-white p-3 md:p-4 rounded-full shadow-lg shadow-blue-600/30 transition-all hover:scale-110 flex items-center justify-center active:scale-95"
-           >
-             <BrainCircuit size={24} />
-           </button>
-        </div>
 
-        {/* AI Coach Overlay Modal */}
-        {showAICoach && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-             <div className="w-full max-w-2xl bg-white rounded-2xl overflow-hidden shadow-2xl h-[80vh] relative flex flex-col">
-                <button 
-                  onClick={() => setShowAICoach(false)}
-                  className="absolute top-4 right-4 text-white hover:text-red-200 z-10"
-                >
-                  <div className="bg-white/20 p-1 rounded-full"><Menu size={20} className="rotate-45" /></div>
-                </button>
-                <AICoach />
-             </div>
-          </div>
-        )}
       </main>
     </div>
   );
@@ -152,19 +129,31 @@ const App: React.FC = () => {
   const [teamLogo, setTeamLogo] = useState<string>('');
 
   useEffect(() => {
-    // Load initial data
-    setPlayers(getPlayers());
-    setMatches(getMatches());
-    setOpponents(getOpponents());
-    setTeamLogo(getTeamLogo());
-    
+    const loadData = async () => {
+      try {
+        const [p, m, o, l] = await Promise.all([
+          getPlayers(),
+          getMatches(),
+          getOpponents(),
+          getTeamLogo()
+        ]);
+        setPlayers(p);
+        setMatches(m);
+        setOpponents(o);
+        setTeamLogo(l);
+      } catch (error) {
+        console.error("Failed to load data", error);
+      }
+    };
+    loadData();
+
     // Check if splash has been seen this session
     const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
-    if (hasSeenSplash) { 
+    if (hasSeenSplash) {
       // Recover session role if exists, default to guest if not
       const savedRole = sessionStorage.getItem('userRole') as UserRole;
       if (savedRole) setUserRole(savedRole);
-      setShowSplash(false); 
+      setShowSplash(false);
     }
   }, []);
 
@@ -182,66 +171,87 @@ const App: React.FC = () => {
     sessionStorage.removeItem('userRole');
   };
 
-  const handleAddPlayer = (player: Player) => {
+  const handleAddPlayer = async (player: Player) => {
     if (userRole !== 'admin') return;
-    const updated = [player, ...players];
-    setPlayers(updated);
-    savePlayers(updated);
+    try {
+      await addPlayer(player);
+      // Optimistic or Refetch
+      setPlayers(prev => [player, ...prev]);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to add player");
+    }
   };
 
-  const handleUpdatePlayer = (updatedPlayer: Player) => {
+  const handleUpdatePlayer = async (updatedPlayer: Player) => {
     if (userRole !== 'admin') return;
-    const updated = players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p);
-    setPlayers(updated);
-    savePlayers(updated);
+    try {
+      await updatePlayer(updatedPlayer);
+      setPlayers(prev => prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
+    } catch (e: any) {
+      console.error(e);
+      alert(`Failed to update player: ${e.message}`);
+    }
   };
 
-  const handleDeletePlayer = (id: string) => {
+  const handleDeletePlayer = async (id: string) => {
     if (userRole !== 'admin') return;
-    const updated = players.filter(p => p.id !== id);
-    setPlayers(updated);
-    savePlayers(updated);
+    try {
+      await deletePlayer(id);
+      setPlayers(prev => prev.filter(p => p.id !== id));
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete player");
+    }
   };
 
-  const handleAddOpponent = (team: OpponentTeam) => {
+  const handleAddOpponent = async (team: OpponentTeam) => {
     if (userRole !== 'admin') return;
-    const updated = [...opponents, team];
-    setOpponents(updated);
-    saveOpponents(updated);
+    try {
+      const savedTeam = await addOpponent(team);
+      setOpponents(prev => [...prev, savedTeam]);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to add opponent team");
+    }
   };
 
-  const handleUpdateOpponent = (updatedTeam: OpponentTeam) => {
+  const handleUpdateOpponent = async (updatedTeam: OpponentTeam) => {
     if (userRole !== 'admin') return;
-    const updated = opponents.map(t => t.id === updatedTeam.id ? updatedTeam : t);
-    setOpponents(updated);
-    saveOpponents(updated);
+    try {
+      await updateOpponent(updatedTeam);
+      setOpponents(prev => prev.map(t => t.id === updatedTeam.id ? updatedTeam : t));
+    } catch (e) { console.error(e); }
   };
 
-  const handleDeleteOpponent = (id: string) => {
+  const handleDeleteOpponent = async (id: string) => {
     if (userRole !== 'admin') return;
-    const updated = opponents.filter(t => t.id !== id);
-    setOpponents(updated);
-    saveOpponents(updated);
+    try {
+      await deleteOpponent(id);
+      setOpponents(prev => prev.filter(t => t.id !== id));
+    } catch (e) { console.error(e); }
   };
 
-  const handleAddMatch = (match: Match) => {
+  const handleAddMatch = async (match: Match) => {
     if (userRole !== 'admin') return;
-    const updated = [...matches, match];
-    setMatches(updated);
-    saveMatches(updated);
+    try {
+      await addMatch(match);
+      setMatches(prev => [...prev, match]);
+    } catch (e) { console.error(e); }
   };
 
-  const handleUpdateMatch = (updatedMatch: Match) => {
+  const handleUpdateMatch = async (updatedMatch: Match) => {
     if (userRole !== 'admin') return;
-    const updated = matches.map(m => m.id === updatedMatch.id ? updatedMatch : m);
-    setMatches(updated);
-    saveMatches(updated);
+    try {
+      await updateMatch(updatedMatch);
+      setMatches(prev => prev.map(m => m.id === updatedMatch.id ? updatedMatch : m));
+    } catch (e) { console.error(e); }
   };
 
-  const handleUpdateLogo = (url: string) => {
+  const handleUpdateLogo = async (url: string) => {
     if (userRole !== 'admin') return;
     setTeamLogo(url);
-    saveTeamLogo(url);
+    await saveTeamLogo(url);
   };
 
   if (showSplash) {
@@ -250,12 +260,12 @@ const App: React.FC = () => {
 
   return (
     <HashRouter>
-      <AppContent 
-        players={players} 
-        matches={matches} 
+      <AppContent
+        players={players}
+        matches={matches}
         opponents={opponents}
         userRole={userRole}
-        onAddPlayer={handleAddPlayer} 
+        onAddPlayer={handleAddPlayer}
         onUpdatePlayer={handleUpdatePlayer}
         onDeletePlayer={handleDeletePlayer}
         onAddOpponent={handleAddOpponent}

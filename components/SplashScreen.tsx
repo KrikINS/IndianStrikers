@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Users, Ticket, Lock, Loader2, ChevronRight, X, User } from 'lucide-react';
 import { UserRole } from '../types';
 import KirikINSLogo from './KirikINSLogo';
-import { getAppUsers } from '../services/storageService';
+import { login } from '../services/storageService';
 
 interface SplashScreenProps {
   onComplete: (role: UserRole) => void;
@@ -23,6 +23,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
   // Loading Screen State
   const [isAppLoading, setIsAppLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
+  const [progress, setProgress] = useState(0);
   const [finalRole, setFinalRole] = useState<UserRole>('guest');
 
   useEffect(() => {
@@ -43,11 +44,15 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
     if (isAppLoading) {
       const fullText = "Legacy of Few Kirukkans";
       let currentIndex = 0;
-      
+      setProgress(0);
+
       const startDelay = setTimeout(() => {
         const interval = setInterval(() => {
           if (currentIndex <= fullText.length) {
             setLoadingText(fullText.slice(0, currentIndex));
+            // Calculate progress based on text completion
+            const currentProgress = Math.min(100, Math.round((currentIndex / fullText.length) * 100));
+            setProgress(currentProgress);
             currentIndex++;
           } else {
             clearInterval(interval);
@@ -90,26 +95,19 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
     setError('');
     setIsAuthenticating(true);
 
-    setTimeout(() => {
-      setIsAuthenticating(false);
-      
-      const normalizedUser = userId.trim();
-      
-      // Get users from storage
-      const users = getAppUsers();
-      
-      const matchedUser = users.find(u => 
-        u.username.toLowerCase() === normalizedUser.toLowerCase() && 
-        u.password === password && 
-        u.role === selectedRole
-      );
+    const normalizedUser = userId.trim();
 
-      if (matchedUser) {
-        initiateAppEntry(matchedUser.role);
-      } else {
+    login(normalizedUser, password, selectedRole || 'guest')
+      .then(res => {
+        sessionStorage.setItem('authToken', res.token);
+        initiateAppEntry(res.role);
+      })
+      .catch(err => {
         setError('Invalid User ID or Password.');
-      }
-    }, 800);
+      })
+      .finally(() => {
+        setIsAuthenticating(false);
+      });
   };
 
   if (isAppLoading) {
@@ -117,18 +115,32 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
       <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center font-sans overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-black"></div>
         <div className="relative z-10 text-center px-4 flex flex-col items-center">
-           <div className="mb-8 animate-pulse">
-              {/* Using team logo for loading screen */}
-              {teamLogo && !imgError ? (
-                  <img src={teamLogo} className="w-24 h-24 object-contain" />
-              ) : (
-                  <Shield size={64} className="text-blue-500" />
-              )}
-           </div>
-           <h2 className="text-3xl md:text-5xl text-slate-300 font-cursive tracking-wide min-h-[60px]" style={{ fontFamily: '"Dancing Script", cursive' }}>
-              {loadingText}
-              <span className="animate-blink">|</span>
-           </h2>
+          <div className="mb-8 animate-pulse">
+            {/* Using team logo for loading screen */}
+            {teamLogo && !imgError ? (
+              <img src={teamLogo} className="w-24 h-24 object-contain" />
+            ) : (
+              <Shield size={64} className="text-blue-500" />
+            )}
+          </div>
+          <h2 className="text-3xl md:text-5xl text-slate-300 font-cursive tracking-wide min-h-[60px]" style={{ fontFamily: '"Dancing Script", cursive' }}>
+            {loadingText}
+            <span className="animate-blink">|</span>
+          </h2>
+
+          {/* Progress Bar */}
+          <div className="w-64 max-w-[80%] h-1 bg-slate-800/50 rounded-full mt-8 overflow-hidden relative backdrop-blur-sm">
+            <div
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+              style={{ width: `${progress}%` }}
+            >
+              <div className="absolute inset-0 bg-white/30 w-full animate-[shimmer_1s_infinite] origin-left scale-x-0"></div>
+            </div>
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-slate-500 text-xs font-mono tracking-widest uppercase">
+            <span>Loading Assets</span>
+            <span className="text-blue-400">{progress}%</span>
+          </div>
         </div>
       </div>
     );
@@ -150,31 +162,31 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
       </div>
 
       <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col items-center justify-center h-full">
-        
+
         {/* CENTER LOGO SECTION - RESTORED INDIAN STRIKERS */}
         <div className={`
           transform transition-all duration-1000 ease-out flex flex-col items-center justify-center w-full
           ${animationStep >= 1 ? 'scale-100 opacity-100 translate-y-0' : 'scale-50 opacity-0 translate-y-10'}
           ${animationStep >= 3 ? '-translate-y-12 md:-translate-y-20' : ''} 
         `}>
-          
+
           {/* Main Team Logo */}
           <div className="mb-6 transform hover:scale-105 transition-transform duration-500">
             <div className="w-32 h-32 md:w-48 md:h-48 bg-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.5)] border-4 border-white/10 relative overflow-hidden group">
-               <div className="absolute inset-0 bg-gradient-to-tr from-blue-700 to-blue-500 opacity-50"></div>
-               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
-               {teamLogo && !imgError ? (
-                 <img 
-                   src={teamLogo} 
-                   onError={() => setImgError(true)}
-                   className="w-full h-full object-cover z-10 relative" 
-                   alt="Team Logo"
-                 />
-               ) : (
-                 <Shield size={80} className="text-white z-10 relative drop-shadow-md" />
-               )}
-               {/* Shine effect */}
-               <div className="absolute top-0 -left-full w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:animate-[shine_1.5s_infinite]"></div>
+              <div className="absolute inset-0 bg-gradient-to-tr from-blue-700 to-blue-500 opacity-50"></div>
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+              {teamLogo && !imgError ? (
+                <img
+                  src={teamLogo}
+                  onError={() => setImgError(true)}
+                  className="w-full h-full object-cover z-10 relative"
+                  alt="Team Logo"
+                />
+              ) : (
+                <Shield size={80} className="text-white z-10 relative drop-shadow-md" />
+              )}
+              {/* Shine effect */}
+              <div className="absolute top-0 -left-full w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:animate-[shine_1.5s_infinite]"></div>
             </div>
           </div>
 
@@ -195,7 +207,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
           transform transition-all duration-700 ease-out delay-100
           ${animationStep >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20 pointer-events-none'}
         `}>
-          <button 
+          <button
             onClick={() => handleRoleSelect('admin')}
             className="group relative bg-slate-800/60 hover:bg-slate-800 backdrop-blur-md border border-slate-700/50 hover:border-blue-500 rounded-xl p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-blue-500/10 text-left overflow-hidden"
           >
@@ -206,7 +218,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
             <div className="flex items-center text-xs font-bold text-blue-400 uppercase tracking-wider group-hover:text-white transition-colors">Login Required <ChevronRight size={14} className="ml-1" /></div>
           </button>
 
-          <button 
+          <button
             onClick={() => handleRoleSelect('member')}
             className="group relative bg-slate-800/60 hover:bg-slate-800 backdrop-blur-md border border-slate-700/50 hover:border-emerald-500 rounded-xl p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-emerald-500/10 text-left overflow-hidden"
           >
@@ -217,11 +229,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
             <div className="flex items-center text-xs font-bold text-emerald-400 uppercase tracking-wider group-hover:text-white transition-colors">Login Required <ChevronRight size={14} className="ml-1" /></div>
           </button>
 
-          <button 
+          <button
             onClick={() => handleRoleSelect('guest')}
             className="group relative bg-slate-800/60 hover:bg-slate-800 backdrop-blur-md border border-slate-700/50 hover:border-orange-500 rounded-xl p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-orange-500/10 text-left overflow-hidden"
           >
-             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Ticket size={64} className="text-orange-500 rotate-12" /></div>
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Ticket size={64} className="text-orange-500 rotate-12" /></div>
             <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center mb-4 text-orange-400 group-hover:bg-orange-600 group-hover:text-white transition-colors"><Ticket size={24} /></div>
             <h3 className="text-xl font-bold text-white mb-1">Guest Fan</h3>
             <p className="text-xs text-slate-400 mb-4">View-only access</p>
@@ -250,7 +262,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
                 <div>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input 
+                    <input
                       type="text"
                       autoFocus
                       value={userId}
@@ -264,7 +276,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
                 <div>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input 
+                    <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -280,7 +292,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
                   )}
                 </div>
 
-                <button 
+                <button
                   type="submit"
                   disabled={!userId || !password || isAuthenticating}
                   className={`
