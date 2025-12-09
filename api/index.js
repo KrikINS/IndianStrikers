@@ -8,7 +8,7 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
 const app = express();
-const PORT = 4001; // process.env.PORT might be set to 4000
+const PORT = process.env.PORT || 4001;
 
 app.use(express.json({ limit: '2mb' }));
 app.use(cors({ origin: true, credentials: true }));
