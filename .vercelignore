@@ -1,2 +1,13 @@
-
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+node_modules
+dist
 api
+/api
+api/**
+backend
+/backend
+backend/**
