@@ -1,7 +1,7 @@
 
 import { Player, Match, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser } from '../types';
 
-const API_URL = 'http://localhost:4001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001/api';
 
 const getHeaders = () => {
   const token = sessionStorage.getItem('authToken');
