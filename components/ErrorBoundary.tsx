@@ -11,23 +11,23 @@ interface State {
     errorInfo: ErrorInfo | null;
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
-    public state: State = {
+class ErrorBoundary extends Component<Props, State> {
+    state: State = {
         hasError: false,
         error: null,
         errorInfo: null
     };
 
-    public static getDerivedStateFromError(error: Error): State {
+    static getDerivedStateFromError(error: Error): State {
         return { hasError: true, error, errorInfo: null };
     }
 
-    public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         console.error("Uncaught error:", error, errorInfo);
         this.setState({ error, errorInfo });
     }
 
-    public render() {
+    render() {
         if (this.state.hasError) {
             return (
                 <div style={{ padding: '20px', fontFamily: 'monospace', color: 'red', backgroundColor: '#fff0f0' }}>

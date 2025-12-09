@@ -91,6 +91,8 @@ export interface Match {
   isUpcoming: boolean;
   tournament?: string;
   tossTime?: string;
+  squad?: string[]; // Array of player IDs
+  isSquadLocked?: boolean;
 }
 
 export interface OpponentPlayer {
@@ -107,7 +109,7 @@ export interface OpponentTeam {
   strength?: string;
   weakness?: string;
   players: OpponentPlayer[];
-  color?: string; 
+  color?: string;
 }
 
 export interface FieldPosition {

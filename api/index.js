@@ -8,10 +8,10 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = 4001; // process.env.PORT might be set to 4000
 
 app.use(express.json({ limit: '2mb' }));
-app.use(cors({ origin: [process.env.FRONTEND_LOCAL, process.env.FRONTEND_PROD], credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 
 app.use((req, res, next) => {
   console.log(`[Incoming Request] ${req.method} ${req.path}`);
@@ -212,6 +212,26 @@ app.post('/api/table', authGuard(['admin']), async (req, res) => {
 });
 app.delete('/api/table/:id', authGuard(['admin']), async (req, res) => {
   const { error } = await supabase.from('tournament_table').delete().eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// STRATEGIES
+app.get('/api/strategies', async (_req, res) => {
+  const { data, error } = await supabase.from('strategies').select('*');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+app.post('/api/strategies', authGuard(['admin', 'member']), async (req, res) => {
+  const { name, batter_hand, match_phase, bowler_id, batter_id, positions } = req.body;
+  const { data, error } = await supabase.from('strategies').insert({
+    name, batter_hand, match_phase, bowler_id, batter_id, positions
+  }).select().single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+app.delete('/api/strategies/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await supabase.from('strategies').delete().eq('id', req.params.id);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });

@@ -33,8 +33,9 @@ const AppContent: React.FC<{
   onUpdateMatch: (m: Match) => void,
   onSignOut: () => void,
   teamLogo: string,
-  onUpdateLogo: (url: string) => void
-}> = ({ players, matches, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onAddMatch, onUpdateMatch, onSignOut, teamLogo, onUpdateLogo }) => {
+  onUpdateLogo: (url: string) => void,
+  currentUser?: { name: string; username: string }
+}> = ({ players, matches, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onAddMatch, onUpdateMatch, onSignOut, teamLogo, onUpdateLogo, currentUser }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const location = useLocation();
@@ -49,6 +50,7 @@ const AppContent: React.FC<{
         teamLogo={teamLogo}
         onUpdateLogo={onUpdateLogo}
         matches={matches}
+        currentUser={currentUser}
       />
 
       <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
@@ -92,7 +94,7 @@ const AppContent: React.FC<{
                 />
               }
             />
-            <Route path="/selection" element={<MatchSelection players={players} userRole={userRole} matches={matches} teamLogo={teamLogo} />} />
+            <Route path="/selection" element={<MatchSelection players={players} userRole={userRole} matches={matches} teamLogo={teamLogo} onUpdateMatch={onUpdateMatch} />} />
             <Route path="/fielding" element={<FieldingMap />} />
             <Route
               path="/opponents"
@@ -126,23 +128,33 @@ const App: React.FC = () => {
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [showSplash, setShowSplash] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>('guest');
+  const [currentUser, setCurrentUser] = useState<{ name: string; username: string }>();
   const [teamLogo, setTeamLogo] = useState<string>('');
 
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log("Fetching data from backend...");
         const [p, m, o, l] = await Promise.all([
           getPlayers(),
           getMatches(),
           getOpponents(),
           getTeamLogo()
         ]);
+        console.log("Data received:", { players: p.length, matches: m.length, opponents: o.length });
+
+        if (p.length === 0 && m.length === 0) {
+          console.warn("Received empty data. Backend might be connected but empty, or request failed silently.");
+          // Optional: alert check
+        }
+
         setPlayers(p);
         setMatches(m);
         setOpponents(o);
         setTeamLogo(l);
-      } catch (error) {
-        console.error("Failed to load data", error);
+      } catch (e: any) {
+        console.error('Failed to load data:', e);
+        alert(`Backend Connection Failed: ${e.message}. Please check if the server is running on port 4000.`);
       }
     };
     loadData();
@@ -153,12 +165,20 @@ const App: React.FC = () => {
       // Recover session role if exists, default to guest if not
       const savedRole = sessionStorage.getItem('userRole') as UserRole;
       if (savedRole) setUserRole(savedRole);
+
+      const savedUser = sessionStorage.getItem('currentUser');
+      if (savedUser) setCurrentUser(JSON.parse(savedUser));
+
       setShowSplash(false);
     }
   }, []);
 
-  const handleLoginComplete = (role: UserRole) => {
+  const handleLoginComplete = (role: UserRole, user?: { name: string; username: string }) => {
     setUserRole(role);
+    if (user) {
+      setCurrentUser(user);
+      sessionStorage.setItem('currentUser', JSON.stringify(user));
+    }
     setShowSplash(false);
     sessionStorage.setItem('hasSeenSplash', 'true');
     sessionStorage.setItem('userRole', role);
@@ -166,9 +186,11 @@ const App: React.FC = () => {
 
   const handleSignOut = () => {
     setUserRole('guest');
+    setCurrentUser(undefined);
     setShowSplash(true);
     sessionStorage.removeItem('hasSeenSplash');
     sessionStorage.removeItem('userRole');
+    sessionStorage.removeItem('currentUser');
   };
 
   const handleAddPlayer = async (player: Player) => {
@@ -235,17 +257,25 @@ const App: React.FC = () => {
   const handleAddMatch = async (match: Match) => {
     if (userRole !== 'admin') return;
     try {
-      await addMatch(match);
-      setMatches(prev => [...prev, match]);
+      const savedMatch = await addMatch(match);
+      setMatches(prev => [...prev, { ...match, id: savedMatch.id }]);
     } catch (e) { console.error(e); }
   };
 
   const handleUpdateMatch = async (updatedMatch: Match) => {
-    if (userRole !== 'admin') return;
+    if (userRole !== 'admin') {
+      console.warn("Attempt to update match without admin role");
+      return;
+    }
+    console.log("Updating match:", updatedMatch);
     try {
       await updateMatch(updatedMatch);
+      console.log("Match updated successfully in backend");
       setMatches(prev => prev.map(m => m.id === updatedMatch.id ? updatedMatch : m));
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error("Match update failed:", e);
+      alert(`Failed to update match: ${e.message}`);
+    }
   };
 
   const handleUpdateLogo = async (url: string) => {
@@ -276,6 +306,7 @@ const App: React.FC = () => {
         onSignOut={handleSignOut}
         teamLogo={teamLogo}
         onUpdateLogo={handleUpdateLogo}
+        currentUser={currentUser}
       />
     </HashRouter>
   );

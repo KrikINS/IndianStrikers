@@ -131,8 +131,13 @@ const FieldingBoard: React.FC = () => {
     if (!boardRef.current || !playerId) return;
 
     const rect = boardRef.current.getBoundingClientRect();
-    let left = ((e.clientX - rect.left) / rect.width) * 100;
-    let top = ((e.clientY - rect.top) / rect.height) * 100;
+
+    // Fix: Ensure we use the clientX/Y from the drop event relative to the board rect
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    let left = ((clientX - rect.left) / rect.width) * 100;
+    let top = ((clientY - rect.top) / rect.height) * 100;
 
     // Clamp drops to ensure they land on board initially
     left = Math.max(5, Math.min(95, left));
@@ -146,9 +151,15 @@ const FieldingBoard: React.FC = () => {
   const handleSaveStrategy = async () => {
     if (!strategyName.trim()) return;
 
+    // If no bowler selected and no fielders placed, prevent save
+    if (!selectedBowlerId && currentPositions.size === 0) {
+      alert("Please select a bowler or place at least one fielder.");
+      return;
+    }
+
     // Omit ID to let backend generate it
     const newStrategy: FieldingStrategy = {
-      id: '', // Placeholder, will be replaced by backend
+      id: '', // Placeholder
       name: strategyName,
       batterHand,
       matchPhase,
@@ -254,6 +265,7 @@ const FieldingBoard: React.FC = () => {
   const handleSelectBowler = (id: string) => {
     setSelectedBowlerId(id);
     if (id) {
+      // Auto-place bowler if not already on field (or move them if they are)
       setCurrentPositions(prev => new Map(prev).set(id, { playerId: id, left: 50, top: 65 }));
     }
   };
@@ -502,8 +514,8 @@ const FieldingBoard: React.FC = () => {
                 className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
               >
                 <option value="">Select Bowler...</option>
-                {players.filter(p => p.role === PlayerRole.BOWLER || p.role === PlayerRole.ALL_ROUNDER).map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                {players.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.role})</option>
                 ))}
               </select>
             </div>
@@ -585,7 +597,7 @@ const FieldingBoard: React.FC = () => {
                 key={player.id}
                 draggable
                 onDragStart={(e) => handleDugoutDragStart(e, player.id)}
-                onDoubleClick={() => { /* Consider adding to default pos on double click */ }}
+                onDoubleClick={() => setCurrentPositions(prev => new Map(prev).set(player.id, { playerId: player.id, left: 50, top: 40 }))}
                 className="flex items-center gap-3 p-2 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500 rounded-lg cursor-grab active:cursor-grabbing group transition-all duration-200"
               >
                 <img

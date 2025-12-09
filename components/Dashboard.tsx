@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Player, Match, TournamentTableEntry, OpponentTeam, UserRole } from '../types';
-import { getOpponents, getTournamentTable, saveTournamentTableEntry } from '../services/storageService';
+import { getOpponents, getTournamentTable, saveTournamentTableEntry, deleteTournamentTableEntry } from '../services/storageService';
 import { Trophy, Medal, Star, Flame, Crown, Plus, Trash2, Zap, Award, Target, Hash, Calendar, History } from 'lucide-react';
 
 interface DashboardProps {
@@ -25,7 +25,18 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
       try {
         const [opp, tbl] = await Promise.all([getOpponents(), getTournamentTable()]);
         setOpponents(opp);
-        setTableData(tbl);
+
+        // Fix missing names in fetched table data
+        const hydratedTable = tbl.map(row => {
+          if (!row.teamName || row.teamName.trim() === '') {
+            if (row.teamId === 'home') return { ...row, teamName: 'Indian Strikers' };
+            const found = opp.find(o => o.id === row.teamId);
+            if (found) return { ...row, teamName: found.name };
+          }
+          return row;
+        });
+
+        setTableData(hydratedTable);
       } catch (e) { console.error("Failed to load dashboard data", e); }
     };
     load();
@@ -78,9 +89,19 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
     setTableData(updated);
   };
 
-  const handleDeleteRow = (id: string) => {
-    const updated = tableData.filter(t => t.id !== id);
-    setTableData(updated);
+  const handleDeleteRow = async (id: string) => {
+    if (window.confirm('Are you sure you want to remove this row?')) {
+      // Optimistically remove from UI immediately so it feels responsive
+      const updated = tableData.filter(t => t.id !== id);
+      setTableData(updated);
+
+      try {
+        await deleteTournamentTableEntry(id);
+      } catch (e) {
+        console.warn("Backend delete failed (row might be local-only):", e);
+        // We do not revert state here because if it failed, it likely didn't exist in DB anyway
+      }
+    }
   };
 
   const handleTableChange = (id: string, field: keyof TournamentTableEntry, value: any) => {
@@ -95,7 +116,19 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
 
   const handleSaveTable = async () => {
     try {
-      await Promise.all(tableData.map(entry => saveTournamentTableEntry(entry)));
+      // Only save rows that have a valid team selected
+      const validRows = tableData.filter(entry => entry.teamId);
+
+      if (validRows.length === 0 && tableData.length > 0) {
+        alert("No valid teams selected to save.");
+        return;
+      }
+
+      await Promise.all(validRows.map(entry => saveTournamentTableEntry(entry)));
+
+      // Optional: Clean up local state if we want to remove empty rows after save
+      // setTableData(validRows); 
+
       alert("Table updated successfully!");
     } catch (e: any) {
       console.error(e);
@@ -276,7 +309,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                 <tr><td colSpan={10} className="p-8 text-center text-slate-500 italic">No teams added to the group table yet.</td></tr>
               ) : (
                 tableData.map((row, idx) => (
-                  <tr key={row.id} className="bg-slate-900 hover:bg-slate-800 transition-colors group">
+                  <tr key={row.id || idx} className="bg-slate-900 hover:bg-slate-800 transition-colors group">
                     <td className="p-2 md:p-4 text-slate-400 font-mono">{idx + 1}</td>
                     <td className="p-2 md:p-4">
                       <select
@@ -308,7 +341,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                     <td className="p-2 md:p-4 text-center text-slate-300 font-mono text-[10px] md:text-xs">{calculateWinPercentage(row.won, row.matches)}</td>
                     <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="text" value={row.nrr} onChange={(e) => handleTableChange(row.id, 'nrr', e.target.value)} className="w-16 bg-transparent text-center text-blue-300 font-mono outline-none focus:bg-slate-800 rounded" /></td>
                     <td className="p-2 md:p-4 text-center">
-                      <button onClick={() => handleDeleteRow(row.id)} className="text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
+                      <button onClick={() => handleDeleteRow(row.id)} className="text-slate-600 hover:text-red-500 transition-all"><Trash2 size={16} /></button>
                     </td>
                   </tr>
                 ))

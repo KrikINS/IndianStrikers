@@ -6,7 +6,7 @@ import KirikINSLogo from './KirikINSLogo';
 import { login } from '../services/storageService';
 
 interface SplashScreenProps {
-  onComplete: (role: UserRole) => void;
+  onComplete: (role: UserRole, user?: { name: string; username: string }) => void;
   teamLogo?: string;
 }
 
@@ -25,6 +25,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
   const [loadingText, setLoadingText] = useState('');
   const [progress, setProgress] = useState(0);
   const [finalRole, setFinalRole] = useState<UserRole>('guest');
+  const [currentUser, setCurrentUser] = useState<{ name: string; username: string }>();
 
   useEffect(() => {
     setImgError(false);
@@ -57,7 +58,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
           } else {
             clearInterval(interval);
             setTimeout(() => {
-              onComplete(finalRole);
+              onComplete(finalRole, currentUser);
             }, 1000);
           }
         }, 80);
@@ -66,10 +67,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
 
       return () => clearTimeout(startDelay);
     }
-  }, [isAppLoading, finalRole, onComplete]);
+  }, [isAppLoading, finalRole, currentUser, onComplete]);
 
-  const initiateAppEntry = (role: UserRole) => {
+  const initiateAppEntry = (role: UserRole, user?: { name: string; username: string }) => {
     setFinalRole(role);
+    if (user) setCurrentUser(user);
     setIsAppLoading(true);
   };
 
@@ -100,7 +102,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
     login(normalizedUser, password, selectedRole || 'guest')
       .then(res => {
         sessionStorage.setItem('authToken', res.token);
-        initiateAppEntry(res.role);
+        // Assuming res.user contains name/username, or fallback
+        initiateAppEntry(res.role, { name: res.username || normalizedUser, username: res.username || normalizedUser });
       })
       .catch(err => {
         setError('Invalid User ID or Password.');

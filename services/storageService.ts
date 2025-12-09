@@ -1,7 +1,7 @@
 
 import { Player, Match, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser } from '../types';
 
-const API_URL = 'http://localhost:4000/api';
+const API_URL = 'http://localhost:4001/api';
 
 const getHeaders = () => {
   const token = sessionStorage.getItem('authToken');
@@ -18,8 +18,14 @@ const handleResponse = async (res: Response) => {
       window.location.reload(); // Force reload to show login screen
       throw new Error("Session expired. Please login again.");
     }
-    const error = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `Request failed: ${res.statusText}`);
+    const text = await res.text();
+    console.error(`API Error (${res.status}):`, text);
+    try {
+      const json = JSON.parse(text);
+      throw new Error(json.error || `Request failed: ${res.status} ${res.statusText}`);
+    } catch (e) {
+      throw new Error(`Request failed: ${res.status} ${res.statusText} - ${text.substring(0, 100)}`);
+    }
   }
   return res.json();
 };
