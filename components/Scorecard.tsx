@@ -153,7 +153,7 @@ interface ScorecardProps {
 
 const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], matches = [] }) => {
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<0 | 1 | 2>(0);
+  const [activeTab, setActiveTab] = useState<0 | 1 | 2>(2);
   const [isLiveMode, setIsLiveMode] = useState(false);
   const [playerSelector, setPlayerSelector] = useState<{ inningIdx: 0 | 1, type: 'batsman' | 'bowler', autoTrigger?: boolean } | null>(null);
   const [selectionPreview, setSelectionPreview] = useState<Partial<Player> | null>(null);
@@ -640,13 +640,45 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     const selected = matches.find(m => m.id === matchId);
     if (!selected) return;
 
+    // Prompt for Toss
+    let tossWinner = window.prompt("Who won the toss?\n1. INDIAN STRIKERS\n2. " + selected.opponent);
+    if (!tossWinner || (tossWinner !== '1' && tossWinner !== '2')) {
+      // Default or ask again? Let's just default to '1' if invalid or cancel? 
+      // Better: Just set what we know and user can edit in table.
+    }
+
+    let tossDecision = '';
+    if (tossWinner === '1' || tossWinner === '2') {
+      tossDecision = window.prompt("What did they choose?\n1. Bat\n2. Bowl") || '';
+    }
+
+    const teamA = 'INDIAN STRIKERS';
+    const teamB = selected.opponent;
+    let tossResultText = '';
+
+    // Logic: 
+    // If Team A won and Bat -> A is Innings 1
+    // If Team A won and Bowl -> B is Innings 1
+    // If Team B won and Bat -> B is Innings 1
+    // If Team B won and Bowl -> A is Innings 1
+
+    // Determining Innings 1
+    // We update matchInfo.tossResult string.
+
+    if (tossWinner === '1') {
+      tossResultText = `${teamA} won the toss and elected to ${tossDecision === '1' ? 'Bat' : 'Bowl'}`;
+    } else if (tossWinner === '2') {
+      tossResultText = `${teamB} won the toss and elected to ${tossDecision === '1' ? 'Bat' : 'Bowl'}`;
+    }
+
     setData(prev => ({
       ...prev,
       matchInfo: {
         ...prev.matchInfo,
         id: matchId,
-        teamAName: 'INDIAN STRIKERS',
-        teamBName: selected.opponent,
+        teamAName: teamA,
+        teamBName: teamB,
+        tossResult: tossResultText,
         date: selected.date.split('T')[0],
         venue: selected.venue,
         tournament: selected.tournament || ''
