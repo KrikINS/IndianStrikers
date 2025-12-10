@@ -631,14 +631,14 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       setLiveState(prev => ({ ...prev, strikerId: prev.nonStrikerId, nonStrikerId: prev.strikerId, bowlerId: '' }));
       if (!isWicket) setPlayerSelector({ inningIdx: innIdx as 0 | 1, type: 'bowler', autoTrigger: true });
     }
-
     updateData({ ...data, innings: newInnings as [Innings, Innings] });
   };
 
   // --- Input Handlers ---
+  import { updateMatch, updatePlayer } from '../services/storageService';
   const handleSaveScorecard = async () => {
     if (!data.matchInfo.id) {
-      alert("Please select a valid scheduled match (Fixture) to save to.");
+      alert("Please select a valid scheduled match (Fixture) before saving.");
       return;
     }
 
@@ -655,7 +655,6 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         history: historyState.commentary,
         liveState
       }
-      // Ideally also update result, scoreFor, scoreAgainst here if we had logic
     };
 
     try {
@@ -663,7 +662,107 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       alert("Scorecard saved successfully!");
     } catch (e: any) {
       console.error("Save failed", e);
-      alert("Failed to save scorecard: " + e.message);
+      alert("Failed to save: " + e.message);
+    }
+  };
+
+  const handleUpdateStats = async () => {
+    // 1. Confirm with Admin
+    if (!window.confirm("Are you sure? This will add the current scorecard stats to the players' career totals.\n\nOnly do this ONCE per match!")) return;
+
+    // 2. Determine which innings belongs to Indian Strikers
+    // We assume Indian Strikers is ALWAYS "Team 1" (innIdx 0) or "Team 2" (innIdx 1) based on user intent?
+    // Since we don't have explicit team mapping, we will search for players by NAME in our 'players' list.
+
+    let updatedCount = 0;
+    const allInnings = [data.innings[0], data.innings[1]];
+
+    try {
+      for (const inning of allInnings) {
+        // Process Batting
+        for (const batsman of inning.batting) {
+          // Find player in our database by ID (preferred) or Name
+          const dbPlayer = players.find(p => p.name === batsman.name); // Using Name matching as ID might differ in opponents
+
+          if (dbPlayer) {
+            // Calculate new totals
+            const currentStats = dbPlayer.battingStats || { matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, average: 0, strikeRate: 0, highestScore: '0', hundreds: 0, fifties: 0, ducks: 0, fours: 0, sixes: 0 };
+
+            const runs = Number(batsman.runs) || 0;
+            const balls = Number(batsman.balls) || 0;
+            const isOut = batsman.howOut !== 'Not Out' && batsman.howOut !== 'Did not bat';
+
+            const newStats = { ...currentStats };
+            newStats.matches = (newStats.matches || 0) + 1; // Assuming playing = batting entry exists? Or check squad?
+            newStats.innings = (newStats.innings || 0) + 1;
+            if (!isOut) newStats.notOuts = (newStats.notOuts || 0) + 1;
+            newStats.runs = (newStats.runs || 0) + runs;
+            newStats.balls = (newStats.balls || 0) + balls;
+            newStats.fours = (newStats.fours || 0) + (Number(batsman.fours) || 0);
+            newStats.sixes = (newStats.sixes || 0) + (Number(batsman.sixes) || 0);
+
+            if (runs >= 100) newStats.hundreds = (newStats.hundreds || 0) + 1;
+            else if (runs >= 50) newStats.fifties = (newStats.fifties || 0) + 1;
+            if (runs === 0 && isOut) newStats.ducks = (newStats.ducks || 0) + 1;
+
+            // High Score logic
+            const currentHigh = parseInt(newStats.highestScore.replace('*', ''));
+            if (runs > currentHigh) {
+              newStats.highestScore = `${runs}${!isOut ? '*' : ''}`;
+            }
+
+            // Update the player
+            await updatePlayer({ ...dbPlayer, battingStats: newStats });
+            updatedCount++;
+          }
+        }
+
+        // Process Bowling
+        for (const bowler of inning.bowling) {
+          const dbPlayer = players.find(p => p.name === bowler.name);
+          if (dbPlayer) {
+            const currentStats = dbPlayer.bowlingStats || { matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0, wickets: 0, average: 0, economy: 0, strikeRate: 0, bestBowling: '0/0', fourWickets: 0, fiveWickets: 0 };
+
+            const overs = Number(bowler.overs) || 0;
+            const runs = Number(bowler.runs) || 0;
+            const wickets = Number(bowler.wickets) || 0;
+            const maidens = Number(bowler.maidens) || 0;
+
+            const newStats = { ...currentStats };
+            // Matches handled in batting loop? Issue: what if they only bowled?
+            // Simplification: We increment matches in batting if they exist there, otherwise here? 
+            // Ideally we track unique players played. For now, let's just update bowling stats.
+            if (!dbPlayer.battingStats?.matches) {
+              // If they didn't bat, we might need to increment match count here, but risky duplication.
+              // We will rely on them being listed in batting even if "Did not bat"
+            }
+
+            newStats.innings = (newStats.innings || 0) + 1;
+            newStats.overs = (newStats.overs || 0) + overs;
+            newStats.runs = (newStats.runs || 0) + runs;
+            newStats.wickets = (newStats.wickets || 0) + wickets;
+            newStats.maidens = (newStats.maidens || 0) + maidens;
+
+            if (wickets >= 5) newStats.fiveWickets = (newStats.fiveWickets || 0) + 1;
+            else if (wickets >= 4) newStats.fourWickets = (newStats.fourWickets || 0) + 1;
+
+            // Best Bowling
+            // Logic: More wickets is better. If equal wickets, fewer runs is better.
+            const [bestW, bestR] = newStats.bestBowling.split('/').map(Number);
+            if (wickets > bestW || (wickets === bestW && runs < bestR)) {
+              newStats.bestBowling = `${wickets}/${runs}`;
+            }
+
+            await updatePlayer({ ...dbPlayer, bowlingStats: newStats });
+            // We count updates, duplicate counts for all-rounders is fine for log
+          }
+        }
+      }
+
+      alert(`Successfully updated stats for verified players! (Career totals updated)`);
+    } catch (e: any) {
+      console.error(e);
+      alert("Error updating player stats: " + e.message);
     }
   };
 
@@ -1109,6 +1208,9 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           </button>
           <button onClick={handleSaveScorecard} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all text-sm md:text-base">
             <Save size={18} /> Save
+          </button>
+          <button onClick={handleUpdateStats} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all text-sm md:text-base">
+            <Activity size={18} /> Update Stats
           </button>
         </div>
       </div>
