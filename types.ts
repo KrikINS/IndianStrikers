@@ -93,6 +93,7 @@ export interface Match {
   tossTime?: string;
   squad?: string[]; // Array of player IDs
   isSquadLocked?: boolean;
+  scorecardData?: any; // JSONB for full scorecard details
 }
 
 export interface OpponentPlayer {
