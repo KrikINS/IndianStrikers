@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { OpponentTeam, Player, Match, PlayerRole } from '../types';
 import { useLocation } from 'react-router-dom';
-import { updateMatch } from '../services/storageService';
+import { updateMatch, updatePlayer } from '../services/storageService';
 
 // --- Types ---
 
