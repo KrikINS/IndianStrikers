@@ -206,7 +206,8 @@ export const updateMatch = async (match: Match) => {
     toss_time: match.tossTime,
     squad: match.squad, // JSONB or array, Supabase handles it
     is_squad_locked: match.isSquadLocked,
-    scorecard_data: match.scorecardData // JSONB
+    scorecard_data: match.scorecardData, // JSONB
+    stats_updated: match.statsUpdated
   };
   const res = await fetch(`${API_URL}/matches/${match.id}`, {
     method: 'PUT',

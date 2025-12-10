@@ -667,6 +667,19 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   };
 
   const handleUpdateStats = async () => {
+    if (!data.matchInfo.id) {
+      alert("Please select a scheduled match first.");
+      return;
+    }
+    const baseMatch = matches.find(m => m.id === data.matchInfo.id);
+    if (!baseMatch) return;
+
+    // SAFEGUARD: Check if already updated
+    if (baseMatch.statsUpdated) {
+      alert("⚠️ Stats for this match have ALREADY been updated!\n\nUpdating again would double-count everyone's stats. Operation cancelled.");
+      return;
+    }
+
     // 1. Confirm with Admin
     if (!window.confirm("Are you sure? This will add the current scorecard stats to the players' career totals.\n\nOnly do this ONCE per match!")) return;
 
@@ -759,7 +772,11 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         }
       }
 
-      alert(`Successfully updated stats for verified players! (Career totals updated)`);
+      // 3. LOCK THE MATCH
+      const lockedMatch = { ...baseMatch, statsUpdated: true };
+      await updateMatch(lockedMatch);
+
+      alert(`Successfully updated stats for verified players!\n\nReference match marked as 'Stats Updated'.`);
     } catch (e: any) {
       console.error(e);
       alert("Error updating player stats: " + e.message);
