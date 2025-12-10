@@ -79,6 +79,7 @@ interface Innings {
 }
 
 interface MatchInfo {
+  id?: string;
   teamAName: string;
   teamBName: string;
   tossResult: string;
@@ -634,7 +635,24 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     updateData({ ...data, innings: newInnings as [Innings, Innings] });
   };
 
-  // --- Input Handlers ---
+  const handleSelectScheduledMatch = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const matchId = e.target.value;
+    const selected = matches.find(m => m.id === matchId);
+    if (!selected) return;
+
+    setData(prev => ({
+      ...prev,
+      matchInfo: {
+        ...prev.matchInfo,
+        id: matchId,
+        teamAName: 'INDIAN STRIKERS',
+        teamBName: selected.opponent,
+        date: selected.date.split('T')[0],
+        venue: selected.venue,
+        tournament: selected.tournament || ''
+      }
+    }));
+  };
 
   const handleSaveScorecard = async () => {
     if (!data.matchInfo.id) {
