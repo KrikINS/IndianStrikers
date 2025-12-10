@@ -237,16 +237,33 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   // -- Helpers --
 
   const loadMatchData = (match: Match) => {
+    // If we have saved scorecard data, load it entirely!
+    if (match.scorecardData && match.scorecardData.data) {
+      setData(match.scorecardData.data);
+      if (match.scorecardData.liveState) setLiveState(match.scorecardData.liveState);
+      // History? 
+      return;
+    }
+
+    // Otherwise, initialize fresh from match details
     setData(prev => ({
       ...prev,
       matchInfo: {
         ...prev.matchInfo,
-        teamAName: 'Indian Strikers',
+        id: match.id, // CRITICAL: Link to DB ID
+        teamAName: 'INDIAN STRIKERS', // Or use logic if we have home/away fields later
         teamBName: match.opponent,
         venue: match.venue,
         date: match.date,
         tournament: match.tournament || '',
-      }
+        tossResult: '',
+        matchResult: ''
+      },
+      // Ensure specific innings are reset if this is a NEW load
+      innings: [
+        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 },
+        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 }
+      ]
     }));
   };
 
@@ -677,7 +694,12 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         date: selected.date.split('T')[0],
         venue: selected.venue,
         tournament: selected.tournament || ''
-      }
+      },
+      // Reset scorecard when switching matches manually
+      innings: [
+        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 },
+        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 }
+      ]
     }));
   };
 
