@@ -217,7 +217,9 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
       if (mode === 'live') {
         setIsLiveMode(true);
-        setActiveTab(0); // Go to 1st Innings Scoring
+        // For new live matches, verify Info first
+        // If data exists, loadMatchData will handle tab switching if needed
+        setActiveTab(2);
       } else {
         setIsLiveMode(false);
         // If it's a past match (edit mode), start at 1st Innings so they can see/edit table?
@@ -241,30 +243,68 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     if (match.scorecardData && match.scorecardData.data) {
       setData(match.scorecardData.data);
       if (match.scorecardData.liveState) setLiveState(match.scorecardData.liveState);
-      // History? 
+
+      // If data is loaded, we can go to scorer tab
+      if (location.state?.mode === 'live') {
+        setActiveTab(0);
+      }
       return;
     }
 
     // Otherwise, initialize fresh from match details
+    // TRIGGER TOSS LOGIC HERE if resetting
+    // Wait, we can't trigger window.prompt directly inside loadMatchData easily if properly pure, 
+    // but in React we can if it's called from useEffect.
+
+    // We will initialize data first
+    let teamA = 'INDIAN STRIKERS';
+    let teamB = match.opponent;
+    let tossResultText = '';
+
+    // Auto-prompt toss if not already set (conceptually)
+    // Actually, prompts are blocking. We should do it.
+
+    // Delay prompt slightly to let render happen? No, blocking is fine.
+    // If coming from navigation, we want to set it up.
+
+    alert(`Setting up Match: Indians Strikers vs ${match.opponent}`);
+
+    let tossWinner = window.prompt(`Who won the toss?\n1. ${teamA}\n2. ${teamB}`);
+    let tossDecision = '';
+    if (tossWinner === '1' || tossWinner === '2') {
+      tossDecision = window.prompt("What did they choose?\n1. Bat\n2. Bowl") || '';
+    }
+
+    if (tossWinner === '1') {
+      tossResultText = `${teamA} won the toss and elected to ${tossDecision === '1' ? 'Bat' : 'Bowl'}`;
+    } else if (tossWinner === '2') {
+      tossResultText = `${teamB} won the toss and elected to ${tossDecision === '1' ? 'Bat' : 'Bowl'}`;
+    }
+
     setData(prev => ({
       ...prev,
       matchInfo: {
         ...prev.matchInfo,
-        id: match.id, // CRITICAL: Link to DB ID
-        teamAName: 'INDIAN STRIKERS', // Or use logic if we have home/away fields later
-        teamBName: match.opponent,
+        id: match.id,
+        teamAName: teamA,
+        teamBName: teamB,
         venue: match.venue,
         date: match.date,
         tournament: match.tournament || '',
-        tossResult: '',
+        tossResult: tossResultText,
         matchResult: ''
       },
-      // Ensure specific innings are reset if this is a NEW load
       innings: [
         { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 },
         { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 }
       ]
     }));
+
+    // Since it's new, stay on Match Info or go to Scorer? 
+    // Maybe stay on info to verify?
+    if (location.state?.mode === 'live') {
+      setActiveTab(2); // Stay on Info to confirm
+    }
   };
 
 
