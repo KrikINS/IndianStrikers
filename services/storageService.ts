@@ -113,7 +113,19 @@ export const addPlayer = async (player: Partial<Player>) => {
     headers: getHeaders(),
     body: JSON.stringify(dbPlayer)
   });
-  return handleResponse(res);
+  const p = await handleResponse(res);
+  return {
+    ...p,
+    avatarUrl: p.avatar_url,
+    matchesPlayed: p.matches_played,
+    runsScored: p.runs_scored,
+    wicketsTaken: p.wickets_taken,
+    isCaptain: p.is_captain,
+    isViceCaptain: p.is_vice_captain,
+    isAvailable: p.is_available,
+    battingStats: p.batting_stats,
+    bowlingStats: p.bowling_stats
+  };
 };
 
 export const updatePlayer = async (player: Player) => {

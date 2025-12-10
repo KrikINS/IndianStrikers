@@ -196,9 +196,9 @@ const App: React.FC = () => {
   const handleAddPlayer = async (player: Player) => {
     if (userRole !== 'admin') return;
     try {
-      await addPlayer(player);
-      // Optimistic or Refetch
-      setPlayers(prev => [player, ...prev]);
+      const newPlayer = await addPlayer(player);
+      // Use the verified player from backend (with real ID)
+      setPlayers(prev => [newPlayer, ...prev]);
     } catch (e) {
       console.error(e);
       alert("Failed to add player");
