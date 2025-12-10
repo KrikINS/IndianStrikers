@@ -250,12 +250,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     }));
   };
 
-  const handleSelectScheduledMatch = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const matchId = e.target.value;
-    if (!matchId) return;
-    const match = matches.find(m => m.id === matchId);
-    if (match) loadMatchData(match);
-  };
+
 
   const getOversFromBalls = (balls: number) => Math.floor(balls / 6) + (balls % 6) / 10;
 
