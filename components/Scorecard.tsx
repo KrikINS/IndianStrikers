@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { OpponentTeam, Player, Match, PlayerRole } from '../types';
 import { useLocation } from 'react-router-dom';
+import { updateMatch } from '../services/storageService';
 
 // --- Types ---
 
@@ -635,6 +636,37 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   };
 
   // --- Input Handlers ---
+  const handleSaveScorecard = async () => {
+    if (!data.matchInfo.id) {
+      alert("Please select a valid scheduled match (Fixture) to save to.");
+      return;
+    }
+
+    const baseMatch = matches.find(m => m.id === data.matchInfo.id);
+    if (!baseMatch) {
+      alert("Selected match not found in database.");
+      return;
+    }
+
+    const updatedMatch: Match = {
+      ...baseMatch,
+      scorecardData: {
+        data,
+        history: historyState.commentary,
+        liveState
+      }
+      // Ideally also update result, scoreFor, scoreAgainst here if we had logic
+    };
+
+    try {
+      await updateMatch(updatedMatch);
+      alert("Scorecard saved successfully!");
+    } catch (e: any) {
+      console.error("Save failed", e);
+      alert("Failed to save scorecard: " + e.message);
+    }
+  };
+
   const handleMatchInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setData({ ...data, matchInfo: { ...data.matchInfo, [e.target.name]: e.target.value } });
   };
@@ -1075,51 +1107,6 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
             <Zap size={18} className={isLiveMode ? "fill-red-600" : ""} />
             {isLiveMode ? 'Exit Live' : 'Go Live'}
           </button>
-          import {updateMatch} from '../services/storageService';
-
-// ... (in component)
-
-  const handleSaveScorecard = async () => {
-    if (!data.matchInfo.id) {
-            alert("Please select a valid scheduled match (Fixture) to save to.");
-          return;
-    }
-
-    // Construct the updated match object
-    // We assume 'matches' prop contains the base match object. We find it or construct partial.
-    const baseMatch = matches.find(m => m.id === data.matchInfo.id);
-          if (!baseMatch) {
-            alert("Selected match not found in database.");
-          return;
-    }
-
-          // Calculate score strings from innings data
-          // Format: "145/4 (20.0)"
-          const scoreFor = `${data.innings[0].totalRuns}/${data.innings[0].wickets} (${calculateInningsTotals(0).overs})`;
-          // Logic for scoreAgainst depends on who batted first, assuming INDIAN STRIKERS is innings[0] if activeTab=0?
-          // Let's just save the full JSON payload mostly.
-
-          // We update the match with both summary and full detail
-          const updatedMatch: Match = {
-            ...baseMatch,
-            // We might want to update the result/scoreFor/scoreAgainst based on game state
-            scorecardData: {
-            data,
-            history: historyState.commentary,
-          liveState
-        }
-    };
-
-          try {
-            await updateMatch(updatedMatch);
-          alert("Scorecard saved successfully!");
-    } catch (e: any) {
-            console.error("Save failed", e);
-          alert("Failed to save scorecard: " + e.message);
-    }
-  };
-
-          // ... (render)
           <button onClick={handleSaveScorecard} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all text-sm md:text-base">
             <Save size={18} /> Save
           </button>
