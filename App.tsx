@@ -69,7 +69,7 @@ const AppContent: React.FC<{
 
         <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
           <Routes>
-            <Route path="/home" element={<Dashboard players={players} matches={matches} userRole={userRole} />} />
+            <Route path="/home" element={<Dashboard players={players} matches={matches} userRole={userRole} teamLogo={teamLogo} />} />
             <Route
               path="/roster"
               element={
