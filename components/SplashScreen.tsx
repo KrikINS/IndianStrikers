@@ -150,21 +150,21 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center overflow-hidden font-sans">
+    <div className="fixed inset-0 z-50 bg-slate-900 overflow-y-auto font-sans">
       {/* Brand Logo - Top Left Corner */}
       <div className="absolute top-6 left-6 z-20 opacity-80 hover:opacity-100 transition-opacity">
         <KirikINSLogo size="medium" />
       </div>
 
       {/* Dynamic Background */}
-      <div className="absolute inset-0 z-0">
+      <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-slate-900 to-black opacity-90"></div>
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[100px] animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[100px] animate-pulse delay-700"></div>
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.3) 1px, transparent 0)', backgroundSize: '30px 30px' }}></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col items-center justify-center h-full">
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col items-center justify-center min-h-screen py-12">
 
         {/* CENTER LOGO SECTION - RESTORED INDIAN STRIKERS */}
         <div className={`
@@ -206,13 +206,13 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
 
         {/* LOGIN BUTTONS */}
         <div className={`
-          w-full max-w-4xl grid md:grid-cols-3 gap-4 md:gap-6 mt-8
+          w-full max-w-4xl grid md:grid-cols-3 gap-3 md:gap-6 mt-8
           transform transition-all duration-700 ease-out delay-100
           ${animationStep >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20 pointer-events-none'}
         `}>
           <button
             onClick={() => handleRoleSelect('admin')}
-            className="group relative bg-slate-800/60 hover:bg-slate-800 backdrop-blur-md border border-slate-700/50 hover:border-blue-500 rounded-xl p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-blue-500/10 text-left overflow-hidden"
+            className="group relative bg-slate-800/60 hover:bg-slate-800 backdrop-blur-md border border-slate-700/50 hover:border-blue-500 rounded-xl p-4 md:p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-blue-500/10 text-left overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Shield size={64} className="text-blue-500 rotate-12" /></div>
             <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4 text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors"><Shield size={24} /></div>
@@ -223,7 +223,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
 
           <button
             onClick={() => handleRoleSelect('member')}
-            className="group relative bg-slate-800/60 hover:bg-slate-800 backdrop-blur-md border border-slate-700/50 hover:border-emerald-500 rounded-xl p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-emerald-500/10 text-left overflow-hidden"
+            className="group relative bg-slate-800/60 hover:bg-slate-800 backdrop-blur-md border border-slate-700/50 hover:border-emerald-500 rounded-xl p-4 md:p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-emerald-500/10 text-left overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Users size={64} className="text-emerald-500 rotate-12" /></div>
             <div className="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4 text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors"><Users size={24} /></div>
@@ -234,7 +234,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
 
           <button
             onClick={() => handleRoleSelect('guest')}
-            className="group relative bg-slate-800/60 hover:bg-slate-800 backdrop-blur-md border border-slate-700/50 hover:border-orange-500 rounded-xl p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-orange-500/10 text-left overflow-hidden"
+            className="group relative bg-slate-800/60 hover:bg-slate-800 backdrop-blur-md border border-slate-700/50 hover:border-orange-500 rounded-xl p-4 md:p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-orange-500/10 text-left overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Ticket size={64} className="text-orange-500 rotate-12" /></div>
             <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center mb-4 text-orange-400 group-hover:bg-orange-600 group-hover:text-white transition-colors"><Ticket size={24} /></div>
