@@ -87,6 +87,7 @@ interface MatchInfo {
   date: string;
   venue: string;
   tournament: string;
+  resultType?: 'Won' | 'Lost' | 'Draw' | 'Tie' | 'No Result' | 'Pending';
 }
 
 interface ScorecardData {
@@ -193,7 +194,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       matchResult: '',
       date: new Date().toISOString().split('T')[0],
       venue: 'RCA-1',
-      tournament: ''
+      tournament: '',
+      resultType: 'Pending'
     },
     innings: [
       { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 },
@@ -293,7 +295,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         date: match.date,
         tournament: match.tournament || '',
         tossResult: tossResultText,
-        matchResult: ''
+        matchResult: '',
+        resultType: (match.result as any) || 'Pending'
       },
       innings: [
         { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 },
@@ -690,7 +693,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
   const handleSelectScheduledMatch = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const matchId = e.target.value;
-    const selected = matches.find(m => m.id === matchId);
+    // Fix: Convert ID to string for comparison as DB might return numbers
+    const selected = matches.find(m => String(m.id) === String(matchId));
     if (!selected) return;
 
     // Prompt for Toss
@@ -709,15 +713,6 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     const teamB = selected.opponent;
     let tossResultText = '';
 
-    // Logic: 
-    // If Team A won and Bat -> A is Innings 1
-    // If Team A won and Bowl -> B is Innings 1
-    // If Team B won and Bat -> B is Innings 1
-    // If Team B won and Bowl -> A is Innings 1
-
-    // Determining Innings 1
-    // We update matchInfo.tossResult string.
-
     if (tossWinner === '1') {
       tossResultText = `${teamA} won the toss and elected to ${tossDecision === '1' ? 'Bat' : 'Bowl'}`;
     } else if (tossWinner === '2') {
@@ -734,7 +729,9 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         tossResult: tossResultText,
         date: selected.date.split('T')[0],
         venue: selected.venue,
-        tournament: selected.tournament || ''
+        tournament: selected.tournament || '',
+        // Initialize result based on existing match data if available
+        resultType: (selected.result as any) || 'Pending'
       },
       // Reset scorecard when switching matches manually
       innings: [
@@ -750,14 +747,24 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       return;
     }
 
-    const baseMatch = matches.find(m => m.id === data.matchInfo.id);
+    // Fix: Convert ID to string for lookup
+    const baseMatch = matches.find(m => String(m.id) === String(data.matchInfo.id));
     if (!baseMatch) {
       alert("Selected match not found in database.");
       return;
     }
 
+    const isCompleted = data.matchInfo.resultType && data.matchInfo.resultType !== 'Pending';
+
     const updatedMatch: Match = {
       ...baseMatch,
+      // Update core match details if they changed
+      venue: data.matchInfo.venue,
+      date: data.matchInfo.date,
+      // Update Result and Status if a result is selected
+      result: isCompleted ? (data.matchInfo.resultType as any) : baseMatch.result,
+      isUpcoming: isCompleted ? false : baseMatch.isUpcoming,
+
       scorecardData: {
         data,
         history: ballCommentary,
@@ -779,7 +786,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       alert("Please select a scheduled match first.");
       return;
     }
-    const baseMatch = matches.find(m => m.id === data.matchInfo.id);
+    const baseMatch = matches.find(m => String(m.id) === String(data.matchInfo.id));
     if (!baseMatch) return;
 
     // SAFEGUARD: Check if already updated
@@ -1018,8 +1025,22 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
               <input name="tossResult" value={data.matchInfo.tossResult} onChange={handleMatchInfoChange} placeholder="e.g. Team A won and elected to bat" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-800" />
             </div>
             <div className="flex-1">
-              <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Match Result</label>
-              <input name="matchResult" value={data.matchInfo.matchResult} onChange={handleMatchInfoChange} placeholder="e.g. Team A won by 20 runs" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-800" />
+              <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Match Outcome</label>
+              <div className="flex gap-2">
+                <select
+                  className="p-3 bg-white border border-slate-200 rounded-xl text-slate-800 font-bold text-sm"
+                  value={data.matchInfo.resultType || 'Pending'}
+                  onChange={(e) => setData({ ...data, matchInfo: { ...data.matchInfo, resultType: e.target.value as any } })}
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="Won">Won</option>
+                  <option value="Lost">Lost</option>
+                  <option value="Draw">Draw</option>
+                  <option value="Tie">Tie</option>
+                  <option value="No Result">No Result</option>
+                </select>
+                <input name="matchResult" value={data.matchInfo.matchResult} onChange={handleMatchInfoChange} placeholder="Details (e.g. Won by 20 runs)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-800" />
+              </div>
             </div>
           </div>
         </div>
