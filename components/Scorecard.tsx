@@ -243,6 +243,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     if (match.scorecardData && match.scorecardData.data) {
       setData(match.scorecardData.data);
       if (match.scorecardData.liveState) setLiveState(match.scorecardData.liveState);
+      if (match.scorecardData.history) setBallCommentary(match.scorecardData.history);
 
       // If data is loaded, we can go to scorer tab
       if (location.state?.mode === 'live') {
@@ -759,7 +760,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       ...baseMatch,
       scorecardData: {
         data,
-        history: historyState.commentary,
+        history: ballCommentary,
         liveState
       }
     };

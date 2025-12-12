@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import {
   Users,
   Calendar,
@@ -188,11 +188,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
                 onChange={handleLogoUpload}
               />
             </div>
-            <span className="text-xl font-black tracking-tight leading-none">
+            <Link to="/home" className="text-xl font-black tracking-tight leading-none hover:opacity-80 transition-opacity block">
               <span className="text-white">INDIAN</span><br />
               {/* Removed text stroke for simpler styling as requested previously */}
               <span className="text-[#4169E1]">STRIKERS</span>
-            </span>
+            </Link>
           </div>
         </div>
 
