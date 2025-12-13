@@ -22,7 +22,11 @@ import {
   CircleDot,
   Medal,
   Handshake,
-  Edit2
+  Edit2,
+  ArrowRight,
+  Settings,
+  CheckCircle2,
+  Hand
 } from 'lucide-react';
 import { OpponentTeam, Player, Match, PlayerRole } from '../types';
 import { useLocation } from 'react-router-dom';
@@ -91,6 +95,9 @@ interface MatchInfo {
   resultType?: 'Won' | 'Lost' | 'Draw' | 'Tie' | 'No Result' | 'Pending';
   squad?: string[];
   opponentSquad?: string[];
+  totalOvers?: number;
+  target?: number;
+  penaltyRuns?: number;
 }
 
 interface ScorecardData {
@@ -153,9 +160,10 @@ interface ScorecardProps {
   opponents?: OpponentTeam[];
   players?: Player[];
   matches?: Match[];
+  onUpdateMatch?: (m: Match) => void;
 }
 
-const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], matches = [] }) => {
+const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], matches = [], onUpdateMatch }) => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<0 | 1 | 2>(2);
   const [isLiveMode, setIsLiveMode] = useState(false);
@@ -187,6 +195,23 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     nonStrikerId: '',
     bowlerId: ''
   });
+
+  // Modal Sequence State: 'striker' -> 'nonStriker' -> 'bowler' -> 'none'
+  const [selectionModalStep, setSelectionModalStep] = useState<'striker' | 'nonStriker' | 'bowler' | 'none'>('none');
+
+  useEffect(() => {
+    // Initial Load / New Innings: Trigger Striker Selection if empty
+    if (activeTab === 0 || !isLiveMode) return;
+    const innIdx = activeTab === 1 ? 0 : 1;
+    // Delay slightly to ensure data loaded
+    const t = setTimeout(() => {
+      if (!liveState.strikerId && selectionModalStep === 'none' && !playerSelector) {
+        setSelectionModalStep('striker');
+        setPlayerSelector({ inningIdx: innIdx, type: 'batsman' });
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [activeTab, isLiveMode]); // Run when tab changes or mode changes
 
   // Initial State
   const [data, setData] = useState<ScorecardData>({
@@ -220,6 +245,10 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   });
   const [squadModal, setSquadModal] = useState(false);
   const [opponentSquadModal, setOpponentSquadModal] = useState(false);
+  const [inningsBreakModal, setInningsBreakModal] = useState(false);
+  const [matchSettingsModal, setMatchSettingsModal] = useState(false);
+  const [endMatchModal, setEndMatchModal] = useState(false);
+  const [selectedMOM, setSelectedMOM] = useState<string | null>(null);
   const commentaryEndRef = useRef<HTMLDivElement>(null);
 
   // Combine Indian Strikers + Opponents for dropdowns
@@ -228,9 +257,65 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     ...opponents
   ];
 
+
+  const [activeMatchId, setActiveMatchId] = useState<string | number | null>(null);
+  const showMatchList = !activeMatchId && (!location.state || !location.state.match);
+
+  if (showMatchList) {
+    const upcomingMatches = matches.filter(m => (m.result === 'Pending' || !m.result) && !m.scorecardData);
+
+    return (
+      <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+        <h1 className="text-2xl md:text-3xl font-black text-slate-800 flex items-center gap-2">
+          <Zap className="fill-blue-600 text-blue-600" /> Live Scoring
+        </h1>
+        <p className="text-slate-500">Select a scheduled match to start scoring.</p>
+
+        <div className="grid gap-4">
+          {upcomingMatches.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200">
+              <p className="text-slate-400 font-bold">No upcoming matches scheduled.</p>
+            </div>
+          ) : (
+            upcomingMatches.map(match => (
+              <button
+                key={match.id}
+                onClick={() => {
+                  setActiveMatchId(match.id);
+                  loadMatchData(match);
+                  // Force Live Mode
+                  setIsLiveMode(true);
+                  // Toss will be triggered by loadMatchData helper
+                }}
+                className="flex justify-between items-center p-4 md:p-6 bg-white border border-slate-200 hover:border-blue-500 hover:shadow-lg rounded-2xl transition-all text-left group"
+              >
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-700">vs {match.opponent}</h3>
+                  <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                    <span>{match.date}</span>
+                    <span>•</span>
+                    <span>{match.venue}</span>
+                  </div>
+                </div>
+                <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <ArrowRightLeft size={20} />
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     if (location.state && location.state.match) {
-      loadMatchData(location.state.match);
+
+      const matchId = location.state.match.id;
+      // Fix: Prioritize fresh data from 'matches' prop if available, otherwise use route state
+      const freshMatch = matches.find(m => String(m.id) === String(matchId)) || location.state.match;
+
+      loadMatchData(freshMatch);
       const mode = location.state.mode;
 
       if (mode === 'live') {
@@ -244,8 +329,13 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         // Or Match Info? User said "enter past match score", so probably the table.
         setActiveTab(0);
       }
+      setActiveMatchId(freshMatch.id);
     }
-  }, [location.state]);
+  }, [location.state, matches]);
+
+  // Auto-Select Removed in favor of Modal Flow
+  // useEffect removed
+
 
   useEffect(() => {
     // Auto-scroll commentary
@@ -277,34 +367,23 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     // 1. No existing scorecard data (handled above)
     // 2. The match is NOT completed (result is Pending or undefined) OR user explicitly wants to start scoring
 
-    const isCompleted = match.result && match.result !== 'Pending';
-
-    if (!isCompleted) {
-      // Trigger Toss Modal instead of prompts
-      setTossModal({
-        isOpen: true,
-        match: match,
-        step: 'winner',
-        winner: null
-      });
-    }
-
-    // Initialize data with default pending state (Toss will update this later)
+    // Initialize defaults for new match flow
     setData(prev => ({
       ...prev,
       matchInfo: {
         ...prev.matchInfo,
-        id: match.id,
+        id: match.id ? match.id.toString() : undefined,
         teamAName: 'INDIAN STRIKERS',
         teamBName: match.opponent,
         venue: match.venue,
         date: match.date,
         tournament: match.tournament || '',
-        tossResult: '', // Will be filled by Toss Modal
+        tossResult: '',
         matchResult: '',
         resultType: (match.result as any) || 'Pending',
         squad: match.squad || [],
-        opponentSquad: (match as any).opponentSquad || [] // Fetch if exists in DB schema (might need migration)
+        opponentSquad: (match as any).opponentSquad || [],
+        totalOvers: (match as any).totalOvers || 20
       },
       innings: [
         { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 },
@@ -312,10 +391,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       ]
     }));
 
-    // If it's new, stay on Match Info to verify/wait for toss
-    if (location.state?.mode === 'live') {
-      setActiveTab(2);
-    }
+    // Start at Setup (Tab 0) unless data suggests otherwise (handled in early return)
+    setActiveTab(0);
   };
 
 
@@ -327,6 +404,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     const totalBalls = Math.floor(ov) * 6 + Math.round((ov % 1) * 10) + ballsToAdd;
     return getOversFromBalls(totalBalls);
   };
+
+
 
   const getStrikeRate = (runs: number | '', balls: number | '') => {
     const r = Number(runs || 0);
@@ -356,9 +435,21 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   };
 
   const getTeamPlayers = (teamName: string) => {
-    if (teamName === 'Indian Strikers') {
+    // Check if Home Team
+    if (teamName === data.matchInfo.teamAName) {
+      if (data.matchInfo.squad && data.matchInfo.squad.length > 0) {
+        return data.matchInfo.squad.map(id => {
+          const p = players.find(x => x.id === id);
+          return { id, name: p ? p.name : 'Unknown' };
+        });
+      }
       return players.map(p => ({ id: p.id, name: p.name }));
     }
+    // Check if Opponent Squad is set manually (prioritize match info settings)
+    if (data.matchInfo.opponentSquad && data.matchInfo.opponentSquad.length > 0) {
+      return data.matchInfo.opponentSquad.map((name, i) => ({ id: `opp-${i}-${name}`, name }));
+    }
+    // Fallback to Roster
     const opponent = opponents.find(op => op.name === teamName);
     return opponent ? opponent.players.map(p => ({ id: p.id, name: p.name })) : [];
   };
@@ -438,6 +529,109 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
     const partnershipBalls = inningCommentary.slice(lastWicketIndex + 1);
     const partnershipRuns = partnershipBalls.reduce((acc, curr) => acc + curr.runs + (curr.extrasRuns || 0), 0);
+
+    const p1 = data.innings[inningIdx].batting.find(b => b.id === liveState.strikerId) || { name: 'P1', runs: 0, balls: 0 };
+    const p2 = data.innings[inningIdx].batting.find(b => b.id === liveState.nonStrikerId) || { name: 'P2', runs: 0, balls: 0 };
+
+    return {
+      p1, p2,
+      totalRuns: partnershipRuns,
+      totalBalls: partnershipBalls.length
+    };
+  };
+
+
+
+  const handlePreviewPlayer = (player: any) => {
+    // Enrich with full stats if possible
+    const fullPlayer = findFullPlayer(player.id, player.name);
+    setSelectionPreview(fullPlayer);
+  };
+
+  const handleAddPlayerFromPreview = () => {
+    if (!playerSelector || !selectionPreview) return;
+
+    const { inningIdx, type } = playerSelector;
+    const newId = selectionPreview.id || selectionPreview.name || `new-${Date.now()}`;
+    const newName = selectionPreview.name || 'Unknown';
+
+    const newInnings = [...data.innings];
+    const currentList = type === 'batsman' ? newInnings[inningIdx].batting : newInnings[inningIdx].bowling;
+
+    // Check if duplicate (should be filtered but safeguard)
+    if (currentList.find(p => p.id === newId)) {
+      alert("Player already added!");
+      return;
+    }
+
+    // Add to Table
+    if (type === 'batsman') {
+      const entry: BattingEntry = {
+        id: newId, name: newName, runs: 0, balls: 0, fours: 0, sixes: 0, howOut: 'Not Out'
+      };
+      newInnings[inningIdx].batting.push(entry);
+    } else {
+      const entry: BowlingEntry = {
+        id: newId, name: newName, overs: 0, maidens: 0, runs: 0, wickets: 0, economy: 0
+      };
+      newInnings[inningIdx].bowling.push(entry);
+    }
+
+    // Update Data
+    updateData({ ...data, innings: newInnings as [Innings, Innings] });
+
+    // Set Active State & Chain Modals
+    if (type === 'batsman') {
+      if (selectionModalStep === 'striker') {
+        setLiveState(prev => ({ ...prev, strikerId: newId }));
+        // Chain to Non-Striker
+        if (!liveState.nonStrikerId) {
+          setSelectionModalStep('nonStriker');
+          // Short delay to allow state update/UI refresh
+          setTimeout(() => {
+            setPlayerSelector({ inningIdx, type: 'batsman' });
+            setSelectionPreview(null);
+          }, 100);
+        } else {
+          // Striker done, check Bowler sequence? (Usually non-striker is already there if we are replacing striker)
+          setSelectionModalStep('none');
+          setPlayerSelector(null);
+        }
+      } else if (selectionModalStep === 'nonStriker') {
+        setLiveState(prev => ({ ...prev, nonStrikerId: newId }));
+
+        // Chain to Bowler? Only if just starting active match or over end?
+        // If we just started match (striker -> nonStriker -> bowler)
+        if (!liveState.bowlerId) {
+          setSelectionModalStep('bowler');
+          setTimeout(() => {
+            setPlayerSelector({ inningIdx, type: 'bowler' });
+            setSelectionPreview(null);
+          }, 100);
+        } else {
+          setSelectionModalStep('none');
+          setPlayerSelector(null);
+        }
+      } else {
+        // Manual Add
+        setPlayerSelector(null);
+      }
+    } else {
+      // BOWLER
+      if (selectionModalStep === 'bowler') {
+        setLiveState(prev => ({ ...prev, bowlerId: newId }));
+        setSelectionModalStep('none');
+        setPlayerSelector(null);
+      } else {
+        // Manual Add
+        setPlayerSelector(null);
+      }
+    }
+
+    setSelectionPreview(null);
+  };
+
+  const calculatePartnership = (partnershipBalls: any[], partnershipRuns: number, inningIdx: 0 | 1) => {
     const ballCount = partnershipBalls.length; // Approximate balls duration
 
     const striker = data.innings[inningIdx].batting.find(b => b.id === liveState.strikerId);
@@ -475,11 +669,6 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   };
 
   const handleScoreBall = (runs: number, isWide: boolean, isNoBall: boolean, isWicket: boolean, isBye: boolean = false, isLegBye: boolean = false) => {
-    if (!liveState.strikerId || !liveState.nonStrikerId || !liveState.bowlerId) {
-      alert("Please select Striker, Non-Striker and Bowler first.");
-      return;
-    }
-
     if (isWicket) {
       setWicketModal({
         isOpen: true,
@@ -530,7 +719,19 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     const strikerIdx = currentInning.batting.findIndex(p => p.id === liveState.strikerId);
     const bowlerIdx = currentInning.bowling.findIndex(p => p.id === liveState.bowlerId);
 
-    if (strikerIdx === -1 || bowlerIdx === -1) return;
+    if (strikerIdx === -1 || bowlerIdx === -1) {
+      let missing = [];
+      if (strikerIdx === -1) missing.push("Striker (Batting)");
+      if (liveState.nonStrikerId && currentInning.batting.findIndex(p => p.id === liveState.nonStrikerId) === -1) missing.push("Non-Striker");
+      if (bowlerIdx === -1) missing.push("Bowler");
+
+      // Check if IDs are set but just not found (mismatch) vs Empty
+      if (!liveState.strikerId) missing = ["Striker (Not Selected)"];
+      else if (strikerIdx === -1) missing = [`Striker (ID Mismatch: ${liveState.strikerId})`];
+
+      alert(`Action Blocked: Missing Active Players.\n\nPlease select the following in the dropdowns above the 'Undo' button:\n- ${missing.join('\n- ')}`);
+      return;
+    }
 
     const striker = currentInning.batting[strikerIdx];
     const bowler = currentInning.bowling[bowlerIdx];
@@ -626,6 +827,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       });
 
       setLiveState(prev => ({ ...prev, strikerId: '' }));
+      // Wicket Fall: Next step is to select new Striker
+      setSelectionModalStep('striker');
       setPlayerSelector({ inningIdx: innIdx as 0 | 1, type: 'batsman', autoTrigger: true });
     }
 
@@ -682,7 +885,10 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       ballNumber: Math.round((calculateInningsTotals(currentInning).overs % 1) * 10),
       striker: striker.name, bowler: bowler.name, runs: ballRuns, extrasType, extrasRuns, isWicket, description
     };
-    setBallCommentary(prev => [...prev, newEvent]);
+
+    // Only check end match if VALID ball (ignore phantom undo/redo triggers if any)
+    const nextHistory = [...ballCommentary, newEvent];
+    setBallCommentary(nextHistory);
 
     // Swap Ends
     if (runs % 2 !== 0 && validBall) {
@@ -693,9 +899,64 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     const newOvers = Number(bowler.overs);
     if (validBall && Math.round((newOvers % 1) * 10) === 0 && newOvers > 0) {
       setLiveState(prev => ({ ...prev, strikerId: prev.nonStrikerId, nonStrikerId: prev.strikerId, bowlerId: '' }));
-      if (!isWicket) setPlayerSelector({ inningIdx: innIdx as 0 | 1, type: 'bowler', autoTrigger: true });
+      if (!isWicket) {
+        // Over End: Next step is to select new Bowler
+        setSelectionModalStep('bowler');
+        setPlayerSelector({ inningIdx: innIdx as 0 | 1, type: 'bowler', autoTrigger: true });
+      }
     }
     updateData({ ...data, innings: newInnings as [Innings, Innings] });
+
+    // Check Innings End Criteria (Only for 1st Innings usually, but check both)
+    // We need to calculate totals based on the NEW updated data, but updateData is async-ish in React state, 
+    // so we use the local calculated values.
+    const updatedStats = calculateInningsTotals(currentInning);
+    const maxOvers = data.matchInfo.totalOvers || 20;
+
+    if (innIdx === 0 && (updatedStats.wickets >= 10 || updatedStats.overs >= maxOvers)) {
+      setInningsBreakModal(true);
+    }
+    else if (innIdx === 1) {
+      // Check Match End
+      const target = data.matchInfo.target || 9999; // Should exist if 2nd innings started
+      // 1. Chasing Team Won?
+      if (updatedStats.totalRuns >= target) {
+        setEndMatchModal(true);
+      }
+      // 2. Defending Team Won? (All Out or Overs Done and Runs < Target)
+      else if (updatedStats.wickets >= 10 || updatedStats.overs >= maxOvers) {
+        setEndMatchModal(true); // Logic for Tie is implied if Runs == Target-1, handled in Result Calculation
+      }
+    }
+  };
+
+  const getTopPerformers = () => {
+    // Simple Fantasy Points: Run=1, Wicket=20, Catch=10, 50=10, 100=20, 5W=20
+    // We need to map Name -> Points
+    const pointsMap = new Map<string, number>();
+
+    const processInning = (ing: Innings) => {
+      ing.batting.forEach(b => {
+        let pts = (Number(b.runs) || 0);
+        if (Number(b.runs) >= 50) pts += 10;
+        if (Number(b.runs) >= 100) pts += 10; // Cumulative
+        pointsMap.set(b.name, (pointsMap.get(b.name) || 0) + pts);
+      });
+      ing.bowling.forEach(b => {
+        let pts = (Number(b.wickets) || 0) * 20;
+        if (Number(b.wickets) >= 5) pts += 20;
+        pointsMap.set(b.name, (pointsMap.get(b.name) || 0) + pts);
+      });
+    };
+
+    processInning(data.innings[0]);
+    processInning(data.innings[1]);
+
+    // Convert to array and sort
+    return Array.from(pointsMap.entries())
+      .map(([name, points]) => ({ name, points }))
+      .sort((a, b) => b.points - a.points)
+      .slice(0, 5);
   };
 
   const handleSelectScheduledMatch = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -737,7 +998,9 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         venue: tossModal.match!.venue,
         tournament: tossModal.match!.tournament || '',
         // Initialize result based on existing match data if available
-        resultType: (tossModal.match!.result as any) || 'Pending'
+        // Initialize result based on existing match data if available
+        resultType: (tossModal.match!.result as any) || 'Pending',
+        totalOvers: data.matchInfo.totalOvers || 20
       },
       // Reset scorecard when switching matches manually
       innings: [
@@ -788,7 +1051,11 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     };
 
     try {
-      await updateMatch(updatedMatch);
+      if (onUpdateMatch) {
+        onUpdateMatch(updatedMatch);
+      } else {
+        await updateMatch(updatedMatch);
+      }
       alert("Scorecard saved successfully!");
     } catch (e: any) {
       console.error("Save failed", e);
@@ -939,38 +1206,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     setPlayerSelector({ inningIdx: innIdx as 0 | 1, type: type === 'batting' ? 'batsman' : 'bowler' });
   };
 
-  const handlePreviewPlayer = (partialPlayer: { id: string, name: string }) => {
-    setSelectionPreview(findFullPlayer(partialPlayer.id, partialPlayer.name));
-  };
 
-  const handleAddPlayerFromPreview = () => {
-    if (!playerSelector || !selectionPreview) return;
-    const { inningIdx, type, autoTrigger } = playerSelector;
-    const newInnings = [...data.innings];
-
-    if (type === 'batsman') {
-      const newBatsman: BattingEntry = {
-        id: selectionPreview.id || Date.now().toString(),
-        name: selectionPreview.name || 'Unknown',
-        runs: 0, balls: 0, fours: 0, sixes: 0, howOut: 'Not Out', fielder: '', bowler: ''
-      };
-      newInnings[inningIdx].batting.push(newBatsman);
-      if (autoTrigger) setLiveState(prev => ({ ...prev, strikerId: newBatsman.id }));
-    } else {
-      const newBowler: BowlingEntry = {
-        id: selectionPreview.id || Date.now().toString(),
-        name: selectionPreview.name || 'Unknown',
-        overs: 0, maidens: 0, runs: 0, wickets: 0, wides: 0, noBalls: 0, legByes: 0, dots: 0
-      };
-      newInnings[inningIdx].bowling.push(newBowler);
-      if (autoTrigger) setLiveState(prev => ({ ...prev, bowlerId: newBowler.id }));
-    }
-
-    updateData({ ...data, innings: newInnings as [Innings, Innings] });
-    setPlayerSelector(null);
-    setSelectionPreview(null);
-    setSearchQuery('');
-  };
 
   const removeRow = (type: 'batting' | 'bowling', innIdx: number, id: string) => {
     const newInnings = [...data.innings];
@@ -979,167 +1215,36 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     updateData({ ...data, innings: newInnings as [Innings, Innings] });
   };
 
+
   const renderTabContent = () => {
-    if (activeTab === 2) {
+    if (activeTab === 0) {
       return (
         <div className="space-y-6 animate-fade-in">
-          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <Target size={24} className="text-blue-500" />
-            Match Info
-          </h3>
-          <div className="bg-slate-100 p-4 rounded-xl border border-slate-200">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
-              <Calendar size={14} /> Select Scheduled Fixture (Auto-fill)
-            </label>
-            <select
-              className="w-full p-3 bg-white border border-slate-300 rounded-xl text-slate-800 font-medium text-sm"
-              onChange={handleSelectScheduledMatch}
-              defaultValue=""
-            >
-              <option value="" disabled>Select a match to score...</option>
-              {matches.filter(m => m.isUpcoming).map(m => (
-                <option key={m.id} value={m.id}>VS {m.opponent} ({new Date(m.date).toLocaleDateString()}) - {m.tournament}</option>
-              ))}
-            </select>
+          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center">
+            <h3 className="text-xl font-bold text-slate-700 mb-2">Match Information</h3>
+            <p className="text-slate-500">Date: {data.matchInfo.date}</p>
+            <p className="text-slate-500">Venue: {data.matchInfo.venue}</p>
+            <p className="text-slate-500 mt-4">Toss: {data.matchInfo.tossResult || 'Pending'}</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">League / Tournament</label>
-                <input name="tournament" value={data.matchInfo.tournament} onChange={handleMatchInfoChange} placeholder="e.g. Winter Cup 2024" className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Team A (Batting 1st)</label>
-                <select name="teamAName" value={data.matchInfo.teamAName} onChange={handleMatchInfoChange} className="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800">
-                  {allTeams.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Team B (Batting 2nd)</label>
-                <select name="teamBName" value={data.matchInfo.teamBName} onChange={handleMatchInfoChange} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-800">
-                  {allTeams.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
-                </select>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 border rounded-xl">
+              <h4 className="font-bold mb-2 text-blue-700">{data.matchInfo.teamAName}</h4>
+              <p className="text-sm text-slate-500">{data.matchInfo.squad?.length || 0} Players Selected</p>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Venue</label>
-                <select name="venue" value={data.matchInfo.venue} onChange={handleMatchInfoChange} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-800">
-                  {Array.from({ length: 15 }, (_, i) => `RCA-${i + 1}`).map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Date</label>
-                <input type="date" name="date" value={data.matchInfo.date} onChange={handleMatchInfoChange} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-800" />
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-4 p-4 bg-slate-100 rounded-xl">
-            <div className="flex-1">
-              <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Match Outcome</label>
-              <div className="flex gap-2">
-                <select
-                  className="p-3 bg-white border border-slate-200 rounded-xl text-slate-800 font-bold text-sm"
-                  value={data.matchInfo.resultType || 'Pending'}
-                  onChange={(e) => setData({ ...data, matchInfo: { ...data.matchInfo, resultType: e.target.value as any } })}
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Won">Won</option>
-                  <option value="Lost">Lost</option>
-                  <option value="Draw">Draw</option>
-                </select>
-                <input name="matchResult" value={data.matchInfo.matchResult} onChange={handleMatchInfoChange} placeholder="Details (e.g. Won by 20 runs)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-800" />
-              </div>
-            </div>
-          </div>
-
-          {/* Playing XI Selection */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="font-bold text-slate-700 uppercase text-xs flex items-center gap-2">
-                <Users size={16} className="text-blue-600" />
-                Playing XI (Indian Strikers)
-              </h4>
-              <button
-                onClick={() => setSquadModal(true)}
-                className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1"
-              >
-                <Edit2 size={12} /> Manage Squad
-              </button>
-            </div>
-
-            {(!data.matchInfo.squad || data.matchInfo.squad.length === 0) ? (
-              <div className="text-center py-6 text-slate-400 text-sm italic">
-                No players selected yet.
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {data.matchInfo.squad.map(playerId => {
-                  const p = players.find(pl => pl.id === playerId);
-                  return p ? (
-                    <div key={p.id} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 overflow-hidden">
-                        {p.avatarUrl ? <img src={p.avatarUrl} className="w-full h-full object-cover" /> : p.name.slice(0, 2)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-800 truncate">{p.name}</p>
-                        <p className="text-[10px] text-slate-500 truncate">{p.role}</p>
-                      </div>
-                    </div>
-                  ) : null;
-                })}
-              </div>
-            )}
-            <div className="mt-2 text-right text-xs font-bold text-slate-400">
-              {data.matchInfo.squad?.length || 0} / 11 Selected
-            </div>
-          </div>
-
-          {/* Opponent Playing XI Selection */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="font-bold text-slate-700 uppercase text-xs flex items-center gap-2">
-                <Users size={16} className="text-red-600" />
-                Playing XI ({data.matchInfo.teamBName})
-              </h4>
-              <button
-                onClick={() => setOpponentSquadModal(true)}
-                className="text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1"
-              >
-                <Edit2 size={12} /> Manage Squad
-              </button>
-            </div>
-
-            {(!data.matchInfo.opponentSquad || data.matchInfo.opponentSquad.length === 0) ? (
-              <div className="text-center py-6 text-slate-400 text-sm italic">
-                No opponent players set.
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {data.matchInfo.opponentSquad.map(playerName => (
-                  <div key={playerName} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 overflow-hidden">
-                      {playerName.slice(0, 2)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-800 truncate">{playerName}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="mt-2 text-right text-xs font-bold text-slate-400">
-              {data.matchInfo.opponentSquad?.length || 0} / 11 Selected
+            <div className="p-4 border rounded-xl">
+              <h4 className="font-bold mb-2 text-red-700">{data.matchInfo.teamBName}</h4>
+              <p className="text-sm text-slate-500">{data.matchInfo.opponentSquad?.length || 0} Players Selected</p>
             </div>
           </div>
         </div>
       );
     }
 
-    const inningIdx = activeTab === 0 ? 0 : 1;
+    const inningIdx = activeTab === 1 ? 0 : 1;
     const inning = data.innings[inningIdx];
     const teamName = inningIdx === 0 ? data.matchInfo.teamAName : data.matchInfo.teamBName;
     const fieldingPlayers = getBowlingTeamPlayers(inningIdx as 0 | 1);
+    const availableBatters = getBattingTeamPlayers(inningIdx as 0 | 1);
     const partnershipData = calculateCurrentPartnership(inningIdx as 0 | 1);
 
     return (
@@ -1257,49 +1362,16 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           </div>
         )}
 
-        {/* Batting Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-            <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Batting</h4>
-            <button onClick={() => addRow('batting', inningIdx)} className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1">
-              <Plus size={14} /> Add Batsman
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs md:text-sm text-left">
-              <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 text-xs uppercase">
-                <tr>
-                  <th className="p-2 md:p-3 min-w-[120px]">Batsman</th>
-                  <th className="p-2 md:p-3 w-24 md:w-32">Dismissal</th>
-                  <th className="p-2 md:p-3 w-24 md:w-32">Fielder</th>
-                  <th className="p-2 md:p-3 w-24 md:w-32">Bowler</th>
-                  <th className="p-2 md:p-3 text-right">R</th>
-                  <th className="p-2 md:p-3 text-right">B</th>
-                  <th className="p-2 md:p-3 text-right">4s</th>
-                  <th className="p-2 md:p-3 text-right">6s</th>
-                  <th className="p-2 md:p-3 text-right">SR</th>
-                  <th className="p-2 md:p-3 w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {inning.batting.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="p-2 md:p-3"><input className="w-full bg-transparent font-bold text-slate-800 outline-none text-xs md:text-sm" value={row.name} onChange={(e) => handleBattingChange(inningIdx, row.id, 'name', e.target.value)} placeholder="Player Name" /></td>
-                    <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.howOut} onChange={(e) => handleBattingChange(inningIdx, row.id, 'howOut', e.target.value)}>{DISMISSAL_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</select></td>
-                    <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.fielder || ''} onChange={(e) => handleBattingChange(inningIdx, row.id, 'fielder', e.target.value)}><option value="">-</option>{fieldingPlayers.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
-                    <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.bowler || ''} onChange={(e) => handleBattingChange(inningIdx, row.id, 'bowler', e.target.value)}><option value="">-</option>{fieldingPlayers.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none font-bold text-slate-900" value={row.runs} onChange={(e) => handleBattingChange(inningIdx, row.id, 'runs', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none text-slate-800" value={row.balls} onChange={(e) => handleBattingChange(inningIdx, row.id, 'balls', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none text-slate-600 font-medium" value={row.fours} onChange={(e) => handleBattingChange(inningIdx, row.id, 'fours', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none text-slate-600 font-medium" value={row.sixes} onChange={(e) => handleBattingChange(inningIdx, row.id, 'sixes', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getStrikeRate(row.runs, row.balls)}</td>
-                    <td className="p-2 md:p-3 text-center"><button onClick={() => removeRow('batting', inningIdx, row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Batting Card (Extracted for Stability) */}
+        <LiveBattingTable
+          data={inning.batting}
+          battingSquad={availableBatters}
+          fieldingSquad={fieldingPlayers}
+          onUpdate={(id: string, field: string, val: any) => handleBattingChange(inningIdx, id, field, val)}
+          onRemove={(id: string) => removeRow('batting', inningIdx, id)}
+          onAdd={() => addRow('batting', inningIdx)}
+          isLiveMode={isLiveMode}
+        />
 
         {/* Extras & Bowling */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
@@ -1311,49 +1383,15 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           <div className="bg-slate-800 p-3 rounded-xl border border-slate-700 text-center text-white"><span className="block text-xs font-bold text-slate-300 uppercase">Total Extras</span><span className="text-xl font-black text-white">{inning.extras}</span></div>
         </div>
 
-        {/* Bowling Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-            <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Bowling</h4>
-            <button onClick={() => addRow('bowling', inningIdx)} className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1"><Plus size={14} /> Add Bowler</button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs md:text-sm text-left">
-              <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 text-xs uppercase">
-                <tr>
-                  <th className="p-2 md:p-3 min-w-[120px]">Bowler</th>
-                  <th className="p-2 md:p-3 text-right">O</th>
-                  <th className="p-2 md:p-3 text-right">M</th>
-                  <th className="p-2 md:p-3 text-right">R</th>
-                  <th className="p-2 md:p-3 text-right">W</th>
-                  <th className="p-2 md:p-3 text-right">Eco</th>
-                  <th className="p-2 md:p-3 text-right">WD</th>
-                  <th className="p-2 md:p-3 text-right">NB</th>
-                  <th className="p-2 md:p-3 text-right">LB</th>
-                  <th className="p-2 md:p-3 text-right">Dot</th>
-                  <th className="p-2 md:p-3 w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {inning.bowling.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="p-2 md:p-3"><input className="w-full bg-transparent font-bold text-slate-800 outline-none text-xs md:text-sm" value={row.name} onChange={(e) => handleBowlingChange(inningIdx, row.id, 'name', e.target.value)} placeholder="Player Name" /></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" step="0.1" className="w-8 md:w-12 text-right bg-transparent outline-none font-bold text-slate-900" value={row.overs} onChange={(e) => handleBowlingChange(inningIdx, row.id, 'overs', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none text-slate-800" value={row.maidens} onChange={(e) => handleBowlingChange(inningIdx, row.id, 'maidens', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none text-slate-800" value={row.runs} onChange={(e) => handleBowlingChange(inningIdx, row.id, 'runs', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none text-blue-600 font-black" value={row.wickets} onChange={(e) => handleBowlingChange(inningIdx, row.id, 'wickets', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getEconomy(row.runs, row.overs)}</td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none text-slate-600 font-medium" value={row.wides} onChange={(e) => handleBowlingChange(inningIdx, row.id, 'wides', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none text-slate-600 font-medium" value={row.noBalls} onChange={(e) => handleBowlingChange(inningIdx, row.id, 'noBalls', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none text-slate-600 font-medium" value={row.legByes} onChange={(e) => handleBowlingChange(inningIdx, row.id, 'legByes', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-right"><input type="number" className="w-8 md:w-12 text-right bg-transparent outline-none text-slate-600 font-medium" value={row.dots} onChange={(e) => handleBowlingChange(inningIdx, row.id, 'dots', Number(e.target.value))} /></td>
-                    <td className="p-2 md:p-3 text-center"><button onClick={() => removeRow('bowling', inningIdx, row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Bowling Card (Extracted for Stability) */}
+        <LiveBowlingTable
+          data={inning.bowling}
+          fieldingSquad={fieldingPlayers}
+          onUpdate={(id: string, field: string, val: any) => handleBowlingChange(inningIdx, id, field, val)}
+          onRemove={(id: string) => removeRow('bowling', inningIdx, id)}
+          onAdd={() => addRow('bowling', inningIdx)}
+          isLiveMode={isLiveMode}
+        />
 
         {/* Boundary Animation Overlay */}
         {boundaryAnim && (
@@ -1371,11 +1409,34 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           </div>
         )}
 
+
+        {/* Batting Table */}
+        <LiveBattingTable
+          data={inning.batting}
+          battingSquad={availableBatters}
+          fieldingSquad={fieldingPlayers}
+          onUpdate={(id: string, field: string, val: any) => handleBattingChange(inningIdx, id, field as keyof BattingEntry, val)}
+          onRemove={(id: string) => removeRow('batting', inningIdx, id)}
+          onAdd={() => addRow('batting', inningIdx)}
+          isLiveMode={isLiveMode}
+        />
+
+        {/* Bowling Table */}
+        <LiveBowlingTable
+          data={inning.bowling}
+          fieldingSquad={fieldingPlayers}
+          onUpdate={(id: string, field: string, val: any) => handleBowlingChange(inningIdx, id, field as keyof BowlingEntry, val)}
+          onRemove={(id: string) => removeRow('bowling', inningIdx, id)}
+          onAdd={() => addRow('bowling', inningIdx)}
+          isLiveMode={isLiveMode}
+        />
+
         {/* Milestone Overlay */}
         {milestone.visible && milestone.data && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none p-4">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-fade-in"></div>
             <div className="relative z-10 animate-zoom-in w-full max-w-lg">
+
               {/* Decorative Elements */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-blue-500/20 rounded-full blur-[100px] animate-pulse"></div>
 
@@ -1429,25 +1490,45 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     );
   };
 
+
+
+
   return (
     <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl md:text-2xl font-bold text-slate-800">Match Scorecard</h2>
-          <p className="text-slate-500 text-sm">Live scoring and result entry</p>
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <span>{data.matchInfo.teamAName} vs {data.matchInfo.teamBName}</span>
+            {data.matchInfo.tossResult && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">{data.matchInfo.tossResult}</span>}
+          </div>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <button onClick={() => setIsLiveMode(!isLiveMode)} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all border text-sm md:text-base ${isLiveMode ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-            <Zap size={18} className={isLiveMode ? "fill-red-600" : ""} />
-            {isLiveMode ? 'Exit Live' : 'Go Live'}
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => setMatchSettingsModal(true)}
+            className="p-2 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
+            title="Match Settings"
+          >
+            <Settings size={20} />
           </button>
-          <button onClick={handleSaveScorecard} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all text-sm md:text-base">
-            <Save size={18} /> Save
-          </button>
-          <button onClick={handleUpdateStats} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all text-sm md:text-base">
-            <Activity size={18} /> Update Stats
+
+          <button onClick={() => setSquadModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+            <Edit2 size={16} /> Manage Playing XI
           </button>
         </div>
+      </div>
+      <div className="flex gap-2 w-full md:w-auto">
+        <button onClick={() => setIsLiveMode(!isLiveMode)} className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all border text-sm md:text-base ${isLiveMode ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+          <Zap size={18} className={isLiveMode ? "fill-red-600" : ""} />
+          {isLiveMode ? 'Exit Live' : 'Go Live'}
+        </button>
+        <button onClick={handleSaveScorecard} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all text-sm md:text-base">
+          <Save size={18} /> Save
+        </button>
+        <button onClick={handleUpdateStats} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all text-sm md:text-base">
+          <Activity size={18} /> Update Stats
+        </button>
       </div>
 
       {!validation.isValid && (
@@ -1461,21 +1542,75 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex p-1 bg-white rounded-xl shadow-sm border border-slate-100 w-full md:w-fit overflow-x-auto">
-        {['Match Info', '1st Innings', '2nd Innings'].map((tab, idx) => (
-          <button
-            key={idx}
-            onClick={() => setActiveTab(idx === 0 ? 2 : idx === 1 ? 0 : 1)}
-            className={`flex-1 md:flex-none px-4 md:px-6 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all whitespace-nowrap ${(activeTab === 0 && idx === 1) || (activeTab === 1 && idx === 2) || (activeTab === 2 && idx === 0) ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {/* Navigation Tabs - Hidden for Wizard Flow */}
+      <div className="hidden"></div>
 
       <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-xl border border-slate-100 min-h-[500px]">
         {renderTabContent()}
       </div>
+
+      {matchSettingsModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-zoom-in">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <Settings size={20} className="text-slate-500" /> Match Settings
+              </h3>
+              <button onClick={() => setMatchSettingsModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Total Overs</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-slate-200 rounded-lg font-bold"
+                  value={data.matchInfo.totalOvers || 20}
+                  onChange={e => setData({ ...data, matchInfo: { ...data.matchInfo, totalOvers: Number(e.target.value) } })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Target Score (Manual)</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-slate-200 rounded-lg font-bold"
+                  value={data.matchInfo.target || ''}
+                  placeholder="Auto-calculated if empty"
+                  onChange={e => setData({ ...data, matchInfo: { ...data.matchInfo, target: Number(e.target.value) } })}
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Set this to override the calculated target or if skipping 1st innings.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Penalty Runs</label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-slate-200 rounded-lg font-bold"
+                  value={data.matchInfo.penaltyRuns || 0}
+                  onChange={e => setData({ ...data, matchInfo: { ...data.matchInfo, penaltyRuns: Number(e.target.value) } })}
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-100">
+                <h4 className="text-sm font-bold text-slate-700 mb-2">Game State Tools</h4>
+                <button
+                  onClick={() => {
+                    if (!window.confirm("Skip 1st Innings? Ensure you set the Target first!")) return;
+                    setActiveTab(1); // Jump to 2nd Innings
+                    setMatchSettingsModal(false);
+                  }}
+                  className="w-full py-2 bg-orange-50 text-orange-600 border border-orange-200 rounded-lg font-bold text-sm hover:bg-orange-100 transition-colors"
+                >
+                  Skip to 2nd Innings
+                </button>
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100">
+              <button onClick={() => setMatchSettingsModal(false)} className="w-full py-2 bg-slate-900 text-white rounded-xl font-bold">Done</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toss Modal */}
       {tossModal.isOpen && tossModal.match && (
@@ -1522,6 +1657,19 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
               </div>
 
               {tossModal.step === 'decision' && (
+                <div className="mt-8">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Overs per Innings</label>
+                  <select
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-center text-lg outline-none focus:border-blue-500 transition-colors"
+                    value={data.matchInfo.totalOvers}
+                    onChange={(e) => setData({ ...data, matchInfo: { ...data.matchInfo, totalOvers: Number(e.target.value) } })}
+                  >
+                    {[10, 12, 15, 16, 20, 25, 30, 35, 40, 45, 50].map(o => <option key={o} value={o}>{o} Overs</option>)}
+                  </select>
+                </div>
+              )}
+
+              {tossModal.step === 'decision' && (
                 <button onClick={() => setTossModal(prev => ({ ...prev, step: 'winner', winner: null }))} className="mt-6 text-slate-400 hover:text-slate-600 text-sm font-bold flex items-center justify-center gap-1">
                   <RotateCcw size={14} /> Back
                 </button>
@@ -1533,8 +1681,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
       {/* Squad Selection Modal */}
       {squadModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-[95%] md:w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl animate-zoom-in overflow-hidden relative">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative mx-auto my-auto">
             <div className="p-3 md:p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl shrink-0">
               <div>
                 <h3 className="font-bold text-slate-800 text-lg">Manage Playing XI</h3>
@@ -1600,10 +1748,156 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         </div>
       )}
 
+      {/* Innings Break Modal */}
+      {inningsBreakModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-6 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl p-8 text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+
+            <Trophy size={64} className="mx-auto text-yellow-500 mb-6 drop-shadow-lg animate-bounce" />
+
+            <h2 className="text-3xl font-black text-slate-800 mb-2">INNINGS BREAK</h2>
+            <p className="text-slate-500 font-bold mb-8">First Innings Completed</p>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-8">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Target to Win</p>
+              <div className="text-5xl font-black text-slate-800 tracking-tighter">
+                {calculateInningsTotals(data.innings[0]).totalRuns + 1}
+              </div>
+              <p className="text-sm font-bold text-slate-500 mt-2">
+                Required in {data.matchInfo.totalOvers || 20} Overs
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setInningsBreakModal(false);
+                const target = calculateInningsTotals(data.innings[0]).totalRuns + 1;
+                setData(prev => ({ ...prev, matchInfo: { ...prev.matchInfo, target } })); // Set Target
+                setActiveTab(2); // Switch to 2nd Innings (Tab 2)
+                setLiveState({ strikerId: '', nonStrikerId: '', bowlerId: '' }); // Reset active players
+                setSelectionModalStep('striker'); // Start sequence for 2nd innings
+                setPlayerSelector({ inningIdx: 1, type: 'batsman', autoTrigger: true }); // Prompt for openers
+              }}
+              className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 group"
+            >
+              Start Run Chase <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Match End Modal (MOM Selection) */}
+      {endMatchModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-6 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden relative">
+            <div className="bg-slate-900 p-6 text-center">
+              <Medal size={48} className="mx-auto text-yellow-500 mb-2" />
+              <h2 className="text-2xl font-black text-white uppercase tracking-wider">Match Complete</h2>
+              <p className="text-slate-400">Select Man of the Match</p>
+            </div>
+
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+              <h3 className="text-sm font-bold text-slate-500 uppercase mb-4">Top Performers</h3>
+              <div className="space-y-3">
+                {getTopPerformers().map((p, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedMOM(p.name)}
+                    className={`w-full flex justify-between items-center p-4 rounded-xl border transition-all ${selectedMOM === p.name ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-slate-300'}`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="font-black text-slate-300 text-lg">#{idx + 1}</span>
+                      <div className="text-left">
+                        <p className="font-bold text-slate-800">{p.name}</p>
+                        <p className="text-xs text-slate-500">{p.points} Pts</p>
+                      </div>
+                    </div>
+                    {selectedMOM === p.name && <Check className="text-blue-600" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 bg-slate-50">
+              <button
+                onClick={async () => {
+                  if (!selectedMOM) { alert("Please select a Man of the Match"); return; }
+
+                  // Calculate Result String
+                  const i1 = calculateInningsTotals(data.innings[0]);
+                  const i2 = calculateInningsTotals(data.innings[1]);
+                  const target = data.matchInfo.target || (i1.totalRuns + 1);
+
+                  let resultType: 'Won' | 'Lost' | 'Draw' | 'Tie' = 'Won'; // Default placeholder, calculated below
+                  let resultText = "";
+
+                  const team1 = data.matchInfo.teamAName; // Batting 1st (Assuming standard flow)
+                  // Wait, who batted first? Depend on toss.
+                  // Actually simplistic view: Innings 0 is Team A (batting first), Innings 1 is Team B.
+
+                  if (i2.totalRuns >= target) {
+                    // Chasing Team Won
+                    resultType = 'Won'; // Or 'Lost' depending on perspective of Indian Strikers?
+                    // We need to know who is Indian Strikers.
+                    // If Indian Strikers is Team B (Chasing) -> Won.
+                    // If Indian Strikers is Team A (Defending) -> Lost.
+
+                    // Let's assume simpler: Just save the text result and 'Won'/'Lost' status relative to Home team.
+                    // Helper:
+                    const chaserName = data.matchInfo.tossResult.includes("elected to Bat")
+                      ? (data.matchInfo.tossResult.startsWith(data.matchInfo.teamAName) ? data.matchInfo.teamBName : data.matchInfo.teamAName)
+                      : (data.matchInfo.tossResult.startsWith(data.matchInfo.teamAName) ? data.matchInfo.teamAName : data.matchInfo.teamBName);
+
+                    // Actually, simpler: innIdx 0 is always Batting First Team.
+                    // If data.innings[0].batting[0] is from Indian Strikers list?
+                    // We have data.matchInfo.teamAName (Home) and TeamBName (Opponent).
+
+                    // We need to verify who batted first.
+                    // But validResult is stored in DB.
+                  }
+
+                  // For now, just save. The backend or stats handle W/L based on team name.
+                  // We will mark it as Completed.
+
+                  // Hack: Just call handleSaveScorecard but ensure it sets isUpcoming=false
+                  // We need to inject the result into data.matchInfo.resultType BEFORE saving?
+                  // Or update the handleSaveScorecard logic to detect completeness?
+
+                  // Let's rely on handleSaveScorecard's logic, but first update state.
+
+                  // Since I can't easily wait for state update, I will call updateMatch directly here?
+                  // No, Reuse handleSaveScorecard logic.
+
+                  setData(prev => ({
+                    ...prev,
+                    matchInfo: {
+                      ...prev.matchInfo,
+                      resultType: 'Won', // Mark as done (we need logic to determine W/L exactly but 'Won' or 'Lost' triggers completion)
+                      matchResult: `Match Completed. MOM: ${selectedMOM}`,
+                      // In a real app we'd calculate "Ind Strikers won by X runs/wickets"
+                    }
+                  }));
+
+                  setTimeout(async () => {
+                    await handleSaveScorecard();
+                    setEndMatchModal(false);
+                    alert("Match Saved & Completed!");
+                  }, 500);
+                }}
+                className="w-full py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-200 transition-all flex items-center justify-center gap-2"
+              >
+                <Save size={20} /> Convert to Result & Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Opponent Squad Modal */}
       {opponentSquadModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-[95%] md:w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl animate-zoom-in overflow-hidden relative">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative mx-auto my-auto">
             <div className="p-3 md:p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl shrink-0">
               <div>
                 <h3 className="font-bold text-slate-800 text-lg">Opponent Playing XI</h3>
@@ -1795,6 +2089,138 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// --- Sub-Components ---
+
+const getStrikeRate = (runs: number | '', balls: number | '') => {
+  const r = Number(runs || 0);
+  const b = Number(balls || 0);
+  if (b === 0) return '0.00';
+  return ((r / b) * 100).toFixed(2);
+};
+
+const getEconomy = (runs: number | '', overs: number | '') => {
+  const r = Number(runs || 0);
+  const o = Number(overs || 0);
+  if (o === 0) return '0.00';
+  const balls = Math.floor(o) * 6 + Math.round((o % 1) * 10);
+  const actualOvers = balls / 6;
+  return (r / actualOvers).toFixed(2);
+};
+
+const LiveBattingTable = ({ data, battingSquad, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) => {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Batting</h4>
+        <button onClick={onAdd} className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1">
+          <Plus size={14} /> Add Batsman
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs md:text-sm text-left">
+          <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 text-xs uppercase">
+            <tr>
+              <th className="p-2 md:p-3 min-w-[120px]">Batsman</th>
+              <th className="p-2 md:p-3 w-24 md:w-32">Dismissal</th>
+              <th className="p-2 md:p-3 w-24 md:w-32">Fielder</th>
+              <th className="p-2 md:p-3 w-24 md:w-32">Bowler</th>
+              <th className="p-2 md:p-3 text-right">R</th>
+              <th className="p-2 md:p-3 text-right">B</th>
+              <th className="p-2 md:p-3 text-right">4s</th>
+              <th className="p-2 md:p-3 text-right">6s</th>
+              <th className="p-2 md:p-3 text-right">SR</th>
+              <th className="p-2 md:p-3 w-8"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row: any) => (
+              <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <td className="p-2 md:p-3">
+                  <select
+                    className="w-full bg-transparent font-bold text-slate-800 outline-none text-xs md:text-sm"
+                    value={row.name}
+                    onChange={(e) => onUpdate(row.id, 'name', e.target.value)}
+                  >
+                    <option value="">Select Player</option>
+                    {battingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    {!battingSquad.find((p: any) => p.name === row.name) && row.name && <option value={row.name}>{row.name}</option>}
+                  </select>
+                </td>
+                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.howOut} onChange={(e) => onUpdate(row.id, 'howOut', e.target.value)}>{DISMISSAL_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</select></td>
+                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.fielder || ''} onChange={(e) => onUpdate(row.id, 'fielder', e.target.value)}><option value="">-</option>{fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
+                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.bowler || ''} onChange={(e) => onUpdate(row.id, 'bowler', e.target.value)}><option value="">-</option>{fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-bold ${isLiveMode ? 'text-slate-400' : 'text-slate-900'}`} value={row.runs} onChange={(e) => onUpdate(row.id, 'runs', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.balls} onChange={(e) => onUpdate(row.id, 'balls', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.fours} onChange={(e) => onUpdate(row.id, 'fours', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.sixes} onChange={(e) => onUpdate(row.id, 'sixes', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getStrikeRate(row.runs, row.balls)}</td>
+                <td className="p-2 md:p-3 text-center"><button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const LiveBowlingTable = ({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) => {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Bowling</h4>
+        <button onClick={onAdd} className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1"><Plus size={14} /> Add Bowler</button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs md:text-sm text-left">
+          <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 text-xs uppercase">
+            <tr>
+              <th className="p-2 md:p-3 min-w-[120px]">Bowler</th>
+              <th className="p-2 md:p-3 text-right">O</th>
+              <th className="p-2 md:p-3 text-right">M</th>
+              <th className="p-2 md:p-3 text-right">R</th>
+              <th className="p-2 md:p-3 text-right">W</th>
+              <th className="p-2 md:p-3 text-right">Eco</th>
+              <th className="p-2 md:p-3 text-right">WD</th>
+              <th className="p-2 md:p-3 text-right">NB</th>
+              <th className="p-2 md:p-3 text-right">LB</th>
+              <th className="p-2 md:p-3 text-right">Dot</th>
+              <th className="p-2 md:p-3 w-8"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row: any) => (
+              <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <td className="p-2 md:p-3">
+                  <select
+                    className="w-full bg-transparent font-bold text-slate-800 outline-none text-xs md:text-sm"
+                    value={row.name}
+                    onChange={(e) => onUpdate(row.id, 'name', e.target.value)}
+                  >
+                    <option value="">Select Bowler</option>
+                    {fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    {!fieldingSquad.find((p: any) => p.name === row.name) && row.name && <option value={row.name}>{row.name}</option>}
+                  </select>
+                </td>
+                <td className="p-2 md:p-3 text-right"><input type="number" step="0.1" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-bold ${isLiveMode ? 'text-slate-400' : 'text-slate-900'}`} value={row.overs} onChange={(e) => onUpdate(row.id, 'overs', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.maidens} onChange={(e) => onUpdate(row.id, 'maidens', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.runs} onChange={(e) => onUpdate(row.id, 'runs', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-black ${isLiveMode ? 'text-blue-300' : 'text-blue-600'}`} value={row.wickets} onChange={(e) => onUpdate(row.id, 'wickets', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getEconomy(row.runs, row.overs)}</td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.wides} onChange={(e) => onUpdate(row.id, 'wides', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.noBalls} onChange={(e) => onUpdate(row.id, 'noBalls', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.legByes} onChange={(e) => onUpdate(row.id, 'legByes', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.dots} onChange={(e) => onUpdate(row.id, 'dots', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-center"><button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

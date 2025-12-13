@@ -18,7 +18,10 @@ app.use((req, res, next) => {
   next();
 });
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+console.log(`[Supabase Config] URL: ${supabaseUrl ? 'Found' : 'MISSING'}, Key: ${supabaseKey ? 'Found' : 'MISSING'}`);
+const supabase = createClient(supabaseUrl, supabaseKey);
 cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET });
 const upload = multer({ storage: multer.memoryStorage() });
 

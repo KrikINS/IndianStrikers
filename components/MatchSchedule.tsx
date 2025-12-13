@@ -381,7 +381,7 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
                   </div>
                 </div>
                 <button
-                  onClick={() => navigate('/scorecard', {
+                  onClick={() => navigate('/live-scoring', {
                     state: {
                       match,
                       mode: new Date(match.date).toDateString() === new Date().toDateString() ? 'live' : 'edit'
@@ -444,7 +444,7 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
 
                 {canEdit && (
                   <button
-                    onClick={() => navigate('/scorecard', { state: { match } })}
+                    onClick={() => navigate('/manual-scorecard', { state: { match } })}
                     className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
                   >
                     <Edit2 size={14} /> Full Scorecard Entry

@@ -116,7 +116,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
     { to: '/matches', icon: <Calendar size={20} />, label: 'Matches' },
     { to: '/selection', icon: <ClipboardList size={20} />, label: 'Match Selection' },
     { to: '/fielding', icon: <Map size={20} />, label: 'Fielding Board' },
-    { to: '/scorecard', icon: <Shield size={20} />, label: 'Scorecard' },
+    { to: '/live-scoring', icon: <Shield size={20} />, label: 'Live Scoring' },
     { to: '/memories', icon: <Image size={20} />, label: 'Memories' },
   ];
 

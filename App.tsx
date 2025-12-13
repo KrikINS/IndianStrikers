@@ -10,6 +10,7 @@ import MatchSelection from './components/MatchSelection';
 import FieldingMap from './components/FieldingMap';
 import OpponentTeams from './components/OpponentTeams';
 import Scorecard from './components/Scorecard';
+import ManualScorecard from './components/ManualScorecard';
 import Memories from './components/Memories';
 import SplashScreen from './components/SplashScreen';
 import UserManagement from './components/UserManagement';
@@ -108,7 +109,8 @@ const AppContent: React.FC<{
                 />
               }
             />
-            <Route path="/scorecard" element={<Scorecard opponents={opponents} players={players} matches={matches} />} />
+            <Route path="/live-scoring" element={<Scorecard opponents={opponents} players={players} matches={matches} onUpdateMatch={onUpdateMatch} />} />
+            <Route path="/manual-scorecard" element={<ManualScorecard players={players} opponents={opponents} />} />
             <Route path="/memories" element={<Memories userRole={userRole} />} />
             {/* User Management Route - Only visible if admin */}
             <Route path="/users" element={userRole === 'admin' ? <UserManagement /> : <Navigate to="/home" />} />
