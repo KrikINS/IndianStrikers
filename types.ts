@@ -92,6 +92,7 @@ export interface Match {
   tournament?: string;
   tossTime?: string;
   squad?: string[]; // Array of player IDs
+  opponentSquad?: string[]; // Array of player Names
   isSquadLocked?: boolean;
   scorecardData?: any; // JSONB for full scorecard details
   statsUpdated?: boolean;

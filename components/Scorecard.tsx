@@ -21,7 +21,8 @@ import {
   Sword,
   CircleDot,
   Medal,
-  Handshake
+  Handshake,
+  Edit2
 } from 'lucide-react';
 import { OpponentTeam, Player, Match, PlayerRole } from '../types';
 import { useLocation } from 'react-router-dom';
@@ -88,6 +89,8 @@ interface MatchInfo {
   venue: string;
   tournament: string;
   resultType?: 'Won' | 'Lost' | 'Draw' | 'Tie' | 'No Result' | 'Pending';
+  squad?: string[];
+  opponentSquad?: string[];
 }
 
 interface ScorecardData {
@@ -204,6 +207,19 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   });
 
   const [validation, setValidation] = useState<ValidationResult>({ isValid: true, errors: [] });
+  const [tossModal, setTossModal] = useState<{
+    isOpen: boolean;
+    match: Match | null;
+    step: 'winner' | 'decision';
+    winner: '1' | '2' | null;
+  }>({
+    isOpen: false,
+    match: null,
+    step: 'winner',
+    winner: null
+  });
+  const [squadModal, setSquadModal] = useState(false);
+  const [opponentSquadModal, setOpponentSquadModal] = useState(false);
   const commentaryEndRef = useRef<HTMLDivElement>(null);
 
   // Combine Indian Strikers + Opponents for dropdowns
@@ -255,48 +271,40 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     }
 
     // Otherwise, initialize fresh from match details
-    // TRIGGER TOSS LOGIC HERE if resetting
-    // Wait, we can't trigger window.prompt directly inside loadMatchData easily if properly pure, 
-    // but in React we can if it's called from useEffect.
 
-    // We will initialize data first
-    let teamA = 'INDIAN STRIKERS';
-    let teamB = match.opponent;
-    let tossResultText = '';
+    // Check if we should trigger Toss Modal logic
+    // We only trigger auto-toss if:
+    // 1. No existing scorecard data (handled above)
+    // 2. The match is NOT completed (result is Pending or undefined) OR user explicitly wants to start scoring
 
-    // Auto-prompt toss if not already set (conceptually)
-    // Actually, prompts are blocking. We should do it.
+    const isCompleted = match.result && match.result !== 'Pending';
 
-    // Delay prompt slightly to let render happen? No, blocking is fine.
-    // If coming from navigation, we want to set it up.
-
-    alert(`Setting up Match: Indians Strikers vs ${match.opponent}`);
-
-    let tossWinner = window.prompt(`Who won the toss?\n1. ${teamA}\n2. ${teamB}`);
-    let tossDecision = '';
-    if (tossWinner === '1' || tossWinner === '2') {
-      tossDecision = window.prompt("What did they choose?\n1. Bat\n2. Bowl") || '';
+    if (!isCompleted) {
+      // Trigger Toss Modal instead of prompts
+      setTossModal({
+        isOpen: true,
+        match: match,
+        step: 'winner',
+        winner: null
+      });
     }
 
-    if (tossWinner === '1') {
-      tossResultText = `${teamA} won the toss and elected to ${tossDecision === '1' ? 'Bat' : 'Bowl'}`;
-    } else if (tossWinner === '2') {
-      tossResultText = `${teamB} won the toss and elected to ${tossDecision === '1' ? 'Bat' : 'Bowl'}`;
-    }
-
+    // Initialize data with default pending state (Toss will update this later)
     setData(prev => ({
       ...prev,
       matchInfo: {
         ...prev.matchInfo,
         id: match.id,
-        teamAName: teamA,
-        teamBName: teamB,
+        teamAName: 'INDIAN STRIKERS',
+        teamBName: match.opponent,
         venue: match.venue,
         date: match.date,
         tournament: match.tournament || '',
-        tossResult: tossResultText,
+        tossResult: '', // Will be filled by Toss Modal
         matchResult: '',
-        resultType: (match.result as any) || 'Pending'
+        resultType: (match.result as any) || 'Pending',
+        squad: match.squad || [],
+        opponentSquad: (match as any).opponentSquad || [] // Fetch if exists in DB schema (might need migration)
       },
       innings: [
         { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 },
@@ -304,10 +312,9 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       ]
     }));
 
-    // Since it's new, stay on Match Info or go to Scorer? 
-    // Maybe stay on info to verify?
+    // If it's new, stay on Match Info to verify/wait for toss
     if (location.state?.mode === 'live') {
-      setActiveTab(2); // Stay on Info to confirm
+      setActiveTab(2);
     }
   };
 
@@ -697,41 +704,40 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     const selected = matches.find(m => String(m.id) === String(matchId));
     if (!selected) return;
 
-    // Prompt for Toss
-    let tossWinner = window.prompt("Who won the toss?\n1. INDIAN STRIKERS\n2. " + selected.opponent);
-    if (!tossWinner || (tossWinner !== '1' && tossWinner !== '2')) {
-      // Default or ask again? Let's just default to '1' if invalid or cancel? 
-      // Better: Just set what we know and user can edit in table.
-    }
+    setTossModal({
+      isOpen: true,
+      match: selected,
+      step: 'winner',
+      winner: null
+    });
+  };
 
-    let tossDecision = '';
-    if (tossWinner === '1' || tossWinner === '2') {
-      tossDecision = window.prompt("What did they choose?\n1. Bat\n2. Bowl") || '';
-    }
+  const handleTossComplete = (decision: 'Bat' | 'Bowl') => {
+    if (!tossModal.match || !tossModal.winner) return;
 
     const teamA = 'INDIAN STRIKERS';
-    const teamB = selected.opponent;
+    const teamB = tossModal.match.opponent;
     let tossResultText = '';
 
-    if (tossWinner === '1') {
-      tossResultText = `${teamA} won the toss and elected to ${tossDecision === '1' ? 'Bat' : 'Bowl'}`;
-    } else if (tossWinner === '2') {
-      tossResultText = `${teamB} won the toss and elected to ${tossDecision === '1' ? 'Bat' : 'Bowl'}`;
+    if (tossModal.winner === '1') {
+      tossResultText = `${teamA} won the toss and elected to ${decision}`;
+    } else {
+      tossResultText = `${teamB} won the toss and elected to ${decision}`;
     }
 
     setData(prev => ({
       ...prev,
       matchInfo: {
         ...prev.matchInfo,
-        id: matchId,
+        id: tossModal.match!.id,
         teamAName: teamA,
         teamBName: teamB,
         tossResult: tossResultText,
-        date: selected.date.split('T')[0],
-        venue: selected.venue,
-        tournament: selected.tournament || '',
+        date: tossModal.match!.date.split('T')[0],
+        venue: tossModal.match!.venue,
+        tournament: tossModal.match!.tournament || '',
         // Initialize result based on existing match data if available
-        resultType: (selected.result as any) || 'Pending'
+        resultType: (tossModal.match!.result as any) || 'Pending'
       },
       // Reset scorecard when switching matches manually
       innings: [
@@ -739,6 +745,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 }
       ]
     }));
+
+    setTossModal(prev => ({ ...prev, isOpen: false }));
   };
 
   const handleSaveScorecard = async () => {
@@ -754,20 +762,27 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       return;
     }
 
+    // Determine completion status
+    // IF resultType is 'Pending', match is upcoming.
+    // IF resultType is 'Won'/'Lost'/'Draw', match is completed.
     const isCompleted = data.matchInfo.resultType && data.matchInfo.resultType !== 'Pending';
+
+    // Ensure we only send valid values from types.ts
+    const validResult = isCompleted ? (data.matchInfo.resultType as 'Won' | 'Lost' | 'Draw') : 'Pending';
 
     const updatedMatch: Match = {
       ...baseMatch,
       // Update core match details if they changed
       venue: data.matchInfo.venue,
       date: data.matchInfo.date,
-      // Update Result and Status if a result is selected
-      result: isCompleted ? (data.matchInfo.resultType as any) : baseMatch.result,
-      isUpcoming: isCompleted ? false : baseMatch.isUpcoming,
+      // Update Result and Status
+      result: validResult,
+      isUpcoming: !isCompleted,
+      squad: data.matchInfo.squad, // Save the updated squad
+      opponentSquad: data.matchInfo.opponentSquad,
 
       scorecardData: {
-        data,
-        history: ballCommentary,
+        ballCommentary,
         liveState
       }
     };
@@ -1021,10 +1036,6 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           </div>
           <div className="flex gap-4 p-4 bg-slate-100 rounded-xl">
             <div className="flex-1">
-              <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Toss Result</label>
-              <input name="tossResult" value={data.matchInfo.tossResult} onChange={handleMatchInfoChange} placeholder="e.g. Team A won and elected to bat" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-800" />
-            </div>
-            <div className="flex-1">
               <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Match Outcome</label>
               <div className="flex gap-2">
                 <select
@@ -1036,11 +1047,89 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                   <option value="Won">Won</option>
                   <option value="Lost">Lost</option>
                   <option value="Draw">Draw</option>
-                  <option value="Tie">Tie</option>
-                  <option value="No Result">No Result</option>
                 </select>
                 <input name="matchResult" value={data.matchInfo.matchResult} onChange={handleMatchInfoChange} placeholder="Details (e.g. Won by 20 runs)" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-800" />
               </div>
+            </div>
+          </div>
+
+          {/* Playing XI Selection */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-slate-700 uppercase text-xs flex items-center gap-2">
+                <Users size={16} className="text-blue-600" />
+                Playing XI (Indian Strikers)
+              </h4>
+              <button
+                onClick={() => setSquadModal(true)}
+                className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1"
+              >
+                <Edit2 size={12} /> Manage Squad
+              </button>
+            </div>
+
+            {(!data.matchInfo.squad || data.matchInfo.squad.length === 0) ? (
+              <div className="text-center py-6 text-slate-400 text-sm italic">
+                No players selected yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {data.matchInfo.squad.map(playerId => {
+                  const p = players.find(pl => pl.id === playerId);
+                  return p ? (
+                    <div key={p.id} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 overflow-hidden">
+                        {p.avatarUrl ? <img src={p.avatarUrl} className="w-full h-full object-cover" /> : p.name.slice(0, 2)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 truncate">{p.name}</p>
+                        <p className="text-[10px] text-slate-500 truncate">{p.role}</p>
+                      </div>
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            )}
+            <div className="mt-2 text-right text-xs font-bold text-slate-400">
+              {data.matchInfo.squad?.length || 0} / 11 Selected
+            </div>
+          </div>
+
+          {/* Opponent Playing XI Selection */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="font-bold text-slate-700 uppercase text-xs flex items-center gap-2">
+                <Users size={16} className="text-red-600" />
+                Playing XI ({data.matchInfo.teamBName})
+              </h4>
+              <button
+                onClick={() => setOpponentSquadModal(true)}
+                className="text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1"
+              >
+                <Edit2 size={12} /> Manage Squad
+              </button>
+            </div>
+
+            {(!data.matchInfo.opponentSquad || data.matchInfo.opponentSquad.length === 0) ? (
+              <div className="text-center py-6 text-slate-400 text-sm italic">
+                No opponent players set.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {data.matchInfo.opponentSquad.map(playerName => (
+                  <div key={playerName} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 overflow-hidden">
+                      {playerName.slice(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-800 truncate">{playerName}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-2 text-right text-xs font-bold text-slate-400">
+              {data.matchInfo.opponentSquad?.length || 0} / 11 Selected
             </div>
           </div>
         </div>
@@ -1387,6 +1476,220 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-xl border border-slate-100 min-h-[500px]">
         {renderTabContent()}
       </div>
+
+      {/* Toss Modal */}
+      {tossModal.isOpen && tossModal.match && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-zoom-in relative">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500"></div>
+
+            <div className="p-6 md:p-8 text-center">
+              <div className="mx-auto w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                <Medal size={40} className="text-blue-600" />
+              </div>
+
+              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight mb-2">
+                {tossModal.step === 'winner' ? 'Who Won The Toss?' : 'Decision?'}
+              </h3>
+              <p className="text-slate-500 font-medium mb-8">
+                {tossModal.step === 'winner' ? `Match: Indian Strikers vs ${tossModal.match.opponent}` : `${tossModal.winner === '1' ? 'Indian Strikers' : tossModal.match.opponent} won the toss`}
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {tossModal.step === 'winner' ? (
+                  <>
+                    <button onClick={() => setTossModal(prev => ({ ...prev, step: 'decision', winner: '1' }))} className="py-4 px-6 bg-slate-50 hover:bg-blue-50 border-2 border-slate-200 hover:border-blue-500 rounded-2xl transition-all group">
+                      <span className="block text-2xl mb-2">🦅</span>
+                      <span className="font-bold text-slate-700 group-hover:text-blue-700">Indian Strikers</span>
+                    </button>
+                    <button onClick={() => setTossModal(prev => ({ ...prev, step: 'decision', winner: '2' }))} className="py-4 px-6 bg-slate-50 hover:bg-red-50 border-2 border-slate-200 hover:border-red-500 rounded-2xl transition-all group">
+                      <span className="block text-2xl mb-2">⚔️</span>
+                      <span className="font-bold text-slate-700 group-hover:text-red-700">{tossModal.match.opponent}</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => handleTossComplete('Bat')} className="py-4 px-6 bg-slate-50 hover:bg-green-50 border-2 border-slate-200 hover:border-green-500 rounded-2xl transition-all group">
+                      <span className="block text-2xl mb-2">🏏</span>
+                      <span className="font-bold text-slate-700 group-hover:text-green-700">Bat First</span>
+                    </button>
+                    <button onClick={() => handleTossComplete('Bowl')} className="py-4 px-6 bg-slate-50 hover:bg-orange-50 border-2 border-slate-200 hover:border-orange-500 rounded-2xl transition-all group">
+                      <span className="block text-2xl mb-2">🥎</span>
+                      <span className="font-bold text-slate-700 group-hover:text-orange-700">Bowl First</span>
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {tossModal.step === 'decision' && (
+                <button onClick={() => setTossModal(prev => ({ ...prev, step: 'winner', winner: null }))} className="mt-6 text-slate-400 hover:text-slate-600 text-sm font-bold flex items-center justify-center gap-1">
+                  <RotateCcw size={14} /> Back
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Squad Selection Modal */}
+      {squadModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-[95%] md:w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl animate-zoom-in overflow-hidden relative">
+            <div className="p-3 md:p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl shrink-0">
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg">Manage Playing XI</h3>
+                <p className="text-xs text-slate-500">Select players for this match</p>
+              </div>
+              <button onClick={() => setSquadModal(false)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 md:p-4 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {players.map(p => {
+                  const isSelected = data.matchInfo.squad?.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        const currentSquad = data.matchInfo.squad || [];
+                        let newSquad;
+                        if (isSelected) {
+                          newSquad = currentSquad.filter(id => id !== p.id);
+                        } else {
+                          if (currentSquad.length >= 11) {
+                            alert("You have already selected 11 players.");
+                            return;
+                          }
+                          newSquad = [...currentSquad, p.id];
+                        }
+                        setData(prev => ({
+                          ...prev,
+                          matchInfo: { ...prev.matchInfo, squad: newSquad }
+                        }));
+                      }}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left group
+                             ${isSelected
+                          ? 'bg-blue-50 border-blue-500 shadow-md ring-1 ring-blue-500'
+                          : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-slate-50'}
+                          `}
+                    >
+                      <div className="relative">
+                        <img src={p.avatarUrl} alt={p.name} className={`w-10 h-10 rounded-full object-cover ${!p.isAvailable ? 'grayscale opacity-70' : ''}`} />
+                        {isSelected && <div className="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full p-0.5 border-2 border-white"><Check size={10} strokeWidth={4} /></div>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className={`font-bold text-sm truncate ${isSelected ? 'text-blue-700' : 'text-slate-700'}`}>{p.name}</h4>
+                        <p className="text-xs text-slate-500">{p.role}</p>
+                      </div>
+                      {!p.isAvailable && !isSelected && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">Unavail</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-3 md:p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-between items-center shrink-0">
+              <div className="text-sm font-bold text-slate-600">
+                Selected: <span className={(data.matchInfo.squad?.length === 11) ? 'text-green-600' : 'text-blue-600'}>{data.matchInfo.squad?.length || 0}</span> / 11
+              </div>
+              <button onClick={() => setSquadModal(false)} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Opponent Squad Modal */}
+      {opponentSquadModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-[95%] md:w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl animate-zoom-in overflow-hidden relative">
+            <div className="p-3 md:p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl shrink-0">
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg">Opponent Playing XI</h3>
+                <p className="text-xs text-slate-500">Add players for {data.matchInfo.teamBName}</p>
+              </div>
+              <button onClick={() => setOpponentSquadModal(false)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+              <div className="space-y-4">
+                <div className="flex gap-2">
+                  <input
+                    id="new-opp-player"
+                    className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl"
+                    placeholder="Player Name"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const val = (e.target as HTMLInputElement).value.trim();
+                        if (val) {
+                          setData(prev => ({
+                            ...prev,
+                            matchInfo: {
+                              ...prev.matchInfo,
+                              opponentSquad: [...(prev.matchInfo.opponentSquad || []), val]
+                            }
+                          }));
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      const input = document.getElementById('new-opp-player') as HTMLInputElement;
+                      if (input && input.value.trim()) {
+                        setData(prev => ({
+                          ...prev,
+                          matchInfo: {
+                            ...prev.matchInfo,
+                            opponentSquad: [...(prev.matchInfo.opponentSquad || []), input.value.trim()]
+                          }
+                        }));
+                        input.value = '';
+                      }
+                    }}
+                    className="bg-red-600 text-white px-4 rounded-xl font-bold"
+                  >
+                    <Plus size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {data.matchInfo.opponentSquad?.map((p, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl">
+                      <span className="font-bold text-slate-700">{p}</span>
+                      <button
+                        onClick={() => {
+                          setData(prev => ({
+                            ...prev,
+                            matchInfo: {
+                              ...prev.matchInfo,
+                              opponentSquad: prev.matchInfo.opponentSquad?.filter((_, i) => i !== idx)
+                            }
+                          }));
+                        }}
+                        className="text-red-400 hover:text-red-600"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 md:p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-between items-center shrink-0">
+              <div className="text-sm font-bold text-slate-600">
+                Selected: {data.matchInfo.opponentSquad?.length || 0} / 11
+              </div>
+              <button onClick={() => setOpponentSquadModal(false)} className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-500/20 transition-all">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Wicket Confirmation Modal */}
       {wicketModal.isOpen && (
