@@ -2095,23 +2095,23 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
 // --- Sub-Components ---
 
-const getStrikeRate = (runs: number | '', balls: number | '') => {
+function getStrikeRate(runs: number | '', balls: number | '') {
   const r = Number(runs || 0);
   const b = Number(balls || 0);
   if (b === 0) return '0.00';
   return ((r / b) * 100).toFixed(2);
-};
+}
 
-const getEconomy = (runs: number | '', overs: number | '') => {
+function getEconomy(runs: number | '', overs: number | '') {
   const r = Number(runs || 0);
   const o = Number(overs || 0);
   if (o === 0) return '0.00';
   const balls = Math.floor(o) * 6 + Math.round((o % 1) * 10);
   const actualOvers = balls / 6;
   return (r / actualOvers).toFixed(2);
-};
+}
 
-const LiveBattingTable = ({ data, battingSquad, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) => {
+function LiveBattingTable({ data, battingSquad, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
@@ -2166,9 +2166,9 @@ const LiveBattingTable = ({ data, battingSquad, fieldingSquad, onUpdate, onRemov
       </div>
     </div>
   );
-};
+}
 
-const LiveBowlingTable = ({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) => {
+function LiveBowlingTable({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
@@ -2223,6 +2223,6 @@ const LiveBowlingTable = ({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLi
       </div>
     </div>
   );
-};
+}
 
 export default Scorecard;
