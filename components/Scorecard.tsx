@@ -163,6 +163,76 @@ interface ScorecardProps {
   onUpdateMatch?: (m: Match) => void;
 }
 
+// --- Definitions ---
+
+function getOversFromBalls(balls: number) {
+  return Math.floor(balls / 6) + (balls % 6) / 10;
+}
+
+function addBallsToOvers(currentOvers: number | '', ballsToAdd: number): number {
+  const ov = Number(currentOvers || 0);
+  const totalBalls = Math.floor(ov) * 6 + Math.round((ov % 1) * 10) + ballsToAdd;
+  return getOversFromBalls(totalBalls);
+}
+
+function getStrikeRate(runs: number | '', balls: number | '') {
+  const r = Number(runs || 0);
+  const b = Number(balls || 0);
+  if (b === 0) return '0.00';
+  return ((r / b) * 100).toFixed(2);
+}
+
+function getEconomy(runs: number | '', overs: number | '') {
+  const r = Number(runs || 0);
+  const o = Number(overs || 0);
+  if (o === 0) return '0.00';
+  const totalBalls = Math.floor(o) * 6 + Math.round((o % 1) * 10);
+  if (totalBalls === 0) return '0.00';
+  const trueOvers = totalBalls / 6;
+  return (r / trueOvers).toFixed(2);
+}
+
+function findFullPlayer(players: Player[], id: string, name: string): Partial<Player> {
+  const player = players.find(p => p.id === id);
+  if (player) return player;
+  return {
+    id, name,
+    role: PlayerRole.BATSMAN,
+    avatarUrl: `https://ui-avatars.com/api/?name=${name}&background=random`,
+    matchesPlayed: 0, runsScored: 0, wicketsTaken: 0, average: 0
+  };
+}
+
+function calculateInningsTotals(inning: Innings): Innings {
+  const batRuns = inning.batting.reduce((sum, b) => sum + Number(b.runs || 0), 0);
+  const wides = inning.bowling.reduce((sum, b) => sum + Number(b.wides || 0), 0);
+  const noBalls = inning.bowling.reduce((sum, b) => sum + Number(b.noBalls || 0), 0);
+  const legByes = inning.bowling.reduce((sum, b) => sum + Number(b.legByes || 0), 0);
+  const byes = Number(inning.byeRuns || 0);
+
+  const calculatedExtras = wides + noBalls + legByes + byes;
+  const totalRuns = batRuns + calculatedExtras;
+
+  const wickets = inning.batting.filter(b => {
+    if (!b.howOut) return false;
+    const val = b.howOut.toLowerCase();
+    return !val.includes('not out') && !val.includes('retired') && !val.includes('did not bat');
+  }).length;
+
+  const totalBalls = inning.bowling.reduce((sum, b) => {
+    const ov = Number(b.overs || 0);
+    return sum + Math.floor(ov) * 6 + Math.round((ov % 1) * 10);
+  }, 0);
+
+  return {
+    ...inning,
+    extras: calculatedExtras,
+    totalRuns,
+    wickets,
+    overs: getOversFromBalls(totalBalls)
+  };
+}
+
 const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], matches = [], onUpdateMatch }) => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<0 | 1 | 2>(2);
@@ -397,33 +467,6 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
 
 
-  const getOversFromBalls = (balls: number) => Math.floor(balls / 6) + (balls % 6) / 10;
-
-  const addBallsToOvers = (currentOvers: number | '', ballsToAdd: number): number => {
-    const ov = Number(currentOvers || 0);
-    const totalBalls = Math.floor(ov) * 6 + Math.round((ov % 1) * 10) + ballsToAdd;
-    return getOversFromBalls(totalBalls);
-  };
-
-
-
-  const getStrikeRate = (runs: number | '', balls: number | '') => {
-    const r = Number(runs || 0);
-    const b = Number(balls || 0);
-    if (b === 0) return '0.00';
-    return ((r / b) * 100).toFixed(2);
-  };
-
-  const getEconomy = (runs: number | '', overs: number | '') => {
-    const r = Number(runs || 0);
-    const o = Number(overs || 0);
-    if (o === 0) return '0.00';
-    const totalBalls = Math.floor(o) * 6 + Math.round((o % 1) * 10);
-    if (totalBalls === 0) return '0.00';
-    const trueOvers = totalBalls / 6;
-    return (r / trueOvers).toFixed(2);
-  };
-
   const getBattingTeamPlayers = (inningIdx: 0 | 1) => {
     const teamName = inningIdx === 0 ? data.matchInfo.teamAName : data.matchInfo.teamBName;
     return getTeamPlayers(teamName);
@@ -454,46 +497,6 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     return opponent ? opponent.players.map(p => ({ id: p.id, name: p.name })) : [];
   };
 
-  const findFullPlayer = (id: string, name: string): Partial<Player> => {
-    const player = players.find(p => p.id === id);
-    if (player) return player;
-    return {
-      id, name,
-      role: PlayerRole.BATSMAN,
-      avatarUrl: `https://ui-avatars.com/api/?name=${name}&background=random`,
-      matchesPlayed: 0, runsScored: 0, wicketsTaken: 0, average: 0
-    };
-  };
-
-  const calculateInningsTotals = (inning: Innings): Innings => {
-    const batRuns = inning.batting.reduce((sum, b) => sum + Number(b.runs || 0), 0);
-    const wides = inning.bowling.reduce((sum, b) => sum + Number(b.wides || 0), 0);
-    const noBalls = inning.bowling.reduce((sum, b) => sum + Number(b.noBalls || 0), 0);
-    const legByes = inning.bowling.reduce((sum, b) => sum + Number(b.legByes || 0), 0);
-    const byes = Number(inning.byeRuns || 0);
-
-    const calculatedExtras = wides + noBalls + legByes + byes;
-    const totalRuns = batRuns + calculatedExtras;
-
-    const wickets = inning.batting.filter(b => {
-      if (!b.howOut) return false;
-      const val = b.howOut.toLowerCase();
-      return !val.includes('not out') && !val.includes('retired') && !val.includes('did not bat');
-    }).length;
-
-    const totalBalls = inning.bowling.reduce((sum, b) => {
-      const ov = Number(b.overs || 0);
-      return sum + Math.floor(ov) * 6 + Math.round((ov % 1) * 10);
-    }, 0);
-
-    return {
-      ...inning,
-      extras: calculatedExtras,
-      totalRuns,
-      wickets,
-      overs: getOversFromBalls(totalBalls)
-    };
-  };
 
   const updateData = (newData: ScorecardData) => {
     const updatedInnings = newData.innings.map(ing => calculateInningsTotals(ing)) as [Innings, Innings];
@@ -544,7 +547,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
   const handlePreviewPlayer = (player: any) => {
     // Enrich with full stats if possible
-    const fullPlayer = findFullPlayer(player.id, player.name);
+    const fullPlayer = findFullPlayer(players, player.id, player.name);
     setSelectionPreview(fullPlayer);
   };
 
@@ -572,7 +575,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       newInnings[inningIdx].batting.push(entry);
     } else {
       const entry: BowlingEntry = {
-        id: newId, name: newName, overs: 0, maidens: 0, runs: 0, wickets: 0, economy: 0
+        id: newId, name: newName, overs: 0, maidens: 0, runs: 0, wickets: 0,
+        wides: 0, noBalls: 0, legByes: 0, dots: 0
       };
       newInnings[inningIdx].bowling.push(entry);
     }
@@ -1367,7 +1371,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           data={inning.batting}
           battingSquad={availableBatters}
           fieldingSquad={fieldingPlayers}
-          onUpdate={(id: string, field: string, val: any) => handleBattingChange(inningIdx, id, field, val)}
+          onUpdate={(id: string, field: string, val: any) => handleBattingChange(inningIdx, id, field as keyof BattingEntry, val)}
           onRemove={(id: string) => removeRow('batting', inningIdx, id)}
           onAdd={() => addRow('batting', inningIdx)}
           isLiveMode={isLiveMode}
@@ -1387,7 +1391,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         <LiveBowlingTable
           data={inning.bowling}
           fieldingSquad={fieldingPlayers}
-          onUpdate={(id: string, field: string, val: any) => handleBowlingChange(inningIdx, id, field, val)}
+          onUpdate={(id: string, field: string, val: any) => handleBowlingChange(inningIdx, id, field as keyof BowlingEntry, val)}
           onRemove={(id: string) => removeRow('bowling', inningIdx, id)}
           onAdd={() => addRow('bowling', inningIdx)}
           isLiveMode={isLiveMode}
@@ -2095,21 +2099,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
 // --- Sub-Components ---
 
-function getStrikeRate(runs: number | '', balls: number | '') {
-  const r = Number(runs || 0);
-  const b = Number(balls || 0);
-  if (b === 0) return '0.00';
-  return ((r / b) * 100).toFixed(2);
-}
 
-function getEconomy(runs: number | '', overs: number | '') {
-  const r = Number(runs || 0);
-  const o = Number(overs || 0);
-  if (o === 0) return '0.00';
-  const balls = Math.floor(o) * 6 + Math.round((o % 1) * 10);
-  const actualOvers = balls / 6;
-  return (r / actualOvers).toFixed(2);
-}
 
 function LiveBattingTable({ data, battingSquad, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) {
   return (
