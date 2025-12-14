@@ -233,6 +233,121 @@ function calculateInningsTotals(inning: Innings): Innings {
   };
 }
 
+// --- Sub-Components ---
+function LiveBattingTable({ data, battingSquad, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Batting</h4>
+        <button onClick={onAdd} className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1">
+          <Plus size={14} /> Add Batsman
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs md:text-sm text-left">
+          <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 text-xs uppercase">
+            <tr>
+              <th className="p-2 md:p-3 min-w-[120px]">Batsman</th>
+              <th className="p-2 md:p-3 w-24 md:w-32">Dismissal</th>
+              <th className="p-2 md:p-3 w-24 md:w-32">Fielder</th>
+              <th className="p-2 md:p-3 w-24 md:w-32">Bowler</th>
+              <th className="p-2 md:p-3 text-right">R</th>
+              <th className="p-2 md:p-3 text-right">B</th>
+              <th className="p-2 md:p-3 text-right">4s</th>
+              <th className="p-2 md:p-3 text-right">6s</th>
+              <th className="p-2 md:p-3 text-right">SR</th>
+              <th className="p-2 md:p-3 w-8"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row: any) => (
+              <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <td className="p-2 md:p-3">
+                  <select
+                    className="w-full bg-transparent font-bold text-slate-800 outline-none text-xs md:text-sm"
+                    value={row.name}
+                    onChange={(e) => onUpdate(row.id, 'name', e.target.value)}
+                  >
+                    <option value="">Select Player</option>
+                    {battingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    {!battingSquad.find((p: any) => p.name === row.name) && row.name && <option value={row.name}>{row.name}</option>}
+                  </select>
+                </td>
+                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.howOut} onChange={(e) => onUpdate(row.id, 'howOut', e.target.value)}>{DISMISSAL_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</select></td>
+                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.fielder || ''} onChange={(e) => onUpdate(row.id, 'fielder', e.target.value)}><option value="">-</option>{fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
+                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.bowler || ''} onChange={(e) => onUpdate(row.id, 'bowler', e.target.value)}><option value="">-</option>{fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-bold ${isLiveMode ? 'text-slate-400' : 'text-slate-900'}`} value={row.runs} onChange={(e) => onUpdate(row.id, 'runs', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.balls} onChange={(e) => onUpdate(row.id, 'balls', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.fours} onChange={(e) => onUpdate(row.id, 'fours', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.sixes} onChange={(e) => onUpdate(row.id, 'sixes', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getStrikeRate(row.runs, row.balls)}</td>
+                <td className="p-2 md:p-3 text-center"><button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function LiveBowlingTable({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Bowling</h4>
+        <button onClick={onAdd} className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1"><Plus size={14} /> Add Bowler</button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs md:text-sm text-left">
+          <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 text-xs uppercase">
+            <tr>
+              <th className="p-2 md:p-3 min-w-[120px]">Bowler</th>
+              <th className="p-2 md:p-3 text-right">O</th>
+              <th className="p-2 md:p-3 text-right">M</th>
+              <th className="p-2 md:p-3 text-right">R</th>
+              <th className="p-2 md:p-3 text-right">W</th>
+              <th className="p-2 md:p-3 text-right">Eco</th>
+              <th className="p-2 md:p-3 text-right">WD</th>
+              <th className="p-2 md:p-3 text-right">NB</th>
+              <th className="p-2 md:p-3 text-right">LB</th>
+              <th className="p-2 md:p-3 text-right">Dot</th>
+              <th className="p-2 md:p-3 w-8"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row: any) => (
+              <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <td className="p-2 md:p-3">
+                  <select
+                    className="w-full bg-transparent font-bold text-slate-800 outline-none text-xs md:text-sm"
+                    value={row.name}
+                    onChange={(e) => onUpdate(row.id, 'name', e.target.value)}
+                  >
+                    <option value="">Select Bowler</option>
+                    {fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                    {!fieldingSquad.find((p: any) => p.name === row.name) && row.name && <option value={row.name}>{row.name}</option>}
+                  </select>
+                </td>
+                <td className="p-2 md:p-3 text-right"><input type="number" step="0.1" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-bold ${isLiveMode ? 'text-slate-400' : 'text-slate-900'}`} value={row.overs} onChange={(e) => onUpdate(row.id, 'overs', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.maidens} onChange={(e) => onUpdate(row.id, 'maidens', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.runs} onChange={(e) => onUpdate(row.id, 'runs', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-black ${isLiveMode ? 'text-blue-300' : 'text-blue-600'}`} value={row.wickets} onChange={(e) => onUpdate(row.id, 'wickets', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getEconomy(row.runs, row.overs)}</td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.wides} onChange={(e) => onUpdate(row.id, 'wides', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.noBalls} onChange={(e) => onUpdate(row.id, 'noBalls', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.legByes} onChange={(e) => onUpdate(row.id, 'legByes', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.dots} onChange={(e) => onUpdate(row.id, 'dots', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-center"><button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], matches = [], onUpdateMatch }) => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<0 | 1 | 2>(2);
@@ -2097,122 +2212,6 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   );
 };
 
-// --- Sub-Components ---
 
-
-
-function LiveBattingTable({ data, battingSquad, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) {
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Batting</h4>
-        <button onClick={onAdd} className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1">
-          <Plus size={14} /> Add Batsman
-        </button>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs md:text-sm text-left">
-          <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 text-xs uppercase">
-            <tr>
-              <th className="p-2 md:p-3 min-w-[120px]">Batsman</th>
-              <th className="p-2 md:p-3 w-24 md:w-32">Dismissal</th>
-              <th className="p-2 md:p-3 w-24 md:w-32">Fielder</th>
-              <th className="p-2 md:p-3 w-24 md:w-32">Bowler</th>
-              <th className="p-2 md:p-3 text-right">R</th>
-              <th className="p-2 md:p-3 text-right">B</th>
-              <th className="p-2 md:p-3 text-right">4s</th>
-              <th className="p-2 md:p-3 text-right">6s</th>
-              <th className="p-2 md:p-3 text-right">SR</th>
-              <th className="p-2 md:p-3 w-8"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row: any) => (
-              <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
-                <td className="p-2 md:p-3">
-                  <select
-                    className="w-full bg-transparent font-bold text-slate-800 outline-none text-xs md:text-sm"
-                    value={row.name}
-                    onChange={(e) => onUpdate(row.id, 'name', e.target.value)}
-                  >
-                    <option value="">Select Player</option>
-                    {battingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
-                    {!battingSquad.find((p: any) => p.name === row.name) && row.name && <option value={row.name}>{row.name}</option>}
-                  </select>
-                </td>
-                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.howOut} onChange={(e) => onUpdate(row.id, 'howOut', e.target.value)}>{DISMISSAL_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</select></td>
-                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.fielder || ''} onChange={(e) => onUpdate(row.id, 'fielder', e.target.value)}><option value="">-</option>{fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
-                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.bowler || ''} onChange={(e) => onUpdate(row.id, 'bowler', e.target.value)}><option value="">-</option>{fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-bold ${isLiveMode ? 'text-slate-400' : 'text-slate-900'}`} value={row.runs} onChange={(e) => onUpdate(row.id, 'runs', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.balls} onChange={(e) => onUpdate(row.id, 'balls', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.fours} onChange={(e) => onUpdate(row.id, 'fours', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.sixes} onChange={(e) => onUpdate(row.id, 'sixes', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getStrikeRate(row.runs, row.balls)}</td>
-                <td className="p-2 md:p-3 text-center"><button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function LiveBowlingTable({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) {
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Bowling</h4>
-        <button onClick={onAdd} className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1"><Plus size={14} /> Add Bowler</button>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs md:text-sm text-left">
-          <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 text-xs uppercase">
-            <tr>
-              <th className="p-2 md:p-3 min-w-[120px]">Bowler</th>
-              <th className="p-2 md:p-3 text-right">O</th>
-              <th className="p-2 md:p-3 text-right">M</th>
-              <th className="p-2 md:p-3 text-right">R</th>
-              <th className="p-2 md:p-3 text-right">W</th>
-              <th className="p-2 md:p-3 text-right">Eco</th>
-              <th className="p-2 md:p-3 text-right">WD</th>
-              <th className="p-2 md:p-3 text-right">NB</th>
-              <th className="p-2 md:p-3 text-right">LB</th>
-              <th className="p-2 md:p-3 text-right">Dot</th>
-              <th className="p-2 md:p-3 w-8"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row: any) => (
-              <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
-                <td className="p-2 md:p-3">
-                  <select
-                    className="w-full bg-transparent font-bold text-slate-800 outline-none text-xs md:text-sm"
-                    value={row.name}
-                    onChange={(e) => onUpdate(row.id, 'name', e.target.value)}
-                  >
-                    <option value="">Select Bowler</option>
-                    {fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
-                    {!fieldingSquad.find((p: any) => p.name === row.name) && row.name && <option value={row.name}>{row.name}</option>}
-                  </select>
-                </td>
-                <td className="p-2 md:p-3 text-right"><input type="number" step="0.1" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-bold ${isLiveMode ? 'text-slate-400' : 'text-slate-900'}`} value={row.overs} onChange={(e) => onUpdate(row.id, 'overs', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.maidens} onChange={(e) => onUpdate(row.id, 'maidens', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.runs} onChange={(e) => onUpdate(row.id, 'runs', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-black ${isLiveMode ? 'text-blue-300' : 'text-blue-600'}`} value={row.wickets} onChange={(e) => onUpdate(row.id, 'wickets', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getEconomy(row.runs, row.overs)}</td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.wides} onChange={(e) => onUpdate(row.id, 'wides', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.noBalls} onChange={(e) => onUpdate(row.id, 'noBalls', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.legByes} onChange={(e) => onUpdate(row.id, 'legByes', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.dots} onChange={(e) => onUpdate(row.id, 'dots', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-center"><button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
 
 export default Scorecard;
