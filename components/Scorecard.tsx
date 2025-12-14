@@ -446,6 +446,83 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   const [activeMatchId, setActiveMatchId] = useState<string | number | null>(null);
   const showMatchList = !activeMatchId && (!location.state || !location.state.match);
 
+  const loadMatchData = (match: Match) => {
+    // If we have saved scorecard data, load it entirely!
+    if (match.scorecardData && match.scorecardData.data) {
+      setData(match.scorecardData.data);
+      if (match.scorecardData.liveState) setLiveState(match.scorecardData.liveState);
+      if (match.scorecardData.history) setBallCommentary(match.scorecardData.history);
+
+      // If data is loaded, we can go to scorer tab
+      if (location.state?.mode === 'live') {
+        setActiveTab(0);
+      }
+      return;
+    }
+
+    // Otherwise, initialize fresh from match details
+
+    // Initialize defaults for new match flow
+    setData(prev => ({
+      ...prev,
+      matchInfo: {
+        ...prev.matchInfo,
+        id: match.id ? match.id.toString() : undefined,
+        teamAName: 'INDIAN STRIKERS',
+        teamBName: match.opponent,
+        venue: match.venue,
+        date: match.date,
+        tournament: match.tournament || '',
+        tossResult: '',
+        matchResult: '',
+        resultType: (match.result as any) || 'Pending',
+        squad: match.squad || [],
+        opponentSquad: (match as any).opponentSquad || [],
+        totalOvers: (match as any).totalOvers || 20
+      },
+      innings: [
+        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 },
+        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 }
+      ]
+    }));
+
+    // Start at Setup (Tab 0) unless data suggests otherwise (handled in early return)
+    setActiveTab(0);
+  };
+
+
+  useEffect(() => {
+    if (location.state && location.state.match) {
+
+      const matchId = location.state.match.id;
+      // Fix: Prioritize fresh data from 'matches' prop if available, otherwise use route state
+      const freshMatch = matches.find(m => String(m.id) === String(matchId)) || location.state.match;
+
+      loadMatchData(freshMatch);
+      const mode = location.state.mode;
+
+      if (mode === 'live') {
+        setIsLiveMode(true);
+        // For new live matches, verify Info first
+        // If data exists, loadMatchData will handle tab switching if needed
+        setActiveTab(2);
+      } else {
+        setIsLiveMode(false);
+        // If it's a past match (edit mode), start at 1st Innings so they can see/edit table?
+        // Or Match Info? User said "enter past match score", so probably the table.
+        setActiveTab(0);
+      }
+      setActiveMatchId(freshMatch.id);
+    }
+  }, [location.state, matches]);
+
+  useEffect(() => {
+    // Auto-scroll commentary
+    if (commentaryEndRef.current) {
+      commentaryEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [ballCommentary]);
+
   if (showMatchList) {
     const upcomingMatches = matches.filter(m => (m.result === 'Pending' || !m.result) && !m.scorecardData);
 
@@ -493,92 +570,11 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     );
   }
 
-  useEffect(() => {
-    if (location.state && location.state.match) {
 
-      const matchId = location.state.match.id;
-      // Fix: Prioritize fresh data from 'matches' prop if available, otherwise use route state
-      const freshMatch = matches.find(m => String(m.id) === String(matchId)) || location.state.match;
-
-      loadMatchData(freshMatch);
-      const mode = location.state.mode;
-
-      if (mode === 'live') {
-        setIsLiveMode(true);
-        // For new live matches, verify Info first
-        // If data exists, loadMatchData will handle tab switching if needed
-        setActiveTab(2);
-      } else {
-        setIsLiveMode(false);
-        // If it's a past match (edit mode), start at 1st Innings so they can see/edit table?
-        // Or Match Info? User said "enter past match score", so probably the table.
-        setActiveTab(0);
-      }
-      setActiveMatchId(freshMatch.id);
-    }
-  }, [location.state, matches]);
-
-  // Auto-Select Removed in favor of Modal Flow
-  // useEffect removed
-
-
-  useEffect(() => {
-    // Auto-scroll commentary
-    if (commentaryEndRef.current) {
-      commentaryEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [ballCommentary]);
 
   // -- Helpers --
 
-  const loadMatchData = (match: Match) => {
-    // If we have saved scorecard data, load it entirely!
-    if (match.scorecardData && match.scorecardData.data) {
-      setData(match.scorecardData.data);
-      if (match.scorecardData.liveState) setLiveState(match.scorecardData.liveState);
-      if (match.scorecardData.history) setBallCommentary(match.scorecardData.history);
 
-      // If data is loaded, we can go to scorer tab
-      if (location.state?.mode === 'live') {
-        setActiveTab(0);
-      }
-      return;
-    }
-
-    // Otherwise, initialize fresh from match details
-
-    // Check if we should trigger Toss Modal logic
-    // We only trigger auto-toss if:
-    // 1. No existing scorecard data (handled above)
-    // 2. The match is NOT completed (result is Pending or undefined) OR user explicitly wants to start scoring
-
-    // Initialize defaults for new match flow
-    setData(prev => ({
-      ...prev,
-      matchInfo: {
-        ...prev.matchInfo,
-        id: match.id ? match.id.toString() : undefined,
-        teamAName: 'INDIAN STRIKERS',
-        teamBName: match.opponent,
-        venue: match.venue,
-        date: match.date,
-        tournament: match.tournament || '',
-        tossResult: '',
-        matchResult: '',
-        resultType: (match.result as any) || 'Pending',
-        squad: match.squad || [],
-        opponentSquad: (match as any).opponentSquad || [],
-        totalOvers: (match as any).totalOvers || 20
-      },
-      innings: [
-        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 },
-        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 }
-      ]
-    }));
-
-    // Start at Setup (Tab 0) unless data suggests otherwise (handled in early return)
-    setActiveTab(0);
-  };
 
 
 
