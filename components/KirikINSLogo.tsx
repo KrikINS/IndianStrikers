@@ -68,9 +68,9 @@ const KirikINSLogo: React.FC<KirikINSLogoProps> = ({ className = '', size = 'lar
             fontWeight="400"
             fontSize={fontSize}
             fill="white"
-            style={{ textShadow: '0 0 5px rgba(255,255,255,0.8)' }}
+            style={{ textShadow: '0 0 2px rgba(255,255,255,0.8)' }}
           >
-            Kirik
+            Krik
           </text>
 
           {/* Part 2: INS - Solid Royal Blue Fill with circular rotation */}
