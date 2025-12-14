@@ -28,7 +28,7 @@ import {
   CheckCircle2,
   Hand
 } from 'lucide-react';
-import { OpponentTeam, Player, Match, PlayerRole } from '../types';
+import { OpponentTeam, Player, Match, PlayerRole, UserRole } from '../types';
 import { useLocation } from 'react-router-dom';
 import { updateMatch, updatePlayer } from '../services/storageService';
 
@@ -81,6 +81,7 @@ interface Innings {
   totalRuns: number;
   wickets: number;
   overs: number;
+  battingTeamName?: string;
 }
 
 interface MatchInfo {
@@ -161,6 +162,7 @@ interface ScorecardProps {
   players?: Player[];
   matches?: Match[];
   onUpdateMatch?: (m: Match) => void | Promise<void>;
+  userRole?: UserRole; // Added Prop
 }
 
 // --- Definitions ---
@@ -234,14 +236,11 @@ function calculateInningsTotals(inning: Innings): Innings {
 }
 
 // --- Sub-Components ---
-function LiveBattingTable({ data, battingSquad, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) {
+function LiveBattingTable({ data, battingSquad, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode, title }: any) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Batting</h4>
-        <button onClick={onAdd} className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1">
-          <Plus size={14} /> Add Batsman
-        </button>
+        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">{title || 'Batting'}</h4>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs md:text-sm text-left">
@@ -291,12 +290,11 @@ function LiveBattingTable({ data, battingSquad, fieldingSquad, onUpdate, onRemov
   );
 }
 
-function LiveBowlingTable({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode }: any) {
+function LiveBowlingTable({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLiveMode, title }: any) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">Bowling</h4>
-        <button onClick={onAdd} className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1"><Plus size={14} /> Add Bowler</button>
+        <h4 className="font-bold text-slate-700 uppercase text-xs tracking-wider">{title || 'Bowling'}</h4>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs md:text-sm text-left">
@@ -348,7 +346,8 @@ function LiveBowlingTable({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLi
   );
 }
 
-const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], matches = [], onUpdateMatch }) => {
+const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], matches = [], onUpdateMatch, userRole = 'guest' }) => {
+  const isScorer = userRole === 'admin' || userRole === 'scorer'; // Permission Check
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<0 | 1 | 2>(2);
   const [isLiveMode, setIsLiveMode] = useState(false);
@@ -430,6 +429,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   });
   const [squadModal, setSquadModal] = useState(false);
   const [opponentSquadModal, setOpponentSquadModal] = useState(false);
+  const [showScorecardModal, setShowScorecardModal] = useState(false);
+  const [modalTab, setModalTab] = useState(0); // State for Scorecard Modal Tabs // New state for scorecard visibility
   const [inningsBreakModal, setInningsBreakModal] = useState(false);
   const [matchSettingsModal, setMatchSettingsModal] = useState(false);
   const [endMatchModal, setEndMatchModal] = useState(false);
@@ -506,6 +507,13 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         // For new live matches, verify Info first
         // If data exists, loadMatchData will handle tab switching if needed
         setActiveTab(2);
+      } else if (mode === 'view') {
+        setIsLiveMode(false);
+        // View mode: Show 1st Innings by default (Tab 1), or Tab 0 (Setup) if no toss?
+        // If match is complete, we definitely want Tab 1.
+        // If loadMatchData found data, it might have set it, but this overrides.
+        // Let's check: if it's view mode, we likely want to see the Scorecard.
+        setActiveTab(1);
       } else {
         setIsLiveMode(false);
         // If it's a past match (edit mode), start at 1st Innings so they can see/edit table?
@@ -516,12 +524,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     }
   }, [location.state, matches]);
 
-  useEffect(() => {
-    // Auto-scroll commentary
-    if (commentaryEndRef.current) {
-      commentaryEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [ballCommentary]);
+
 
   if (showMatchList) {
     const upcomingMatches = matches.filter(m => (m.result === 'Pending' || !m.result) && !m.scorecardData);
@@ -579,13 +582,16 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
 
   const getBattingTeamPlayers = (inningIdx: 0 | 1) => {
-    const teamName = inningIdx === 0 ? data.matchInfo.teamAName : data.matchInfo.teamBName;
-    return getTeamPlayers(teamName);
+    // Fix: Use the actual batting team assigned by Toss
+    const teamName = data.innings[inningIdx].battingTeamName || (inningIdx === 0 ? data.matchInfo.teamAName : data.matchInfo.teamBName);
+    return getTeamPlayers(teamName!);
   };
 
   const getBowlingTeamPlayers = (inningIdx: 0 | 1) => {
-    const teamName = inningIdx === 0 ? data.matchInfo.teamBName : data.matchInfo.teamAName;
-    return getTeamPlayers(teamName);
+    const battingTeam = data.innings[inningIdx].battingTeamName || (inningIdx === 0 ? data.matchInfo.teamAName : data.matchInfo.teamBName);
+    // Bowling team is the one NOT batting
+    const teamName = battingTeam === data.matchInfo.teamAName ? data.matchInfo.teamBName : data.matchInfo.teamAName;
+    return getTeamPlayers(teamName!);
   };
 
   const getTeamPlayers = (teamName: string) => {
@@ -808,10 +814,55 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     setTimeout(() => setMilestone({ visible: false, data: null }), 5000); // 5s duration
   };
 
+  // Helper to check for Hat-tricks
+  const checkHattrick = (type: 'W' | '4' | '6', currentBall: BallEvent, history: BallEvent[]) => {
+    // 3 consecutive events by same player (Bowler for Wickets, Striker for Boundaries)
+    // Filter history for relevant events
+    let relevantHistory: BallEvent[] = [];
+
+    if (type === 'W') {
+      // Wicket Hattrick: Recent balls by THIS bowler (ignoring wides/noballs if needed? usually strictly consecutive legal deliveries or just consecutive wickets)
+      // Standard: 3 wickets in 3 consecutive balls bowled by the bowler (across overs allowed)
+      relevantHistory = history.filter(b => b.bowler === currentBall.bowler && b.isWicket).slice(-3);
+    } else {
+      // Boundary Hattrick: 3 consecutive boundaries by THIS striker
+      const runs = type === '4' ? 4 : 6;
+      relevantHistory = history.filter(b => b.striker === currentBall.striker && b.runs === runs).slice(-3);
+    }
+
+    if (relevantHistory.length === 3) {
+      // Currently processing the 3rd one. Check if strictly consecutive in terms of that player's events? 
+      // Simplified: If last 2 matching events are recent enough. 
+      // Actually, for a TRUE hattrick, we should check if they are the VERY last 2 events for that player.
+      // But standard filtering is "events of type X". 
+      // Let's stick to "Consecutive in their stats log". 
+
+      const title = type === 'W' ? 'HATTRICK WICKET!' : `HATTRICK ${type === '4' ? 'FOURS' : 'SIXES'}!`;
+      const subText = type === 'W' ? '3 Wickets in a row!' : '3 Boundaries in a row!';
+
+      triggerMilestone({
+        type: '50', // Customize
+        title: title,
+        playerName: type === 'W' ? currentBall.bowler : currentBall.striker,
+        subText: subText,
+        stats: {
+          label1: type === 'W' ? 'Wickets' : 'Runs', value1: type === 'W' ? 3 : (type === '4' ? 12 : 18),
+          label2: 'History', value2: '🔥🔥🔥'
+        }
+      });
+    }
+  };
+
   const processBall = (
     runs: number, isWide: boolean, isNoBall: boolean, isWicket: boolean,
     isBye: boolean, isLegBye: boolean, dismissalType: string = '', fielderName: string = ''
   ) => {
+    // Boundary Animation Trigger
+    if (!isWide && !isNoBall && (runs === 4 || runs === 6)) {
+      setBoundaryAnim(runs);
+      setTimeout(() => setBoundaryAnim(null), 3000); // Reset after 3s
+    }
+
     // 1. Snapshot for Undo
     setHistory(prev => [...prev, JSON.parse(JSON.stringify({
       data, commentary: ballCommentary, liveState
@@ -882,6 +933,18 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
       if (runs === 6) striker.sixes = Number(striker.sixes || 0) + 1;
       description = runs > 0 ? `No Ball + ${runs} Runs` : `No Ball`;
       validBall = false; isDot = false;
+
+      // Trigger Free Hit Milestone Overlay
+      triggerMilestone({
+        type: '50', // Reusing '50' style for generic large text or create custom
+        title: 'FREE HIT!',
+        playerName: 'NO BALL',
+        subText: 'Next delivery is a Free Hit',
+        stats: {
+          label1: 'Extras', value1: 1 + runs,
+          label2: 'Bowler', value2: bowler.name
+        }
+      });
     }
     else if (isBye) {
       extrasType = 'B';
@@ -1005,6 +1068,15 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     const nextHistory = [...ballCommentary, newEvent];
     setBallCommentary(nextHistory);
 
+    // Hattrick Checks
+    if (isWicket && !isNoBall && !isWide) {
+      checkHattrick('W', newEvent, nextHistory);
+    }
+    if (!isWide && !isNoBall) {
+      if (runs === 4) checkHattrick('4', newEvent, nextHistory);
+      if (runs === 6) checkHattrick('6', newEvent, nextHistory);
+    }
+
     // Swap Ends
     if (runs % 2 !== 0 && validBall) {
       setLiveState(prev => ({ ...prev, strikerId: prev.nonStrikerId, nonStrikerId: prev.strikerId }));
@@ -1078,6 +1150,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     const matchId = e.target.value;
     // Fix: Convert ID to string for comparison as DB might return numbers
     const selected = matches.find(m => String(m.id) === String(matchId));
+    console.log("Selected Match Object:", selected);
     if (!selected) return;
 
     setTossModal({
@@ -1091,15 +1164,25 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   const handleTossComplete = (decision: 'Bat' | 'Bowl') => {
     if (!tossModal.match || !tossModal.winner) return;
 
-    const teamA = 'INDIAN STRIKERS';
-    const teamB = tossModal.match.opponent;
-    let tossResultText = '';
+    const teamA = data.matchInfo.teamAName || 'INDIAN STRIKERS';
+    const teamB = tossModal.match.opponent || tossModal.match.teamBName || 'Opponent';
 
-    if (tossModal.winner === '1') {
-      tossResultText = `${teamA} won the toss and elected to ${decision}`;
-    } else {
-      tossResultText = `${teamB} won the toss and elected to ${decision}`;
+    const winnerId = tossModal.winner;
+    const winnerName = winnerId === '1' ? teamA : teamB;
+    const isBattingFirst = (winnerId === '1' && decision === 'Bat') || (winnerId === '2' && decision === 'Bowl');
+
+    // Determine batting order
+    const firstInningsTeam = isBattingFirst ? teamA : teamB;
+    const secondInningsTeam = isBattingFirst ? teamB : teamA;
+
+    if (winnerName === 'undefined' || !winnerName) {
+      console.error("Toss winner undefined", { winnerId, teamA, teamB });
     }
+
+    // Debug Toss
+    console.log("Conducting Toss:", { winnerId, decision, teamA, teamB, isBattingFirst });
+
+    const tossResultText = `${winnerName} won the toss and elected to ${decision}`;
 
     setData(prev => ({
       ...prev,
@@ -1108,19 +1191,20 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         id: tossModal.match!.id,
         teamAName: teamA,
         teamBName: teamB,
+        // Fix: Ensure we copy the squad if available
+        opponentSquad: tossModal.match!.opponentSquad || [],
         tossResult: tossResultText,
         date: tossModal.match!.date.split('T')[0],
         venue: tossModal.match!.venue,
         tournament: tossModal.match!.tournament || '',
-        // Initialize result based on existing match data if available
         // Initialize result based on existing match data if available
         resultType: (tossModal.match!.result as any) || 'Pending',
         totalOvers: data.matchInfo.totalOvers || 20
       },
       // Reset scorecard when switching matches manually
       innings: [
-        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 },
-        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0 }
+        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0, battingTeamName: firstInningsTeam },
+        { batting: [], bowling: [], byeRuns: 0, extras: 0, totalRuns: 0, wickets: 0, overs: 0, battingTeamName: secondInningsTeam }
       ]
     }));
 
@@ -1347,103 +1431,104 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
 
   const renderTabContent = () => {
+    // Determine if tables should be read-only (Live Mode OR Match Completed)
+    const isMatchCompleted = data.matchInfo.resultType && data.matchInfo.resultType !== 'Pending';
+    const tablesReadOnly = isLiveMode || isMatchCompleted;
+
     if (activeTab === 0) {
       return (
         <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
-          {/* Match Setup Dashboard */}
-          <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
-            {/* Header */}
-            <div className="bg-slate-900 p-8 text-white text-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-blue-600/20 blur-3xl rounded-full scale-150"></div>
-              <h3 className="text-3xl font-black relative z-10 uppercase tracking-widest mb-2">Match Setup</h3>
-              <div className="flex justify-center gap-6 text-slate-400 font-medium relative z-10 text-sm">
-                <span className="flex items-center gap-2"><Calendar size={16} /> {data.matchInfo.date}</span>
-                <span className="flex items-center gap-2"><Target size={16} /> {data.matchInfo.venue}</span>
+          {/* Score Strip */}
+          <div className="bg-slate-900 rounded-3xl p-4 md:p-6 mb-4 md:mb-6 shadow-2xl relative overflow-hidden ring-1 ring-white/10 text-white">
+            <div className="absolute top-0 left-0 w-full h-full bg-blue-600/20 blur-3xl rounded-full scale-150"></div>
+            <h3 className="text-3xl font-black relative z-10 uppercase tracking-widest mb-2 text-white">Match Setup</h3>
+            <div className="flex justify-center gap-6 text-slate-400 font-medium relative z-10 text-sm">
+              <span className="flex items-center gap-2"><Calendar size={16} /> {data.matchInfo.date}</span>
+              <span className="flex items-center gap-2"><Target size={16} /> {data.matchInfo.venue}</span>
+            </div>
+          </div>
+
+          <div className="p-6 md:p-8 space-y-8">
+            {/* Step 1: Toss */}
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 text-center relative overflow-hidden">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-slate-200 px-3 py-1 rounded-b-lg text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                Step 1: The Coin Toss
+              </div>
+
+              <div className="mt-4">
+                {data.matchInfo.tossResult ? (
+                  <div className="inline-flex items-center gap-3 px-6 py-3 bg-green-100 text-green-800 rounded-xl font-bold border border-green-200 shadow-sm animate-fade-in">
+                    <CheckCircle2 size={24} />
+                    <span className="text-lg">{data.matchInfo.tossResult}</span>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-slate-500 mb-6 font-medium">Who will bat first? Conduct the toss to proceed.</p>
+                    <button
+                      onClick={() => setTossModal({
+                        isOpen: true,
+                        match: { ...data.matchInfo, id: Number(data.matchInfo.id || 0) } as any,
+                        step: 'winner',
+                        winner: null
+                      })}
+                      className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 mx-auto"
+                    >
+                      <CircleDot size={20} className="animate-spin-slow" /> Conduct Toss
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="p-6 md:p-8 space-y-8">
-              {/* Step 1: Toss */}
-              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-slate-200 px-3 py-1 rounded-b-lg text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  Step 1: The Coin Toss
+            {/* Step 2: Squads */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Home Team */}
+              <div className="p-5 border border-slate-200 rounded-2xl hover:border-blue-300 transition-colors bg-white shadow-sm hover:shadow-md group">
+                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                  <h4 className="font-black text-slate-800 text-lg group-hover:text-blue-700 transition-colors uppercase italic">{data.matchInfo.teamAName}</h4>
+                  <span className={`px-2 py-1 text-xs font-bold rounded-lg ${data.matchInfo.squad && data.matchInfo.squad.length >= 11 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {data.matchInfo.squad?.length || 0} / 11
+                  </span>
                 </div>
-
-                <div className="mt-4">
-                  {data.matchInfo.tossResult ? (
-                    <div className="inline-flex items-center gap-3 px-6 py-3 bg-green-100 text-green-800 rounded-xl font-bold border border-green-200 shadow-sm animate-fade-in">
-                      <CheckCircle2 size={24} />
-                      <span className="text-lg">{data.matchInfo.tossResult}</span>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-slate-500 mb-6 font-medium">Who will bat first? Conduct the toss to proceed.</p>
-                      <button
-                        onClick={() => setTossModal({
-                          isOpen: true,
-                          match: { ...data.matchInfo, id: Number(data.matchInfo.id || 0) } as any,
-                          step: 'winner',
-                          winner: null
-                        })}
-                        className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 mx-auto"
-                      >
-                        <CircleDot size={20} className="animate-spin-slow" /> Conduct Toss
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Step 2: Squads */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Home Team */}
-                <div className="p-5 border border-slate-200 rounded-2xl hover:border-blue-300 transition-colors bg-white shadow-sm hover:shadow-md group">
-                  <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
-                    <h4 className="font-black text-slate-800 text-lg group-hover:text-blue-700 transition-colors uppercase italic">{data.matchInfo.teamAName}</h4>
-                    <span className={`px-2 py-1 text-xs font-bold rounded-lg ${data.matchInfo.squad && data.matchInfo.squad.length >= 11 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {data.matchInfo.squad?.length || 0} / 11
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setSquadModal(true)}
-                    className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Edit2 size={16} /> Manage Home Squad
-                  </button>
-                </div>
-
-                {/* Opponent Team */}
-                <div className="p-5 border border-slate-200 rounded-2xl hover:border-red-300 transition-colors bg-white shadow-sm hover:shadow-md group">
-                  <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
-                    <h4 className="font-black text-slate-800 text-lg group-hover:text-red-700 transition-colors uppercase italic">{data.matchInfo.teamBName}</h4>
-                    <span className={`px-2 py-1 text-xs font-bold rounded-lg ${data.matchInfo.opponentSquad && data.matchInfo.opponentSquad.length > 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                      {data.matchInfo.opponentSquad?.length || 0} Players
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setOpponentSquadModal(true)}
-                    className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Users size={16} /> Manage Opponent
-                  </button>
-                </div>
-              </div>
-
-              {/* Step 3: Start Action */}
-              <div className="pt-6 border-t border-slate-100">
                 <button
-                  onClick={() => {
-                    setIsLiveMode(true);
-                    setActiveTab(1); // Go to 1st Innings
-                  }}
-                  disabled={!data.matchInfo.tossResult}
-                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black text-xl rounded-2xl shadow-xl shadow-slate-900/20 transition-all active:scale-95 flex items-center justify-center gap-3 relative overflow-hidden group"
+                  onClick={() => setSquadModal(true)}
+                  className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                  <Zap size={24} className={data.matchInfo.tossResult ? "fill-yellow-400 text-yellow-400" : ""} />
-                  {data.matchInfo.tossResult ? 'START MATCH SCORING' : 'Complete Toss to Start'}
+                  <Edit2 size={16} /> Manage Home Squad
                 </button>
               </div>
+
+              {/* Opponent Team */}
+              <div className="p-5 border border-slate-200 rounded-2xl hover:border-red-300 transition-colors bg-white shadow-sm hover:shadow-md group">
+                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                  <h4 className="font-black text-slate-800 text-lg group-hover:text-red-700 transition-colors uppercase italic">{data.matchInfo.teamBName}</h4>
+                  <span className={`px-2 py-1 text-xs font-bold rounded-lg ${data.matchInfo.opponentSquad && data.matchInfo.opponentSquad.length > 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                    {data.matchInfo.opponentSquad?.length || 0} Players
+                  </span>
+                </div>
+                <button
+                  onClick={() => setOpponentSquadModal(true)}
+                  className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+                >
+                  <Users size={16} /> Manage Opponent
+                </button>
+              </div>
+            </div>
+
+            {/* Step 3: Start Action */}
+            <div className="pt-6 border-t border-slate-100">
+              <button
+                onClick={() => {
+                  setIsLiveMode(true);
+                  setActiveTab(1); // Go to 1st Innings
+                }}
+                disabled={!data.matchInfo.tossResult}
+                className="w-full py-4 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black text-xl rounded-2xl shadow-xl shadow-slate-900/20 transition-all active:scale-95 flex items-center justify-center gap-3 relative overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                <Zap size={24} className={data.matchInfo.tossResult ? "fill-yellow-400 text-yellow-400" : ""} />
+                {data.matchInfo.tossResult ? 'START MATCH SCORING' : 'Complete Toss to Start'}
+              </button>
             </div>
           </div>
         </div>
@@ -1452,10 +1537,26 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
     const inningIdx = activeTab === 1 ? 0 : 1;
     const inning = data.innings[inningIdx];
-    const teamName = inningIdx === 0 ? data.matchInfo.teamAName : data.matchInfo.teamBName;
+    // Fix: Use the explicitly set battingTeamName, fallback to manual logic only if missing
+    const teamName = inning.battingTeamName || (inningIdx === 0 ? data.matchInfo.teamAName : data.matchInfo.teamBName);
     const fieldingPlayers = getBowlingTeamPlayers(inningIdx as 0 | 1);
     const availableBatters = getBattingTeamPlayers(inningIdx as 0 | 1);
     const partnershipData = calculateCurrentPartnership(inningIdx as 0 | 1);
+
+    // CHASE LOGIC
+    let chaseInfo = null;
+    if (inningIdx === 1) {
+      const target = calculateInningsTotals(data.innings[0]).totalRuns + 1;
+      const runsNeeded = target - inning.totalRuns;
+
+      const totalOvers = data.matchInfo.totalOvers || 20;
+      const ballsBowled = Math.floor(inning.overs) * 6 + Math.round((inning.overs % 1) * 10);
+      const ballsRemaining = (totalOvers * 6) - ballsBowled;
+
+      const rrr = ballsRemaining > 0 ? ((runsNeeded / ballsRemaining) * 6).toFixed(2) : '-';
+
+      chaseInfo = { target, runsNeeded, ballsRemaining, rrr };
+    }
 
     return (
       <div className="space-y-4 md:space-y-8 animate-fade-in relative">
@@ -1470,6 +1571,27 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           </div>
         </div>
 
+        {/* Chase Info Strip */}
+        {chaseInfo && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-3 md:p-4 flex flex-wrap gap-4 items-center justify-between shadow-sm">
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Target</span>
+              <span className="text-xl md:text-2xl font-black text-slate-800">{chaseInfo.target}</span>
+            </div>
+
+            <div className="flex-1 text-center border-l border-r border-blue-200 px-4">
+              <div className="text-sm md:text-base font-bold text-blue-800">
+                Need <span className="text-2xl md:text-3xl font-black">{Math.max(0, chaseInfo.runsNeeded)}</span> runs off <span className="text-2xl md:text-3xl font-black">{Math.max(0, chaseInfo.ballsRemaining)}</span> balls
+              </div>
+            </div>
+
+            <div className="flex flex-col text-right">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Req. Rate</span>
+              <span className="text-xl md:text-2xl font-black text-slate-800">{chaseInfo.rrr}</span>
+            </div>
+          </div>
+        )}
+
         {isLiveMode && (
           <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-700">
             <div className="p-3 md:p-4 bg-slate-950 border-b border-slate-800 flex flex-col md:flex-row justify-between gap-3 md:gap-4">
@@ -1477,28 +1599,32 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                 <div className="bg-red-600 px-2 py-1 rounded text-xs font-bold text-white animate-pulse flex items-center gap-1 shrink-0">
                   <span className="w-2 h-2 bg-white rounded-full"></span> LIVE
                 </div>
-                <div className="flex gap-1 md:gap-2 overflow-x-auto pb-1 md:pb-0">
-                  <select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.strikerId} onChange={(e) => setLiveState({ ...liveState, strikerId: e.target.value })}>
-                    <option value="">Striker</option>
-                    {inning.batting.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                  <select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.nonStrikerId} onChange={(e) => setLiveState({ ...liveState, nonStrikerId: e.target.value })}>
-                    <option value="">Non-Striker</option>
-                    {inning.batting.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                  <select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.bowlerId} onChange={(e) => setLiveState({ ...liveState, bowlerId: e.target.value })}>
-                    <option value="">Bowler</option>
-                    {inning.bowling.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                </div>
+                {isScorer && (
+                  <div className="flex gap-1 md:gap-2 overflow-x-auto pb-1 md:pb-0">
+                    <select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.strikerId} onChange={(e) => setLiveState({ ...liveState, strikerId: e.target.value })}>
+                      <option value="">Striker</option>
+                      {inning.batting.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+                    <select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.nonStrikerId} onChange={(e) => setLiveState({ ...liveState, nonStrikerId: e.target.value })}>
+                      <option value="">Non-Striker</option>
+                      {inning.batting.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+                    <select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.bowlerId} onChange={(e) => setLiveState({ ...liveState, bowlerId: e.target.value })}>
+                      <option value="">Bowler</option>
+                      {inning.bowling.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+                  </div>
+                )}
               </div>
-              <button
-                onClick={handleUndo}
-                disabled={history.length === 0}
-                className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors text-xs md:text-sm disabled:opacity-50 self-end md:self-auto"
-              >
-                <RotateCcw size={14} /> Undo Last Ball
-              </button>
+              {isScorer && (
+                <button
+                  onClick={handleUndo}
+                  disabled={history.length === 0}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors text-xs md:text-sm disabled:opacity-50 self-end md:self-auto"
+                >
+                  <RotateCcw size={14} /> Undo Last Ball
+                </button>
+              )}
             </div>
 
             {/* Partnership Display */}
@@ -1524,30 +1650,40 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
             )}
 
             <div className="flex flex-col md:flex-row">
-              <div className="flex-1 p-3 md:p-6 border-b md:border-b-0 md:border-r border-slate-800">
-                <div className="grid grid-cols-4 md:grid-cols-6 gap-2 mb-4">
-                  {[0, 1, 2, 3, 4, 6].map(run => (
-                    <button key={run} onClick={() => handleScoreBall(run, false, false, false)} className="py-3 md:py-4 bg-slate-800 hover:bg-slate-700 rounded-xl font-black text-xl md:text-2xl border border-slate-700 transition-all hover:-translate-y-1 text-white shadow-lg active:scale-95 active:bg-blue-600">
-                      {run}
-                    </button>
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <button onClick={() => handleScoreBall(0, false, false, true)} className="py-3 bg-red-600 hover:bg-red-700 rounded-xl font-bold border border-red-500 text-white shadow-lg shadow-red-900/50 active:scale-95">WICKET</button>
-                  <button onClick={() => handleScoreBall(5, false, false, false)} className="py-3 bg-slate-800 hover:bg-slate-700 rounded-xl font-bold border border-slate-700 text-white active:scale-95">5 Runs</button>
-                </div>
+              {isScorer ? (
+                <div className="flex-1 p-3 md:p-6 border-b md:border-b-0 md:border-r border-slate-800">
+                  <div className="grid grid-cols-4 md:grid-cols-6 gap-2 mb-4">
+                    {[0, 1, 2, 3, 4, 6].map(run => (
+                      <button key={run} onClick={() => handleScoreBall(run, false, false, false)} className="py-3 md:py-4 bg-slate-800 hover:bg-slate-700 rounded-xl font-black text-xl md:text-2xl border border-slate-700 transition-all hover:-translate-y-1 text-white shadow-lg active:scale-95 active:bg-blue-600">
+                        {run}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <button onClick={() => handleScoreBall(0, false, false, true)} className="py-3 bg-red-600 hover:bg-red-700 rounded-xl font-bold border border-red-500 text-white shadow-lg shadow-red-900/50 active:scale-95">WICKET</button>
+                    <button onClick={() => handleScoreBall(5, false, false, false)} className="py-3 bg-slate-800 hover:bg-slate-700 rounded-xl font-bold border border-slate-700 text-white active:scale-95">5 Runs</button>
+                  </div>
 
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Extras</p>
-                  <div className="grid grid-cols-5 gap-1">
-                    {[0, 1, 2, 3, 4].map(n => <button key={`wd-${n}`} onClick={() => handleScoreBall(n, true, false, false)} className="p-2 bg-orange-900/40 text-orange-200 border border-orange-800 rounded text-[10px] md:text-xs font-bold hover:bg-orange-900 active:bg-orange-800">WD{n > 0 ? `+${n}` : ''}</button>)}
-                    {[0, 1, 2, 3, 4].map(n => <button key={`nb-${n}`} onClick={() => handleScoreBall(n, false, true, false)} className="p-2 bg-yellow-900/40 text-yellow-200 border border-yellow-800 rounded text-[10px] md:text-xs font-bold hover:bg-yellow-900 active:bg-yellow-800">NB{n > 0 ? `+${n}` : ''}</button>)}
-                    {[1, 2, 3, 4].map(n => <button key={`b-${n}`} onClick={() => handleScoreBall(n, false, false, false, true)} className="p-2 bg-blue-900/40 text-blue-200 border border-blue-800 rounded text-[10px] md:text-xs font-bold hover:bg-blue-900 active:bg-blue-800">B+{n}</button>)}
-                    <div className="p-2"></div>
-                    {[1, 2, 3, 4].map(n => <button key={`lb-${n}`} onClick={() => handleScoreBall(n, false, false, false, false, true)} className="p-2 bg-purple-900/40 text-purple-200 border border-purple-800 rounded text-[10px] md:text-xs font-bold hover:bg-purple-900 active:bg-purple-800">LB+{n}</button>)}
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Extras</p>
+                    <div className="grid grid-cols-5 gap-1">
+                      {[0, 1, 2, 3, 4].map(n => <button key={`wd-${n}`} onClick={() => handleScoreBall(n, true, false, false)} className="p-2 bg-orange-900/40 text-orange-200 border border-orange-800 rounded text-[10px] md:text-xs font-bold hover:bg-orange-900 active:bg-orange-800">WD{n > 0 ? `+${n}` : ''}</button>)}
+                      {[0, 1, 2, 3, 4].map(n => <button key={`nb-${n}`} onClick={() => handleScoreBall(n, false, true, false)} className="p-2 bg-yellow-900/40 text-yellow-200 border border-yellow-800 rounded text-[10px] md:text-xs font-bold hover:bg-yellow-900 active:bg-yellow-800">NB{n > 0 ? `+${n}` : ''}</button>)}
+                      {[1, 2, 3, 4].map(n => <button key={`b-${n}`} onClick={() => handleScoreBall(n, false, false, false, true)} className="p-2 bg-blue-900/40 text-blue-200 border border-blue-800 rounded text-[10px] md:text-xs font-bold hover:bg-blue-900 active:bg-blue-800">B+{n}</button>)}
+                      <div className="p-2"></div>
+                      {[1, 2, 3, 4].map(n => <button key={`lb-${n}`} onClick={() => handleScoreBall(n, false, false, false, false, true)} className="p-2 bg-purple-900/40 text-purple-200 border border-purple-800 rounded text-[10px] md:text-xs font-bold hover:bg-purple-900 active:bg-purple-800">LB+{n}</button>)}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex-1 p-6 md:border-r border-slate-800 flex items-center justify-center">
+                  <div className="text-center">
+                    <Zap size={48} className="text-slate-700 mx-auto mb-4" />
+                    <h3 className="text-slate-400 font-bold mb-2">Live View</h3>
+                    <p className="text-slate-600 text-sm">Updates will appear automatically.</p>
+                  </div>
+                </div>
+              )}
 
               <div className="w-full md:w-80 bg-slate-950/50 flex flex-col h-48 md:h-[450px] border-l border-slate-800 shrink-0">
                 <div className="p-3 bg-slate-900 border-b border-slate-800 text-xs font-bold text-slate-400 uppercase">Ball by Ball</div>
@@ -1580,7 +1716,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           onUpdate={(id: string, field: string, val: any) => handleBattingChange(inningIdx, id, field as keyof BattingEntry, val)}
           onRemove={(id: string) => removeRow('batting', inningIdx, id)}
           onAdd={() => addRow('batting', inningIdx)}
-          isLiveMode={isLiveMode}
+          isLiveMode={tablesReadOnly}
+          title={`${inning.battingTeamName || (inningIdx === 0 ? data.matchInfo.teamAName : data.matchInfo.teamBName)} Batting`}
         />
 
         {/* Extras & Bowling */}
@@ -1600,7 +1737,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           onUpdate={(id: string, field: string, val: any) => handleBowlingChange(inningIdx, id, field as keyof BowlingEntry, val)}
           onRemove={(id: string) => removeRow('bowling', inningIdx, id)}
           onAdd={() => addRow('bowling', inningIdx)}
-          isLiveMode={isLiveMode}
+          isLiveMode={tablesReadOnly}
+          title={`${inning.battingTeamName === data.matchInfo.teamAName ? data.matchInfo.teamBName : data.matchInfo.teamAName} Bowling`}
         />
 
         {/* Boundary Animation Overlay */}
@@ -1608,7 +1746,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"></div>
             <div className="relative animate-zoom-in">
-              <div className="text-[100px] md:text-[200px] font-black italic text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-orange-600 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] transform -skew-x-12">
+              <div className="text-[100px] md:text-[200px] font-black italic text-yellow-400 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] transform -skew-x-12">
                 {boundaryAnim}
               </div>
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] md:w-[300px] h-[200px] md:h-[300px] bg-yellow-500/30 rounded-full blur-[80px] animate-pulse"></div>
@@ -1620,26 +1758,66 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         )}
 
 
-        {/* Batting Table */}
-        <LiveBattingTable
-          data={inning.batting}
-          battingSquad={availableBatters}
-          fieldingSquad={fieldingPlayers}
-          onUpdate={(id: string, field: string, val: any) => handleBattingChange(inningIdx, id, field as keyof BattingEntry, val)}
-          onRemove={(id: string) => removeRow('batting', inningIdx, id)}
-          onAdd={() => addRow('batting', inningIdx)}
-          isLiveMode={isLiveMode}
-        />
+        {/* View Full Scorecard Button */}
+        <button
+          onClick={() => setShowScorecardModal(true)}
+          className="w-full py-4 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-2xl shadow-sm hover:border-blue-500 hover:text-blue-600 hover:shadow-md transition-all flex items-center justify-center gap-2 mb-8"
+        >
+          <Activity size={20} /> View Full Live Scorecard
+        </button>
 
-        {/* Bowling Table */}
-        <LiveBowlingTable
-          data={inning.bowling}
-          fieldingSquad={fieldingPlayers}
-          onUpdate={(id: string, field: string, val: any) => handleBowlingChange(inningIdx, id, field as keyof BowlingEntry, val)}
-          onRemove={(id: string) => removeRow('bowling', inningIdx, id)}
-          onAdd={() => addRow('bowling', inningIdx)}
-          isLiveMode={isLiveMode}
-        />
+        {/* Full Scorecard Modal */}
+        {/* Full Scorecard Modal */}
+        {showScorecardModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+            <div className="bg-slate-50 rounded-3xl w-[95%] md:w-full max-w-5xl flex flex-col shadow-2xl relative animate-zoom-in max-h-[90vh] overflow-hidden">
+              {/* Header with Close */}
+              <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white rounded-t-3xl shrink-0 z-10">
+                <div className="flex items-center gap-4">
+                  <h3 className="font-bold text-slate-900 text-lg uppercase tracking-wider">Scorecard</h3>
+                  {/* Tabs */}
+                  <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                    <button onClick={() => setModalTab(0)} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${modalTab === 0 ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>1st Innings</button>
+                    <button onClick={() => setModalTab(1)} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${modalTab === 1 ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>2nd Innings</button>
+                  </div>
+                </div>
+                <button onClick={() => setShowScorecardModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={24} className="text-slate-500" /></button>
+              </div>
+
+              <div className="p-4 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
+                {/* Dynamic Title based on Tab */}
+                <div className="flex justify-between items-end border-b border-slate-200 pb-2">
+                  <h4 className="font-black text-slate-800 text-xl uppercase italic">
+                    {data.innings[modalTab].battingTeamName || (modalTab === 0 ? data.matchInfo.teamAName : data.matchInfo.teamBName)} Batting
+                  </h4>
+                  <span className="text-2xl font-black text-slate-700">{data.innings[modalTab].totalRuns}/{data.innings[modalTab].wickets} <span className="text-sm text-slate-500">({data.innings[modalTab].overs} ov)</span></span>
+                </div>
+
+                {/* Tables */}
+                <LiveBattingTable
+                  data={data.innings[modalTab].batting}
+                  battingSquad={modalTab === 0 ? getBattingTeamPlayers(0) : getBattingTeamPlayers(1)}
+                  fieldingSquad={modalTab === 0 ? getBowlingTeamPlayers(0) : getBowlingTeamPlayers(1)}
+                  onUpdate={(id: string, field: string, val: any) => handleBattingChange(modalTab, id, field as keyof BattingEntry, val)}
+                  onRemove={(id: string) => removeRow('batting', modalTab, id)}
+                  onAdd={() => addRow('batting', modalTab)}
+                  isLiveMode={tablesReadOnly}
+                  title={`${data.innings[modalTab].battingTeamName || (modalTab === 0 ? data.matchInfo.teamAName : data.matchInfo.teamBName)} Batting`}
+                />
+
+                <LiveBowlingTable
+                  data={data.innings[modalTab].bowling}
+                  fieldingSquad={modalTab === 0 ? getBowlingTeamPlayers(0) : getBowlingTeamPlayers(1)}
+                  onUpdate={(id: string, field: string, val: any) => handleBowlingChange(modalTab, id, field as keyof BowlingEntry, val)}
+                  onRemove={(id: string) => removeRow('bowling', modalTab, id)}
+                  onAdd={() => addRow('bowling', modalTab)}
+                  isLiveMode={tablesReadOnly}
+                  title={`${data.innings[modalTab].battingTeamName === data.matchInfo.teamAName ? data.matchInfo.teamBName : data.matchInfo.teamAName} Bowling`}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Milestone Overlay */}
         {milestone.visible && milestone.data && (
@@ -1837,7 +2015,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                 {tossModal.step === 'winner' ? 'Who Won The Toss?' : 'Decision?'}
               </h3>
               <p className="text-slate-500 font-medium mb-8">
-                {tossModal.step === 'winner' ? `Match: Indian Strikers vs ${tossModal.match.opponent}` : `${tossModal.winner === '1' ? 'Indian Strikers' : tossModal.match.opponent} won the toss`}
+                {tossModal.step === 'winner' ? `Match: Indian Strikers vs ${tossModal.match.opponent || tossModal.match.teamBName || 'Opponent'}` : `${tossModal.winner === '1' ? 'Indian Strikers' : (tossModal.match.opponent || tossModal.match.teamBName || 'Opponent')} won the toss`}
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1849,7 +2027,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                     </button>
                     <button onClick={() => setTossModal(prev => ({ ...prev, step: 'decision', winner: '2' }))} className="py-4 px-6 bg-slate-50 hover:bg-red-50 border-2 border-slate-200 hover:border-red-500 rounded-2xl transition-all group">
                       <span className="block text-2xl mb-2">⚔️</span>
-                      <span className="font-bold text-slate-700 group-hover:text-red-700">{tossModal.match.opponent}</span>
+                      <span className="font-bold text-slate-700 group-hover:text-red-700">{tossModal.match.opponent || tossModal.match.teamBName || 'Opponent'}</span>
                     </button>
                   </>
                 ) : (

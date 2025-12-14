@@ -260,10 +260,11 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
       {/* 2. Team Legacy & Match Heroes */}
       <div className="grid lg:grid-cols-12 gap-4 md:gap-8">
         {/* Team Achievements */}
-        <div className="lg:col-span-5 xl:col-span-4 bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl md:rounded-3xl shadow-xl p-6 md:p-8 text-white relative overflow-hidden flex flex-col justify-center min-h-[250px]">
+        <div className="lg:col-span-5 xl:col-span-4 bg-slate-900 rounded-2xl md:rounded-3xl shadow-xl p-6 md:p-8 text-white relative overflow-hidden flex flex-col justify-center min-h-[250px] border border-slate-800 ring-1 ring-white/10">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-black/90 backdrop-blur-xl"></div>
           <div className="absolute top-0 right-0 p-8 opacity-10"><Trophy size={180} /></div>
 
-          <h3 className="text-xl md:text-2xl font-black mb-6 md:mb-8 relative z-10 flex items-center gap-3">
+          <h3 className="text-xl md:text-2xl font-black mb-6 md:mb-8 relative z-10 flex items-center gap-3 text-white">
             <Award className="text-yellow-400" /> Team Legacy
           </h3>
 

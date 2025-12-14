@@ -39,7 +39,7 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
     scoreAgainst: ''
   });
 
-  const canEdit = userRole === 'admin';
+  const canEdit = userRole === 'admin' || userRole === 'member';
 
   // Filter matches based on search term
   const filteredMatches = matches.filter(m =>
@@ -442,14 +442,24 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
                   </div>
                 </div>
 
-                {canEdit && (
+                {/* Actions */}
+                <div className="flex gap-3 mt-4">
                   <button
-                    onClick={() => navigate('/manual-scorecard', { state: { match } })}
-                    className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                    onClick={() => navigate('/live-scoring', { state: { match, mode: 'view' } })}
+                    className="flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
                   >
-                    <Edit2 size={14} /> Full Scorecard Entry
+                    <Zap size={14} /> View Scorecard
                   </button>
-                )}
+
+                  {canEdit && (
+                    <button
+                      onClick={() => navigate('/manual-scorecard', { state: { match } })}
+                      className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Edit2 size={14} /> Edit
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           )}

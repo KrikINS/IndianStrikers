@@ -1,10 +1,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Player, FieldingStrategy, PlayerRole, FieldPosition } from '../types';
+import { Player, FieldingStrategy, PlayerRole, FieldPosition, UserRole } from '../types';
 import { getPlayers, getStrategies, addStrategy, deleteStrategy } from '../services/storageService';
 import { Save, RefreshCcw, Target, GripVertical, Plus, Zap, Flame, Clock, Trash2, Users, ChevronRight, CornerUpLeft, Activity, X } from 'lucide-react';
 
-const FieldingBoard: React.FC = () => {
+interface FieldingMapProps {
+  userRole?: UserRole;
+}
+
+const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [strategies, setStrategies] = useState<FieldingStrategy[]>([]);
   const [currentPositions, setCurrentPositions] = useState<Map<string, FieldPosition>>(new Map());
@@ -17,6 +21,7 @@ const FieldingBoard: React.FC = () => {
   const [batterHand, setBatterHand] = useState<'RHB' | 'LHB'>('RHB');
   const [matchPhase, setMatchPhase] = useState<'Powerplay' | 'Middle' | 'Death'>('Powerplay');
   const [selectedBowlerId, setSelectedBowlerId] = useState<string>('');
+  const [selectedKeeperId, setSelectedKeeperId] = useState<string>('');
   const [showGuides, setShowGuides] = useState(true);
 
   // Interaction State
@@ -59,6 +64,7 @@ const FieldingBoard: React.FC = () => {
       return next;
     });
     if (selectedBowlerId === id) setSelectedBowlerId('');
+    if (selectedKeeperId === id) setSelectedKeeperId('');
     if (selectedMarkerId === id) setSelectedMarkerId(null);
   };
 
@@ -188,7 +194,16 @@ const FieldingBoard: React.FC = () => {
       setCurrentPositions(posMap);
       setBatterHand(strategy.batterHand);
       if (strategy.matchPhase) setMatchPhase(strategy.matchPhase);
+      if (strategy.matchPhase) setMatchPhase(strategy.matchPhase);
       if (strategy.bowlerId) setSelectedBowlerId(strategy.bowlerId);
+      // Try to infer keeper from position 50,32 or role? Strategy doesn't save keeperID explicitly.
+      // We can iterate positions to find who is at 50,32?
+      // Or just leave it empty. The user didn't ask to save Keeper ID, just place them.
+      // But if we want color, we need selectedKeeperId.
+      // I'll leave it for now or check if any player at 50,32 is a keeper.
+      const keeperPos = strategy.positions.find(p => Math.abs(p.left - 50) < 2 && Math.abs(p.top - 32) < 2);
+      if (keeperPos) setSelectedKeeperId(keeperPos.playerId);
+
       setActiveStrategyId(strategy.id);
     }
   };
@@ -213,25 +228,31 @@ const FieldingBoard: React.FC = () => {
     const availablePlayers = [...players].filter(p => p.isAvailable).slice(0, 11);
 
     // 1. Wicket Keeper: Behind Striker (Top)
-    const wk = availablePlayers.find(p => p.role === PlayerRole.WICKET_KEEPER) || availablePlayers[0];
-    if (wk) {
-      newMap.set(wk.id, { playerId: wk.id, left: 50, top: 32 }); // Close behind stumps (39)
+    let wkIdToUse = selectedKeeperId;
+    if (!wkIdToUse) {
+      const wk = availablePlayers.find(p => p.role === PlayerRole.WICKET_KEEPER) || availablePlayers[0];
+      wkIdToUse = wk ? wk.id : '';
+    }
+
+    if (wkIdToUse) {
+      newMap.set(wkIdToUse, { playerId: wkIdToUse, left: 50, top: 32 }); // Close behind stumps (Top)
+      if (selectedKeeperId !== wkIdToUse) setSelectedKeeperId(wkIdToUse);
     }
 
     // 2. Bowler
     let bowlerIdToUse = selectedBowlerId;
     if (!bowlerIdToUse) {
-      const autoBowler = availablePlayers.find(p => p.role === PlayerRole.BOWLER && p.id !== wk?.id);
+      const autoBowler = availablePlayers.find(p => p.role === PlayerRole.BOWLER && p.id !== wkIdToUse);
       bowlerIdToUse = autoBowler ? autoBowler.id : '';
     }
 
     if (bowlerIdToUse) {
-      newMap.set(bowlerIdToUse, { playerId: bowlerIdToUse, left: 50, top: 65 }); // Run up start
+      newMap.set(bowlerIdToUse, { playerId: bowlerIdToUse, left: 50, top: 68 }); // Behind wickets (Bottom)
       if (selectedBowlerId !== bowlerIdToUse) setSelectedBowlerId(bowlerIdToUse);
-    }
+    } // Removed extra brace that was ending the if block early
 
     // 3. Fielders
-    const fielders = availablePlayers.filter(p => p.id !== wk?.id && p.id !== bowlerIdToUse);
+    const fielders = availablePlayers.filter(p => p.id !== wkIdToUse && p.id !== bowlerIdToUse);
 
     // Standard Field (RHB default coordinates)
     // Inner Circle Radius is ~28% from 50,50.
@@ -252,7 +273,8 @@ const FieldingBoard: React.FC = () => {
     fielders.forEach((p, i) => {
       if (positions[i]) {
         let { l, t } = positions[i];
-        if (isLHB) {
+        // REVERSED: User requested flipping. Now RHB gets '100-l' (Left) and LHB gets 'l' (Right).
+        if (!isLHB) {
           l = 100 - l;
         }
         newMap.set(p.id, { playerId: p.id, left: l, top: t });
@@ -266,7 +288,15 @@ const FieldingBoard: React.FC = () => {
     setSelectedBowlerId(id);
     if (id) {
       // Auto-place bowler if not already on field (or move them if they are)
-      setCurrentPositions(prev => new Map(prev).set(id, { playerId: id, left: 50, top: 65 }));
+      setCurrentPositions(prev => new Map(prev).set(id, { playerId: id, left: 50, top: 68 }));
+    }
+  };
+
+  const handleSelectKeeper = (id: string) => {
+    setSelectedKeeperId(id);
+    if (id) {
+      // Auto-place keeper if not already on field
+      setCurrentPositions(prev => new Map(prev).set(id, { playerId: id, left: 50, top: 32 }));
     }
   };
 
@@ -296,7 +326,7 @@ const FieldingBoard: React.FC = () => {
 
     return {
       ...pos,
-      left: batterHand === 'LHB' ? 100 - pos.left : pos.left
+      left: batterHand === 'RHB' ? 100 - pos.left : pos.left
     };
   });
 
@@ -309,10 +339,10 @@ const FieldingBoard: React.FC = () => {
         onClick={handleBackgroundClick}
       >
 
-        {/* Ground Wrapper */}
-        <div className="relative w-full h-full max-w-[80vh] aspect-[1/1]">
+        {/* Ground Wrapper - Enforce Square Aspect Ratio */}
+        <div className="relative shadow-2xl rounded-full aspect-square w-full lg:w-auto lg:h-full lg:max-w-full">
 
-          {/* LAYER 1: VISUALS (CLIPPED) */}
+          {/* LAYER 1: VISUALS (SVG) */}
           <div
             className="absolute inset-0 rounded-full overflow-hidden shadow-2xl pointer-events-none"
             style={{
@@ -324,29 +354,33 @@ const FieldingBoard: React.FC = () => {
               style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 20px, #000 20px, #000 40px)' }}>
             </div>
 
-            {/* Boundary Rope */}
-            <div className="absolute inset-2 rounded-full border-[3px] border-white/90 shadow-[0_0_20px_rgba(255,255,255,0.3)]"></div>
+            <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+              {/* Boundary Rope */}
+              <circle cx="50" cy="50" r="48" fill="none" stroke="white" strokeWidth="0.8" strokeOpacity="0.9" />
 
-            {/* 30 Yard Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55%] h-[55%] rounded-full border border-white/40 border-dashed"></div>
+              {/* 30 Yard Circle (Radius 28 to match logic) */}
+              <circle cx="50" cy="50" r="28" fill="none" stroke="white" strokeWidth="0.3" strokeDasharray="2,2" strokeOpacity="0.6" />
 
-            {/* Pitch Area */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[8%] h-[22%] bg-[#d4b996] rounded-[2px] shadow-lg opacity-90 flex flex-col justify-between py-[2%]">
-              <div className="w-full h-px bg-white/60"></div>
-              <div className="w-full h-px bg-white/60"></div>
+              {/* Pitch Area */}
+              <rect x="46" y="39" width="8" height="22" fill="#d4b996" rx="0.5" opacity="0.9" />
 
               {/* Stumps */}
-              <div className="absolute top-[1%] left-1/2 -translate-x-1/2 flex gap-[1px]">
-                <div className="w-1 h-1.5 bg-slate-800 rounded-sm"></div>
-                <div className="w-1 h-1.5 bg-slate-800 rounded-sm"></div>
-                <div className="w-1 h-1.5 bg-slate-800 rounded-sm"></div>
-              </div>
-              <div className="absolute bottom-[1%] left-1/2 -translate-x-1/2 flex gap-[1px]">
-                <div className="w-1 h-1.5 bg-slate-800 rounded-sm"></div>
-                <div className="w-1 h-1.5 bg-slate-800 rounded-sm"></div>
-                <div className="w-1 h-1.5 bg-slate-800 rounded-sm"></div>
-              </div>
-            </div>
+              <g fill="#1e293b">
+                {/* Top Stumps */}
+                <rect x="48.5" y="40" width="0.8" height="1" />
+                <rect x="49.6" y="40" width="0.8" height="1" />
+                <rect x="50.7" y="40" width="0.8" height="1" />
+
+                {/* Bottom Stumps */}
+                <rect x="48.5" y="60" width="0.8" height="1" />
+                <rect x="49.6" y="60" width="0.8" height="1" />
+                <rect x="50.7" y="60" width="0.8" height="1" />
+              </g>
+
+              {/* Creases */}
+              <line x1="46" y1="42" x2="54" y2="42" stroke="white" strokeWidth="0.2" opacity="0.8" />
+              <line x1="46" y1="58" x2="54" y2="58" stroke="white" strokeWidth="0.2" opacity="0.8" />
+            </svg>
 
             {/* Batter Marker */}
             <div className="absolute top-[40%] left-1/2 -translate-x-1/2 transition-all duration-300 z-10 flex flex-col items-center pointer-events-none">
@@ -386,7 +420,7 @@ const FieldingBoard: React.FC = () => {
               if (!player) return null;
 
               const isInner = isInnerCircle(pos.left, pos.top);
-              const isWK = player.role === PlayerRole.WICKET_KEEPER;
+              const isWK = player.role === PlayerRole.WICKET_KEEPER || player.id === selectedKeeperId;
               const isBowler = player.id === selectedBowlerId;
               const isSelected = selectedMarkerId === pos.playerId;
 
@@ -506,6 +540,20 @@ const FieldingBoard: React.FC = () => {
           </div>
 
           <div className="space-y-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Wicket Keeper</label>
+              <select
+                value={selectedKeeperId}
+                onChange={(e) => handleSelectKeeper(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="">Select Keeper...</option>
+                {players.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.role})</option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase">Bowler</label>
               <select

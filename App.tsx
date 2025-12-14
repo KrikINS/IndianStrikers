@@ -96,7 +96,7 @@ const AppContent: React.FC<{
               }
             />
             <Route path="/selection" element={<MatchSelection players={players} userRole={userRole} matches={matches} teamLogo={teamLogo} onUpdateMatch={onUpdateMatch} />} />
-            <Route path="/fielding" element={<FieldingMap />} />
+            <Route path="/fielding" element={<FieldingMap userRole={userRole} />} />
             <Route
               path="/opponents"
               element={
@@ -109,7 +109,7 @@ const AppContent: React.FC<{
                 />
               }
             />
-            <Route path="/live-scoring" element={<Scorecard opponents={opponents} players={players} matches={matches} onUpdateMatch={onUpdateMatch} />} />
+            <Route path="/live-scoring" element={<Scorecard opponents={opponents} players={players} matches={matches} onUpdateMatch={onUpdateMatch} userRole={userRole} />} />
             <Route path="/manual-scorecard" element={<ManualScorecard players={players} opponents={opponents} />} />
             <Route path="/memories" element={<Memories userRole={userRole} />} />
             {/* User Management Route - Only visible if admin */}

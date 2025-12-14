@@ -129,7 +129,9 @@ const UserManagement: React.FC = () => {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold
-                        ${user.role === 'admin' ? 'bg-blue-600' : user.role === 'member' ? 'bg-emerald-600' : 'bg-orange-500'}
+                        ${user.role === 'admin' ? 'bg-blue-600' :
+                          user.role === 'member' ? 'bg-emerald-600' :
+                            user.role === 'scorer' ? 'bg-purple-600' : 'bg-orange-500'}
                       `}>
                         {user.avatarUrl ? (
                           <img src={user.avatarUrl} className="w-full h-full rounded-full" />
@@ -146,7 +148,9 @@ const UserManagement: React.FC = () => {
                   <td className="p-4 font-mono text-slate-600">{user.username}</td>
                   <td className="p-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase
-                       ${user.role === 'admin' ? 'bg-blue-100 text-blue-700' : user.role === 'member' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}
+                       ${user.role === 'admin' ? 'bg-blue-100 text-blue-700' :
+                        user.role === 'member' ? 'bg-emerald-100 text-emerald-700' :
+                          user.role === 'scorer' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}
                     `}>
                       {user.role}
                     </span>
@@ -222,19 +226,23 @@ const UserManagement: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Role</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['admin', 'member', 'guest'].map((r) => (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {['admin', 'scorer', 'member', 'guest'].map((r) => (
                     <button
                       key={r}
                       type="button"
                       onClick={() => setFormData({ ...formData, role: r as UserRole })}
                       className={`py-2 rounded-lg text-xs font-bold uppercase transition-all flex flex-col items-center gap-1
                           ${formData.role === r
-                          ? (r === 'admin' ? 'bg-blue-600 text-white' : r === 'member' ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white')
+                          ? (r === 'admin' ? 'bg-blue-600 text-white' :
+                            r === 'member' ? 'bg-emerald-600 text-white' :
+                              r === 'scorer' ? 'bg-purple-600 text-white' : 'bg-orange-500 text-white')
                           : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}
                         `}
                     >
-                      {r === 'admin' ? <Shield size={16} /> : r === 'member' ? <User size={16} /> : <Ticket size={16} />}
+                      {r === 'admin' ? <Shield size={16} /> :
+                        r === 'member' ? <User size={16} /> :
+                          r === 'scorer' ? <Lock size={16} /> : <Ticket size={16} />}
                       {r}
                     </button>
                   ))}

@@ -223,9 +223,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
               <div className={`
                   w-10 h-10 rounded-full flex items-center justify-center shrink-0
                   ${userRole === 'admin' ? 'bg-blue-600 text-white' :
-                  userRole === 'member' ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white'}
+                  userRole === 'member' ? 'bg-emerald-600 text-white' :
+                    userRole === 'scorer' ? 'bg-purple-600 text-white' : 'bg-orange-500 text-white'}
                 `}>
-                {userRole === 'admin' ? <Shield size={18} /> : userRole === 'member' ? <User size={18} /> : <Ticket size={18} />}
+                {userRole === 'admin' ? <Shield size={18} /> :
+                  userRole === 'member' ? <User size={18} /> :
+                    userRole === 'scorer' ? <ClipboardList size={18} /> : <Ticket size={18} />}
               </div>
               <div className="overflow-hidden">
                 <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Logged In</p>

@@ -1,5 +1,5 @@
 
-export type UserRole = 'admin' | 'member' | 'guest';
+export type UserRole = 'admin' | 'member' | 'scorer' | 'guest';
 
 export enum PlayerRole {
   BATSMAN = 'Batsman',
@@ -76,6 +76,9 @@ export interface Player {
   isViceCaptain?: boolean;
   isAvailable?: boolean;
   avatarUrl?: string;
+  dob?: string;
+  externalId?: string;
+  jerseyNumber?: number;
   battingStats?: BattingStats;
   bowlingStats?: BowlingStats;
 }
@@ -83,6 +86,8 @@ export interface Player {
 export interface Match {
   id: string;
   opponent: string;
+  teamAName?: string; // Home Team Name Overlay
+  teamBName?: string; // Opponent Team Name Overlay
   date: string;
   venue: string; // Ground
   result?: 'Won' | 'Lost' | 'Draw' | 'Pending';
