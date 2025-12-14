@@ -160,7 +160,7 @@ interface ScorecardProps {
   opponents?: OpponentTeam[];
   players?: Player[];
   matches?: Match[];
-  onUpdateMatch?: (m: Match) => void;
+  onUpdateMatch?: (m: Match) => void | Promise<void>;
 }
 
 // --- Definitions ---
@@ -1127,14 +1127,16 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     setTossModal(prev => ({ ...prev, isOpen: false }));
   };
 
-  const handleSaveScorecard = async () => {
-    if (!data.matchInfo.id) {
+  const handleSaveScorecard = async (overrideMatchInfo?: any) => {
+    const currentMatchInfo = overrideMatchInfo || data.matchInfo;
+
+    if (!currentMatchInfo.id) {
       alert("Please select a valid scheduled match (Fixture) before saving.");
       return;
     }
 
     // Fix: Convert ID to string for lookup
-    const baseMatch = matches.find(m => String(m.id) === String(data.matchInfo.id));
+    const baseMatch = matches.find(m => String(m.id) === String(currentMatchInfo.id));
     if (!baseMatch) {
       alert("Selected match not found in database.");
       return;
@@ -1143,21 +1145,29 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
     // Determine completion status
     // IF resultType is 'Pending', match is upcoming.
     // IF resultType is 'Won'/'Lost'/'Draw', match is completed.
-    const isCompleted = data.matchInfo.resultType && data.matchInfo.resultType !== 'Pending';
-
     // Ensure we only send valid values from types.ts
-    const validResult = isCompleted ? (data.matchInfo.resultType as 'Won' | 'Lost' | 'Draw') : 'Pending';
+    // The DB has a check constraint for: 'Won', 'Lost', 'Draw', 'Pending'
+    // We must ensure the value matches exactly (case-sensitive)
+    const validResultTypes = ['Won', 'Lost', 'Draw', 'Pending'];
+    let finalResult = currentMatchInfo.resultType; // Use override/current
+
+    // Fallback if invalid
+    if (!validResultTypes.includes(finalResult || '')) {
+      finalResult = 'Pending';
+    }
+
+    const isCompleted = finalResult !== 'Pending';
 
     const updatedMatch: Match = {
       ...baseMatch,
       // Update core match details if they changed
-      venue: data.matchInfo.venue,
-      date: data.matchInfo.date,
+      venue: currentMatchInfo.venue,
+      date: currentMatchInfo.date,
       // Update Result and Status
-      result: validResult,
+      result: finalResult as 'Won' | 'Lost' | 'Draw' | 'Pending',
       isUpcoming: !isCompleted,
-      squad: data.matchInfo.squad, // Save the updated squad
-      opponentSquad: data.matchInfo.opponentSquad,
+      squad: currentMatchInfo.squad, // Save the updated squad
+      opponentSquad: currentMatchInfo.opponentSquad,
 
       scorecardData: {
         ballCommentary,
@@ -1167,11 +1177,16 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
 
     try {
       if (onUpdateMatch) {
-        onUpdateMatch(updatedMatch);
+        await onUpdateMatch(updatedMatch);
       } else {
         await updateMatch(updatedMatch);
       }
       alert("Scorecard saved successfully!");
+
+      // Redirect if the match is completed
+      if (isCompleted) {
+        window.location.hash = '#/matches';
+      }
     } catch (e: any) {
       console.error("Save failed", e);
       alert("Failed to save: " + e.message);
@@ -1334,21 +1349,101 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   const renderTabContent = () => {
     if (activeTab === 0) {
       return (
-        <div className="space-y-6 animate-fade-in">
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center">
-            <h3 className="text-xl font-bold text-slate-700 mb-2">Match Information</h3>
-            <p className="text-slate-500">Date: {data.matchInfo.date}</p>
-            <p className="text-slate-500">Venue: {data.matchInfo.venue}</p>
-            <p className="text-slate-500 mt-4">Toss: {data.matchInfo.tossResult || 'Pending'}</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 border rounded-xl">
-              <h4 className="font-bold mb-2 text-blue-700">{data.matchInfo.teamAName}</h4>
-              <p className="text-sm text-slate-500">{data.matchInfo.squad?.length || 0} Players Selected</p>
+        <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
+          {/* Match Setup Dashboard */}
+          <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200">
+            {/* Header */}
+            <div className="bg-slate-900 p-8 text-white text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full bg-blue-600/20 blur-3xl rounded-full scale-150"></div>
+              <h3 className="text-3xl font-black relative z-10 uppercase tracking-widest mb-2">Match Setup</h3>
+              <div className="flex justify-center gap-6 text-slate-400 font-medium relative z-10 text-sm">
+                <span className="flex items-center gap-2"><Calendar size={16} /> {data.matchInfo.date}</span>
+                <span className="flex items-center gap-2"><Target size={16} /> {data.matchInfo.venue}</span>
+              </div>
             </div>
-            <div className="p-4 border rounded-xl">
-              <h4 className="font-bold mb-2 text-red-700">{data.matchInfo.teamBName}</h4>
-              <p className="text-sm text-slate-500">{data.matchInfo.opponentSquad?.length || 0} Players Selected</p>
+
+            <div className="p-6 md:p-8 space-y-8">
+              {/* Step 1: Toss */}
+              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 text-center relative overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-slate-200 px-3 py-1 rounded-b-lg text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Step 1: The Coin Toss
+                </div>
+
+                <div className="mt-4">
+                  {data.matchInfo.tossResult ? (
+                    <div className="inline-flex items-center gap-3 px-6 py-3 bg-green-100 text-green-800 rounded-xl font-bold border border-green-200 shadow-sm animate-fade-in">
+                      <CheckCircle2 size={24} />
+                      <span className="text-lg">{data.matchInfo.tossResult}</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-slate-500 mb-6 font-medium">Who will bat first? Conduct the toss to proceed.</p>
+                      <button
+                        onClick={() => setTossModal({
+                          isOpen: true,
+                          match: { ...data.matchInfo, id: Number(data.matchInfo.id || 0) } as any,
+                          step: 'winner',
+                          winner: null
+                        })}
+                        className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 mx-auto"
+                      >
+                        <CircleDot size={20} className="animate-spin-slow" /> Conduct Toss
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Step 2: Squads */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Home Team */}
+                <div className="p-5 border border-slate-200 rounded-2xl hover:border-blue-300 transition-colors bg-white shadow-sm hover:shadow-md group">
+                  <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                    <h4 className="font-black text-slate-800 text-lg group-hover:text-blue-700 transition-colors uppercase italic">{data.matchInfo.teamAName}</h4>
+                    <span className={`px-2 py-1 text-xs font-bold rounded-lg ${data.matchInfo.squad && data.matchInfo.squad.length >= 11 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {data.matchInfo.squad?.length || 0} / 11
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setSquadModal(true)}
+                    className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Edit2 size={16} /> Manage Home Squad
+                  </button>
+                </div>
+
+                {/* Opponent Team */}
+                <div className="p-5 border border-slate-200 rounded-2xl hover:border-red-300 transition-colors bg-white shadow-sm hover:shadow-md group">
+                  <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                    <h4 className="font-black text-slate-800 text-lg group-hover:text-red-700 transition-colors uppercase italic">{data.matchInfo.teamBName}</h4>
+                    <span className={`px-2 py-1 text-xs font-bold rounded-lg ${data.matchInfo.opponentSquad && data.matchInfo.opponentSquad.length > 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                      {data.matchInfo.opponentSquad?.length || 0} Players
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setOpponentSquadModal(true)}
+                    className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Users size={16} /> Manage Opponent
+                  </button>
+                </div>
+              </div>
+
+              {/* Step 3: Start Action */}
+              <div className="pt-6 border-t border-slate-100">
+                <button
+                  onClick={() => {
+                    setIsLiveMode(true);
+                    setActiveTab(1); // Go to 1st Innings
+                  }}
+                  disabled={!data.matchInfo.tossResult}
+                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black text-xl rounded-2xl shadow-xl shadow-slate-900/20 transition-all active:scale-95 flex items-center justify-center gap-3 relative overflow-hidden group"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                  <Zap size={24} className={data.matchInfo.tossResult ? "fill-yellow-400 text-yellow-400" : ""} />
+                  {data.matchInfo.tossResult ? 'START MATCH SCORING' : 'Complete Toss to Start'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1939,66 +2034,52 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                 onClick={async () => {
                   if (!selectedMOM) { alert("Please select a Man of the Match"); return; }
 
-                  // Calculate Result String
+                  // 1. Calculate Totals
                   const i1 = calculateInningsTotals(data.innings[0]);
                   const i2 = calculateInningsTotals(data.innings[1]);
-                  const target = data.matchInfo.target || (i1.totalRuns + 1);
+                  const r1 = i1.totalRuns;
+                  const r2 = i2.totalRuns;
 
-                  let resultType: 'Won' | 'Lost' | 'Draw' | 'Tie' = 'Won'; // Default placeholder, calculated below
-                  let resultText = "";
+                  // 2. Identify Indian Strikers (Team A)
+                  // Assumption: Team A is Indian Strikers. 
+                  // But to be safe, let's verify who batted 1st.
+                  // If "Team A elected to Bat" OR "Team B elected to Bowl" -> Team A batted 1st (Innings 0)
 
-                  const team1 = data.matchInfo.teamAName; // Batting 1st (Assuming standard flow)
-                  // Wait, who batted first? Depend on toss.
-                  // Actually simplistic view: Innings 0 is Team A (batting first), Innings 1 is Team B.
+                  const teamA = data.matchInfo.teamAName; // Indian Strikers
+                  const toss = data.matchInfo.tossResult || "";
 
-                  if (i2.totalRuns >= target) {
-                    // Chasing Team Won
-                    resultType = 'Won'; // Or 'Lost' depending on perspective of Indian Strikers?
-                    // We need to know who is Indian Strikers.
-                    // If Indian Strikers is Team B (Chasing) -> Won.
-                    // If Indian Strikers is Team A (Defending) -> Lost.
+                  // Check if Team A batted first
+                  const teamABattedFirst = (toss.includes(teamA) && toss.includes("to Bat")) ||
+                    (!toss.includes(teamA) && toss.includes("to Bowl"));
 
-                    // Let's assume simpler: Just save the text result and 'Won'/'Lost' status relative to Home team.
-                    // Helper:
-                    const chaserName = data.matchInfo.tossResult.includes("elected to Bat")
-                      ? (data.matchInfo.tossResult.startsWith(data.matchInfo.teamAName) ? data.matchInfo.teamBName : data.matchInfo.teamAName)
-                      : (data.matchInfo.tossResult.startsWith(data.matchInfo.teamAName) ? data.matchInfo.teamAName : data.matchInfo.teamBName);
+                  let finalResult: 'Won' | 'Lost' | 'Draw' = 'Draw';
 
-                    // Actually, simpler: innIdx 0 is always Batting First Team.
-                    // If data.innings[0].batting[0] is from Indian Strikers list?
-                    // We have data.matchInfo.teamAName (Home) and TeamBName (Opponent).
-
-                    // We need to verify who batted first.
-                    // But validResult is stored in DB.
+                  if (r1 > r2) {
+                    // Innings 0 Won
+                    finalResult = teamABattedFirst ? 'Won' : 'Lost';
+                  } else if (r2 > r1) {
+                    // Innings 1 Won
+                    finalResult = teamABattedFirst ? 'Lost' : 'Won';
+                  } else {
+                    finalResult = 'Draw';
                   }
 
-                  // For now, just save. The backend or stats handle W/L based on team name.
-                  // We will mark it as Completed.
+                  // 3. Construct Overrides
+                  const overrideData = {
+                    ...data.matchInfo,
+                    resultType: finalResult,
+                    matchResult: `Match Completed. MOM: ${selectedMOM}`,
+                  };
 
-                  // Hack: Just call handleSaveScorecard but ensure it sets isUpcoming=false
-                  // We need to inject the result into data.matchInfo.resultType BEFORE saving?
-                  // Or update the handleSaveScorecard logic to detect completeness?
-
-                  // Let's rely on handleSaveScorecard's logic, but first update state.
-
-                  // Since I can't easily wait for state update, I will call updateMatch directly here?
-                  // No, Reuse handleSaveScorecard logic.
-
+                  // 4. Save & Close
+                  // We update local state just for UI consistency before redirect
                   setData(prev => ({
                     ...prev,
-                    matchInfo: {
-                      ...prev.matchInfo,
-                      resultType: 'Won', // Mark as done (we need logic to determine W/L exactly but 'Won' or 'Lost' triggers completion)
-                      matchResult: `Match Completed. MOM: ${selectedMOM}`,
-                      // In a real app we'd calculate "Ind Strikers won by X runs/wickets"
-                    }
+                    matchInfo: overrideData
                   }));
 
-                  setTimeout(async () => {
-                    await handleSaveScorecard();
-                    setEndMatchModal(false);
-                    alert("Match Saved & Completed!");
-                  }, 500);
+                  await handleSaveScorecard(overrideData);
+                  setEndMatchModal(false);
                 }}
                 className="w-full py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-200 transition-all flex items-center justify-center gap-2"
               >
