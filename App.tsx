@@ -63,7 +63,7 @@ const AppContent: React.FC<{
               <span className="text-white">INDIAN</span> <span className="text-[#4169E1]">STRIKERS</span>
             </h1>
           </div>
-          <button onClick={() => setSidebarOpen(true)} className="text-slate-400 p-1 hover:text-white">
+          <button onClick={() => setSidebarOpen(true)} className="text-slate-400 p-1 hover:text-white" title="Open Menu">
             <Menu size={24} />
           </button>
         </header>

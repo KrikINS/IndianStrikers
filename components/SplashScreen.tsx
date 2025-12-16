@@ -26,6 +26,13 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
   const [progress, setProgress] = useState(0);
   const [finalRole, setFinalRole] = useState<UserRole>('guest');
   const [currentUser, setCurrentUser] = useState<{ name: string; username: string }>();
+  const progressBarRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (progressBarRef.current) {
+      progressBarRef.current.style.setProperty('--progress-width', `${progress}%`);
+    }
+  }, [progress]);
 
   useEffect(() => {
     setImgError(false);
@@ -121,12 +128,12 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
           <div className="mb-8 animate-pulse">
             {/* Using team logo for loading screen */}
             {teamLogo && !imgError ? (
-              <img src={teamLogo} className="w-24 h-24 object-contain" />
+              <img src={teamLogo} className="w-24 h-24 object-contain" alt="Team Logo" />
             ) : (
               <Shield size={64} className="text-blue-500" />
             )}
           </div>
-          <h2 className="text-3xl md:text-5xl text-slate-300 font-cursive tracking-wide min-h-[60px]" style={{ fontFamily: '"Dancing Script", cursive' }}>
+          <h2 className="text-3xl md:text-5xl text-slate-300 font-cursive tracking-wide min-h-[60px]">
             {loadingText}
             <span className="animate-blink">|</span>
           </h2>
@@ -134,8 +141,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
           {/* Progress Bar */}
           <div className="w-64 max-w-[80%] h-1 bg-slate-800/50 rounded-full mt-8 overflow-hidden relative backdrop-blur-sm">
             <div
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-              style={{ width: `${progress}%` }}
+              ref={progressBarRef}
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)] progress-fill"
             >
               <div className="absolute inset-0 bg-white/30 w-full animate-[shimmer_1s_infinite] origin-left scale-x-0"></div>
             </div>
@@ -161,7 +168,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-slate-900 to-black opacity-90"></div>
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[100px] animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[100px] animate-pulse delay-700"></div>
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.3) 1px, transparent 0)', backgroundSize: '30px 30px' }}></div>
+        <div className="absolute inset-0 opacity-10 bg-dot-pattern"></div>
       </div>
 
       <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col items-center justify-center min-h-screen py-12">
@@ -249,7 +256,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
       {animationStep === 4 && selectedRole && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden relative transform transition-all scale-100 opacity-100">
-            <button onClick={handleCloseAuth} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-full"><X size={20} /></button>
+            <button onClick={handleCloseAuth} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-full" title="Close" aria-label="Close"><X size={20} /></button>
 
             <div className="p-8">
               <div className="flex items-center gap-4 mb-6">

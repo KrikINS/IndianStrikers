@@ -184,8 +184,9 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
           </h3>
           <form onSubmit={handleSubmit} className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">League / Tournament Name</label>
+              <label htmlFor="create-tournament" className="block text-xs font-bold text-slate-500 uppercase mb-1">League / Tournament Name</label>
               <input
+                id="create-tournament"
                 required
                 name="tournament"
                 value={formData.tournament}
@@ -196,8 +197,9 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Opponent</label>
+              <label htmlFor="create-opponent" className="block text-xs font-bold text-slate-500 uppercase mb-1">Opponent</label>
               <select
+                id="create-opponent"
                 required
                 name="opponent"
                 value={formData.opponent}
@@ -212,8 +214,9 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ground</label>
+              <label htmlFor="create-venue" className="block text-xs font-bold text-slate-500 uppercase mb-1">Ground</label>
               <select
+                id="create-venue"
                 name="venue"
                 value={formData.venue}
                 onChange={handleInputChange}
@@ -226,8 +229,9 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
+              <label htmlFor="create-date" className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
               <input
+                id="create-date"
                 required
                 type="date"
                 name="date"
@@ -238,8 +242,9 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Toss Time</label>
+              <label htmlFor="create-tossTime" className="block text-xs font-bold text-slate-500 uppercase mb-1">Toss Time</label>
               <input
+                id="create-tossTime"
                 type="time"
                 name="tossTime"
                 value={formData.tossTime}
@@ -266,27 +271,27 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
                 <Edit2 size={20} className="text-orange-400" />
                 Edit Match Details
               </h3>
-              <button onClick={() => setEditingMatch(null)} className="text-slate-400 hover:text-white"><X size={20} /></button>
+              <button onClick={() => setEditingMatch(null)} className="text-slate-400 hover:text-white" title="Close" aria-label="Close"><X size={20} /></button>
             </div>
 
             <form onSubmit={handleEditSubmit} className="p-6 space-y-6">
               {/* Basic Details */}
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tournament</label>
-                  <input name="tournament" value={editFormData.tournament} onChange={handleEditInputChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                  <label htmlFor="edit-tournament" className="block text-xs font-bold text-slate-500 uppercase mb-1">Tournament</label>
+                  <input id="edit-tournament" name="tournament" value={editFormData.tournament} onChange={handleEditInputChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Opponent</label>
-                  <input name="opponent" value={editFormData.opponent} onChange={handleEditInputChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                  <label htmlFor="edit-opponent" className="block text-xs font-bold text-slate-500 uppercase mb-1">Opponent</label>
+                  <input id="edit-opponent" name="opponent" value={editFormData.opponent} onChange={handleEditInputChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
-                  <input type="date" name="date" value={editFormData.date} onChange={handleEditInputChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                  <label htmlFor="edit-date" className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
+                  <input id="edit-date" type="date" name="date" value={editFormData.date} onChange={handleEditInputChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Venue</label>
-                  <select name="venue" value={editFormData.venue} onChange={handleEditInputChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  <label htmlFor="edit-venue" className="block text-xs font-bold text-slate-500 uppercase mb-1">Venue</label>
+                  <select id="edit-venue" name="venue" value={editFormData.venue} onChange={handleEditInputChange} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
                     {groundOptions.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
@@ -308,8 +313,8 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
                 {!editFormData.isUpcoming && (
                   <div className="grid md:grid-cols-3 gap-4 animate-fade-in bg-slate-50 p-4 rounded-xl border border-slate-100">
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Result</label>
-                      <select name="result" value={editFormData.result} onChange={handleEditInputChange} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none">
+                      <label htmlFor="edit-result" className="block text-xs font-bold text-slate-500 uppercase mb-1">Result</label>
+                      <select id="edit-result" name="result" value={editFormData.result} onChange={handleEditInputChange} className="w-full p-2.5 bg-white border border-slate-200 rounded-xl outline-none">
                         <option value="Won">Won</option>
                         <option value="Lost">Lost</option>
                         <option value="Draw">Draw</option>
@@ -317,12 +322,12 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Strikers Score</label>
-                      <input name="scoreFor" value={editFormData.scoreFor} onChange={handleEditInputChange} placeholder="e.g. 150/4" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl" />
+                      <label htmlFor="edit-scoreFor" className="block text-xs font-bold text-slate-500 uppercase mb-1">Strikers Score</label>
+                      <input id="edit-scoreFor" name="scoreFor" value={editFormData.scoreFor} onChange={handleEditInputChange} placeholder="e.g. 150/4" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Opponent Score</label>
-                      <input name="scoreAgainst" value={editFormData.scoreAgainst} onChange={handleEditInputChange} placeholder="e.g. 148/9" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl" />
+                      <label htmlFor="edit-scoreAgainst" className="block text-xs font-bold text-slate-500 uppercase mb-1">Opponent Score</label>
+                      <input id="edit-scoreAgainst" name="scoreAgainst" value={editFormData.scoreAgainst} onChange={handleEditInputChange} placeholder="e.g. 148/9" className="w-full p-2.5 bg-white border border-slate-200 rounded-xl" />
                     </div>
                   </div>
                 )}

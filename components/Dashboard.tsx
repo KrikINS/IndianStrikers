@@ -200,12 +200,16 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
 
                 {/* Corner Logo */}
                 <div className="absolute top-4 left-4 z-20 w-12 h-12 bg-white/10 backdrop-blur-md rounded-lg p-2 border border-white/20">
-                  {teamLogo ? <img src={teamLogo} className="w-full h-full object-contain" /> : <Shield className="text-white" />}
+                  {teamLogo ? (
+                    <img src={teamLogo} className="w-full h-full object-contain" alt="Team Logo" />
+                  ) : (
+                    <Shield className="text-white" />
+                  )}
                 </div>
 
                 {/* Player Image */}
                 <div className="absolute top-16 left-1/2 -translate-x-1/2 w-64 h-64 z-10">
-                  <img src={selectedHero.player.avatarUrl} className="w-full h-full object-cover rounded-full border-4 border-white/20 shadow-xl" crossOrigin="anonymous" />
+                  <img src={selectedHero.player.avatarUrl} className="w-full h-full object-cover rounded-full border-4 border-white/20 shadow-xl" crossOrigin="anonymous" alt={selectedHero.player.name} />
                 </div>
 
                 {/* Content */}
@@ -231,7 +235,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-bold text-lg text-slate-800">Match Hero Poster</h3>
-                  <button onClick={() => setSelectedHero(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} /></button>
+                  <button onClick={() => setSelectedHero(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors" title="Close" aria-label="Close Modal"><X size={20} /></button>
                 </div>
                 <p className="text-sm text-slate-500 mb-6">High-quality poster generated for social media sharing. Click the download button below to save.</p>
               </div>
@@ -322,7 +326,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                   </div>
                   <div className="flex flex-col items-center text-center">
                     <div className="relative mb-3">
-                      <img src={player.avatarUrl} className="w-14 h-14 md:w-16 md:h-16 rounded-2xl object-cover shadow-md" />
+                      <img src={player.avatarUrl} className="w-14 h-14 md:w-16 md:h-16 rounded-2xl object-cover shadow-md" alt={player.name} />
                       <div className="absolute -bottom-2 bg-slate-900 text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-white">
                         {player.role === 'Bowler' ? '2+ Wkts' : '40+ Runs'}
                       </div>
@@ -365,6 +369,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                   value={tournamentName}
                   onChange={(e) => setTournamentName(e.target.value)}
                   className="bg-slate-950 border border-slate-700 text-white text-sm font-bold px-3 py-1.5 rounded-lg w-full focus:ring-1 focus:ring-blue-500 outline-none"
+                  aria-label="Tournament Name"
                 />
               </div>
               <div>
@@ -373,6 +378,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                   value={groupNumber}
                   onChange={(e) => setGroupNumber(e.target.value)}
                   className="bg-slate-950 border border-slate-700 text-white text-sm font-bold px-3 py-1.5 rounded-lg w-20 text-center focus:ring-1 focus:ring-blue-500 outline-none"
+                  aria-label="Group Number"
                 />
               </div>
             </div>
@@ -421,6 +427,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                         value={row.teamId}
                         onChange={(e) => handleTeamSelect(row.id, e.target.value)}
                         className="bg-transparent text-white font-bold w-full outline-none cursor-pointer text-xs md:text-sm"
+                        aria-label="Select team for table row"
                       >
                         <option value="" className="bg-slate-900 text-slate-500">Select...</option>
 
@@ -438,15 +445,15 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                         }
                       </select>
                     </td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.matches} onChange={(e) => handleTableChange(row.id, 'matches', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-white outline-none focus:bg-slate-800 rounded" /></td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.won} onChange={(e) => handleTableChange(row.id, 'won', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-green-400 font-bold outline-none focus:bg-slate-800 rounded" /></td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.lost} onChange={(e) => handleTableChange(row.id, 'lost', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-red-400 font-bold outline-none focus:bg-slate-800 rounded" /></td>
-                    <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="number" value={row.nr} onChange={(e) => handleTableChange(row.id, 'nr', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-slate-400 outline-none focus:bg-slate-800 rounded" /></td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.points} onChange={(e) => handleTableChange(row.id, 'points', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-yellow-400 font-black text-sm md:text-lg outline-none focus:bg-slate-800 rounded" /></td>
+                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.matches} onChange={(e) => handleTableChange(row.id, 'matches', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-white outline-none focus:bg-slate-800 rounded" aria-label="Matches played" /></td>
+                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.won} onChange={(e) => handleTableChange(row.id, 'won', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-green-400 font-bold outline-none focus:bg-slate-800 rounded" aria-label="Matches won" /></td>
+                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.lost} onChange={(e) => handleTableChange(row.id, 'lost', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-red-400 font-bold outline-none focus:bg-slate-800 rounded" aria-label="Matches lost" /></td>
+                    <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="number" value={row.nr} onChange={(e) => handleTableChange(row.id, 'nr', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-slate-400 outline-none focus:bg-slate-800 rounded" aria-label="No result matches" /></td>
+                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.points} onChange={(e) => handleTableChange(row.id, 'points', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-yellow-400 font-black text-sm md:text-lg outline-none focus:bg-slate-800 rounded" aria-label="Points" /></td>
                     <td className="p-2 md:p-4 text-center text-slate-300 font-mono text-[10px] md:text-xs">{calculateWinPercentage(row.won, row.matches)}</td>
-                    <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="text" value={row.nrr} onChange={(e) => handleTableChange(row.id, 'nrr', e.target.value)} className="w-16 bg-transparent text-center text-blue-300 font-mono outline-none focus:bg-slate-800 rounded" /></td>
+                    <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="text" value={row.nrr} onChange={(e) => handleTableChange(row.id, 'nrr', e.target.value)} className="w-16 bg-transparent text-center text-blue-300 font-mono outline-none focus:bg-slate-800 rounded" aria-label="Net run rate" /></td>
                     <td className="p-2 md:p-4 text-center">
-                      <button onClick={() => handleDeleteRow(row.id)} className="text-slate-600 hover:text-red-500 transition-all"><Trash2 size={16} /></button>
+                      <button onClick={() => handleDeleteRow(row.id)} className="text-slate-600 hover:text-red-500 transition-all" title="Delete Team" aria-label="Delete Team"><Trash2 size={16} /></button>
                     </td>
                   </tr>
                 ))
@@ -492,7 +499,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
             {topRunScorers.map((player, idx) => (
               <div key={player.id} className="flex items-center gap-2 md:gap-3 group">
                 <div className="relative shrink-0">
-                  <img src={player.avatarUrl} className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-slate-100 object-cover" />
+                  <img src={player.avatarUrl} className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-slate-100 object-cover" alt={player.name} />
                   <span className="absolute -bottom-1 -right-1 bg-slate-800 text-white text-[9px] md:text-[10px] font-bold w-3.5 h-3.5 md:w-4 md:h-4 flex items-center justify-center rounded-full border border-white">
                     {idx + 1}
                   </span>
@@ -518,7 +525,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
             {topWicketTakers.map((player, idx) => (
               <div key={player.id} className="flex items-center gap-2 md:gap-3 group">
                 <div className="relative shrink-0">
-                  <img src={player.avatarUrl} className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-slate-100 object-cover" />
+                  <img src={player.avatarUrl} className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-slate-100 object-cover" alt={player.name} />
                   <span className="absolute -bottom-1 -right-1 bg-slate-800 text-white text-[9px] md:text-[10px] font-bold w-3.5 h-3.5 md:w-4 md:h-4 flex items-center justify-center rounded-full border border-white">
                     {idx + 1}
                   </span>

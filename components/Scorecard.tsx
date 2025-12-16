@@ -25,8 +25,7 @@ import {
   Edit2,
   ArrowRight,
   Settings,
-  CheckCircle2,
-  Hand
+  CheckCircle2
 } from 'lucide-react';
 import { OpponentTeam, Player, Match, PlayerRole, UserRole } from '../types';
 import { useLocation } from 'react-router-dom';
@@ -262,7 +261,7 @@ function LiveBattingTable({ data, battingSquad, fieldingSquad, onUpdate, onRemov
             {data.map((row: any) => (
               <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="p-2 md:p-3">
-                  <select
+                  <select title="Select Batsman"
                     className="w-full bg-transparent font-bold text-slate-800 outline-none text-xs md:text-sm"
                     value={row.name}
                     onChange={(e) => onUpdate(row.id, 'name', e.target.value)}
@@ -272,15 +271,15 @@ function LiveBattingTable({ data, battingSquad, fieldingSquad, onUpdate, onRemov
                     {!battingSquad.find((p: any) => p.name === row.name) && row.name && <option value={row.name}>{row.name}</option>}
                   </select>
                 </td>
-                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.howOut} onChange={(e) => onUpdate(row.id, 'howOut', e.target.value)}>{DISMISSAL_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</select></td>
-                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.fielder || ''} onChange={(e) => onUpdate(row.id, 'fielder', e.target.value)}><option value="">-</option>{fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
-                <td className="p-2 md:p-3"><select className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.bowler || ''} onChange={(e) => onUpdate(row.id, 'bowler', e.target.value)}><option value="">-</option>{fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-bold ${isLiveMode ? 'text-slate-400' : 'text-slate-900'}`} value={row.runs} onChange={(e) => onUpdate(row.id, 'runs', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.balls} onChange={(e) => onUpdate(row.id, 'balls', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.fours} onChange={(e) => onUpdate(row.id, 'fours', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.sixes} onChange={(e) => onUpdate(row.id, 'sixes', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3"><select title="Select Dismissal Type" aria-label="Dismissal Type" className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.howOut} onChange={(e) => onUpdate(row.id, 'howOut', e.target.value)}>{DISMISSAL_TYPES.map(type => <option key={type} value={type}>{type}</option>)}</select></td>
+                <td className="p-2 md:p-3"><select title="Fielder" aria-label="Select Fielder" className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.fielder || ''} onChange={(e) => onUpdate(row.id, 'fielder', e.target.value)}><option value="">-</option>{fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
+                <td className="p-2 md:p-3"><select title="Bowler" className="w-full bg-transparent text-slate-700 text-[10px] md:text-xs outline-none font-medium" value={row.bowler || ''} onChange={(e) => onUpdate(row.id, 'bowler', e.target.value)}><option value="">-</option>{fieldingSquad.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}</select></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="Runs Scored" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-bold ${isLiveMode ? 'text-slate-400' : 'text-slate-900'}`} value={row.runs} onChange={(e) => onUpdate(row.id, 'runs', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="Balls Faced" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.balls} onChange={(e) => onUpdate(row.id, 'balls', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="Fours" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.fours} onChange={(e) => onUpdate(row.id, 'fours', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="Sixes" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.sixes} onChange={(e) => onUpdate(row.id, 'sixes', Number(e.target.value))} /></td>
                 <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getStrikeRate(row.runs, row.balls)}</td>
-                <td className="p-2 md:p-3 text-center">{!isLiveMode && <button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>}</td>
+                <td className="p-2 md:p-3 text-center">{!isLiveMode && <button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500" title="Remove Player"><Trash2 size={14} /></button>}</td>
               </tr>
             ))}
           </tbody>
@@ -318,6 +317,8 @@ function LiveBowlingTable({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLi
               <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="p-2 md:p-3">
                   <select
+                    title="Select Bowler"
+                    aria-label="Select Bowler"
                     className="w-full bg-transparent font-bold text-slate-800 outline-none text-xs md:text-sm"
                     value={row.name}
                     onChange={(e) => onUpdate(row.id, 'name', e.target.value)}
@@ -327,16 +328,16 @@ function LiveBowlingTable({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLi
                     {!fieldingSquad.find((p: any) => p.name === row.name) && row.name && <option value={row.name}>{row.name}</option>}
                   </select>
                 </td>
-                <td className="p-2 md:p-3 text-right"><input type="number" step="0.1" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-bold ${isLiveMode ? 'text-slate-400' : 'text-slate-900'}`} value={row.overs} onChange={(e) => onUpdate(row.id, 'overs', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.maidens} onChange={(e) => onUpdate(row.id, 'maidens', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.runs} onChange={(e) => onUpdate(row.id, 'runs', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-black ${isLiveMode ? 'text-blue-300' : 'text-blue-600'}`} value={row.wickets} onChange={(e) => onUpdate(row.id, 'wickets', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" step="0.1" title="Overs Bowled" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-bold ${isLiveMode ? 'text-slate-400' : 'text-slate-900'}`} value={row.overs} onChange={(e) => onUpdate(row.id, 'overs', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="Maiden Overs" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.maidens} onChange={(e) => onUpdate(row.id, 'maidens', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="Runs Conceded" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none ${isLiveMode ? 'text-slate-400' : 'text-slate-800'}`} value={row.runs} onChange={(e) => onUpdate(row.id, 'runs', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="Wickets Taken" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-black ${isLiveMode ? 'text-blue-300' : 'text-blue-600'}`} value={row.wickets} onChange={(e) => onUpdate(row.id, 'wickets', Number(e.target.value))} /></td>
                 <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getEconomy(row.runs, row.overs)}</td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.wides} onChange={(e) => onUpdate(row.id, 'wides', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.noBalls} onChange={(e) => onUpdate(row.id, 'noBalls', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.legByes} onChange={(e) => onUpdate(row.id, 'legByes', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.dots} onChange={(e) => onUpdate(row.id, 'dots', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-center">{!isLiveMode && <button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>}</td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="Wides" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.wides} onChange={(e) => onUpdate(row.id, 'wides', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="No Balls" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.noBalls} onChange={(e) => onUpdate(row.id, 'noBalls', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="Leg Byes" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.legByes} onChange={(e) => onUpdate(row.id, 'legByes', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-right"><input type="number" title="Dot Balls" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.dots} onChange={(e) => onUpdate(row.id, 'dots', Number(e.target.value))} /></td>
+                <td className="p-2 md:p-3 text-center">{!isLiveMode && <button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500" title="Remove Player"><Trash2 size={14} /></button>}</td>
               </tr>
             ))}
           </tbody>
@@ -1609,15 +1610,15 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                 </div>
                 {isScorer && (
                   <div className="flex gap-1 md:gap-2 overflow-x-auto pb-1 md:pb-0">
-                    <select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.strikerId} onChange={(e) => setLiveState({ ...liveState, strikerId: e.target.value })}>
+                    <select title="Select Striker" className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.strikerId} onChange={(e) => setLiveState({ ...liveState, strikerId: e.target.value })}>
                       <option value="">Striker</option>
                       {inning.batting.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
-                    <select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.nonStrikerId} onChange={(e) => setLiveState({ ...liveState, nonStrikerId: e.target.value })}>
+                    <select title="Select Non-Striker" className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.nonStrikerId} onChange={(e) => setLiveState({ ...liveState, nonStrikerId: e.target.value })}>
                       <option value="">Non-Striker</option>
                       {inning.batting.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
-                    <select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.bowlerId} onChange={(e) => setLiveState({ ...liveState, bowlerId: e.target.value })}>
+                    <select title="Select Bowler" className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs md:text-sm text-white max-w-[100px] md:max-w-[120px]" value={liveState.bowlerId} onChange={(e) => setLiveState({ ...liveState, bowlerId: e.target.value })}>
                       <option value="">Bowler</option>
                       {inning.bowling.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
@@ -1734,7 +1735,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           <div className="bg-white p-3 rounded-xl border border-slate-200 text-center"><span className="block text-xs font-bold text-slate-600 uppercase">Wides</span><span className="text-xl font-black text-slate-800">{inning.bowling.reduce((sum, b) => sum + Number(b.wides || 0), 0)}</span></div>
           <div className="bg-white p-3 rounded-xl border border-slate-200 text-center"><span className="block text-xs font-bold text-slate-600 uppercase">No Balls</span><span className="text-xl font-black text-slate-800">{inning.bowling.reduce((sum, b) => sum + Number(b.noBalls || 0), 0)}</span></div>
           <div className="bg-white p-3 rounded-xl border border-slate-200 text-center"><span className="block text-xs font-bold text-slate-600 uppercase">Leg Byes</span><span className="text-xl font-black text-slate-800">{inning.bowling.reduce((sum, b) => sum + Number(b.legByes || 0), 0)}</span></div>
-          <div className="bg-white p-3 rounded-xl border border-slate-200 text-center"><span className="block text-xs font-bold text-slate-600 uppercase mb-1">Byes</span><input type="number" disabled={!isScorer} value={inning.byeRuns} onChange={(e) => { const n = [...data.innings]; n[inningIdx].byeRuns = Number(e.target.value); updateData({ ...data, innings: n as [Innings, Innings] }); }} className={`w-full text-center text-xl font-black bg-slate-50 rounded-lg p-1 outline-none ${!isScorer ? 'text-slate-400' : 'text-slate-800'}`} /></div>
+          <div className="bg-white p-3 rounded-xl border border-slate-200 text-center"><span className="block text-xs font-bold text-slate-600 uppercase mb-1">Byes</span><input title="Byes" type="number" disabled={!isScorer} value={inning.byeRuns} onChange={(e) => { const n = [...data.innings]; n[inningIdx].byeRuns = Number(e.target.value); updateData({ ...data, innings: n as [Innings, Innings] }); }} className={`w-full text-center text-xl font-black bg-slate-50 rounded-lg p-1 outline-none ${!isScorer ? 'text-slate-400' : 'text-slate-800'}`} /></div>
           <div className="bg-slate-800 p-3 rounded-xl border border-slate-700 text-center text-white"><span className="block text-xs font-bold text-slate-300 uppercase">Total Extras</span><span className="text-xl font-black text-white">{inning.extras}</span></div>
         </div>
 
@@ -1789,7 +1790,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                     <button onClick={() => setModalTab(1)} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${modalTab === 1 ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>2nd Innings</button>
                   </div>
                 </div>
-                <button onClick={() => setShowScorecardModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={24} className="text-slate-500" /></button>
+                <button onClick={() => setShowScorecardModal(false)} title="Close Scorecard" className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={24} className="text-slate-500" /></button>
               </div>
 
               <div className="p-4 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
@@ -1960,12 +1961,14 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <Settings size={20} className="text-slate-500" /> Match Settings
               </h3>
-              <button onClick={() => setMatchSettingsModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+              <button onClick={() => setMatchSettingsModal(false)} className="text-slate-400 hover:text-slate-600" title="Close"><X size={20} /></button>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Total Overs</label>
+                <label htmlFor="total-overs" className="block text-xs font-bold text-slate-500 uppercase mb-1">Total Overs</label>
                 <input
+                  id="total-overs"
+                  title="Total Overs"
                   type="number"
                   className="w-full p-2 border border-slate-200 rounded-lg font-bold"
                   value={data.matchInfo.totalOvers || 20}
@@ -1986,8 +1989,10 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Penalty Runs</label>
+                <label htmlFor="penalty-runs" className="block text-xs font-bold text-slate-500 uppercase mb-1">Penalty Runs</label>
                 <input
+                  id="penalty-runs"
+                  title="Penalty Runs"
                   type="number"
                   className="w-full p-2 border border-slate-200 rounded-lg font-bold"
                   value={data.matchInfo.penaltyRuns || 0}
@@ -2064,6 +2069,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                 <div className="mt-8">
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Overs per Innings</label>
                   <select
+                    title="Overs per Innings"
                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-center text-lg outline-none focus:border-blue-500 transition-colors"
                     value={data.matchInfo.totalOvers}
                     onChange={(e) => setData({ ...data, matchInfo: { ...data.matchInfo, totalOvers: Number(e.target.value) } })}
@@ -2092,7 +2098,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                 <h3 className="font-bold text-slate-800 text-lg">Manage Playing XI</h3>
                 <p className="text-xs text-slate-500">Select players for this match</p>
               </div>
-              <button onClick={() => setSquadModal(false)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
+              <button onClick={() => setSquadModal(false)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-200 rounded-full transition-colors" title="Close"><X size={20} /></button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-3 md:p-4 custom-scrollbar">
@@ -2293,7 +2299,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                 <h3 className="font-bold text-slate-800 text-lg">Opponent Playing XI</h3>
                 <p className="text-xs text-slate-500">Add players for {data.matchInfo.teamBName}</p>
               </div>
-              <button onClick={() => setOpponentSquadModal(false)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
+              <button onClick={() => setOpponentSquadModal(false)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-200 rounded-full transition-colors" title="Close"><X size={20} /></button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
@@ -2320,6 +2326,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                     }}
                   />
                   <button
+                    title="Add Player"
                     onClick={() => {
                       const input = document.getElementById('new-opp-player') as HTMLInputElement;
                       if (input && input.value.trim()) {
@@ -2354,6 +2361,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                           }));
                         }}
                         className="text-red-400 hover:text-red-600"
+                        title="Remove Player"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -2389,14 +2397,14 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dismissal Type</label>
-                <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-red-500" value={wicketDetails.type} onChange={(e) => setWicketDetails({ ...wicketDetails, type: e.target.value })}>
+                <select title="Dismissal Type" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-red-500" value={wicketDetails.type} onChange={(e) => setWicketDetails({ ...wicketDetails, type: e.target.value })}>
                   {DISMISSAL_TYPES.filter(t => t !== 'Not Out' && t !== 'Did not bat' && t !== 'Retired Hurt').map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               {['Caught', 'Run Out', 'Stumped'].includes(wicketDetails.type) && (
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fielder Name</label>
-                  <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 outline-none focus:ring-2 focus:ring-red-500" value={wicketDetails.fielderName} onChange={(e) => setWicketDetails({ ...wicketDetails, fielderName: e.target.value })}>
+                  <select title="Fielder Name" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 outline-none focus:ring-2 focus:ring-red-500" value={wicketDetails.fielderName} onChange={(e) => setWicketDetails({ ...wicketDetails, fielderName: e.target.value })}>
                     <option value="">Select Fielder...</option>
                     {getBowlingTeamPlayers(activeTab === 0 ? 0 : activeTab === 1 ? 0 : 1).map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                   </select>
@@ -2422,7 +2430,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                     {playerSelector.autoTrigger && <Zap size={16} className="text-yellow-500 fill-yellow-500" />}
                     Select {playerSelector.type === 'batsman' ? 'Batsman' : 'Bowler'}
                   </h3>
-                  <button onClick={() => setPlayerSelector(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                  <button onClick={() => setPlayerSelector(null)} title="Close" className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
                 </div>
                 <div className="p-4">
                   <div className="relative mb-4">
@@ -2453,8 +2461,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
             ) : (
               <div className="relative">
                 <div className="h-32 bg-slate-900 relative">
-                  <button onClick={() => setSelectionPreview(null)} className="absolute top-4 left-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-sm transition-colors"><ArrowRightLeft size={18} /></button>
-                  <button onClick={() => setPlayerSelector(null)} className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-sm transition-colors"><X size={18} /></button>
+                  <button onClick={() => setSelectionPreview(null)} title="Back" aria-label="Back to Player List" className="absolute top-4 left-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-sm transition-colors"><ArrowRightLeft size={18} /></button>
+                  <button onClick={() => setPlayerSelector(null)} title="Close" aria-label="Close Player Selector" className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-sm transition-colors"><X size={18} /></button>
                   <div className="absolute -bottom-12 left-1/2 -translate-x-1/2"><img src={selectionPreview.avatarUrl} alt={selectionPreview.name} className="w-24 h-24 rounded-2xl border-4 border-white shadow-xl object-cover bg-slate-200" /></div>
                 </div>
                 <div className="pt-16 pb-6 px-6 text-center">

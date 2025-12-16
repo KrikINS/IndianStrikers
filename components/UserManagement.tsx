@@ -134,7 +134,11 @@ const UserManagement: React.FC = () => {
                             user.role === 'scorer' ? 'bg-purple-600' : 'bg-orange-500'}
                       `}>
                         {user.avatarUrl ? (
-                          <img src={user.avatarUrl} className="w-full h-full rounded-full" />
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.name}
+                            className="w-full h-full rounded-full"
+                          />
                         ) : (
                           user.name[0]
                         )}
@@ -157,10 +161,10 @@ const UserManagement: React.FC = () => {
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => handleOpenEdit(user)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                      <button onClick={() => handleOpenEdit(user)} title="Edit User" aria-label="Edit User" className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                         <Edit2 size={16} />
                       </button>
-                      <button onClick={() => handleDelete(user.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                      <button onClick={() => handleDelete(user.id)} title="Delete User" aria-label="Delete User" className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -186,7 +190,8 @@ const UserManagement: React.FC = () => {
                 {editingUser ? <Edit2 size={20} className="text-orange-400" /> : <Plus size={20} className="text-blue-400" />}
                 {editingUser ? 'Edit User' : 'Add New User'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white"><X size={20} /></button>
+              <button type="button" onClick={() => setIsModalOpen(false)} title="Close Modal" aria-label="Close Modal" className="text-slate-400 hover:text-white"><X size={20} /></button>
+
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">

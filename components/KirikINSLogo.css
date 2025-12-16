@@ -1,0 +1,44 @@
+/* KirikINSLogo Component Styles */
+
+.kirik-logo-container {
+    width: var(--logo-width);
+    height: var(--logo-height);
+}
+
+/* Size variants */
+.kirik-logo-container.small {
+    --logo-width: 60px;
+    --logo-height: 24px;
+}
+
+.kirik-logo-container.medium {
+    --logo-width: 100px;
+    --logo-height: 30px;
+}
+
+.kirik-logo-container.large {
+    --logo-width: 150px;
+    --logo-height: 40px;
+}
+
+.kirik-logo-container.xl {
+    --logo-width: 200px;
+    --logo-height: 60px;
+}
+
+/* Filter styles */
+.kirik-logo-filter.filter-small {
+    filter: url(#neonGlow-small);
+}
+
+.kirik-logo-filter.filter-medium {
+    filter: url(#neonGlow-medium);
+}
+
+.kirik-logo-filter.filter-large {
+    filter: url(#neonGlow-large);
+}
+
+.kirik-logo-filter.filter-xl {
+    filter: url(#neonGlow-xl);
+}

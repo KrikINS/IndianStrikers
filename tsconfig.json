@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "strict": true,
     "experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
     "useDefineForClassFields": false,
     "module": "ESNext",
     "lib": [

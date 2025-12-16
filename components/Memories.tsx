@@ -64,7 +64,7 @@ const INITIAL_MEMORIES: Memory[] = [
     likes: 150,
     width: 'col-span-1 row-span-1'
   },
-   {
+  {
     id: '6',
     type: 'image',
     url: 'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?q=80&w=800&auto=format&fit=crop',
@@ -80,7 +80,7 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
   const [filter, setFilter] = useState<'all' | 'image' | 'video'>('all');
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
+
   // New Memory Form
   const [newCaption, setNewCaption] = useState('');
   const [newType, setNewType] = useState<'image' | 'video'>('image');
@@ -129,7 +129,7 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
           <h2 className="text-4xl font-black text-slate-800 tracking-tight">Team Memories</h2>
           <p className="text-slate-500 mt-2 font-medium">Reliving the glory days, one frame at a time.</p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
             {['all', 'image', 'video'].map((f) => (
@@ -142,11 +142,12 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
               </button>
             ))}
           </div>
-          
+
           {isAdmin && (
-            <button 
+            <button
               onClick={() => setIsAddModalOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-105"
+              title="Add Memory"
             >
               <Plus size={20} />
             </button>
@@ -157,7 +158,7 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
       {/* Masonry Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-[200px]">
         {filteredMemories.map((item, idx) => (
-          <div 
+          <div
             key={item.id}
             onClick={() => setSelectedMemory(item)}
             className={`
@@ -166,34 +167,34 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
               ${idx % 5 === 0 ? 'md:col-span-2 md:row-span-2' : ''} 
             `}
           >
-            <img 
-              src={item.url} 
+            <img
+              src={item.url}
               alt={item.caption}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             />
-            
+
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-               <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                  <div className="flex items-center justify-between text-white mb-2">
-                     <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                       {item.type === 'video' ? <Film size={10} /> : <ImageIcon size={10} />} {item.type}
-                     </span>
-                     <span className="flex items-center gap-1 text-xs font-bold">
-                       <Heart size={12} className="fill-white" /> {item.likes}
-                     </span>
-                  </div>
-                  <h3 className="text-white font-bold leading-tight">{item.caption}</h3>
-                  <p className="text-slate-300 text-xs mt-1 flex items-center gap-1">
-                    <Calendar size={10} /> {new Date(item.date).toLocaleDateString()}
-                  </p>
-               </div>
+              <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                <div className="flex items-center justify-between text-white mb-2">
+                  <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                    {item.type === 'video' ? <Film size={10} /> : <ImageIcon size={10} />} {item.type}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs font-bold">
+                    <Heart size={12} className="fill-white" /> {item.likes}
+                  </span>
+                </div>
+                <h3 className="text-white font-bold leading-tight">{item.caption}</h3>
+                <p className="text-slate-300 text-xs mt-1 flex items-center gap-1">
+                  <Calendar size={10} /> {new Date(item.date).toLocaleDateString()}
+                </p>
+              </div>
             </div>
 
             {item.type === 'video' && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                 <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg border border-white/50 group-hover:scale-110 transition-transform">
-                    <Play size={20} className="text-white ml-1 fill-white" />
-                 </div>
+                <div className="w-12 h-12 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg border border-white/50 group-hover:scale-110 transition-transform">
+                  <Play size={20} className="text-white ml-1 fill-white" />
+                </div>
               </div>
             )}
           </div>
@@ -203,45 +204,47 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
       {/* Lightbox Modal */}
       {selectedMemory && (
         <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 animate-fade-in">
-           <button 
-             onClick={() => setSelectedMemory(null)}
-             className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors p-2 bg-white/10 rounded-full"
-           >
-             <X size={24} />
-           </button>
+          <button
+            onClick={() => setSelectedMemory(null)}
+            className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors p-2 bg-white/10 rounded-full"
+            title="Close"
+            aria-label="Close"
+          >
+            <X size={24} />
+          </button>
 
-           <div className="w-full max-w-5xl max-h-[90vh] flex flex-col md:flex-row gap-6 bg-black/50 rounded-3xl overflow-hidden border border-white/10">
-              {/* Media */}
-              <div className="flex-1 bg-black flex items-center justify-center relative min-h-[400px]">
-                 {selectedMemory.type === 'video' ? (
-                   <div className="relative w-full h-full flex items-center justify-center">
-                      <img src={selectedMemory.url} className="w-full h-full object-contain opacity-50" />
-                      <Play size={64} className="absolute text-white/80" />
-                      <p className="absolute bottom-10 text-white/50 text-sm">Video playback placeholder</p>
-                   </div>
-                 ) : (
-                   <img src={selectedMemory.url} className="max-w-full max-h-[80vh] object-contain" />
-                 )}
+          <div className="w-full max-w-5xl max-h-[90vh] flex flex-col md:flex-row gap-6 bg-black/50 rounded-3xl overflow-hidden border border-white/10">
+            {/* Media */}
+            <div className="flex-1 bg-black flex items-center justify-center relative min-h-[400px]">
+              {selectedMemory.type === 'video' ? (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <img src={selectedMemory.url} alt={selectedMemory.caption} className="w-full h-full object-contain opacity-50" />
+                  <Play size={64} className="absolute text-white/80" />
+                  <p className="absolute bottom-10 text-white/50 text-sm">Video playback placeholder</p>
+                </div>
+              ) : (
+                <img src={selectedMemory.url} alt={selectedMemory.caption} className="max-w-full max-h-[80vh] object-contain" />
+              )}
+            </div>
+
+            {/* Sidebar Info */}
+            <div className="w-full md:w-80 p-8 flex flex-col justify-center bg-zinc-900/50 backdrop-blur-sm border-l border-white/10">
+              <div className="mb-auto">
+                <span className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-2 block">{selectedMemory.type}</span>
+                <h3 className="text-2xl font-bold text-white mb-4 leading-tight">{selectedMemory.caption}</h3>
+                <p className="text-zinc-400 text-sm mb-6">Captured on {new Date(selectedMemory.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
               </div>
 
-              {/* Sidebar Info */}
-              <div className="w-full md:w-80 p-8 flex flex-col justify-center bg-zinc-900/50 backdrop-blur-sm border-l border-white/10">
-                 <div className="mb-auto">
-                    <span className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-2 block">{selectedMemory.type}</span>
-                    <h3 className="text-2xl font-bold text-white mb-4 leading-tight">{selectedMemory.caption}</h3>
-                    <p className="text-zinc-400 text-sm mb-6">Captured on {new Date(selectedMemory.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                 </div>
-                 
-                 <div className="flex items-center gap-4 py-6 border-t border-white/10">
-                    <button className="flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-colors">
-                       <Heart size={18} className="text-red-500 fill-red-500" /> Like ({selectedMemory.likes})
-                    </button>
-                    <button className="p-3 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700">
-                       <Maximize2 size={18} />
-                    </button>
-                 </div>
+              <div className="flex items-center gap-4 py-6 border-t border-white/10">
+                <button className="flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-colors">
+                  <Heart size={18} className="text-red-500 fill-red-500" /> Like ({selectedMemory.likes})
+                </button>
+                <button className="p-3 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700" title="Maximize" aria-label="Maximize image">
+                  <Maximize2 size={18} />
+                </button>
               </div>
-           </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -254,39 +257,43 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
                 <Plus size={20} className="text-blue-400" />
                 Add New Memory
               </h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white"><X size={20} /></button>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white" aria-label="Close modal"><X size={20} /></button>
             </div>
-            
+
             <form onSubmit={handleAddMemory} className="p-6 space-y-4">
               {/* Type Selection */}
               <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
-                 <button type="button" onClick={() => setNewType('image')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${newType === 'image' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>Photo</button>
-                 <button type="button" onClick={() => setNewType('video')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${newType === 'video' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>Video</button>
+                <button type="button" onClick={() => setNewType('image')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${newType === 'image' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>Photo</button>
+                <button type="button" onClick={() => setNewType('video')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${newType === 'video' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>Video</button>
               </div>
 
               {/* Upload */}
               <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 hover:border-blue-400 transition-colors relative">
-                 <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleFileUpload} />
-                 {newUrl ? (
-                   <img src={newUrl} className="h-32 object-contain rounded-lg shadow-md" />
-                 ) : (
-                   <>
-                     <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-2">
-                       <ImageIcon size={24} />
-                     </div>
-                     <p className="text-sm font-bold text-slate-700">Click to upload</p>
-                     <p className="text-xs text-slate-400">or drag and drop</p>
-                   </>
-                 )}
+                <input type="file" title="Upload a memory" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleFileUpload} />
+                {newUrl ? (
+                  <img
+                    src={newUrl}
+                    alt="New memory preview"
+                    className="h-32 object-contain rounded-lg shadow-md"
+                  />
+                ) : (
+                  <>
+                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-2">
+                      <ImageIcon size={24} />
+                    </div>
+                    <p className="text-sm font-bold text-slate-700">Click to upload</p>
+                    <p className="text-xs text-slate-400">or drag and drop</p>
+                  </>
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Caption</label>
-                <input 
+                <input
                   required
                   value={newCaption}
                   onChange={e => setNewCaption(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 outline-none focus:ring-2 focus:ring-blue-500" 
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="What's happening in this moment?"
                 />
               </div>

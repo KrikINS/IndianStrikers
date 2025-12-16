@@ -1,0 +1,30 @@
+/* Fielding Map Component Styles */
+
+/* Ghost Guide Markers */
+.guide-marker {
+    position: absolute;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    transition: all 0.3s;
+    /* Use CSS custom properties for dynamic positioning */
+    left: var(--marker-left);
+    top: var(--marker-top);
+    transform: translate(-50%, -50%);
+}
+
+/* Player Position Markers */
+.player-marker {
+    position: absolute;
+    z-index: 30;
+    /* Use CSS custom properties for dynamic positioning */
+    left: var(--marker-left);
+    top: var(--marker-top);
+    transform: translate(-50%, -50%);
+    touch-action: none;
+}

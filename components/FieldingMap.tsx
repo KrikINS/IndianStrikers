@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Player, FieldingStrategy, PlayerRole, FieldPosition, UserRole } from '../types';
 import { getPlayers, getStrategies, addStrategy, deleteStrategy } from '../services/storageService';
 import { Save, RefreshCcw, Target, GripVertical, Plus, Zap, Flame, Clock, Trash2, Users, ChevronRight, CornerUpLeft, Activity, X } from 'lucide-react';
+import './FieldingMap.css';
 
 interface FieldingMapProps {
   userRole?: UserRole;
@@ -200,8 +201,9 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
       strategy.positions.forEach((p: FieldPosition) => posMap.set(p.playerId, p));
       setCurrentPositions(posMap);
       setBatterHand(strategy.batterHand);
-      if (strategy.matchPhase) setMatchPhase(strategy.matchPhase);
-      if (strategy.matchPhase) setMatchPhase(strategy.matchPhase);
+      if (strategy.matchPhase && (strategy.matchPhase === 'Powerplay' || strategy.matchPhase === 'Middle' || strategy.matchPhase === 'Death')) {
+        setMatchPhase(strategy.matchPhase);
+      }
       if (strategy.bowlerId) setSelectedBowlerId(strategy.bowlerId);
       // Try to infer keeper from position 50,32 or role? Strategy doesn't save keeperID explicitly.
       // We can iterate positions to find who is at 50,32?
@@ -353,14 +355,10 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
 
           {/* LAYER 1: VISUALS (SVG) */}
           <div
-            className="absolute inset-0 rounded-full overflow-hidden shadow-2xl pointer-events-none"
-            style={{
-              background: 'radial-gradient(circle, #10b981 0%, #059669 40%, #047857 100%)',
-            }}
+            className="absolute inset-0 rounded-full overflow-hidden shadow-2xl pointer-events-none fielding-ground-gradient"
           >
             {/* Mowing Stripes Overlay */}
-            <div className="absolute inset-0 opacity-10"
-              style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 20px, #000 20px, #000 40px)' }}>
+            <div className="absolute inset-0 opacity-10 mowing-stripes">
             </div>
 
             <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
@@ -401,10 +399,11 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
 
             {/* Ghost Guide Markers */}
             {showGuides && guidePositions.map((pos, idx) => (
+              // eslint-disable-next-line react/forbid-component-props
               <div
                 key={`guide-${idx}`}
-                className="absolute w-6 h-6 rounded-full border border-white/20 flex items-center justify-center pointer-events-none group transition-all duration-300"
-                style={{ left: `${pos.left}%`, top: `${pos.top}%`, transform: 'translate(-50%, -50%)' }}
+                className="guide-marker"
+                style={{ '--marker-left': `${pos.left}%`, '--marker-top': `${pos.top}%` } as React.CSSProperties}
               >
                 <div className="opacity-0 group-hover:opacity-100 absolute -top-5 bg-black/60 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full whitespace-nowrap transition-opacity z-10 border border-white/10">
                   {pos.label}
@@ -424,6 +423,8 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
             onDragOver={handleBoardDragOver}
             onDrop={handleBoardDrop}
           >
+            {/* Note: Inline styles are used below for CSS custom properties (--marker-left, --marker-top) 
+                which enable dynamic positioning while keeping styling logic in external CSS */}
             {Array.from(currentPositions.values()).map((pos: FieldPosition) => {
               const player = players.find(p => p.id === pos.playerId);
               if (!player) return null;
@@ -440,17 +441,13 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
               // Visual warning if being dragged out
               const isDraggingOut = draggedId === pos.playerId && (pos.left < 0 || pos.left > 100 || pos.top < 0 || pos.top > 100);
 
+              // eslint-disable-next-line react/forbid-component-props
               return (
-                <div
+                <button
+                  type="button"
                   key={pos.playerId}
-                  className={`absolute z-30 animate-zoom-in ${isDraggingOut ? 'opacity-50 scale-90 grayscale' : 'scale-100'} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
-                  style={{
-                    left: `${pos.left}%`,
-                    top: `${pos.top}%`,
-                    // Transform is handled by Tailwind class + inline translation
-                    transform: 'translate(-50%, -50%)',
-                    touchAction: 'none'
-                  }}
+                  className={`player-marker animate-zoom-in ${isDraggingOut ? 'opacity-50 scale-90 grayscale' : 'scale-100'} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                  style={{ '--marker-left': `${pos.left}%`, '--marker-top': `${pos.top}%` } as React.CSSProperties}
                   onPointerDown={(e) => handlePointerDown(e, pos.playerId)}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
@@ -458,6 +455,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
                 >
                   {/* Interactive Tooltip Card (On Click) */}
                   {isSelected && (
+                    // eslint-disable-next-line react/forbid-component-props
                     <div
                       className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white rounded-xl shadow-xl border border-slate-200 p-3 w-40 z-50 animate-fade-in"
                       onClick={(e) => e.stopPropagation()}
@@ -465,13 +463,13 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <img src={player.avatarUrl} className="w-8 h-8 rounded-full border border-slate-100 object-cover" />
+                          <img src={player.avatarUrl} alt={`${player.name} avatar`} className="w-8 h-8 rounded-full border border-slate-100 object-cover" />
                           <div>
                             <p className="text-xs font-bold text-slate-800 leading-none">{player.name.split(' ')[0]}</p>
                             <p className="text-[10px] text-slate-400">{player.role}</p>
                           </div>
                         </div>
-                        <button onClick={() => setSelectedMarkerId(null)} className="text-slate-300 hover:text-slate-500"><X size={12} /></button>
+                        <button onClick={() => setSelectedMarkerId(null)} className="text-slate-300 hover:text-slate-500" aria-label="Close player information"><X size={12} /></button>
                       </div>
 
                       <div className="grid grid-cols-2 gap-1 mb-2">
@@ -512,7 +510,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
                     {/* Outer Glow */}
                     <div className={`absolute inset-0 rounded-full opacity-20 ${isBowler ? 'animate-ping bg-white' : ''}`}></div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -554,8 +552,9 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
 
           <div className="space-y-3">
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Wicket Keeper</label>
+              <label htmlFor="wicket-keeper-select" className="text-[10px] font-bold text-slate-500 uppercase">Wicket Keeper</label>
               <select
+                id="wicket-keeper-select"
                 value={selectedKeeperId}
                 onChange={(e) => handleSelectKeeper(e.target.value)}
                 disabled={isReadOnly}
@@ -569,8 +568,9 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Bowler</label>
+              <label htmlFor="bowler-select" className="text-[10px] font-bold text-slate-500 uppercase">Bowler</label>
               <select
+                id="bowler-select"
                 value={selectedBowlerId}
                 onChange={(e) => handleSelectBowler(e.target.value)}
                 disabled={isReadOnly}
@@ -603,6 +603,8 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
             </h3>
 
             <select
+              id="strategy-preset-select"
+              aria-label="Load strategy preset"
               className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
               onChange={(e) => handleLoadStrategy(e.target.value)}
               value={activeStrategyId || ''}
@@ -622,6 +624,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
                 onClick={handleSaveStrategy}
                 disabled={!strategyName}
                 className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                aria-label="Save strategy"
               >
                 <Save size={14} />
               </button>
@@ -638,6 +641,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
                 <button
                   onClick={() => handleDeleteStrategy(activeStrategyId)}
                   className="p-2 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg"
+                  aria-label="Delete strategy"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -687,7 +691,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
         </div>
 
       </div>
-    </div>
+    </div >
   );
 };
 

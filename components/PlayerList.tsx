@@ -423,7 +423,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                 {editingPlayer ? <Edit2 size={20} className="text-blue-400" /> : <Plus size={20} className="text-blue-400" />}
                 {editingPlayer ? 'Edit Player Profile' : 'New Signing'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors"><X size={24} /></button>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors" title="Close"><X size={24} /></button>
             </div>
 
             <div className="flex border-b border-slate-200 overflow-x-auto">
@@ -488,6 +488,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                       </div>
                       <input
                         type="file"
+                        title="Upload Avatar"
                         ref={fileInputRef}
                         className="hidden"
                         accept="image/*"
@@ -511,20 +512,20 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
-                      <select name="role" value={formData.role} onChange={handleInputChange} className="w-full p-2.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                      <label htmlFor="field-role" className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+                      <select id="field-role" name="role" title="Role" value={formData.role} onChange={handleInputChange} className="w-full p-2.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
                         {Object.values(PlayerRole).map(role => <option key={role} value={role}>{role}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Batting Style</label>
-                      <select name="battingStyle" value={formData.battingStyle} onChange={handleInputChange} className="w-full p-2.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                      <label htmlFor="field-battingStyle" className="block text-sm font-medium text-slate-700 mb-1">Batting Style</label>
+                      <select id="field-battingStyle" name="battingStyle" title="Batting Style" value={formData.battingStyle} onChange={handleInputChange} className="w-full p-2.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
                         {Object.values(BattingStyle).map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Bowling Style</label>
-                      <select name="bowlingStyle" value={formData.bowlingStyle} onChange={handleInputChange} className="w-full p-2.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                      <label htmlFor="field-bowlingStyle" className="block text-sm font-medium text-slate-700 mb-1">Bowling Style</label>
+                      <select id="field-bowlingStyle" name="bowlingStyle" title="Bowling Style" value={formData.bowlingStyle} onChange={handleInputChange} className="w-full p-2.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
                         {Object.values(BowlingStyle).map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
@@ -537,6 +538,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                       <input
                         type="date"
                         name="dob"
+                        title="Date of Birth"
                         value={formData.dob || ''}
                         onChange={handleInputChange}
                         className="w-full p-2.5 bg-slate-100 border border-slate-200 text-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
@@ -586,6 +588,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                       <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
                       <input
                         type={key === 'highestScore' ? 'text' : 'number'}
+                        title={key.replace(/([A-Z])/g, ' $1').trim()}
+                        placeholder={key.replace(/([A-Z])/g, ' $1').trim()}
                         step={key === 'average' || key === 'strikeRate' ? '0.01' : '1'}
                         value={formData.battingStats ? (formData.battingStats as any)[key] : ''}
                         onChange={(e) => handleStatChange('batting', key as keyof BattingStats, e.target.value)}
@@ -603,6 +607,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                       <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
                       <input
                         type={key === 'bestBowling' ? 'text' : 'number'}
+                        title={key.replace(/([A-Z])/g, ' $1').trim()}
+                        placeholder={key.replace(/([A-Z])/g, ' $1').trim()}
                         step={key === 'average' || key === 'economy' || key === 'strikeRate' ? '0.01' : '1'}
                         value={formData.bowlingStats ? (formData.bowlingStats as any)[key] : ''}
                         onChange={(e) => handleStatChange('bowling', key as keyof BowlingStats, e.target.value)}
@@ -620,6 +626,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                       type="button"
                       onClick={handleDeleteClick}
                       className="px-4 py-2.5 text-red-500 hover:bg-red-50 rounded-xl font-medium flex items-center gap-2"
+                      title="Delete Player"
                     >
                       <Trash2 size={18} /> <span className="hidden md:inline">Delete Player</span>
                     </button>
@@ -689,13 +696,14 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
             <button
               onClick={() => setViewingPlayer(null)}
               className="absolute top-4 right-4 z-10 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white backdrop-blur-md transition-colors"
+              title="Close"
             >
               <X size={20} />
             </button>
 
             {/* Hero Section */}
             <div className="relative h-40 md:h-48 bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 shrink-0">
-              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+              <div className="absolute inset-0 opacity-20 bg-dot-white-grid"></div>
               <div className="absolute -bottom-12 md:-bottom-16 left-6 md:left-8">
                 <img
                   src={viewingPlayer.avatarUrl}

@@ -1,5 +1,6 @@
 
 import React from 'react';
+import './KirikINSLogo.css';
 
 interface KirikINSLogoProps {
   className?: string;
@@ -33,8 +34,14 @@ const KirikINSLogo: React.FC<KirikINSLogoProps> = ({ className = '', size = 'lar
   // Neon Glow Filter ID
   const filterId = `neonGlow-${size}`;
 
+  // Create filter class name based on size
+  const filterClass = `filter-${size}`;
+
   return (
-    <div className={`perspective-container select-none ${className}`} style={{ width: width, height: height }}>
+    <div
+      className={`kirik-logo-container perspective-container select-none ${size} ${className}`}
+      data-filter-id={filterId}
+    >
       <svg
         width="100%"
         height="100%"
@@ -58,7 +65,7 @@ const KirikINSLogo: React.FC<KirikINSLogoProps> = ({ className = '', size = 'lar
         </defs>
 
         {/* Group with Filter */}
-        <g style={{ filter: `url(#${filterId})` }}>
+        <g className={`kirik-logo-filter ${filterClass}`}>
           {/* Part 1: Kirik - White Fill, Neon Font */}
           <text
             x="0"
@@ -68,13 +75,13 @@ const KirikINSLogo: React.FC<KirikINSLogoProps> = ({ className = '', size = 'lar
             fontWeight="400"
             fontSize={fontSize}
             fill="white"
-            style={{ textShadow: '0 0 2px rgba(255,255,255,0.8)' }}
+            className="kirik-text-white-glow"
           >
             Krik
           </text>
 
           {/* Part 2: INS - Solid Royal Blue Fill with circular rotation */}
-          <g className="rotate-ins" style={{ transformBox: 'fill-box', transformOrigin: 'center' }}>
+          <g className="rotate-ins">
             <text
               x={insStartX}
               y="55%"
@@ -83,7 +90,7 @@ const KirikINSLogo: React.FC<KirikINSLogoProps> = ({ className = '', size = 'lar
               fontWeight="400"
               fontSize={fontSize}
               fill="#4169E1"
-              style={{ textShadow: '0 0 8px rgba(65, 105, 225, 0.8)' }}
+              className="kirik-text-blue-glow"
             >
               INS
             </text>

@@ -20,10 +20,11 @@ interface PlayerCardProps {
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, isSelected, onToggle, canEdit }) => (
-  <div
+  <button
+    type="button"
     onClick={() => onToggle(player.id)}
     className={`
-      relative p-3 rounded-xl border flex items-center gap-3 transition-all group
+      w-full text-left relative p-3 rounded-xl border flex items-center gap-3 transition-all group
       ${!player.isAvailable && !isSelected
         ? 'bg-slate-50 border-slate-100 opacity-60 cursor-not-allowed grayscale'
         : 'cursor-pointer hover:scale-[1.02]'}
@@ -54,7 +55,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isSelected, onToggle, c
         {isSelected ? <ArrowLeft size={14} /> : <ArrowRight size={14} />}
       </div>
     )}
-  </div>
+  </button>
 );
 
 const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matches, teamLogo, onUpdateMatch }) => {
@@ -216,6 +217,7 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-800">{batsmen}</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  {/* eslint-disable-next-line react/forbid-dom-props */}
                   <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${(batsmen / 6) * 100}%` }}></div>
                 </div>
               </div>
@@ -226,6 +228,7 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-800">{bowlers}</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  {/* eslint-disable-next-line react/forbid-dom-props */}
                   <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${(bowlers / 4) * 100}%` }}></div>
                 </div>
               </div>
@@ -236,6 +239,7 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-800">{allRounders}</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  {/* eslint-disable-next-line react/forbid-dom-props */}
                   <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${(allRounders / 2) * 100}%` }}></div>
                 </div>
               </div>
@@ -246,6 +250,7 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-800">{keepers}</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  {/* eslint-disable-next-line react/forbid-dom-props */}
                   <div className="h-full bg-yellow-500 transition-all duration-500" style={{ width: `${(keepers / 1) * 100}%` }}></div>
                 </div>
               </div>
@@ -389,7 +394,7 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
         <div ref={cardRef} className="w-[800px] h-[800px] bg-slate-900 text-white relative overflow-hidden flex flex-col font-sans">
           {/* Dynamic Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-slate-900 to-black z-0"></div>
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+          <div className="absolute inset-0 opacity-10 bg-dot-white-grid"></div>
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
           <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-orange-500/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2"></div>
 
@@ -442,6 +447,7 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <div className="relative">
                     <img
                       src={p.avatarUrl}
+                      alt={p.name}
                       className="w-14 h-14 rounded-full border-2 border-white/30 object-cover"
                       crossOrigin="anonymous"
                     />

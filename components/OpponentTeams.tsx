@@ -16,7 +16,7 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newPlayerName, setNewPlayerName] = useState<string>('');
-  
+
   // Modal Form State
   const [formData, setFormData] = useState<Partial<OpponentTeam>>({
     name: '',
@@ -26,7 +26,7 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
     color: 'bg-slate-500',
     logoUrl: ''
   });
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canEdit = userRole === 'admin';
 
@@ -117,7 +117,7 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
 
   const handleAddPlayer = (teamId: string) => {
     if (!newPlayerName.trim()) return;
-    
+
     const team = teams.find(t => t.id === teamId);
     if (team) {
       const updatedTeam = {
@@ -151,7 +151,7 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
           <p className="text-slate-500">Analyze rivals and manage their squads</p>
         </div>
         {canEdit && (
-          <button 
+          <button
             onClick={handleOpenAdd}
             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-600/20"
           >
@@ -169,10 +169,11 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
           return (
             <div key={team.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-all duration-300">
               {/* Accordion Header */}
-              <div 
+              <button
+                type="button"
                 onClick={() => toggleAccordion(team.id)}
                 className={`
-                  p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors group
+                  w-full text-left p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors group
                   ${isExpanded ? 'bg-slate-50 border-b border-slate-100' : ''}
                 `}
               >
@@ -199,18 +200,18 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   {canEdit && (
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
+                      <button
                         onClick={(e) => handleOpenEdit(team, e)}
                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                         title="Edit Team"
                       >
                         <Edit2 size={18} />
                       </button>
-                      <button 
+                      <button
                         onClick={(e) => handleDelete(team.id, team.name, e)}
                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                         title="Delete Team"
@@ -222,7 +223,7 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
                   <div className="w-px h-6 bg-slate-200 mx-2"></div>
                   {isExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
                 </div>
-              </div>
+              </button>
 
               {/* Accordion Body */}
               <div className={`
@@ -231,7 +232,7 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
               `}>
                 <div className="overflow-hidden">
                   <div className="p-6 border-t border-slate-100 grid md:grid-cols-3 gap-8">
-                    
+
                     {/* Stats Column */}
                     <div className="space-y-4">
                       <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tactical Analysis</h4>
@@ -257,35 +258,36 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
                         Squad List
                         <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{team.players.length}</span>
                       </h4>
-                      
+
                       <div className="bg-slate-50 rounded-xl p-4 min-h-[150px] max-h-[300px] overflow-y-auto">
                         {team.players.length === 0 ? (
-                           <p className="text-slate-400 text-sm text-center py-4">No players listed yet.</p>
+                          <p className="text-slate-400 text-sm text-center py-4">No players listed yet.</p>
                         ) : (
                           <div className="flex flex-wrap gap-2">
-                             {team.players.map(player => (
-                               <div key={player.id} className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 shadow-sm flex items-center gap-2">
-                                  {player.name}
-                               </div>
-                             ))}
+                            {team.players.map(player => (
+                              <div key={player.id} className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 shadow-sm flex items-center gap-2">
+                                {player.name}
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
 
                       {canEdit && (
                         <div className="flex gap-2">
-                          <input 
-                            type="text" 
-                            placeholder="Add player name..." 
+                          <input
+                            type="text"
+                            placeholder="Add player name..."
                             value={newPlayerName}
                             onChange={(e) => setNewPlayerName(e.target.value)}
                             className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             onKeyDown={(e) => { if (e.key === 'Enter') handleAddPlayer(team.id); }}
                           />
-                          <button 
+                          <button
                             onClick={() => handleAddPlayer(team.id)}
                             disabled={!newPlayerName.trim()}
                             className="bg-slate-800 hover:bg-slate-900 text-white px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title="Add Player"
                           >
                             <UserPlus size={18} />
                           </button>
@@ -302,86 +304,93 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
       </div>
 
       {/* Add/Edit Team Modal */}
-      {isModalOpen && canEdit && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div className="bg-slate-900 p-5 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Swords size={20} className="text-orange-400" />
-                {editingId ? 'Edit Opponent' : 'Add New Opponent'}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white"><X size={20} /></button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="flex items-center justify-center mb-4">
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-24 h-24 rounded-2xl bg-slate-800 border-2 border-dashed border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-700 hover:border-blue-500 transition-all group overflow-hidden"
-                >
-                  {formData.logoUrl ? (
-                    <img src={formData.logoUrl} alt="Preview" className="w-full h-full object-cover" />
-                  ) : (
-                    <>
-                      <Upload size={24} className="text-slate-500 group-hover:text-blue-500 mb-1" />
-                      <span className="text-xs text-slate-500 group-hover:text-blue-400">Logo</span>
-                    </>
-                  )}
-                  <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+      {
+        isModalOpen && canEdit && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+              <div className="bg-slate-900 p-5 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Swords size={20} className="text-orange-400" />
+                  {editingId ? 'Edit Opponent' : 'Add New Opponent'}
+                </h3>
+                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white" title="Close"><X size={20} /></button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div className="flex items-center justify-center mb-4">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-24 h-24 rounded-2xl bg-slate-800 border-2 border-dashed border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-700 hover:border-blue-500 transition-all group overflow-hidden"
+                    title="Upload Logo"
+                  >
+                    {formData.logoUrl ? (
+                      <img src={formData.logoUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <>
+                        <Upload size={24} className="text-slate-500 group-hover:text-blue-500 mb-1" />
+                        <span className="text-xs text-slate-500 group-hover:text-blue-400">Logo</span>
+                      </>
+                    )}
+                  </button>
+                  <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileChange} aria-label="Upload team logo" />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Team Name</label>
-                <input 
-                  required
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                  className="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-400" 
-                  placeholder="e.g. Royal Challengers" 
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Team Name</label>
+                  <input
+                    required
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-400"
+                    placeholder="e.g. Royal Challengers"
+                    title="Team Name"
+                  />
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                 <div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Current Rank</label>
-                    <input 
+                    <input
                       type="number"
                       value={formData.rank}
-                      onChange={e => setFormData({...formData, rank: Number(e.target.value)})}
-                      className="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500 outline-none" 
+                      onChange={e => setFormData({ ...formData, rank: Number(e.target.value) })}
+                      className="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      title="Current Rank"
                     />
-                 </div>
-                 {/* Color picker could go here, relying on default for now */}
-              </div>
+                  </div>
+                  {/* Color picker could go here, relying on default for now */}
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Key Strength</label>
-                <input 
-                  value={formData.strength}
-                  onChange={e => setFormData({...formData, strength: e.target.value})}
-                  className="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-400" 
-                  placeholder="e.g. Opening Batting" 
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Key Strength</label>
+                  <input
+                    value={formData.strength}
+                    onChange={e => setFormData({ ...formData, strength: e.target.value })}
+                    className="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-400"
+                    placeholder="e.g. Opening Batting"
+                    title="Key Strength"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Key Weakness</label>
-                <input 
-                  value={formData.weakness}
-                  onChange={e => setFormData({...formData, weakness: e.target.value})}
-                  className="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-400" 
-                  placeholder="e.g. Spin Bowling" 
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Key Weakness</label>
+                  <input
+                    value={formData.weakness}
+                    onChange={e => setFormData({ ...formData, weakness: e.target.value })}
+                    className="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-blue-500 outline-none placeholder-slate-400"
+                    placeholder="e.g. Spin Bowling"
+                    title="Key Weakness"
+                  />
+                </div>
 
-              <button type="submit" className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2">
-                {editingId ? 'Update Team' : 'Create Team'}
-              </button>
-            </form>
+                <button type="submit" className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 mt-2">
+                  {editingId ? 'Update Team' : 'Create Team'}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 };

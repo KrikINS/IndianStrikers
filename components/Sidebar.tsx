@@ -146,7 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
             <div className="opacity-90 hover:opacity-100 transition-opacity">
               <KirikINSLogo size="medium" />
             </div>
-            <button onClick={toggle} className="md:hidden text-gray-400 hover:text-white">
+            <button onClick={toggle} className="md:hidden text-gray-400 hover:text-white" title="Close sidebar">
               <X size={24} />
             </button>
           </div>
@@ -186,6 +186,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
                 className="hidden"
                 accept="image/*"
                 onChange={handleLogoUpload}
+                title="Upload Team Logo"
               />
             </div>
             <Link to="/home" className="text-xl font-black tracking-tight leading-none hover:opacity-80 transition-opacity block">

@@ -120,6 +120,7 @@ const ManualScorecard: React.FC<ManualScorecardProps> = ({ players, opponents = 
                             className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:border-blue-500 transition-colors"
                             value={matchData.opponent}
                             onChange={e => setMatchData({ ...matchData, opponent: e.target.value })}
+                            aria-label="Select Opponent Team"
                         >
                             <option value="">Select Team</option>
                             {opponents.map(o => <option key={o.id} value={o.name}>{o.name}</option>)}
@@ -129,12 +130,12 @@ const ManualScorecard: React.FC<ManualScorecardProps> = ({ players, opponents = 
 
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-500 uppercase">Tournament</label>
-                        <input className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={matchData.tournament || ''} onChange={e => setMatchData({ ...matchData, tournament: e.target.value })} />
+                        <input className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={matchData.tournament || ''} onChange={e => setMatchData({ ...matchData, tournament: e.target.value })} aria-label="Tournament Name" />
                     </div>
 
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-500 uppercase">Toss Winner</label>
-                        <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={tossWinner} onChange={e => setTossWinner(e.target.value)}>
+                        <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={tossWinner} onChange={e => setTossWinner(e.target.value)} aria-label="Select Toss Winner">
                             <option value="">Select</option>
                             <option value="Indian Strikers">Indian Strikers</option>
                             <option value={matchData.opponent || 'Opponent'}>{matchData.opponent || 'Opponent'}</option>
@@ -143,7 +144,7 @@ const ManualScorecard: React.FC<ManualScorecardProps> = ({ players, opponents = 
 
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-500 uppercase">Batting First</label>
-                        <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={battingFirst} onChange={e => setBattingFirst(e.target.value)}>
+                        <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={battingFirst} onChange={e => setBattingFirst(e.target.value)} aria-label="Select Team Batting First">
                             <option value="">Select</option>
                             <option value="Indian Strikers">Indian Strikers</option>
                             <option value={matchData.opponent || 'Opponent'}>{matchData.opponent || 'Opponent'}</option>
@@ -152,7 +153,7 @@ const ManualScorecard: React.FC<ManualScorecardProps> = ({ players, opponents = 
 
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-slate-500 uppercase">Overs</label>
-                        <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={overs} onChange={e => setOvers(e.target.value)}>
+                        <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={overs} onChange={e => setOvers(e.target.value)} aria-label="Select Total Overs">
                             <option value="20">20 Overs</option>
                             {[10, 12, 15, 16, 25, 30, 40, 50].map(o => <option key={o} value={o}>{o} Overs</option>)}
                         </select>
@@ -241,6 +242,7 @@ const BattingSection = ({ title, data, setData, playersList, bowlersList, colorC
                                         className="w-full p-1.5 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-slate-700 placeholder-slate-300"
                                         placeholder="Player Name"
                                         value={row.name}
+                                        aria-label="Batter Name"
                                         onChange={e => {
                                             const newData = [...data];
                                             newData[idx].name = e.target.value;
@@ -255,6 +257,7 @@ const BattingSection = ({ title, data, setData, playersList, bowlersList, colorC
                                     <select
                                         className="w-full p-1.5 bg-transparent border-b border-slate-100 focus:border-blue-500 outline-none text-xs font-semibold"
                                         value={row.howOut}
+                                        aria-label="Dismissal Type"
                                         onChange={e => {
                                             const newData = [...data];
                                             newData[idx].howOut = e.target.value;
@@ -270,6 +273,7 @@ const BattingSection = ({ title, data, setData, playersList, bowlersList, colorC
                                         className="w-full p-1.5 bg-transparent border-b border-transparent focus:border-blue-500 outline-none text-xs"
                                         placeholder="Fielder"
                                         value={row.fielder}
+                                        aria-label="Fielder Name"
                                         onChange={e => {
                                             const newData = [...data];
                                             newData[idx].fielder = e.target.value;
@@ -286,6 +290,7 @@ const BattingSection = ({ title, data, setData, playersList, bowlersList, colorC
                                         className="w-full p-1.5 bg-transparent border-b border-transparent focus:border-blue-500 outline-none text-xs"
                                         placeholder="Bowler"
                                         value={row.bowler}
+                                        aria-label="Bowler Name"
                                         onChange={e => {
                                             const newData = [...data];
                                             newData[idx].bowler = e.target.value;
@@ -296,10 +301,10 @@ const BattingSection = ({ title, data, setData, playersList, bowlersList, colorC
                                         {bowlersList.map((p: string) => <option key={p} value={p} />)}
                                     </datalist>
                                 </td>
-                                <td className="p-2"><input type="number" className="w-full text-center p-1 font-bold bg-slate-50 rounded" value={row.runs} onChange={e => { const n = [...data]; n[idx].runs = e.target.value; setData(n) }} /></td>
-                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs" value={row.balls} onChange={e => { const n = [...data]; n[idx].balls = e.target.value; setData(n) }} /></td>
-                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs text-green-600" value={row.fours} onChange={e => { const n = [...data]; n[idx].fours = e.target.value; setData(n) }} /></td>
-                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs text-purple-600" value={row.sixes} onChange={e => { const n = [...data]; n[idx].sixes = e.target.value; setData(n) }} /></td>
+                                <td className="p-2"><input type="number" className="w-full text-center p-1 font-bold bg-slate-50 rounded" value={row.runs} aria-label="Runs" onChange={e => { const n = [...data]; n[idx].runs = e.target.value; setData(n) }} /></td>
+                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs" value={row.balls} aria-label="Balls" onChange={e => { const n = [...data]; n[idx].balls = e.target.value; setData(n) }} /></td>
+                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs text-green-600" value={row.fours} aria-label="Fours" onChange={e => { const n = [...data]; n[idx].fours = e.target.value; setData(n) }} /></td>
+                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs text-purple-600" value={row.sixes} aria-label="Sixes" onChange={e => { const n = [...data]; n[idx].sixes = e.target.value; setData(n) }} /></td>
                             </tr>
                         ))}
                     </tbody>
@@ -340,6 +345,7 @@ const BowlingSection = ({ title, data, setData, bowlersList, colorClass }: any) 
                                         className="w-full p-1.5 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-slate-700"
                                         placeholder="Bowler Name"
                                         value={row.name}
+                                        aria-label="Bowler Name"
                                         onChange={e => {
                                             const newData = [...data];
                                             newData[idx].name = e.target.value;
@@ -350,12 +356,12 @@ const BowlingSection = ({ title, data, setData, bowlersList, colorClass }: any) 
                                         {bowlersList.map((p: string) => <option key={p} value={p} />)}
                                     </datalist>
                                 </td>
-                                <td className="p-2"><input type="number" className="w-full text-center p-1 font-bold bg-slate-50 rounded" value={row.overs} onChange={e => { const n = [...data]; n[idx].overs = e.target.value; setData(n) }} /></td>
-                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs" value={row.maidens} onChange={e => { const n = [...data]; n[idx].maidens = e.target.value; setData(n) }} /></td>
-                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs" value={row.runs} onChange={e => { const n = [...data]; n[idx].runs = e.target.value; setData(n) }} /></td>
-                                <td className="p-2"><input type="number" className="w-full text-center p-1 font-black text-red-600 bg-red-50 rounded" value={row.wickets} onChange={e => { const n = [...data]; n[idx].wickets = e.target.value; setData(n) }} /></td>
-                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs" value={row.wides} onChange={e => { const n = [...data]; n[idx].wides = e.target.value; setData(n) }} /></td>
-                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs" value={row.noBalls} onChange={e => { const n = [...data]; n[idx].noBalls = e.target.value; setData(n) }} /></td>
+                                <td className="p-2"><input type="number" className="w-full text-center p-1 font-bold bg-slate-50 rounded" value={row.overs} aria-label="Overs" onChange={e => { const n = [...data]; n[idx].overs = e.target.value; setData(n) }} /></td>
+                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs" value={row.maidens} aria-label="Maidens" onChange={e => { const n = [...data]; n[idx].maidens = e.target.value; setData(n) }} /></td>
+                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs" value={row.runs} aria-label="Runs" onChange={e => { const n = [...data]; n[idx].runs = e.target.value; setData(n) }} /></td>
+                                <td className="p-2"><input type="number" className="w-full text-center p-1 font-black text-red-600 bg-red-50 rounded" value={row.wickets} aria-label="Wickets" onChange={e => { const n = [...data]; n[idx].wickets = e.target.value; setData(n) }} /></td>
+                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs" value={row.wides} aria-label="Wides" onChange={e => { const n = [...data]; n[idx].wides = e.target.value; setData(n) }} /></td>
+                                <td className="p-2"><input type="number" className="w-full text-center p-1 text-xs" value={row.noBalls} aria-label="No Balls" onChange={e => { const n = [...data]; n[idx].noBalls = e.target.value; setData(n) }} /></td>
                             </tr>
                         ))}
                     </tbody>
@@ -370,11 +376,11 @@ const ExtrasSection = ({ title, data, setData }: any) => {
         <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 flex flex-wrap items-center gap-4">
             <label className="text-xs font-bold uppercase text-slate-500">{title}</label>
             <div className="flex items-center gap-2">
-                <input type="number" placeholder="B" title="Byes" className="w-12 p-1.5 border border-slate-200 rounded text-center font-bold" value={data.byes} onChange={e => setData({ ...data, byes: e.target.value })} />
-                <input type="number" placeholder="LB" title="Leg Byes" className="w-12 p-1.5 border border-slate-200 rounded text-center font-bold" value={data.legByes} onChange={e => setData({ ...data, legByes: e.target.value })} />
-                <input type="number" placeholder="WD" title="Wides" className="w-12 p-1.5 border border-slate-200 rounded text-center font-bold" value={data.wides} onChange={e => setData({ ...data, wides: e.target.value })} />
-                <input type="number" placeholder="NB" title="No Balls" className="w-12 p-1.5 border border-slate-200 rounded text-center font-bold" value={data.noBalls} onChange={e => setData({ ...data, noBalls: e.target.value })} />
-                <input type="number" placeholder="PEN" title="Penalty" className="w-12 p-1.5 border border-slate-200 rounded text-center font-bold" value={data.penalty} onChange={e => setData({ ...data, penalty: e.target.value })} />
+                <input type="number" placeholder="B" title="Byes" aria-label="Byes" className="w-12 p-1.5 border border-slate-200 rounded text-center font-bold" value={data.byes} onChange={e => setData({ ...data, byes: e.target.value })} />
+                <input type="number" placeholder="LB" title="Leg Byes" aria-label="Leg Byes" className="w-12 p-1.5 border border-slate-200 rounded text-center font-bold" value={data.legByes} onChange={e => setData({ ...data, legByes: e.target.value })} />
+                <input type="number" placeholder="WD" title="Wides" aria-label="Wides" className="w-12 p-1.5 border border-slate-200 rounded text-center font-bold" value={data.wides} onChange={e => setData({ ...data, wides: e.target.value })} />
+                <input type="number" placeholder="NB" title="No Balls" aria-label="No Balls" className="w-12 p-1.5 border border-slate-200 rounded text-center font-bold" value={data.noBalls} onChange={e => setData({ ...data, noBalls: e.target.value })} />
+                <input type="number" placeholder="PEN" title="Penalty" aria-label="Penalty Runs" className="w-12 p-1.5 border border-slate-200 rounded text-center font-bold" value={data.penalty} onChange={e => setData({ ...data, penalty: e.target.value })} />
             </div>
             <div className="ml-auto bg-slate-200 px-3 py-1 rounded-lg text-sm font-bold text-slate-700">
                 Total Extras: {calculateExtras(data)}
