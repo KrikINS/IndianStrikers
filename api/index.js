@@ -102,7 +102,7 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
   res.json(data);
 });
 
-app.put('/api/players/:id', authGuard(['admin']), async (req, res) => {
+app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => {
   console.log(`[PUT /players/${req.params.id}]`, req.body);
   const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats } = req.body;
   const { error } = await supabase.from('players').update({
@@ -127,12 +127,12 @@ app.get('/api/matches', async (_req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-app.post('/api/matches', authGuard(['admin']), async (req, res) => {
+app.post('/api/matches', authGuard(['admin', 'member']), async (req, res) => {
   const { data, error } = await supabase.from('matches').insert([req.body]).select().single();
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
-app.put('/api/matches/:id', authGuard(['admin']), async (req, res) => {
+app.put('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => {
   const { error } = await supabase.from('matches').update(req.body).eq('id', req.params.id);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });

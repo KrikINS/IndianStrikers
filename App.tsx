@@ -156,7 +156,7 @@ const App: React.FC = () => {
         setTeamLogo(l);
       } catch (e: any) {
         console.error('Failed to load data:', e);
-        alert(`Backend Connection Failed: ${e.message}. Please check if the server is running on port 4000.`);
+        alert(`Backend Error: ${e.message}. \n\nIf "fetch failed", the Backend cannot reach Supabase. Check your internet or Supabase Project status.`);
       }
     };
     loadData();
@@ -265,8 +265,8 @@ const App: React.FC = () => {
   };
 
   const handleUpdateMatch = async (updatedMatch: Match) => {
-    if (userRole !== 'admin') {
-      console.warn("Attempt to update match without admin role");
+    if (userRole !== 'admin' && userRole !== 'member') {
+      console.warn("Attempt to update match without permission");
       return;
     }
     console.log("Updating match:", updatedMatch);

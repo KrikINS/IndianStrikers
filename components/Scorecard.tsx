@@ -280,7 +280,7 @@ function LiveBattingTable({ data, battingSquad, fieldingSquad, onUpdate, onRemov
                 <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.fours} onChange={(e) => onUpdate(row.id, 'fours', Number(e.target.value))} /></td>
                 <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.sixes} onChange={(e) => onUpdate(row.id, 'sixes', Number(e.target.value))} /></td>
                 <td className="p-2 md:p-3 text-right font-mono text-[10px] md:text-xs text-slate-600 font-medium">{getStrikeRate(row.runs, row.balls)}</td>
-                <td className="p-2 md:p-3 text-center"><button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
+                <td className="p-2 md:p-3 text-center">{!isLiveMode && <button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>}</td>
               </tr>
             ))}
           </tbody>
@@ -336,7 +336,7 @@ function LiveBowlingTable({ data, fieldingSquad, onUpdate, onRemove, onAdd, isLi
                 <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.noBalls} onChange={(e) => onUpdate(row.id, 'noBalls', Number(e.target.value))} /></td>
                 <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.legByes} onChange={(e) => onUpdate(row.id, 'legByes', Number(e.target.value))} /></td>
                 <td className="p-2 md:p-3 text-right"><input type="number" disabled={isLiveMode} className={`w-8 md:w-12 text-right bg-transparent outline-none font-medium ${isLiveMode ? 'text-slate-300' : 'text-slate-600'}`} value={row.dots} onChange={(e) => onUpdate(row.id, 'dots', Number(e.target.value))} /></td>
-                <td className="p-2 md:p-3 text-center"><button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
+                <td className="p-2 md:p-3 text-center">{!isLiveMode && <button onClick={() => onRemove(row.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>}</td>
               </tr>
             ))}
           </tbody>
@@ -1433,7 +1433,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
   const renderTabContent = () => {
     // Determine if tables should be read-only (Live Mode OR Match Completed)
     const isMatchCompleted = data.matchInfo.resultType && data.matchInfo.resultType !== 'Pending';
-    const tablesReadOnly = isLiveMode || isMatchCompleted;
+    const tablesReadOnly = isLiveMode || isMatchCompleted || !isScorer;
 
     if (activeTab === 0) {
       return (
@@ -1464,17 +1464,19 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                 ) : (
                   <div>
                     <p className="text-slate-500 mb-6 font-medium">Who will bat first? Conduct the toss to proceed.</p>
-                    <button
-                      onClick={() => setTossModal({
-                        isOpen: true,
-                        match: { ...data.matchInfo, id: Number(data.matchInfo.id || 0) } as any,
-                        step: 'winner',
-                        winner: null
-                      })}
-                      className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 mx-auto"
-                    >
-                      <CircleDot size={20} className="animate-spin-slow" /> Conduct Toss
-                    </button>
+                    {isScorer && (
+                      <button
+                        onClick={() => setTossModal({
+                          isOpen: true,
+                          match: { ...data.matchInfo, id: Number(data.matchInfo.id || 0) } as any,
+                          step: 'winner',
+                          winner: null
+                        })}
+                        className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 mx-auto"
+                      >
+                        <CircleDot size={20} className="animate-spin-slow" /> Conduct Toss
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1490,12 +1492,14 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                     {data.matchInfo.squad?.length || 0} / 11
                   </span>
                 </div>
-                <button
-                  onClick={() => setSquadModal(true)}
-                  className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
-                >
-                  <Edit2 size={16} /> Manage Home Squad
-                </button>
+                {isScorer && (
+                  <button
+                    onClick={() => setSquadModal(true)}
+                    className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Edit2 size={16} /> Manage Home Squad
+                  </button>
+                )}
               </div>
 
               {/* Opponent Team */}
@@ -1506,32 +1510,36 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
                     {data.matchInfo.opponentSquad?.length || 0} Players
                   </span>
                 </div>
-                <button
-                  onClick={() => setOpponentSquadModal(true)}
-                  className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
-                >
-                  <Users size={16} /> Manage Opponent
-                </button>
+                {isScorer && (
+                  <button
+                    onClick={() => setOpponentSquadModal(true)}
+                    className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 font-bold rounded-xl hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Users size={16} /> Manage Opponent
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Step 3: Start Action */}
             <div className="pt-6 border-t border-slate-100">
-              <button
-                onClick={() => {
-                  setIsLiveMode(true);
-                  setActiveTab(1); // Go to 1st Innings
-                }}
-                disabled={!data.matchInfo.tossResult}
-                className="w-full py-4 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black text-xl rounded-2xl shadow-xl shadow-slate-900/20 transition-all active:scale-95 flex items-center justify-center gap-3 relative overflow-hidden group"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                <Zap size={24} className={data.matchInfo.tossResult ? "fill-yellow-400 text-yellow-400" : ""} />
-                {data.matchInfo.tossResult ? 'START MATCH SCORING' : 'Complete Toss to Start'}
-              </button>
+              {isScorer && (
+                <button
+                  onClick={() => {
+                    setIsLiveMode(true);
+                    setActiveTab(1); // Go to 1st Innings
+                  }}
+                  disabled={!data.matchInfo.tossResult}
+                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black text-xl rounded-2xl shadow-xl shadow-slate-900/20 transition-all active:scale-95 flex items-center justify-center gap-3 relative overflow-hidden group"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                  <Zap size={24} className={data.matchInfo.tossResult ? "fill-yellow-400 text-yellow-400" : ""} />
+                  {data.matchInfo.tossResult ? 'START MATCH SCORING' : 'Complete Toss to Start'}
+                </button>
+              )}
             </div>
-          </div>
-        </div>
+          </div >
+        </div >
       );
     }
 
@@ -1726,7 +1734,7 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           <div className="bg-white p-3 rounded-xl border border-slate-200 text-center"><span className="block text-xs font-bold text-slate-600 uppercase">Wides</span><span className="text-xl font-black text-slate-800">{inning.bowling.reduce((sum, b) => sum + Number(b.wides || 0), 0)}</span></div>
           <div className="bg-white p-3 rounded-xl border border-slate-200 text-center"><span className="block text-xs font-bold text-slate-600 uppercase">No Balls</span><span className="text-xl font-black text-slate-800">{inning.bowling.reduce((sum, b) => sum + Number(b.noBalls || 0), 0)}</span></div>
           <div className="bg-white p-3 rounded-xl border border-slate-200 text-center"><span className="block text-xs font-bold text-slate-600 uppercase">Leg Byes</span><span className="text-xl font-black text-slate-800">{inning.bowling.reduce((sum, b) => sum + Number(b.legByes || 0), 0)}</span></div>
-          <div className="bg-white p-3 rounded-xl border border-slate-200 text-center"><span className="block text-xs font-bold text-slate-600 uppercase mb-1">Byes</span><input type="number" value={inning.byeRuns} onChange={(e) => { const n = [...data.innings]; n[inningIdx].byeRuns = Number(e.target.value); updateData({ ...data, innings: n as [Innings, Innings] }); }} className="w-full text-center text-xl font-black text-slate-800 bg-slate-50 rounded-lg p-1 outline-none" /></div>
+          <div className="bg-white p-3 rounded-xl border border-slate-200 text-center"><span className="block text-xs font-bold text-slate-600 uppercase mb-1">Byes</span><input type="number" disabled={!isScorer} value={inning.byeRuns} onChange={(e) => { const n = [...data.innings]; n[inningIdx].byeRuns = Number(e.target.value); updateData({ ...data, innings: n as [Innings, Innings] }); }} className={`w-full text-center text-xl font-black bg-slate-50 rounded-lg p-1 outline-none ${!isScorer ? 'text-slate-400' : 'text-slate-800'}`} /></div>
           <div className="bg-slate-800 p-3 rounded-xl border border-slate-700 text-center text-white"><span className="block text-xs font-bold text-slate-300 uppercase">Total Extras</span><span className="text-xl font-black text-white">{inning.extras}</span></div>
         </div>
 
@@ -1893,17 +1901,21 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
         </div>
 
         <div className="flex gap-2">
-          <button
-            onClick={() => setMatchSettingsModal(true)}
-            className="p-2 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
-            title="Match Settings"
-          >
-            <Settings size={20} />
-          </button>
+          {isScorer && (
+            <>
+              <button
+                onClick={() => setMatchSettingsModal(true)}
+                className="p-2 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
+                title="Match Settings"
+              >
+                <Settings size={20} />
+              </button>
 
-          <button onClick={() => setSquadModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
-            <Edit2 size={16} /> Manage Playing XI
-          </button>
+              <button onClick={() => setSquadModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+                <Edit2 size={16} /> Manage Playing XI
+              </button>
+            </>
+          )}
         </div>
       </div>
       <div className="flex gap-2 w-full md:w-auto">
@@ -1911,12 +1923,16 @@ const Scorecard: React.FC<ScorecardProps> = ({ opponents = [], players = [], mat
           <Zap size={18} className={isLiveMode ? "fill-red-600" : ""} />
           {isLiveMode ? 'Exit Live' : 'Go Live'}
         </button>
-        <button onClick={handleSaveScorecard} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all text-sm md:text-base">
-          <Save size={18} /> Save
-        </button>
-        <button onClick={handleUpdateStats} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all text-sm md:text-base">
-          <Activity size={18} /> Update Stats
-        </button>
+        {isScorer && (
+          <>
+            <button onClick={handleSaveScorecard} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all text-sm md:text-base">
+              <Save size={18} /> Save
+            </button>
+            <button onClick={handleUpdateStats} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all text-sm md:text-base">
+              <Activity size={18} /> Update Stats
+            </button>
+          </>
+        )}
       </div>
 
       {!validation.isValid && (

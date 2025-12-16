@@ -9,6 +9,7 @@ interface FieldingMapProps {
 }
 
 const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
+  const isReadOnly = userRole === 'guest';
   const [players, setPlayers] = useState<Player[]>([]);
   const [strategies, setStrategies] = useState<FieldingStrategy[]>([]);
   const [currentPositions, setCurrentPositions] = useState<Map<string, FieldPosition>>(new Map());
@@ -58,6 +59,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
   // --- Interaction Logic ---
 
   const handleRemovePosition = (id: string) => {
+    if (isReadOnly) return;
     setCurrentPositions(prev => {
       const next = new Map(prev);
       next.delete(id);
@@ -70,6 +72,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
 
   const handlePointerDown = (e: React.PointerEvent, playerId: string) => {
     e.stopPropagation();
+    if (isReadOnly) return;
     if (boardRef.current) {
       setDraggedId(playerId);
       setSelectedMarkerId(null); // Clear selection on drag start
@@ -122,17 +125,20 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
   };
 
   const handleDugoutDragStart = (e: React.DragEvent, playerId: string) => {
+    if (isReadOnly) return;
     e.dataTransfer.setData('text/plain', playerId);
     e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleBoardDragOver = (e: React.DragEvent) => {
+    if (isReadOnly) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
   const handleBoardDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    if (isReadOnly) return;
     const playerId = e.dataTransfer.getData('text/plain');
     if (!boardRef.current || !playerId) return;
 
@@ -155,6 +161,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
   // --- Strategy Management ---
 
   const handleSaveStrategy = async () => {
+    if (isReadOnly) return;
     if (!strategyName.trim()) return;
 
     // If no bowler selected and no fielders placed, prevent save
@@ -209,6 +216,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
   };
 
   const handleDeleteStrategy = async (id: string) => {
+    if (isReadOnly) return;
     if (window.confirm('Delete this strategy?')) {
       try {
         await deleteStrategy(id);
@@ -224,6 +232,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
   // Auto Deploy: Top=Striker, Bottom=Bowler. Pitch center is 50,50. 
   // Stumps at Top ~39%, Bottom ~61%.
   const handleAutoDeploy = () => {
+    if (isReadOnly) return;
     const newMap = new Map<string, FieldPosition>();
     const availablePlayers = [...players].filter(p => p.isAvailable).slice(0, 11);
 
@@ -434,7 +443,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
               return (
                 <div
                   key={pos.playerId}
-                  className={`absolute cursor-pointer z-30 animate-zoom-in ${isDraggingOut ? 'opacity-50 scale-90 grayscale' : 'scale-100'}`}
+                  className={`absolute z-30 animate-zoom-in ${isDraggingOut ? 'opacity-50 scale-90 grayscale' : 'scale-100'} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
                   style={{
                     left: `${pos.left}%`,
                     top: `${pos.top}%`,
@@ -476,12 +485,14 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => handleRemovePosition(player.id)}
-                        className="w-full py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-bold rounded flex items-center justify-center gap-1 transition-colors"
-                      >
-                        <Trash2 size={10} /> Remove
-                      </button>
+                      {!isReadOnly && (
+                        <button
+                          onClick={() => handleRemovePosition(player.id)}
+                          className="w-full py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-bold rounded flex items-center justify-center gap-1 transition-colors"
+                        >
+                          <Trash2 size={10} /> Remove
+                        </button>
+                      )}
 
                       {/* Triangle Pointer */}
                       <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] w-3 h-3 bg-white border-b border-r border-slate-200 rotate-45"></div>
@@ -507,9 +518,11 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
           </div>
 
           {/* Instruction Tip */}
-          <div className="absolute top-4 right-4 pointer-events-none bg-white/10 backdrop-blur-sm px-2 py-1 rounded-full border border-white/20 text-white text-[10px] font-medium z-10 animate-fade-in opacity-80">
-            Click for options or Drag out to remove
-          </div>
+          {!isReadOnly && (
+            <div className="absolute top-4 right-4 pointer-events-none bg-white/10 backdrop-blur-sm px-2 py-1 rounded-full border border-white/20 text-white text-[10px] font-medium z-10 animate-fade-in opacity-80">
+              Click for options or Drag out to remove
+            </div>
+          )}
 
         </div>
       </div>
@@ -545,7 +558,8 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
               <select
                 value={selectedKeeperId}
                 onChange={(e) => handleSelectKeeper(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                disabled={isReadOnly}
+                className={`w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <option value="">Select Keeper...</option>
                 {players.map(p => (
@@ -559,7 +573,8 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
               <select
                 value={selectedBowlerId}
                 onChange={(e) => handleSelectBowler(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                disabled={isReadOnly}
+                className={`w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <option value="">Select Bowler...</option>
                 {players.map(p => (
@@ -580,54 +595,56 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
           </div>
         </div>
 
-        {/* Card 2: Strategy Tools */}
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-3">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-            <Save size={14} /> Strategy
-          </h3>
+        {/* Card 2: Strategy Tools - Only for Members/Admins */}
+        {userRole !== 'guest' && (
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <Save size={14} /> Strategy
+            </h3>
 
-          <select
-            className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
-            onChange={(e) => handleLoadStrategy(e.target.value)}
-            value={activeStrategyId || ''}
-          >
-            <option value="">Load Preset...</option>
-            {strategies.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-
-          <div className="flex gap-2">
-            <input
-              className="flex-1 bg-slate-800 border border-slate-700 text-white text-xs rounded-lg p-2 outline-none placeholder-slate-400"
-              placeholder="Save as..."
-              value={strategyName}
-              onChange={(e) => setStrategyName(e.target.value)}
-            />
-            <button
-              onClick={handleSaveStrategy}
-              disabled={!strategyName}
-              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            <select
+              className="w-full bg-slate-800 border border-slate-700 text-white text-xs rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+              onChange={(e) => handleLoadStrategy(e.target.value)}
+              value={activeStrategyId || ''}
             >
-              <Save size={14} />
-            </button>
-          </div>
+              <option value="">Load Preset...</option>
+              {strategies.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
 
-          <div className="flex gap-2 pt-2 border-t border-slate-50">
-            <button
-              onClick={handleAutoDeploy}
-              className="flex-1 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold rounded-lg flex items-center justify-center gap-2"
-            >
-              <RefreshCcw size={12} /> Auto Field
-            </button>
-            {activeStrategyId && (
+            <div className="flex gap-2">
+              <input
+                className="flex-1 bg-slate-800 border border-slate-700 text-white text-xs rounded-lg p-2 outline-none placeholder-slate-400"
+                placeholder="Save as..."
+                value={strategyName}
+                onChange={(e) => setStrategyName(e.target.value)}
+              />
               <button
-                onClick={() => handleDeleteStrategy(activeStrategyId)}
-                className="p-2 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg"
+                onClick={handleSaveStrategy}
+                disabled={!strategyName}
+                className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                <Trash2 size={14} />
+                <Save size={14} />
               </button>
-            )}
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-50">
+              <button
+                onClick={handleAutoDeploy}
+                className="flex-1 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-bold rounded-lg flex items-center justify-center gap-2"
+              >
+                <RefreshCcw size={12} /> Auto Field
+              </button>
+              {activeStrategyId && (
+                <button
+                  onClick={() => handleDeleteStrategy(activeStrategyId)}
+                  className="p-2 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Card 3: Dugout */}
         <div className="bg-slate-900 rounded-2xl shadow-sm border border-slate-800 flex flex-col overflow-hidden flex-1 min-h-[200px] lg:min-h-0">
@@ -643,10 +660,10 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
             {players.filter(p => !currentPositions.has(p.id) && p.isAvailable).map(player => (
               <div
                 key={player.id}
-                draggable
+                draggable={!isReadOnly}
                 onDragStart={(e) => handleDugoutDragStart(e, player.id)}
-                onDoubleClick={() => setCurrentPositions(prev => new Map(prev).set(player.id, { playerId: player.id, left: 50, top: 40 }))}
-                className="flex items-center gap-3 p-2 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500 rounded-lg cursor-grab active:cursor-grabbing group transition-all duration-200"
+                onDoubleClick={() => !isReadOnly && setCurrentPositions(prev => new Map(prev).set(player.id, { playerId: player.id, left: 50, top: 40 }))}
+                className={`flex items-center gap-3 p-2 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500 rounded-lg group transition-all duration-200 ${isReadOnly ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}`}
               >
                 <img
                   src={player.avatarUrl}
@@ -657,7 +674,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
                   <p className="text-sm font-bold text-slate-200 truncate leading-tight">{player.name}</p>
                   <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide truncate leading-tight">{player.role}</p>
                 </div>
-                <GripVertical size={16} className="text-slate-700 group-hover:text-blue-500 transition-colors" />
+                {!isReadOnly && <GripVertical size={16} className="text-slate-700 group-hover:text-blue-500 transition-colors" />}
               </div>
             ))}
             {players.filter(p => !currentPositions.has(p.id) && p.isAvailable).length === 0 && (
