@@ -4,6 +4,7 @@ import { Player, Match, TournamentTableEntry, OpponentTeam, UserRole } from '../
 import { getOpponents, getTournamentTable, saveTournamentTableEntry, deleteTournamentTableEntry } from '../services/storageService';
 import { Trophy, Medal, Star, Flame, Crown, Plus, Trash2, Zap, Award, Target, Hash, Calendar, History, X, Share2, Loader2, Download, Shield } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import './Dashboard.css';
 
 interface DashboardProps {
   players: Player[];
@@ -255,7 +256,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
 
       {/* 1. Hero Section */}
       <div className="text-center py-4 md:py-6">
-        <h1 className="text-3xl md:text-6xl font-black tracking-tighter uppercase transparent bg-clip-text bg-gradient-to-r from-orange-500 via-white to-green-500 drop-shadow-sm leading-tight" style={{ WebkitTextStroke: '1px #cbd5e1' }}>
+        <h1 className="text-3xl md:text-6xl font-black tracking-tighter uppercase transparent bg-clip-text bg-gradient-to-r from-orange-500 via-white to-green-500 drop-shadow-sm leading-tight hero-heading-stroke">
           One Team, One Dream
         </h1>
         <div className="h-1 w-16 md:w-24 bg-blue-600 mx-auto mt-2 md:mt-4 rounded-full"></div>
@@ -510,7 +511,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                     <span className="text-xs font-black text-slate-600">{player.displayRuns}</span>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden w-full">
-                    <div className="h-full bg-orange-500 rounded-full transition-all duration-1000" style={{ width: `${(player.displayRuns / (topRunScorers[0]?.displayRuns || 1)) * 100}%` }}></div>
+                    <div className="h-full bg-orange-500 rounded-full transition-all duration-1000 progress-bar-fill" style={{ '--progress-width': `${(player.displayRuns / (topRunScorers[0]?.displayRuns || 1)) * 100}%` } as React.CSSProperties}></div>
                   </div>
                 </div>
               </div>
@@ -536,7 +537,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                     <span className="text-xs font-black text-slate-600">{player.displayWickets}</span>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden w-full">
-                    <div className="h-full bg-blue-500 rounded-full transition-all duration-1000" style={{ width: `${(player.displayWickets / (topWicketTakers[0]?.displayWickets || 1)) * 100}%` }}></div>
+                    <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 progress-bar-fill" style={{ '--progress-width': `${(player.displayWickets / (topWicketTakers[0]?.displayWickets || 1)) * 100}%` } as React.CSSProperties}></div>
                   </div>
                 </div>
               </div>

@@ -156,7 +156,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
     left = Math.max(5, Math.min(95, left));
     top = Math.max(5, Math.min(95, top));
 
-    setCurrentPositions(prev => new Map(prev).set(playerId, { playerId, left, top }));
+    setCurrentPositions(prev => new Map(prev).set(String(playerId), { playerId: String(playerId), left, top }));
   };
 
   // --- Strategy Management ---
@@ -296,18 +296,30 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
   };
 
   const handleSelectBowler = (id: string) => {
+    // If we're changing bowlers, we might want to check if the old bowler was at the default spot and remove them?
+    // For now, we just ensure the NEW bowler is placed.
+    // If we want to avoid stacking:
+    if (selectedBowlerId && currentPositions.get(selectedBowlerId)?.left === 50 && currentPositions.get(selectedBowlerId)?.top === 68) {
+      // Optional: Remove old bowler from that spot?
+      // setCurrentPositions(prev => {
+      //   const newMap = new Map(prev);
+      //   newMap.delete(selectedBowlerId);
+      //   return newMap;
+      // })
+      // But what if they just want to swap roles? Let's leave the old one, but maybe shift them slightly? 
+      // No, simpler is better. Just place the new one.
+    }
+
     setSelectedBowlerId(id);
     if (id) {
-      // Auto-place bowler if not already on field (or move them if they are)
-      setCurrentPositions(prev => new Map(prev).set(id, { playerId: id, left: 50, top: 68 }));
+      setCurrentPositions(prev => new Map(prev).set(String(id), { playerId: String(id), left: 50, top: 68 }));
     }
   };
 
   const handleSelectKeeper = (id: string) => {
-    setSelectedKeeperId(id);
+    setSelectedKeeperId(String(id));
     if (id) {
-      // Auto-place keeper if not already on field
-      setCurrentPositions(prev => new Map(prev).set(id, { playerId: id, left: 50, top: 32 }));
+      setCurrentPositions(prev => new Map(prev).set(String(id), { playerId: String(id), left: 50, top: 32 }));
     }
   };
 
@@ -426,13 +438,13 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
             {/* Note: Inline styles are used below for CSS custom properties (--marker-left, --marker-top) 
                 which enable dynamic positioning while keeping styling logic in external CSS */}
             {Array.from(currentPositions.values()).map((pos: FieldPosition) => {
-              const player = players.find(p => p.id === pos.playerId);
+              const player = players.find(p => String(p.id) === String(pos.playerId));
               if (!player) return null;
 
               const isInner = isInnerCircle(pos.left, pos.top);
-              const isWK = player.role === PlayerRole.WICKET_KEEPER || player.id === selectedKeeperId;
-              const isBowler = player.id === selectedBowlerId;
-              const isSelected = selectedMarkerId === pos.playerId;
+              const isWK = player.role === PlayerRole.WICKET_KEEPER || String(player.id) === String(selectedKeeperId);
+              const isBowler = String(player.id) === String(selectedBowlerId);
+              const isSelected = String(selectedMarkerId) === String(pos.playerId);
 
               let bgColor = isInner ? 'bg-emerald-500' : 'bg-blue-600';
               if (isWK) bgColor = 'bg-yellow-500';
@@ -661,18 +673,19 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
             </span>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
-            {players.filter(p => !currentPositions.has(p.id) && p.isAvailable).map(player => (
+            {players.filter(p => !currentPositions.has(String(p.id)) && p.isAvailable).map(player => (
               <div
                 key={player.id}
                 draggable={!isReadOnly}
-                onDragStart={(e) => handleDugoutDragStart(e, player.id)}
-                onDoubleClick={() => !isReadOnly && setCurrentPositions(prev => new Map(prev).set(player.id, { playerId: player.id, left: 50, top: 40 }))}
-                className={`flex items-center gap-3 p-2 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500 rounded-lg group transition-all duration-200 ${isReadOnly ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}`}
+                onDragStart={(e) => handleDugoutDragStart(e, String(player.id))}
+                onDoubleClick={() => !isReadOnly && setCurrentPositions(prev => new Map(prev).set(String(player.id), { playerId: String(player.id), left: 50, top: 40 }))}
+                className={`flex items-center gap-3 p-2 bg-slate-800/40 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500 rounded-lg group transition-all duration-200 select-none ${isReadOnly ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}`}
               >
                 <img
                   src={player.avatarUrl}
                   alt={player.name}
-                  className="w-9 h-9 rounded-full border border-slate-600 object-cover shadow-sm shrink-0"
+                  draggable="false"
+                  className="w-9 h-9 rounded-full border border-slate-600 object-cover shadow-sm shrink-0 select-none pointer-events-none"
                 />
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                   <p className="text-sm font-bold text-slate-200 truncate leading-tight">{player.name}</p>

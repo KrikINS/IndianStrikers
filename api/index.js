@@ -52,19 +52,28 @@ function authGuard(roles = []) {
 app.post('/api/login', async (req, res) => {
   const { mode, username, password } = req.body || {};
   if (mode === 'guest') return res.json({ ok: true, token: signToken({ username: 'guest', role: 'guest' }), role: 'guest' });
-  const { data: row, error } = await supabase.from('app_users').select('username,password_hash,role,is_active').eq('username', username).single();
+  const { data: row, error } = await supabase.from('app_users').select('id,username,password_hash,role,is_active,avatar_url').eq('username', username).single();
   if (error || !row || !row.is_active) return res.status(401).json({ error: 'Invalid user' });
   if (row.role !== mode && row.role !== 'admin') return res.status(403).json({ error: 'Role mismatch' });
   const ok = await bcrypt.compare(password, row.password_hash);
   if (!ok) return res.status(401).json({ error: 'Invalid password' });
-  res.json({ ok: true, token: signToken({ username: row.username, role: row.role }), role: row.role });
+  res.json({
+    ok: true,
+    token: signToken({ id: row.id, username: row.username, role: row.role }),
+    role: row.role,
+    user: { id: row.id, username: row.username, name: row.username, avatarUrl: row.avatar_url }
+  });
 });
 
 // USERS (Admin only)
-app.get('/api/users', authGuard(['admin']), async (_req, res) => {
-  const { data, error } = await supabase.from('app_users').select('id,username,role,avatar_url,created_at').neq('username', 'admin'); // Hide super admin if needed, or show all
-  if (error) return res.status(500).json({ error: error.message });
-  // Map snake_case to frontend expected shape if needed, or handle in frontend
+app.get('/api/users', authGuard(['admin', 'member']), async (req, res) => {
+  console.log(`[GET /api/users] Request received from ${req.user?.username} (${req.user?.role})`);
+  const { data, error } = await supabase.from('app_users').select('id,username,role,avatar_url,created_at'); // Show all users
+  if (error) {
+    console.error('[GET /api/users] Database error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  console.log(`[GET /api/users] Returning ${data.length} users`);
   res.json(data);
 });
 app.post('/api/users', authGuard(['admin']), async (req, res) => {
@@ -96,17 +105,17 @@ app.get('/api/players', async (_req, res) => {
   res.json(data);
 });
 app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
-  const { name, role, avatar_url } = req.body || {};
+  const { name, role, avatar_url, linked_user_id, jersey_number, dob, external_id } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Name is required' });
-  const { data, error } = await supabase.from('players').insert([{ name, role, avatar_url }]).select().single();
+  const { data, error } = await supabase.from('players').insert([{ name, role, avatar_url, linked_user_id, jersey_number, dob, external_id }]).select().single();
   res.json(data);
 });
 
 app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => {
   console.log(`[PUT /players/${req.params.id}]`, req.body);
-  const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats } = req.body;
+  const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id } = req.body;
   const { error } = await supabase.from('players').update({
-    name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats
+    name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id
   }).eq('id', req.params.id);
   if (error) {
     console.error('[PUT /players error]', error);

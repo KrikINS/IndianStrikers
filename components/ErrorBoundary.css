@@ -1,0 +1,10 @@
+.error-boundary-container {
+    padding: 20px;
+    font-family: monospace;
+    color: red;
+    background-color: #fff0f0;
+}
+
+.error-boundary-details {
+    white-space: pre-wrap;
+}

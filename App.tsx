@@ -35,8 +35,9 @@ const AppContent: React.FC<{
   onSignOut: () => void,
   teamLogo: string,
   onUpdateLogo: (url: string) => void,
-  currentUser?: { name: string; username: string }
-}> = ({ players, matches, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onAddMatch, onUpdateMatch, onSignOut, teamLogo, onUpdateLogo, currentUser }) => {
+  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string },
+  linkedPlayer?: Player
+}> = ({ players, matches, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onAddMatch, onUpdateMatch, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const location = useLocation();
@@ -52,6 +53,7 @@ const AppContent: React.FC<{
         onUpdateLogo={onUpdateLogo}
         matches={matches}
         currentUser={currentUser}
+        linkedPlayer={linkedPlayer}
       />
 
       <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
@@ -130,7 +132,7 @@ const App: React.FC = () => {
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [showSplash, setShowSplash] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>('guest');
-  const [currentUser, setCurrentUser] = useState<{ name: string; username: string }>();
+  const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; username: string; avatarUrl?: string }>();
   const [teamLogo, setTeamLogo] = useState<string>('');
 
   useEffect(() => {
@@ -175,7 +177,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleLoginComplete = (role: UserRole, user?: { name: string; username: string }) => {
+  const handleLoginComplete = (role: UserRole, user?: { id?: string; name: string; username: string; avatarUrl?: string }) => {
     setUserRole(role);
     if (user) {
       setCurrentUser(user);
@@ -309,6 +311,7 @@ const App: React.FC = () => {
         teamLogo={teamLogo}
         onUpdateLogo={handleUpdateLogo}
         currentUser={currentUser}
+        linkedPlayer={currentUser?.id ? players.find(p => String(p.linkedUserId) === String(currentUser?.id)) : undefined}
       />
     </HashRouter>
   );

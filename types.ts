@@ -81,6 +81,7 @@ export interface Player {
   jerseyNumber?: number;
   battingStats?: BattingStats;
   bowlingStats?: BowlingStats;
+  linkedUserId?: string;
 }
 
 export interface Match {

@@ -4,7 +4,7 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon index.js",
+    "dev": "set PORT=4001&& nodemon index.js",
     "start": "node index.js"
   },
   "dependencies": {

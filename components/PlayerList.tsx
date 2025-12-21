@@ -1,6 +1,7 @@
 
 import React, { useState, useRef } from 'react';
-import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats } from '../types';
+import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
+import { getAppUsers } from '../services/storageService';
 import { Plus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search } from 'lucide-react';
 
 interface PlayerListProps {
@@ -76,6 +77,17 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEditTab, setActiveEditTab] = useState<'general' | 'batting' | 'bowling'>('general');
 
+  const [users, setUsers] = useState<AppUser[]>([]); // New State for user linking
+
+  const fetchUsers = async () => {
+    if (userRole === 'admin') {
+      try {
+        const u = await getAppUsers();
+        setUsers(u);
+      } catch (e) { console.error("Failed to load users", e); }
+    }
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canEdit = userRole === 'admin';
@@ -119,11 +131,13 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
       externalId: '',
       jerseyNumber: undefined,
       battingStats: { ...defaultBattingStats },
-      bowlingStats: { ...defaultBowlingStats }
+      bowlingStats: { ...defaultBowlingStats },
+      linkedUserId: ''
     });
     setActiveEditTab('general');
-    setIsStatsUnlocked(false); // Reset unlock
+    setIsStatsUnlocked(false);
     setIsModalOpen(true);
+    if (userRole === 'admin') fetchUsers(); // Fetch users immediately
   };
 
   const handleOpenEdit = (player: Player, e: React.MouseEvent) => {
@@ -133,11 +147,13 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
     setFormData({
       ...player,
       battingStats: player.battingStats || { ...defaultBattingStats },
-      bowlingStats: player.bowlingStats || { ...defaultBowlingStats }
+      bowlingStats: player.bowlingStats || { ...defaultBowlingStats },
+      linkedUserId: player.linkedUserId || '' // Explicitly set ensure fallback
     });
     setActiveEditTab('general');
-    setIsStatsUnlocked(false); // Reset unlock
+    setIsStatsUnlocked(false);
     setIsModalOpen(true);
+    if (userRole === 'admin') fetchUsers(); // Fetch users immediately
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -220,6 +236,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (formData.name && formData.role) {
       // Auto-update summary stats from detailed stats
       const batting = formData.battingStats || defaultBattingStats;
@@ -248,7 +265,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
         externalId: formData.externalId,
         jerseyNumber: formData.jerseyNumber ? Number(formData.jerseyNumber) : undefined,
         battingStats: batting,
-        bowlingStats: bowling
+        bowlingStats: bowling,
+        linkedUserId: formData.linkedUserId
       };
 
       if (editingPlayer) {
@@ -304,11 +322,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
               Recruit Player
             </button>
           )}
-          {canEdit && (
-            <div className="text-xs text-slate-400 font-bold px-2">
-              Admin Password: <span className="text-slate-600 bg-slate-100 px-1 rounded">admin123</span>
-            </div>
-          )}
+
         </div>
       </div>
 
@@ -332,8 +346,15 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
             className="group relative bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
           >
             {/* Header / Background */}
-            <div className={`h-20 md:h-24 bg-gradient-to-r ${player.isAvailable ? 'from-slate-800 to-slate-900' : 'from-slate-200 to-slate-300'}`}>
-              <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+            <div className={`h-20 md:h-24 bg-gradient-to-r ${player.isAvailable ? 'from-slate-800 to-slate-900' : 'from-slate-200 to-slate-300'} relative overflow-hidden`}>
+              {/* Jersey Number Watermark */}
+              {player.jerseyNumber && (
+                <div className={`absolute top-1 right-2 text-[4rem] font-black italic select-none z-0 pointer-events-none ${player.isAvailable ? 'text-white/25' : 'text-slate-900/15'}`} style={{ fontFamily: 'Impact, sans-serif' }}>
+                  {player.jerseyNumber}
+                </div>
+              )}
+
+              <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
                 {player.isCaptain && (
                   <span className="bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded shadow-sm tracking-wider">CPT</span>
                 )}
@@ -578,6 +599,51 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                       <span className="text-sm font-semibold text-slate-700">Vice Captain</span>
                     </label>
                   </div>
+
+                  {/* Linked User Account - ADMIN ONLY */}
+                  {userRole === 'admin' && (
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-bold text-slate-700 flex items-center gap-2">
+                          <UserCheck size={16} /> Link App Account (Optional)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={fetchUsers}
+                          title="Refresh User List"
+                          className="text-blue-600 hover:text-blue-800 text-xs font-bold underline"
+                        >
+                          Refresh List {users.length > 0 && `(${users.length})`}
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-3">
+                        Linking a user account will automatically sync their profile picture.
+                      </p>
+                      <select
+                        name="linkedUserId"
+                        title="Select Linked User"
+                        value={formData.linkedUserId || ''}
+                        onChange={(e) => {
+                          const uid = e.target.value;
+                          const user = users.find(u => u.id === uid);
+                          setFormData(prev => ({
+                            ...prev,
+                            linkedUserId: uid,
+                            avatarUrl: user?.avatarUrl || prev.avatarUrl // Auto update avatar
+                          }));
+                        }}
+                        className="w-full p-2.5 bg-white border border-slate-200 text-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">-- No Linked Account --</option>
+                        {users.map(u => (
+                          <option key={u.id} value={u.id}>
+                            {u.name} ({u.username}) - {u.role}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                  )}
                 </div>
               )}
 
@@ -727,6 +793,32 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
 
             {/* Content */}
             <div className="pt-16 md:pt-20 p-4 md:p-8 flex-1 overflow-y-auto">
+              {/* General Info Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 bg-slate-50 p-5 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Jersey No.</div>
+                  <div className="text-2xl font-black text-slate-800 italic">{viewingPlayer.jerseyNumber || '-'}</div>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Player ID</div>
+                  <div className="text-sm font-mono font-bold text-slate-600 truncate" title={viewingPlayer.externalId}>{viewingPlayer.externalId || '-'}</div>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Birth</div>
+                  <div className="font-bold text-slate-700">{viewingPlayer.dob ? new Date(viewingPlayer.dob).toLocaleDateString() : '-'}</div>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-center">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-slate-400 font-bold uppercase">Bat:</span>
+                    <span className="font-bold text-slate-700">{viewingPlayer.battingStyle || 'RHB'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400 font-bold uppercase">Bowl:</span>
+                    <span className="font-bold text-slate-700">{viewingPlayer.bowlingStyle || 'None'}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Detailed Stats Section */}
               <div className="mb-6 md:mb-8">
                 <div className="flex gap-2 md:gap-4 mb-4 overflow-x-auto pb-2">
@@ -828,15 +920,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                 <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                   <UserCheck className="text-blue-500" /> Additional Details
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 text-sm">
-                  <div className="flex justify-between py-2 border-b border-slate-200">
-                    <span className="text-slate-500">Batting Style</span>
-                    <span className="font-bold text-slate-900">{viewingPlayer.battingStyle}</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-slate-200">
-                    <span className="text-slate-500">Bowling Style</span>
-                    <span className="font-bold text-slate-900">{viewingPlayer.bowlingStyle}</span>
-                  </div>
+                <div className="grid grid-cols-1 gap-4 text-sm">
                   <div className="flex justify-between py-2 border-b border-slate-200">
                     <span className="text-slate-500">Status</span>
                     <span className={`font-bold px-2 py-0.5 rounded-md ${viewingPlayer.isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

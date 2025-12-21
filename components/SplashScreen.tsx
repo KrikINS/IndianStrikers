@@ -6,7 +6,7 @@ import KirikINSLogo from './KirikINSLogo';
 import { login } from '../services/storageService';
 
 interface SplashScreenProps {
-  onComplete: (role: UserRole, user?: { name: string; username: string }) => void;
+  onComplete: (role: UserRole, user?: { id?: string; name: string; username: string; avatarUrl?: string }) => void;
   teamLogo?: string;
 }
 
@@ -25,7 +25,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
   const [loadingText, setLoadingText] = useState('');
   const [progress, setProgress] = useState(0);
   const [finalRole, setFinalRole] = useState<UserRole>('guest');
-  const [currentUser, setCurrentUser] = useState<{ name: string; username: string }>();
+  const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; username: string; avatarUrl?: string }>();
   const progressBarRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,7 +76,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
     }
   }, [isAppLoading, finalRole, currentUser, onComplete]);
 
-  const initiateAppEntry = (role: UserRole, user?: { name: string; username: string }) => {
+  const initiateAppEntry = (role: UserRole, user?: { id?: string; name: string; username: string; avatarUrl?: string }) => {
     setFinalRole(role);
     if (user) setCurrentUser(user);
     setIsAppLoading(true);
@@ -109,8 +109,9 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
     login(normalizedUser, password, selectedRole || 'guest')
       .then(res => {
         sessionStorage.setItem('authToken', res.token);
-        // Assuming res.user contains name/username, or fallback
-        initiateAppEntry(res.role, { name: res.username || normalizedUser, username: res.username || normalizedUser });
+        // Use full user object if available, otherwise fallback
+        const userObj = res.user || { name: res.username || normalizedUser, username: res.username || normalizedUser };
+        initiateAppEntry(res.role, userObj);
       })
       .catch(err => {
         setError('Invalid User ID or Password.');

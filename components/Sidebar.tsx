@@ -29,10 +29,11 @@ interface SidebarProps {
   teamLogo: string;
   onUpdateLogo: (url: string) => void;
   matches: Match[];
-  currentUser?: { name: string; username: string };
+  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string };
+  linkedPlayer?: { name: string; avatarUrl?: string }; // Minimal player type needed
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', onSignOut, teamLogo, onUpdateLogo, matches = [], currentUser }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', onSignOut, teamLogo, onUpdateLogo, matches = [], currentUser, linkedPlayer }) => {
   const [imgError, setImgError] = useState(false);
   const [nextMatch, setNextMatch] = useState<Match | null>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -123,6 +124,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
   if (userRole === 'admin') {
     links.push({ to: '/users', icon: <Settings size={20} />, label: 'User Management' });
   }
+
+  const effectiveAvatar = linkedPlayer?.avatarUrl || currentUser?.avatarUrl;
 
   return (
     <>
@@ -222,18 +225,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
           <div className="mb-4 flex items-center justify-between p-3 bg-slate-800 rounded-xl border border-slate-700">
             <div className="flex items-center gap-3 overflow-hidden">
               <div className={`
-                  w-10 h-10 rounded-full flex items-center justify-center shrink-0
-                  ${userRole === 'admin' ? 'bg-blue-600 text-white' :
-                  userRole === 'member' ? 'bg-emerald-600 text-white' :
-                    userRole === 'scorer' ? 'bg-purple-600 text-white' : 'bg-orange-500 text-white'}
+                  w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden
+                  ${!effectiveAvatar ? (
+                  userRole === 'admin' ? 'bg-blue-600 text-white' :
+                    userRole === 'member' ? 'bg-emerald-600 text-white' :
+                      userRole === 'scorer' ? 'bg-purple-600 text-white' : 'bg-orange-500 text-white'
+                ) : 'bg-slate-900 border border-slate-600'}
                 `}>
-                {userRole === 'admin' ? <Shield size={18} /> :
-                  userRole === 'member' ? <User size={18} /> :
-                    userRole === 'scorer' ? <ClipboardList size={18} /> : <Ticket size={18} />}
+                {effectiveAvatar ? (
+                  <img src={effectiveAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  userRole === 'admin' ? <Shield size={18} /> :
+                    userRole === 'member' ? <User size={18} /> :
+                      userRole === 'scorer' ? <ClipboardList size={18} /> : <Ticket size={18} />
+                )}
               </div>
               <div className="overflow-hidden">
                 <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Logged In</p>
-                <p className="text-sm font-bold text-white capitalize truncate">{currentUser?.name || userRole}</p>
+                {/* Use linked player name if available, else current user name */}
+                <p className="text-sm font-bold text-white capitalize truncate">{linkedPlayer?.name || currentUser?.name || userRole}</p>
               </div>
             </div>
             <button

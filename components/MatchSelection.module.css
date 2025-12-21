@@ -1,0 +1,28 @@
+.progressBar {
+    height: 0.5rem;
+    background-color: #f1f5f9;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.progressBarFill {
+    height: 100%;
+    transition: all 500ms;
+    width: var(--progress-width);
+}
+
+.progressBarFillBatsmen {
+    background-color: #3b82f6;
+}
+
+.progressBarFillBowlers {
+    background-color: #22c55e;
+}
+
+.progressBarFillAllRounders {
+    background-color: #a855f7;
+}
+
+.progressBarFillKeeper {
+    background-color: #eab308;
+}

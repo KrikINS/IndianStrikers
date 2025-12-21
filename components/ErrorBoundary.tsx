@@ -1,5 +1,6 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import './ErrorBoundary.css';
 
 interface Props {
     children: ReactNode;
@@ -30,9 +31,9 @@ class ErrorBoundary extends Component<Props, State> {
     render() {
         if (this.state.hasError) {
             return (
-                <div style={{ padding: '20px', fontFamily: 'monospace', color: 'red', backgroundColor: '#fff0f0' }}>
+                <div className="error-boundary-container">
                     <h1>Something went wrong.</h1>
-                    <details style={{ whiteSpace: 'pre-wrap' }}>
+                    <details className="error-boundary-details">
                         <summary>Error Details</summary>
                         {this.state.error && this.state.error.toString()}
                         <br />

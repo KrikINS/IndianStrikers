@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Player, PlayerRole, UserRole, Match } from '../types';
 import { Trophy, AlertTriangle, Lock, ArrowRight, ArrowLeft, Share2, Loader2, Calendar, MapPin, Sword, Shield, CircleDot, UserX } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import styles from './MatchSelection.module.css';
 
 interface MatchSelectionProps {
   players: Player[];
@@ -216,9 +217,8 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-500">Batsmen</span>
                   <span className="text-slate-800">{batsmen}</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  {/* eslint-disable-next-line react/forbid-dom-props */}
-                  <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${(batsmen / 6) * 100}%` }}></div>
+                <div className={styles.progressBar} style={{ '--progress-width': `${(batsmen / 6) * 100}%` } as React.CSSProperties}>
+                  <div className={`${styles.progressBarFill} ${styles.progressBarFillBatsmen}`}></div>
                 </div>
               </div>
 
@@ -227,9 +227,8 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-500">Bowlers</span>
                   <span className="text-slate-800">{bowlers}</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  {/* eslint-disable-next-line react/forbid-dom-props */}
-                  <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${(bowlers / 4) * 100}%` }}></div>
+                <div className={styles.progressBar} style={{ '--progress-width': `${(bowlers / 4) * 100}%` } as React.CSSProperties}>
+                  <div className={`${styles.progressBarFill} ${styles.progressBarFillBowlers}`}></div>
                 </div>
               </div>
 
@@ -238,9 +237,8 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-500">All-Rounders</span>
                   <span className="text-slate-800">{allRounders}</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  {/* eslint-disable-next-line react/forbid-dom-props */}
-                  <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${(allRounders / 2) * 100}%` }}></div>
+                <div className={styles.progressBar} style={{ '--progress-width': `${(allRounders / 2) * 100}%` } as React.CSSProperties}>
+                  <div className={`${styles.progressBarFill} ${styles.progressBarFillAllRounders}`}></div>
                 </div>
               </div>
 
@@ -249,9 +247,8 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-500">Wicket Keeper</span>
                   <span className="text-slate-800">{keepers}</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  {/* eslint-disable-next-line react/forbid-dom-props */}
-                  <div className="h-full bg-yellow-500 transition-all duration-500" style={{ width: `${(keepers / 1) * 100}%` }}></div>
+                <div className={styles.progressBar} style={{ '--progress-width': `${(keepers / 1) * 100}%` } as React.CSSProperties}>
+                  <div className={`${styles.progressBarFill} ${styles.progressBarFillKeeper}`}></div>
                 </div>
               </div>
             </div>
