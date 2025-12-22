@@ -77,24 +77,29 @@ export const saveAppUsers = (users: AppUser[]) => console.warn("saveAppUsers is 
 export const getPlayers = async (): Promise<Player[]> => {
   const res = await fetch(`${API_URL}/players`);
   const data = await handleResponse(res);
-  return data.map((p: any) => ({
-    ...p,
-    avatarUrl: p.avatar_url,
-    matchesPlayed: p.matches_played,
-    runsScored: p.runs_scored,
-    wicketsTaken: p.wickets_taken,
-    isCaptain: p.is_captain,
-    isViceCaptain: p.is_vice_captain,
-    isAvailable: p.is_available,
-    battingStats: p.batting_stats,
-    bowlingStats: p.bowling_stats,
-    battingStyle: p.batting_style,
-    bowlingStyle: p.bowling_style,
-    linkedUserId: p.linked_user_id,
-    jerseyNumber: p.jersey_number,
-    dob: p.dob,
-    externalId: p.external_id
-  }));
+  console.log('[getPlayers] Raw Data:', data); // Debug log
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .filter((p: any) => p !== null && p !== undefined) // Filter out nulls
+    .map((p: any) => ({
+      ...p,
+      avatarUrl: p.avatar_url,
+      matchesPlayed: p.matches_played,
+      runsScored: p.runs_scored,
+      wicketsTaken: p.wickets_taken,
+      isCaptain: p.is_captain,
+      isViceCaptain: p.is_vice_captain,
+      isAvailable: p.is_available,
+      battingStats: p.batting_stats,
+      bowlingStats: p.bowling_stats,
+      battingStyle: p.batting_style,
+      bowlingStyle: p.bowling_style,
+      linkedUserId: p.linked_user_id,
+      jerseyNumber: p.jersey_number,
+      dob: p.dob,
+      externalId: p.external_id
+    }));
 };
 
 export const addPlayer = async (player: Partial<Player>) => {
@@ -115,7 +120,7 @@ export const addPlayer = async (player: Partial<Player>) => {
     bowling_stats: player.bowlingStats,
     linked_user_id: player.linkedUserId,
     jersey_number: player.jerseyNumber,
-    dob: player.dob,
+    dob: player.dob || null,
     external_id: player.externalId
   };
   const res = await fetch(`${API_URL}/players`, {
@@ -124,6 +129,7 @@ export const addPlayer = async (player: Partial<Player>) => {
     body: JSON.stringify(dbPlayer)
   });
   const p = await handleResponse(res);
+  if (!p) throw new Error("Server returned empty response");
   return {
     ...p,
     avatarUrl: p.avatar_url,
@@ -162,7 +168,7 @@ export const updatePlayer = async (player: Player) => {
     bowling_stats: player.bowlingStats,
     linked_user_id: player.linkedUserId,
     jersey_number: player.jerseyNumber,
-    dob: player.dob,
+    dob: player.dob || null,
     external_id: player.externalId
   };
   const res = await fetch(`${API_URL}/players/${player.id}`, {

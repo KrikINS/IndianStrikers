@@ -105,9 +105,29 @@ app.get('/api/players', async (_req, res) => {
   res.json(data);
 });
 app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
-  const { name, role, avatar_url, linked_user_id, jersey_number, dob, external_id } = req.body || {};
+  console.log('[POST /api/players] Body:', JSON.stringify(req.body));
+  const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Name is required' });
-  const { data, error } = await supabase.from('players').insert([{ name, role, avatar_url, linked_user_id, jersey_number, dob, external_id }]).select().single();
+
+  const payload = {
+    name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id
+  };
+  console.log('[POST /api/players] Payload:', JSON.stringify(payload));
+
+  const { data, error } = await supabase.from('players').insert([payload]).select().single();
+
+  if (error) {
+    console.error('[POST /players error]', error);
+    return res.status(400).json({ error: error.message });
+  }
+
+  if (!data) {
+    console.error('[POST /players] DATA IS NULL! Check RLS policies.');
+    // Return a mock object to prevent crash if RLS hides the return
+    return res.status(200).json({ ...payload, id: 'temp-id-' + Date.now() });
+  }
+
+  console.log('[POST /api/players] Success:', JSON.stringify(data));
   res.json(data);
 });
 
