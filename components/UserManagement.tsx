@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppUser, UserRole } from '../types';
-import { getAppUsers, addAppUser, deleteAppUser } from '../services/storageService';
-import { Plus, Trash2, Edit2, Shield, User, Ticket, X, Check, Search, Lock } from 'lucide-react';
+import { AppUser, UserRole, MembershipRequest } from '../types';
+import { getAppUsers, addAppUser, deleteAppUser, getMembershipRequests, updateMembershipRequestStatus, deleteMembershipRequest } from '../services/storageService';
+import { Plus, Trash2, Edit2, Shield, User, Ticket, X, Check, Search, Lock, UserPlus, FileText, CheckCircle } from 'lucide-react';
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<AppUser[]>([]);
+  const [requests, setRequests] = useState<MembershipRequest[]>([]);
+  const [activeTab, setActiveTab] = useState<'users' | 'requests'>('users');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,8 +23,12 @@ const UserManagement: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await getAppUsers();
-        setUsers(data);
+        const [usersData, requestsData] = await Promise.all([
+          getAppUsers(),
+          getMembershipRequests()
+        ]);
+        setUsers(usersData);
+        setRequests(requestsData);
       } catch (e) { console.error(e); }
     };
     load();
@@ -67,18 +73,45 @@ const UserManagement: React.FC = () => {
       } else {
         // Add
         addAppUser(formData).then(newUser => {
-          // Backend returns the created user (snake_case mapped via service?)
-          // The service returns headers response usually. 
-          // I need to be careful. The service addAppUser returns handleResponse(res). 
-          // api returns `data` (single row).
-          // Service doesn't map response of addAppUser individually, it just returns JSON.
-          // API returns { id, username, ... }
-          // I should map it or reload.
-          // Let's reload for simplicity or append loosely
           window.location.reload();
         }).catch(e => alert("Failed to create user"));
       }
       setIsModalOpen(false);
+    }
+  };
+
+  const handleApproveRequest = (req: MembershipRequest) => {
+    if (window.confirm(`Approve ${req.name}? This will open the user creation form.`)) {
+      // Pre-fill form
+      setFormData({
+        name: req.name,
+        username: req.email.split('@')[0], // Suggest username
+        password: 'changeme123', // Default password
+        role: 'member'
+      });
+      setEditingUser(null);
+      setIsModalOpen(true);
+
+      // Update status in background
+      updateMembershipRequestStatus(req.id, 'Approved').then(() => {
+        setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'Approved' } : r));
+      });
+    }
+  };
+
+  const handleRejectRequest = (id: string) => {
+    if (window.confirm('Reject this request?')) {
+      updateMembershipRequestStatus(id, 'Rejected').then(() => {
+        setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'Rejected' } : r));
+      });
+    }
+  };
+
+  const handleDeleteRequest = (id: string) => {
+    if (window.confirm('Delete this request permanent?')) {
+      deleteMembershipRequest(id).then(() => {
+        setRequests(prev => prev.filter(r => r.id !== id));
+      });
     }
   };
 
@@ -103,83 +136,186 @@ const UserManagement: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
-          <Search size={20} className="text-slate-400" />
-          <input
-            className="bg-transparent outline-none w-full text-sm font-medium text-slate-700"
-            placeholder="Search users..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-xs">
-              <tr>
-                <th className="p-4">User</th>
-                <th className="p-4">User ID (Login)</th>
-                <th className="p-4">Role</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredUsers.map(user => (
-                <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold
-                        ${user.role === 'admin' ? 'bg-blue-600' :
-                          user.role === 'member' ? 'bg-emerald-600' :
-                            user.role === 'scorer' ? 'bg-purple-600' : 'bg-orange-500'}
-                      `}>
-                        {user.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.name}
-                            className="w-full h-full rounded-full"
-                          />
-                        ) : (
-                          user.name[0]
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-800">{user.name}</p>
-                        <p className="text-xs text-slate-400">ID: {user.id}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 font-mono text-slate-600">{user.username}</td>
-                  <td className="p-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase
-                       ${user.role === 'admin' ? 'bg-blue-100 text-blue-700' :
-                        user.role === 'member' ? 'bg-emerald-100 text-emerald-700' :
-                          user.role === 'scorer' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}
-                    `}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => handleOpenEdit(user)} title="Edit User" aria-label="Edit User" className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => handleDelete(user.id)} title="Delete User" aria-label="Delete User" className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredUsers.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-slate-400">No users found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="flex gap-1 border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'users' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+        >
+          <User size={16} /> All Users
+        </button>
+        <button
+          onClick={() => setActiveTab('requests')}
+          className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'requests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+        >
+          <UserPlus size={16} /> Membership Requests
+          {requests.filter(r => r.status === 'Pending').length > 0 && (
+            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+              {requests.filter(r => r.status === 'Pending').length}
+            </span>
+          )}
+        </button>
       </div>
+
+      {activeTab === 'users' ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
+            <Search size={20} className="text-slate-400" />
+            <input
+              className="bg-transparent outline-none w-full text-sm font-medium text-slate-700"
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-xs">
+                <tr>
+                  <th className="p-4">User</th>
+                  <th className="p-4">User ID (Login)</th>
+                  <th className="p-4">Role</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredUsers.map(user => (
+                  <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold
+                          ${user.role === 'admin' ? 'bg-blue-600' :
+                            user.role === 'member' ? 'bg-emerald-600' :
+                              user.role === 'scorer' ? 'bg-purple-600' : 'bg-orange-500'}
+                        `}>
+                          {user.avatarUrl ? (
+                            <img
+                              src={user.avatarUrl}
+                              alt={user.name}
+                              className="w-full h-full rounded-full"
+                            />
+                          ) : (
+                            user.name[0]
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800">{user.name}</p>
+                          <p className="text-xs text-slate-400">ID: {user.id}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4 font-mono text-slate-600">{user.username}</td>
+                    <td className="p-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase
+                         ${user.role === 'admin' ? 'bg-blue-100 text-blue-700' :
+                          user.role === 'member' ? 'bg-emerald-100 text-emerald-700' :
+                            user.role === 'scorer' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}
+                      `}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => handleOpenEdit(user)} title="Edit User" aria-label="Edit User" className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => handleDelete(user.id)} title="Delete User" aria-label="Delete User" className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-slate-400">No users found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-xs">
+                <tr>
+                  <th className="p-4">Applicant</th>
+                  <th className="p-4">Contact</th>
+                  <th className="p-4">History</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {requests.map(req => (
+                  <tr key={req.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-4">
+                      <div>
+                        <p className="font-bold text-slate-800">{req.name}</p>
+                        <p className="text-xs text-slate-400">{new Date(req.date).toLocaleDateString()}</p>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div>
+                        <p className="text-slate-800 font-medium">{req.email}</p>
+                        <p className="text-xs text-slate-400">{req.contactNumber}</p>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      {req.associatedBefore === 'Yes' ? (
+                        <span className="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded">
+                          Ex-Player ({req.associationYear})
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-medium text-xs">New</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2 py-1 rounded-lg text-xs font-bold uppercase
+                         ${req.status === 'Pending' ? 'bg-orange-100 text-orange-600' :
+                          req.status === 'Approved' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}
+                       `}>
+                        {req.status}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {req.status === 'Pending' && (
+                          <>
+                            <button
+                              onClick={() => handleApproveRequest(req)}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center gap-1"
+                              title="Approve & Create User"
+                            >
+                              <CheckCircle size={16} /> <span className="text-xs font-bold hidden md:inline">Approve</span>
+                            </button>
+                            <button
+                              onClick={() => handleRejectRequest(req.id)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
+                              title="Reject"
+                            >
+                              <X size={16} /> <span className="text-xs font-bold hidden md:inline">Reject</span>
+                            </button>
+                          </>
+                        )}
+                        <button onClick={() => handleDeleteRequest(req.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete Request" aria-label="Delete Request">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {requests.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-slate-400">No membership requests found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {isModalOpen && (

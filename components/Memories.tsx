@@ -1,7 +1,15 @@
 
 import React, { useState } from 'react';
-import { Play, Image as ImageIcon, Plus, X, Maximize2, Heart, Film, Calendar } from 'lucide-react';
+import { Play, Image as ImageIcon, Plus, X, Maximize2, Heart, Film, Calendar, Trash2, MessageCircle, Send, User } from 'lucide-react';
 import { UserRole } from '../types';
+
+interface Comment {
+  id: string;
+  text: string;
+  authorName: string;
+  timestamp: string;
+  authorRole?: UserRole; // Optional to show badges
+}
 
 interface Memory {
   id: string;
@@ -11,10 +19,12 @@ interface Memory {
   date: string;
   likes: number;
   width?: string; // class for grid span
+  comments: Comment[];
 }
 
 interface MemoriesProps {
   userRole: UserRole;
+  currentUser?: { name: string; username: string; id?: string };
 }
 
 // Seed data
@@ -26,7 +36,11 @@ const INITIAL_MEMORIES: Memory[] = [
     caption: 'Championship Winning Moment 2023',
     date: '2023-11-15',
     likes: 124,
-    width: 'col-span-2 row-span-2'
+    width: 'col-span-2 row-span-2',
+    comments: [
+      { id: 'c1', text: 'What a clear night!', authorName: 'Coach Ravi', timestamp: '2023-11-16T10:00:00Z', authorRole: 'admin' },
+      { id: 'c2', text: 'Incredible victory!', authorName: 'Amit', timestamp: '2023-11-16T10:05:00Z', authorRole: 'member' }
+    ]
   },
   {
     id: '2',
@@ -35,7 +49,8 @@ const INITIAL_MEMORIES: Memory[] = [
     caption: 'Training Camp - Day 1',
     date: '2024-01-10',
     likes: 45,
-    width: 'col-span-1 row-span-1'
+    width: 'col-span-1 row-span-1',
+    comments: []
   },
   {
     id: '3',
@@ -44,7 +59,8 @@ const INITIAL_MEMORIES: Memory[] = [
     caption: 'Match Highlights vs Royal CC',
     date: '2024-02-20',
     likes: 89,
-    width: 'col-span-1 row-span-1'
+    width: 'col-span-1 row-span-1',
+    comments: []
   },
   {
     id: '4',
@@ -53,7 +69,8 @@ const INITIAL_MEMORIES: Memory[] = [
     caption: 'Team Huddle before the big game',
     date: '2023-12-05',
     likes: 67,
-    width: 'col-span-1 row-span-2'
+    width: 'col-span-1 row-span-2',
+    comments: []
   },
   {
     id: '5',
@@ -62,7 +79,8 @@ const INITIAL_MEMORIES: Memory[] = [
     caption: 'Awards Night',
     date: '2023-11-20',
     likes: 150,
-    width: 'col-span-1 row-span-1'
+    width: 'col-span-1 row-span-1',
+    comments: []
   },
   {
     id: '6',
@@ -71,11 +89,12 @@ const INITIAL_MEMORIES: Memory[] = [
     caption: 'Practice Session Nets',
     date: '2024-03-01',
     likes: 32,
-    width: 'col-span-1 row-span-1'
+    width: 'col-span-1 row-span-1',
+    comments: []
   }
 ];
 
-const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
+const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
   const [memories, setMemories] = useState<Memory[]>(INITIAL_MEMORIES);
   const [filter, setFilter] = useState<'all' | 'image' | 'video'>('all');
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
@@ -86,7 +105,11 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
   const [newType, setNewType] = useState<'image' | 'video'>('image');
   const [newUrl, setNewUrl] = useState('');
 
+  // New Comment Form
+  const [newComment, setNewComment] = useState('');
+
   const isAdmin = userRole === 'admin';
+  const canComment = userRole === 'admin' || userRole === 'member';
 
   const filteredMemories = memories.filter(m => filter === 'all' ? true : m.type === filter);
 
@@ -101,13 +124,43 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
       caption: newCaption || 'New Memory',
       date: new Date().toISOString().split('T')[0],
       likes: 0,
-      width: 'col-span-1 row-span-1'
+      width: 'col-span-1 row-span-1',
+      comments: []
     };
 
     setMemories([newMemory, ...memories]);
     setIsAddModalOpen(false);
     setNewCaption('');
     setNewUrl('');
+  };
+
+  const handleDeleteMemory = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this memory?')) return;
+    setMemories(memories.filter(m => m.id !== id));
+    if (selectedMemory?.id === id) setSelectedMemory(null);
+  };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !selectedMemory) return;
+
+    const comment: Comment = {
+      id: Date.now().toString(),
+      text: newComment,
+      authorName: currentUser?.name || 'Anonymous Member',
+      authorRole: userRole,
+      timestamp: new Date().toISOString()
+    };
+
+    const updatedMemory = {
+      ...selectedMemory,
+      comments: [...(selectedMemory.comments || []), comment]
+    };
+
+    setMemories(memories.map(m => m.id === selectedMemory.id ? updatedMemory : m));
+    setSelectedMemory(updatedMemory);
+    setNewComment('');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,6 +250,17 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
                 </div>
               </div>
             )}
+
+            {/* Admin Delete Button */}
+            {isAdmin && (
+              <button
+                onClick={(e) => handleDeleteMemory(e, item.id)}
+                className="absolute top-2 right-2 bg-red-600/90 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                title="Delete Memory"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -228,20 +292,85 @@ const Memories: React.FC<MemoriesProps> = ({ userRole }) => {
             </div>
 
             {/* Sidebar Info */}
-            <div className="w-full md:w-80 p-8 flex flex-col justify-center bg-zinc-900/50 backdrop-blur-sm border-l border-white/10">
-              <div className="mb-auto">
+            <div className="w-full md:w-96 flex flex-col bg-zinc-900 border-l border-white/10 max-h-[90vh]">
+              <div className="p-6 flex-1 overflow-y-auto">
                 <span className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-2 block">{selectedMemory.type}</span>
-                <h3 className="text-2xl font-bold text-white mb-4 leading-tight">{selectedMemory.caption}</h3>
-                <p className="text-zinc-400 text-sm mb-6">Captured on {new Date(selectedMemory.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <div className="flex justify-between items-start gap-4 mb-4">
+                  <h3 className="text-2xl font-bold text-white leading-tight">{selectedMemory.caption}</h3>
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => handleDeleteMemory(e, selectedMemory.id)}
+                      className="text-red-400 hover:text-red-300 p-1"
+                      title="Delete Memory"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  )}
+                </div>
+                <p className="text-zinc-400 text-sm mb-6 pb-6 border-b border-white/10">
+                  Captured on {new Date(selectedMemory.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+
+                {/* Comments Section */}
+                {canComment && (
+                  <div className="space-y-4">
+                    <h4 className="text-white font-bold flex items-center gap-2">
+                      <MessageCircle size={16} className="text-blue-400" />
+                      Comments
+                    </h4>
+
+                    <div className="space-y-3">
+                      {(selectedMemory.comments && selectedMemory.comments.length > 0) ? (
+                        selectedMemory.comments.map(comment => (
+                          <div key={comment.id} className="bg-white/5 rounded-xl p-3">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm font-bold text-white flex items-center gap-2">
+                                {comment.authorName}
+                                {comment.authorRole === 'admin' && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 rounded uppercase">Admin</span>}
+                              </span>
+                              <span className="text-[10px] text-zinc-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-sm text-zinc-300">{comment.text}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-zinc-500 text-sm italic">No comments yet. Be the first!</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center gap-4 py-6 border-t border-white/10">
-                <button className="flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-colors">
-                  <Heart size={18} className="text-red-500 fill-red-500" /> Like ({selectedMemory.likes})
-                </button>
-                <button className="p-3 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700" title="Maximize" aria-label="Maximize image">
-                  <Maximize2 size={18} />
-                </button>
+              {/* Action Bar */}
+              <div className="p-4 bg-zinc-950 border-t border-white/10 space-y-4">
+                <div className="flex items-center gap-4">
+                  <button className="flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-colors">
+                    <Heart size={18} className="text-red-500 fill-red-500" /> Like ({selectedMemory.likes})
+                  </button>
+                  <button className="p-3 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700" title="Maximize" aria-label="Maximize image">
+                    <Maximize2 size={18} />
+                  </button>
+                </div>
+
+                {/* Add Comment Input */}
+                {canComment && (
+                  <form onSubmit={handleAddComment} className="relative">
+                    <input
+                      value={newComment}
+                      onChange={e => setNewComment(e.target.value)}
+                      placeholder="Add a comment..."
+                      className="w-full bg-zinc-800/50 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50 focus:bg-zinc-800 transition-all text-sm"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newComment.trim()}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-400 disabled:text-zinc-600 hover:text-blue-300 p-2 transition-colors"
+                      title="Post Comment"
+                    >
+                      <Send size={16} />
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
           </div>

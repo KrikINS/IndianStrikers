@@ -113,7 +113,7 @@ const AppContent: React.FC<{
             />
             <Route path="/live-scoring" element={<Scorecard opponents={opponents} players={players} matches={matches} onUpdateMatch={onUpdateMatch} userRole={userRole} />} />
             <Route path="/manual-scorecard" element={<ManualScorecard players={players} opponents={opponents} />} />
-            <Route path="/memories" element={<Memories userRole={userRole} />} />
+            <Route path="/memories" element={<Memories userRole={userRole} currentUser={currentUser} />} />
             {/* User Management Route - Only visible if admin */}
             <Route path="/users" element={userRole === 'admin' ? <UserManagement /> : <Navigate to="/home" />} />
             <Route path="*" element={<Navigate to="/home" replace />} />

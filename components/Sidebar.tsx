@@ -16,10 +16,12 @@ import {
   Image,
   Clock,
   Upload,
-  Settings
+  Settings,
+  UserPlus
 } from 'lucide-react';
 import { UserRole, Match } from '../types';
 import KirikINSLogo from './KirikINSLogo';
+import MembershipRequestForm from './MembershipRequestForm';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -37,6 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
   const [imgError, setImgError] = useState(false);
   const [nextMatch, setNextMatch] = useState<Match | null>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset error state when prop changes
@@ -255,6 +258,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
             </button>
           </div>
 
+          {/* Join Us Button for Guests */}
+          {userRole === 'guest' && (
+            <button
+              onClick={() => setIsJoinModalOpen(true)}
+              className="w-full mb-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+            >
+              <UserPlus size={18} /> Join Us / Apply
+            </button>
+          )}
+
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-xl border border-slate-700/50 shadow-inner min-h-[140px] flex flex-col justify-center">
             {nextMatch ? (
               <div className="space-y-3">
@@ -300,7 +313,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
             )}
           </div>
         </div>
-      </aside>
+      </aside >
+
+      {/* Membership Request Modal */}
+      {isJoinModalOpen && <MembershipRequestForm onClose={() => setIsJoinModalOpen(false)} />}
     </>
   );
 };

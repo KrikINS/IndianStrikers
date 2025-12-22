@@ -268,6 +268,35 @@ app.delete('/api/strategies/:id', authGuard(['admin']), async (req, res) => {
   res.json({ ok: true });
 });
 
+// MEMBERSHIP REQUESTS
+app.get('/api/membership_requests', authGuard(['admin']), async (req, res) => {
+  const { data, error } = await supabase.from('membership_requests').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/membership_requests', async (req, res) => {
+  const { name, email, contact_number, associated_before, association_year, status } = req.body;
+  const { data, error } = await supabase.from('membership_requests').insert([{
+    name, email, contact_number, associated_before, association_year, status: status || 'Pending'
+  }]).select().single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+app.put('/api/membership_requests/:id', authGuard(['admin']), async (req, res) => {
+  const { status } = req.body;
+  const { error } = await supabase.from('membership_requests').update({ status }).eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+app.delete('/api/membership_requests/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await supabase.from('membership_requests').delete().eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 // UPLOAD (Cloudinary)
 app.post('/api/upload', authGuard(['admin', 'member']), upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Missing file' });

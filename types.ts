@@ -148,3 +148,14 @@ export interface TournamentTableEntry {
   points: number;
   nrr: string;
 }
+
+export interface MembershipRequest {
+  id: string;
+  name: string;
+  email: string;
+  contactNumber: string;
+  associatedBefore: 'Yes' | 'No';
+  associationYear?: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  date: string;
+}

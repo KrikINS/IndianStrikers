@@ -1,5 +1,5 @@
 
-import { Player, Match, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser } from '../types';
+import { Player, Match, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001/api';
 
@@ -396,6 +396,56 @@ export const deleteTournamentTableEntry = async (id: string) => {
 };
 
 export const saveTournamentTable = (table: TournamentTableEntry[]) => console.warn("saveTournamentTable deprecated. Use individual entry save.");
+
+// MEMBERSHIP REQUESTS
+export const getMembershipRequests = async (): Promise<MembershipRequest[]> => {
+  const res = await fetch(`${API_URL}/membership_requests`, { headers: getHeaders() });
+  const data = await handleResponse(res);
+  return data.map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    email: r.email,
+    contactNumber: r.contact_number,
+    associatedBefore: r.associated_before,
+    associationYear: r.association_year,
+    status: r.status,
+    date: r.created_at
+  }));
+};
+
+export const addMembershipRequest = async (request: Partial<MembershipRequest>) => {
+  const dbRequest = {
+    name: request.name,
+    email: request.email,
+    contact_number: request.contactNumber,
+    associated_before: request.associatedBefore,
+    association_year: request.associationYear,
+    status: 'Pending'
+  };
+  const res = await fetch(`${API_URL}/membership_requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, // Public endpoint, no auth usually? Or guest auth? Assuming public for now or same headers
+    body: JSON.stringify(dbRequest)
+  });
+  return handleResponse(res);
+};
+
+export const updateMembershipRequestStatus = async (id: string, status: 'Approved' | 'Rejected') => {
+  const res = await fetch(`${API_URL}/membership_requests/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify({ status })
+  });
+  return handleResponse(res);
+};
+
+export const deleteMembershipRequest = async (id: string) => {
+  const res = await fetch(`${API_URL}/membership_requests/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
 
 /* DEPRECATED / STUBS */
 export const savePlayers = (p: Player[]) => console.warn("savePlayers deprecated");
