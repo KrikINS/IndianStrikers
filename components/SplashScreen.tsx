@@ -178,7 +178,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
         <div className={`
           transform transition-all duration-1000 ease-out flex flex-col items-center justify-center w-full
           ${animationStep >= 1 ? 'scale-100 opacity-100 translate-y-0' : 'scale-50 opacity-0 translate-y-10'}
-          ${animationStep >= 3 ? '-translate-y-12 md:-translate-y-20' : ''} 
+          ${animationStep >= 3 ? '-translate-y-4 md:-translate-y-20' : ''} 
         `}>
 
           {/* Main Team Logo */}
