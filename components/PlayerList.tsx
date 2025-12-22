@@ -113,6 +113,9 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const activePlayers = filteredPlayers.filter(p => p.isAvailable);
+  const inactivePlayers = filteredPlayers.filter(p => !p.isAvailable);
+
   const handleOpenAdd = () => {
     setEditingPlayer(null);
     setFormData({
@@ -303,6 +306,96 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
     }
   };
 
+  const renderPlayerCard = (player: Player) => (
+    <div
+      key={player.id}
+      onClick={() => { setViewingPlayer(player); setActiveStatTab('batting'); }}
+      className="group relative bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
+    >
+      {/* Header / Background */}
+      <div className={`h-20 md:h-24 bg-gradient-to-r ${player.isAvailable ? 'from-slate-800 to-slate-900' : 'from-slate-200 to-slate-300'} relative overflow-hidden`}>
+        {/* Jersey Number Watermark */}
+        {player.jerseyNumber && (
+          <div className={`absolute top-1 right-2 text-[4rem] font-black italic select-none z-0 pointer-events-none ${player.isAvailable ? 'text-white/25' : 'text-slate-900/15'}`} style={{ fontFamily: 'Impact, sans-serif' }}>
+            {player.jerseyNumber}
+          </div>
+        )}
+
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
+          {player.isCaptain && (
+            <span className="bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded shadow-sm tracking-wider">CPT</span>
+          )}
+          {player.isViceCaptain && (
+            <span className="bg-blue-400 text-blue-900 text-[10px] font-black px-2 py-0.5 rounded shadow-sm tracking-wider">VC</span>
+          )}
+        </div>
+
+        {/* Quick Availability Toggle */}
+        {canManagePlayers && (
+          <button
+            onClick={(e) => handleToggleAvailability(player, e)}
+            className={`absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold shadow-md transition-all z-10
+              ${player.isAvailable
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : 'bg-red-500 text-white hover:bg-red-600'}
+            `}
+            title="Toggle Availability"
+          >
+            {player.isAvailable ? <UserCheck size={10} /> : <UserX size={10} />}
+            {player.isAvailable ? 'ACTIVE' : 'AWAY'}
+          </button>
+        )}
+      </div>
+
+      {/* Avatar */}
+      <div className="absolute top-8 md:top-10 left-6">
+        <div className="relative">
+          <img
+            src={player.avatarUrl}
+            alt={player.name}
+            className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl border-4 border-white object-cover shadow-md ${!player.isAvailable ? 'grayscale opacity-80' : ''}`}
+          />
+          <div className={`absolute -bottom-1 -right-1 w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white ${player.isAvailable ? 'bg-green-500' : 'bg-red-500'}`} title={player.isAvailable ? 'Available' : 'Unavailable'}></div>
+        </div>
+      </div>
+
+      <div className="pt-8 md:pt-10 p-4 md:p-6">
+        <div className="flex justify-between items-start mb-1">
+          <h3 className={`text-base md:text-lg font-bold ${player.isAvailable ? 'text-slate-800' : 'text-slate-500'}`}>{player.name}</h3>
+          {canEdit && (
+            <div className="flex gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
+              {canEditProfile && (
+                <button
+                  onClick={(e) => handleOpenEdit(player, e)}
+                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1"
+                  title="Edit Profile"
+                >
+                  <Edit2 size={16} /> <span className="text-xs font-bold">Edit</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+          {getRoleIcon(player.role)}
+          <span className="font-medium">{player.role}</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span className="text-slate-400 block uppercase text-[10px]">Runs</span>
+            <span className="font-bold text-slate-700 text-sm">{player.runsScored}</span>
+          </div>
+          <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span className="text-slate-400 block uppercase text-[10px]">Wickets</span>
+            <span className="font-bold text-slate-700 text-sm">{player.wicketsTaken}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -338,99 +431,43 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-        {filteredPlayers.map((player) => (
-          <div
-            key={player.id}
-            onClick={() => { setViewingPlayer(player); setActiveStatTab('batting'); }}
-            className="group relative bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
-          >
-            {/* Header / Background */}
-            <div className={`h-20 md:h-24 bg-gradient-to-r ${player.isAvailable ? 'from-slate-800 to-slate-900' : 'from-slate-200 to-slate-300'} relative overflow-hidden`}>
-              {/* Jersey Number Watermark */}
-              {player.jerseyNumber && (
-                <div className={`absolute top-1 right-2 text-[4rem] font-black italic select-none z-0 pointer-events-none ${player.isAvailable ? 'text-white/25' : 'text-slate-900/15'}`} style={{ fontFamily: 'Impact, sans-serif' }}>
-                  {player.jerseyNumber}
-                </div>
-              )}
-
-              <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
-                {player.isCaptain && (
-                  <span className="bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded shadow-sm tracking-wider">CPT</span>
-                )}
-                {player.isViceCaptain && (
-                  <span className="bg-blue-400 text-blue-900 text-[10px] font-black px-2 py-0.5 rounded shadow-sm tracking-wider">VC</span>
-                )}
-              </div>
-
-              {/* Quick Availability Toggle */}
-              {canManagePlayers && (
-                <button
-                  onClick={(e) => handleToggleAvailability(player, e)}
-                  className={`absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold shadow-md transition-all z-10
-                    ${player.isAvailable
-                      ? 'bg-green-500 text-white hover:bg-green-600'
-                      : 'bg-red-500 text-white hover:bg-red-600'}
-                  `}
-                  title="Toggle Availability"
-                >
-                  {player.isAvailable ? <UserCheck size={10} /> : <UserX size={10} />}
-                  {player.isAvailable ? 'ACTIVE' : 'AWAY'}
-                </button>
-              )}
+      <div className="space-y-10">
+        {/* Active Players Section */}
+        {activePlayers.length > 0 && (
+          <section>
+            <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
+              <span className="w-1.5 h-6 bg-blue-600 rounded-full"></span>
+              Active Squad
+              <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{activePlayers.length}</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              {activePlayers.map(renderPlayerCard)}
             </div>
+          </section>
+        )}
 
-            {/* Avatar */}
-            <div className="absolute top-8 md:top-10 left-6">
-              <div className="relative">
-                <img
-                  src={player.avatarUrl}
-                  alt={player.name}
-                  className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl border-4 border-white object-cover shadow-md ${!player.isAvailable ? 'grayscale opacity-80' : ''}`}
-                />
-                <div className={`absolute -bottom-1 -right-1 w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white ${player.isAvailable ? 'bg-green-500' : 'bg-red-500'}`} title={player.isAvailable ? 'Available' : 'Unavailable'}></div>
-              </div>
+        {/* Inactive Players Section */}
+        {inactivePlayers.length > 0 && (
+          <section>
+            {activePlayers.length > 0 && <div className="h-px bg-slate-200 my-8 block w-full opacity-50"></div>}
+            <h3 className="text-xl font-bold text-slate-500 mb-5 flex items-center gap-3">
+              <span className="w-1.5 h-6 bg-slate-300 rounded-full"></span>
+              Inactive / Away
+              <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{inactivePlayers.length}</span>
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 opacity-75 grayscale-[25%] hover:grayscale-0 transition-all">
+              {inactivePlayers.map(renderPlayerCard)}
             </div>
+          </section>
+        )}
 
-            <div className="pt-8 md:pt-10 p-4 md:p-6">
-              <div className="flex justify-between items-start mb-1">
-                <h3 className={`text-base md:text-lg font-bold ${player.isAvailable ? 'text-slate-800' : 'text-slate-500'}`}>{player.name}</h3>
-                {canEdit && (
-                  <div className="flex gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                    {canEditProfile && (
-                      <button
-                        onClick={(e) => handleOpenEdit(player, e)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1"
-                        title="Edit Profile"
-                      >
-                        <Edit2 size={16} /> <span className="text-xs font-bold">Edit</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
-                {getRoleIcon(player.role)}
-                <span className="font-medium">{player.role}</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <span className="text-slate-400 block uppercase text-[10px]">Runs</span>
-                  <span className="font-bold text-slate-700 text-sm">{player.runsScored}</span>
-                </div>
-                <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <span className="text-slate-400 block uppercase text-[10px]">Wickets</span>
-                  <span className="font-bold text-slate-700 text-sm">{player.wicketsTaken}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
         {filteredPlayers.length === 0 && (
-          <div className="col-span-full py-12 text-center text-slate-400">
-            No players found matching "{searchQuery}".
+          <div className="py-16 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 text-slate-400 mb-4">
+              <Search size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-700">No players found</h3>
+            <p className="text-slate-500">We couldn't find any players matching "{searchQuery}"</p>
           </div>
         )}
       </div>
