@@ -273,18 +273,18 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
             <Award className="text-yellow-400" /> Team Legacy
           </h3>
 
-          <div className="grid grid-cols-3 gap-3 md:gap-4 relative z-10">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors">
+          <div className="flex md:grid md:grid-cols-3 gap-3 md:gap-4 relative z-10 overflow-x-auto pb-2 md:pb-0 snap-x no-scrollbar md:custom-scrollbar">
+            <div className="min-w-[110px] md:min-w-0 bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors snap-center">
               <div className="text-yellow-400 mb-2 flex justify-center"><Trophy size={24} className="md:w-7 md:h-7" /></div>
               <div className="text-2xl md:text-3xl font-black mb-1">7</div>
               <div className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-300">Winners</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors">
+            <div className="min-w-[110px] md:min-w-0 bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors snap-center">
               <div className="text-slate-300 mb-2 flex justify-center"><Medal size={24} className="md:w-7 md:h-7" /></div>
               <div className="text-2xl md:text-3xl font-black mb-1">5</div>
               <div className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-300">Runners-Up</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors">
+            <div className="min-w-[110px] md:min-w-0 bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors snap-center">
               <div className="text-orange-400 mb-2 flex justify-center"><Star size={24} className="md:w-7 md:h-7" /></div>
               <div className="text-2xl md:text-3xl font-black mb-1">22</div>
               <div className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-300">Semi Finalist</div>
@@ -293,7 +293,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
         </div>
 
         {/* Latest Match Performers Carousel */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-center space-y-3 md:space-y-4">
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-center space-y-3 md:space-y-4 overflow-hidden">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 px-1">
             <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
               <Zap className="text-yellow-500 fill-yellow-500" size={20} /> Match Day Heroes
@@ -310,7 +310,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
               No completed matches to show performers.
             </div>
           ) : (
-            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x">
+            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x w-full">
               {latestMatchHeroes.map((player) => (
                 <div
                   key={player.id}
