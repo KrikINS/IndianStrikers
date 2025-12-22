@@ -297,12 +297,50 @@ app.delete('/api/membership_requests/:id', authGuard(['admin']), async (req, res
   res.json({ ok: true });
 });
 
+// MEMORIES
+app.get('/api/memories', async (_req, res) => {
+  const { data, error } = await supabase.from('memories').select('*').order('date', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/memories', authGuard(['admin', 'member']), async (req, res) => {
+  const { type, url, caption, date, likes, width } = req.body;
+  const { data, error } = await supabase.from('memories').insert([{
+    type, url, caption, date, likes: likes || 0, width: width || 'col-span-1 row-span-1', comments: []
+  }]).select().single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/memories/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await supabase.from('memories').delete().eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+app.put('/api/memories/:id', authGuard(['admin', 'member']), async (req, res) => {
+  const { comments, likes } = req.body;
+  const updates = {};
+  if (comments !== undefined) updates.comments = comments;
+  if (likes !== undefined) updates.likes = likes;
+
+  const { error } = await supabase.from('memories').update(updates).eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 // UPLOAD (Cloudinary)
 app.post('/api/upload', authGuard(['admin', 'member']), upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Missing file' });
-  const fileStr = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-  const result = await cloudinary.uploader.upload(fileStr, { folder: 'indianstrikers' });
-  res.json({ ok: true, url: result.secure_url });
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Missing file' });
+    const fileStr = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    const result = await cloudinary.uploader.upload(fileStr, { folder: 'indianstrikers' });
+    res.json({ ok: true, url: result.secure_url });
+  } catch (e) {
+    console.error('[Upload Error]', e);
+    res.status(500).json({ error: 'Upload failed: ' + e.message });
+  }
 });
 
 // HEALTH

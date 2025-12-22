@@ -451,3 +451,51 @@ export const deleteMembershipRequest = async (id: string) => {
 export const savePlayers = (p: Player[]) => console.warn("savePlayers deprecated");
 export const saveMatches = (m: Match[]) => console.warn("saveMatches deprecated");
 export const saveOpponents = (o: OpponentTeam[]) => console.warn("saveOpponents deprecated");
+
+// MEMORIES
+export interface Memory {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+  caption: string;
+  date: string;
+  likes: number;
+  width?: string;
+  comments: any[];
+}
+
+export const getMemories = async (): Promise<Memory[]> => {
+  const res = await fetch(`${API_URL}/memories`, { headers: getHeaders() });
+  return handleResponse(res);
+};
+
+export const addMemory = async (memory: Partial<Memory>) => {
+  const res = await fetch(`${API_URL}/memories`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(memory)
+  });
+  return handleResponse(res);
+}
+
+export const deleteMemory = async (id: string): Promise<void> => {
+  const token = sessionStorage.getItem('authToken');
+  const res = await fetch(`${API_URL}/memories/${id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to delete memory');
+};
+
+export const updateMemory = async (id: string, updates: Partial<Memory>): Promise<void> => {
+  const token = sessionStorage.getItem('authToken');
+  const res = await fetch(`${API_URL}/memories/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) throw new Error('Failed to update memory');
+};

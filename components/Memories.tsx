@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, Image as ImageIcon, Plus, X, Maximize2, Heart, Film, Calendar, Trash2, MessageCircle, Send, User } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -11,137 +11,99 @@ interface Comment {
   authorRole?: UserRole; // Optional to show badges
 }
 
-interface Memory {
-  id: string;
-  type: 'image' | 'video';
-  url: string;
-  caption: string;
-  date: string;
-  likes: number;
-  width?: string; // class for grid span
-  comments: Comment[];
-}
+import { getMemories, deleteMemory, addMemory, updateMemory, Memory } from '../services/storageService';
 
 interface MemoriesProps {
   userRole: UserRole;
   currentUser?: { name: string; username: string; id?: string };
 }
 
-// Seed data
-const INITIAL_MEMORIES: Memory[] = [
-  {
-    id: '1',
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1531415074968-055db6435128?q=80&w=1200&auto=format&fit=crop',
-    caption: 'Championship Winning Moment 2023',
-    date: '2023-11-15',
-    likes: 124,
-    width: 'col-span-2 row-span-2',
-    comments: [
-      { id: 'c1', text: 'What a clear night!', authorName: 'Coach Ravi', timestamp: '2023-11-16T10:00:00Z', authorRole: 'admin' },
-      { id: 'c2', text: 'Incredible victory!', authorName: 'Amit', timestamp: '2023-11-16T10:05:00Z', authorRole: 'member' }
-    ]
-  },
-  {
-    id: '2',
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?q=80&w=800&auto=format&fit=crop',
-    caption: 'Training Camp - Day 1',
-    date: '2024-01-10',
-    likes: 45,
-    width: 'col-span-1 row-span-1',
-    comments: []
-  },
-  {
-    id: '3',
-    type: 'video',
-    url: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=1000&auto=format&fit=crop', // Placeholder thumb
-    caption: 'Match Highlights vs Royal CC',
-    date: '2024-02-20',
-    likes: 89,
-    width: 'col-span-1 row-span-1',
-    comments: []
-  },
-  {
-    id: '4',
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1593341646782-e0b495cffd32?q=80&w=800&auto=format&fit=crop',
-    caption: 'Team Huddle before the big game',
-    date: '2023-12-05',
-    likes: 67,
-    width: 'col-span-1 row-span-2',
-    comments: []
-  },
-  {
-    id: '5',
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1606925797300-0b35e9d1794e?q=80&w=800&auto=format&fit=crop',
-    caption: 'Awards Night',
-    date: '2023-11-20',
-    likes: 150,
-    width: 'col-span-1 row-span-1',
-    comments: []
-  },
-  {
-    id: '6',
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?q=80&w=800&auto=format&fit=crop',
-    caption: 'Practice Session Nets',
-    date: '2024-03-01',
-    likes: 32,
-    width: 'col-span-1 row-span-1',
-    comments: []
-  }
-];
-
 const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
-  const [memories, setMemories] = useState<Memory[]>(INITIAL_MEMORIES);
+  const [memories, setMemories] = useState<Memory[]>([]);
   const [filter, setFilter] = useState<'all' | 'image' | 'video'>('all');
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // New Memory Form
-  const [newCaption, setNewCaption] = useState('');
+  // Add Memory State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newType, setNewType] = useState<'image' | 'video'>('image');
+  const [newCaption, setNewCaption] = useState('');
   const [newUrl, setNewUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   // New Comment Form
   const [newComment, setNewComment] = useState('');
 
   const isAdmin = userRole === 'admin';
   const canComment = userRole === 'admin' || userRole === 'member';
+  const canDelete = userRole === 'admin';
+  // const canAdd = userRole === 'admin' || userRole === 'member'; // Assuming logic for add button visibility
 
-  const filteredMemories = memories.filter(m => filter === 'all' ? true : m.type === filter);
+  useEffect(() => {
+    getMemories().then(setMemories).catch(console.error);
+  }, []);
 
-  const handleAddMemory = (e: React.FormEvent) => {
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Delete this memory?')) {
+      try {
+        await deleteMemory(id);
+        setMemories(prev => prev.filter(m => m.id !== id));
+      } catch (e) {
+        alert('Failed to delete memory');
+      }
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('http://localhost:4001/api/upload', {
+        method: 'POST',
+        body: formData,
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('authToken')}` }
+      });
+      const data = await res.json();
+      if (data.url) setNewUrl(data.url);
+      else alert('Upload failed: ' + (data.error || 'Unknown error'));
+    } catch (e) {
+      console.error(e);
+      alert('Upload failed: ' + (e instanceof Error ? e.message : 'Network error'));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAddMemory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUrl) return;
 
-    const newMemory: Memory = {
-      id: Date.now().toString(),
-      type: newType,
-      url: newUrl,
-      caption: newCaption || 'New Memory',
-      date: new Date().toISOString().split('T')[0],
-      likes: 0,
-      width: 'col-span-1 row-span-1',
-      comments: []
-    };
+    try {
+      const memoryData = {
+        type: newType,
+        url: newUrl,
+        caption: newCaption,
+        date: new Date().toISOString().split('T')[0],
+        likes: 0,
+        width: 'col-span-1 row-span-1', // Default size
+        comments: []
+      };
 
-    setMemories([newMemory, ...memories]);
-    setIsAddModalOpen(false);
-    setNewCaption('');
-    setNewUrl('');
+      const savedMemory = await addMemory(memoryData);
+      setMemories(prev => [savedMemory, ...prev]);
+      setIsAddModalOpen(false);
+      setNewUrl('');
+      setNewCaption('');
+    } catch (e) {
+      alert('Failed to add memory');
+      console.error(e);
+    }
   };
 
-  const handleDeleteMemory = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this memory?')) return;
-    setMemories(memories.filter(m => m.id !== id));
-    if (selectedMemory?.id === id) setSelectedMemory(null);
-  };
-
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !selectedMemory) return;
 
@@ -153,26 +115,39 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
       timestamp: new Date().toISOString()
     };
 
-    const updatedMemory = {
-      ...selectedMemory,
-      comments: [...(selectedMemory.comments || []), comment]
-    };
+    const updatedComments = [...(selectedMemory.comments || []), comment];
 
-    setMemories(memories.map(m => m.id === selectedMemory.id ? updatedMemory : m));
-    setSelectedMemory(updatedMemory);
-    setNewComment('');
-  };
+    try {
+      await updateMemory(selectedMemory.id, { comments: updatedComments });
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      const updatedMemory = { ...selectedMemory, comments: updatedComments };
+
+      setMemories(memories.map(m => m.id === selectedMemory.id ? updatedMemory : m));
+      setSelectedMemory(updatedMemory);
+      setNewComment('');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to post comment');
     }
   };
+
+  const handleLike = async () => {
+    if (!selectedMemory) return;
+    const newLikes = (selectedMemory.likes || 0) + 1;
+
+    try {
+      await updateMemory(selectedMemory.id, { likes: newLikes });
+
+      const updatedMemory = { ...selectedMemory, likes: newLikes };
+      setMemories(memories.map(m => m.id === selectedMemory.id ? updatedMemory : m));
+      setSelectedMemory(updatedMemory);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to like post');
+    }
+  };
+
+  const filteredMemories = memories.filter(m => filter === 'all' || m.type === filter);
 
   return (
     <div className="space-y-8 animate-fade-in pb-20">
@@ -196,7 +171,7 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
             ))}
           </div>
 
-          {isAdmin && (
+          {(isAdmin || canComment) && (
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-105"
@@ -216,8 +191,8 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
             onClick={() => setSelectedMemory(item)}
             className={`
               group relative rounded-2xl overflow-hidden cursor-pointer shadow-sm border border-slate-100 bg-slate-200
-              ${item.width}
-              ${idx % 5 === 0 ? 'md:col-span-2 md:row-span-2' : ''} 
+              ${item.width || 'col-span-1 row-span-1'}
+              ${(idx % 5 === 0 && !item.width) ? 'md:col-span-2 md:row-span-2' : ''} 
             `}
           >
             <img
@@ -254,7 +229,7 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
             {/* Admin Delete Button */}
             {isAdmin && (
               <button
-                onClick={(e) => handleDeleteMemory(e, item.id)}
+                onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                 className="absolute top-2 right-2 bg-red-600/90 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                 title="Delete Memory"
               >
@@ -282,9 +257,8 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
             <div className="flex-1 bg-black flex items-center justify-center relative min-h-[400px]">
               {selectedMemory.type === 'video' ? (
                 <div className="relative w-full h-full flex items-center justify-center">
-                  <img src={selectedMemory.url} alt={selectedMemory.caption} className="w-full h-full object-contain opacity-50" />
-                  <Play size={64} className="absolute text-white/80" />
-                  <p className="absolute bottom-10 text-white/50 text-sm">Video playback placeholder</p>
+                  {/* In a real app, use a video player component */}
+                  <video src={selectedMemory.url} controls autoPlay className="max-w-full max-h-[80vh] rounded-xl" />
                 </div>
               ) : (
                 <img src={selectedMemory.url} alt={selectedMemory.caption} className="max-w-full max-h-[80vh] object-contain" />
@@ -299,7 +273,11 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
                   <h3 className="text-2xl font-bold text-white leading-tight">{selectedMemory.caption}</h3>
                   {isAdmin && (
                     <button
-                      onClick={(e) => handleDeleteMemory(e, selectedMemory.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(selectedMemory.id);
+                        setSelectedMemory(null);
+                      }}
                       className="text-red-400 hover:text-red-300 p-1"
                       title="Delete Memory"
                     >
@@ -321,15 +299,8 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
 
                     <div className="space-y-3">
                       {(selectedMemory.comments && selectedMemory.comments.length > 0) ? (
-                        selectedMemory.comments.map(comment => (
-                          <div key={comment.id} className="bg-white/5 rounded-xl p-3">
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm font-bold text-white flex items-center gap-2">
-                                {comment.authorName}
-                                {comment.authorRole === 'admin' && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 rounded uppercase">Admin</span>}
-                              </span>
-                              <span className="text-[10px] text-zinc-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
-                            </div>
+                        selectedMemory.comments.map((comment: any, idx: number) => (
+                          <div key={idx} className="bg-white/5 rounded-xl p-3">
                             <p className="text-sm text-zinc-300">{comment.text}</p>
                           </div>
                         ))
@@ -344,7 +315,10 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
               {/* Action Bar */}
               <div className="p-4 bg-zinc-950 border-t border-white/10 space-y-4">
                 <div className="flex items-center gap-4">
-                  <button className="flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-colors">
+                  <button
+                    onClick={handleLike}
+                    className="flex-1 bg-white text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-colors"
+                  >
                     <Heart size={18} className="text-red-500 fill-red-500" /> Like ({selectedMemory.likes})
                   </button>
                   <button className="p-3 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700" title="Maximize" aria-label="Maximize image">
@@ -358,7 +332,7 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
                     <input
                       value={newComment}
                       onChange={e => setNewComment(e.target.value)}
-                      placeholder="Add a comment..."
+                      placeholder="Add a comment... (Not persisted)"
                       className="w-full bg-zinc-800/50 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50 focus:bg-zinc-800 transition-all text-sm"
                     />
                     <button
@@ -398,13 +372,22 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
 
               {/* Upload */}
               <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 hover:border-blue-400 transition-colors relative">
-                <input type="file" title="Upload a memory" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleFileUpload} />
-                {newUrl ? (
-                  <img
-                    src={newUrl}
-                    alt="New memory preview"
-                    className="h-32 object-contain rounded-lg shadow-md"
-                  />
+                <input type="file" title="Upload a memory" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*,video/*" onChange={handleFileUpload} />
+                {isUploading ? (
+                  <p className="text-blue-600 font-bold animate-pulse">Uploading...</p>
+                ) : newUrl ? (
+                  newType === 'image' ? (
+                    <img
+                      src={newUrl}
+                      alt="New memory preview"
+                      className="h-32 object-contain rounded-lg shadow-md"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <Film size={32} className="text-blue-500 mb-2" />
+                      <p className="text-sm font-bold text-slate-700">Video Selected</p>
+                    </div>
+                  )
                 ) : (
                   <>
                     <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-2">
