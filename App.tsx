@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { App as CapacitorApp } from '@capacitor/app';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import PlayerList from './components/PlayerList';
@@ -41,6 +42,27 @@ const AppContent: React.FC<{
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleBackButton = async () => {
+      // If on home screen, exit app
+      if (location.pathname === '/home' || location.pathname === '/') {
+        await CapacitorApp.exitApp();
+      } else {
+        // Otherwise go back in history
+        navigate(-1);
+      }
+    };
+
+    // Add listener
+    const listener = CapacitorApp.addListener('backButton', handleBackButton);
+
+    // Cleanup
+    return () => {
+      listener.then(l => l.remove());
+    };
+  }, [location, navigate]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
