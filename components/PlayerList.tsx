@@ -1,5 +1,6 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
 import { getAppUsers } from '../services/storageService';
 import { Plus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search } from 'lucide-react';
@@ -78,6 +79,23 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
   const [activeEditTab, setActiveEditTab] = useState<'general' | 'batting' | 'bowling'>('general');
 
   const [users, setUsers] = useState<AppUser[]>([]); // New State for user linking
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Handle deep-linking to player profile
+  useEffect(() => {
+    const playerId = searchParams.get('id');
+    if (playerId && players.length > 0) {
+      const player = players.find(p => p.id === playerId);
+      if (player) {
+        setViewingPlayer(player);
+        setActiveStatTab('batting');
+        // Clear param to avoid re-opening if user closes modal
+        const newParams = new Set(searchParams);
+        searchParams.delete('id');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, players, setSearchParams]);
 
   const fetchUsers = async () => {
     if (userRole === 'admin') {

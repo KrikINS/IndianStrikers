@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   Users,
   Calendar,
@@ -17,7 +17,8 @@ import {
   Clock,
   Upload,
   Settings,
-  UserPlus
+  UserPlus,
+  ArrowRight
 } from 'lucide-react';
 import { UserRole, Match } from '../types';
 import MembershipRequestForm from './MembershipRequestForm';
@@ -31,10 +32,11 @@ interface SidebarProps {
   onUpdateLogo: (url: string) => void;
   matches: Match[];
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string };
-  linkedPlayer?: { name: string; avatarUrl?: string }; // Minimal player type needed
+  linkedPlayer?: { id?: string; name: string; avatarUrl?: string }; // Minimal player type needed
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', onSignOut, teamLogo, onUpdateLogo, matches = [], currentUser, linkedPlayer }) => {
+  const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -96,9 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
       `}>
         <div className="p-5 flex flex-col gap-2 shrink-0 bg-slate-950/30">
           <div className="flex items-center justify-between">
-            {/* Brand Logo - Top Corner */}
-            <div className="w-8 h-8"></div>
-            <button onClick={toggle} className="md:hidden text-gray-400 hover:text-white" title="Close sidebar">
+            <button onClick={toggle} className="md:hidden text-gray-400 hover:text-white ml-auto" title="Close sidebar">
               <X size={24} />
             </button>
           </div>
@@ -169,9 +169,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
           ))}
         </nav>
 
-        <div className="p-6 mt-auto">
+        <div className="p-6 mt-auto border-t border-slate-800 bg-slate-900/80 backdrop-blur-md">
           {/* User Badge */}
-          <div className="mb-4 flex items-center justify-between p-3 bg-slate-800 rounded-xl border border-slate-700">
+          <div
+            onClick={() => {
+              if (linkedPlayer?.id) {
+                navigate(`/roster?id=${linkedPlayer.id}`);
+                if (window.innerWidth < 768) toggle();
+              }
+            }}
+            className={`mb-4 flex items-center justify-between p-3 bg-slate-800 rounded-xl border border-slate-700 ${linkedPlayer?.id ? 'cursor-pointer hover:bg-slate-700/50 transition-colors group/user' : ''}`}
+          >
             <div className="flex items-center gap-3 overflow-hidden">
               <div className={`
                   w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden
@@ -182,7 +190,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
                 ) : 'bg-slate-900 border border-slate-600'}
                 `}>
                 {effectiveAvatar ? (
-                  <img src={effectiveAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                  <img src={effectiveAvatar} alt="Avatar" className="w-full h-full object-cover group-hover/user:scale-110 transition-transform" />
                 ) : (
                   userRole === 'admin' ? <Shield size={18} /> :
                     userRole === 'member' ? <User size={18} /> :
@@ -192,17 +200,32 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
               <div className="overflow-hidden">
                 <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Logged In</p>
                 {/* Use linked player name if available, else current user name */}
-                <p className="text-sm font-bold text-white capitalize truncate">{linkedPlayer?.name || currentUser?.name || userRole}</p>
+                <p className="text-sm font-bold text-white capitalize truncate group-hover/user:text-blue-300 transition-colors">{linkedPlayer?.name || currentUser?.name || userRole}</p>
               </div>
             </div>
+            {linkedPlayer?.id ? (
+              <div className="p-1.5 text-slate-500 group-hover/user:text-blue-400">
+                <ArrowRight size={14} />
+              </div>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); onSignOut(); }}
+                className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-all"
+                title="Sign Out"
+              >
+                <LogOut size={18} />
+              </button>
+            )}
+          </div>
+
+          {linkedPlayer?.id && (
             <button
               onClick={onSignOut}
-              className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-all"
-              title="Sign Out"
+              className="w-full py-2 flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30"
             >
-              <LogOut size={18} />
+              <LogOut size={14} /> SIGN OUT
             </button>
-          </div>
+          )}
 
           {/* Join Us Button for Guests */}
           {userRole === 'guest' && (

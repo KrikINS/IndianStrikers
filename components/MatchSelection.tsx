@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Player, PlayerRole, UserRole, Match } from '../types';
 import { Trophy, AlertTriangle, Lock, ArrowRight, ArrowLeft, Share2, Loader2, Calendar, MapPin, Sword, Shield, CircleDot, UserX } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -65,10 +66,15 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
   const [imgError, setImgError] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Find next match
-  const nextMatch = matches
+  const location = useLocation();
+
+  // Find next match as fallback
+  const nextMatchFallback = matches
     .filter(m => m.isUpcoming)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+  // Prioritize match from state else use next match
+  const nextMatch = location.state?.selectedMatch || nextMatchFallback;
 
   const canEdit = userRole === 'admin' && nextMatch && (!nextMatch.isSquadLocked || userRole === 'admin');
   // Admin can always edit? "can only be changed by the admin once locked" -> implies admin CAN change it.

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Match, OpponentTeam, UserRole } from '../types';
-import { Calendar, MapPin, Trophy, Clock, Plus, ChevronDown, ChevronUp, ArrowRight, Search, Handshake, Edit2, X, CheckCircle, Zap } from 'lucide-react';
+import { Calendar, MapPin, Trophy, Clock, Plus, ChevronDown, ChevronUp, ArrowRight, Search, Handshake, Edit2, X, CheckCircle, Zap, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface MatchScheduleProps {
@@ -400,6 +400,13 @@ const MatchSchedule: React.FC<MatchScheduleProps> = ({ matches, opponents, onAdd
                     <><Edit2 size={16} /> Update Scorecard</>
                   )}
                 </button>
+                <button
+                  onClick={() => navigate('/selection', { state: { selectedMatch: match } })}
+                  className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 mt-2 border border-slate-200/50 hover:border-slate-300"
+                >
+                  <ClipboardList size={16} /> Select Squad
+                </button>
+
               </div>
             ))
           )}
