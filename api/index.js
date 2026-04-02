@@ -84,11 +84,25 @@ app.post('/api/users', authGuard(['admin']), async (req, res) => {
     username,
     password_hash: hash,
     role,
+    name,
     avatar_url
-    // name is not in schema? schema has username. 
-    // Wait, schema.sql says: create table app_users (..., username text unique, ...). It DOES NOT have 'name'. 
-    // Frontend UserManagement expects 'name'. I might need to alter schema or just use username as name.
   }]).select().single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+app.put('/api/users/:id', authGuard(['admin']), async (req, res) => {
+  const { username, password, role, name, avatar_url } = req.body;
+  const updates = { username, role, name, avatar_url, updated_at: new Date() };
+  
+  if (password && password.trim().length > 0) {
+    updates.password_hash = await bcrypt.hash(password, 10);
+  }
+
+  const { data, error } = await supabase.from('app_users')
+    .update(updates)
+    .eq('id', req.params.id)
+    .select().single();
+
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });

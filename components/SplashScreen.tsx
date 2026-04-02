@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Ticket, Lock, Loader2, ChevronRight, X, User } from 'lucide-react';
+import { Shield, Users, Ticket, Lock, Loader2, ChevronRight, X, User, Eye, EyeOff } from 'lucide-react';
 import { UserRole } from '../types';
 import KirikINSLogo from './KirikINSLogo';
 import { login } from '../services/storageService';
@@ -16,6 +15,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -90,6 +90,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
       setError('');
       setUserId('');
       setPassword('');
+      setShowPassword(false);
       setAnimationStep(4);
     }
   };
@@ -288,12 +289,20 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Password"
-                      className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 text-white pl-12 pr-4 py-3 rounded-xl outline-none transition-colors placeholder:text-slate-600"
+                      className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 text-white pl-12 pr-12 py-3 rounded-xl outline-none transition-colors placeholder:text-slate-600"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                   {error && (
                     <div className="mt-2 text-red-400 text-xs flex items-center gap-1 animate-pulse">

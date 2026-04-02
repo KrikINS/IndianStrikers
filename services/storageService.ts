@@ -47,11 +47,20 @@ export const getAppUsers = async (): Promise<AppUser[]> => {
   return data.map((u: any) => ({
     id: u.id,
     username: u.username,
-    name: u.username,
+    name: u.name || u.username,
     role: u.role,
     avatarUrl: u.avatar_url,
     password: ''
   }));
+};
+
+export const updateAppUser = async (id: string, user: Partial<AppUser>) => {
+  const res = await fetch(`${API_URL}/users/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(user)
+  });
+  return handleResponse(res);
 };
 
 export const addAppUser = async (user: Partial<AppUser>) => {

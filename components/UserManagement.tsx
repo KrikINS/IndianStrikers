@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppUser, UserRole, MembershipRequest } from '../types';
-import { getAppUsers, addAppUser, deleteAppUser, getMembershipRequests, updateMembershipRequestStatus, deleteMembershipRequest } from '../services/storageService';
+import { getAppUsers, addAppUser, deleteAppUser, getMembershipRequests, updateMembershipRequestStatus, deleteMembershipRequest, updateAppUser } from '../services/storageService';
 import { Plus, Trash2, Edit2, Shield, User, Ticket, X, Check, Search, Lock, UserPlus, FileText, CheckCircle } from 'lucide-react';
 
 const UserManagement: React.FC = () => {
@@ -66,15 +66,23 @@ const UserManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.username && formData.password && formData.role) {
+    if (formData.username && formData.role) {
       if (editingUser) {
-        // Update - Not implemented in API yet for simplicity, or we can just ignore
-        alert("Edit not supported in this version");
+        // Update
+        updateAppUser(editingUser.id, formData).then(() => {
+          alert("User updated successfully");
+          window.location.reload();
+        }).catch(e => alert("Failed to update user: " + e.message));
       } else {
         // Add
+        if (!formData.password) {
+          alert("Password is required for new users");
+          return;
+        }
         addAppUser(formData).then(newUser => {
+          alert("User created successfully");
           window.location.reload();
-        }).catch(e => alert("Failed to create user"));
+        }).catch(e => alert("Failed to create user: " + e.message));
       }
       setIsModalOpen(false);
     }
@@ -356,13 +364,18 @@ const UserManagement: React.FC = () => {
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
                 <input
-                  required
+                  required={!editingUser}
                   type="text"
                   value={formData.password}
                   onChange={e => setFormData({ ...formData, password: e.target.value })}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                  placeholder="Secure password"
+                  placeholder={editingUser ? "Enter new password if changing" : "Secure password"}
                 />
+                {editingUser && (
+                  <p className="mt-1 text-[10px] text-blue-600 font-medium italic">
+                    Note: Leave blank to keep the current password.
+                  </p>
+                )}
               </div>
 
               <div>

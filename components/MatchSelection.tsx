@@ -280,17 +280,17 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                     ${nextMatch?.isSquadLocked
                   ? 'bg-amber-500 hover:bg-amber-600 text-white'
                   : selectedIds.size !== 11
-                    ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                    ? 'bg-slate-200 text-slate-600 cursor-not-allowed'
                     : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/30 hover:shadow-xl hover:scale-105'
                 }
                   `}
             >
-              {nextMatch?.isSquadLocked ? <><Lock size={16} /> Unlock Team Sheet</> : (selectedIds.size !== 11 ? `Select ${11 - selectedIds.size} more` : <><Shield size={16} /> Lock & Confirm Squad</>)}
+              {nextMatch?.isSquadLocked ? <><Lock size={16} /> Unlock Team Sheet</> : (selectedIds.size !== 11 ? `Select ${11 - selectedIds.size} more` : <><Shield size={16} /> Lock Team & Squad</>)}
             </button>
           ) : (
             <button
               disabled={true}
-              className="w-full py-4 rounded-xl font-bold bg-slate-200 text-slate-500 cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-4 rounded-xl font-bold bg-slate-200 text-slate-700 cursor-not-allowed flex items-center justify-center gap-2"
             >
               <Lock size={16} /> Team Locked
             </button>
@@ -301,7 +301,7 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
             disabled={!nextMatch?.isSquadLocked || isGenerating}
             className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-xl
                   ${!nextMatch?.isSquadLocked
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                ? 'bg-slate-100 text-slate-500 cursor-not-allowed'
                 : 'bg-indigo-900 text-white hover:bg-black'
               }
                 `}
@@ -350,23 +350,23 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   isSquadLocked: !isLocked
                 });
               }}
-              className={`w-full py-3 rounded-xl font-bold transition-all
+              className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2
                   ${nextMatch?.isSquadLocked
                   ? 'bg-amber-500 text-white'
                   : selectedIds.size !== 11
-                    ? 'bg-slate-300 text-slate-500 disabled:opacity-100'
+                    ? 'bg-slate-300 text-slate-600 disabled:opacity-100'
                     : 'bg-blue-600 text-white'
                 }
                 `}
             >
-              {nextMatch?.isSquadLocked ? 'Unlock Team Sheet' : (selectedIds.size !== 11 ? `Select ${11 - selectedIds.size} more` : 'Lock & Confirm Squad')}
+              {nextMatch?.isSquadLocked ? <><Lock size={16} /> Unlock Team Sheet</> : (selectedIds.size !== 11 ? `Select ${11 - selectedIds.size} more` : <><Shield size={16} /> Lock Team & Squad</>)}
             </button>
           ) : (
             <button
               disabled={true}
-              className="w-full py-3 rounded-xl font-bold transition-all bg-slate-200 text-slate-500 cursor-not-allowed"
+              className="w-full py-3 rounded-xl font-bold transition-all bg-slate-200 text-slate-700 cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Team Locked
+              <Lock size={16} /> Team Locked
             </button>
           )}
 
@@ -375,7 +375,7 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
             disabled={!nextMatch?.isSquadLocked || isGenerating}
             className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2
                   ${!nextMatch?.isSquadLocked
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                ? 'bg-slate-100 text-slate-500 cursor-not-allowed'
                 : 'bg-indigo-900 text-white hover:bg-black'
               }
                 `}

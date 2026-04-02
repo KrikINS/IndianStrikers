@@ -141,7 +141,13 @@ const AppContent: React.FC<{
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </div>
-
+        
+        {/* Persistent Branding Logo - Fixed Bottom Right, 50% Size */}
+        <div className="fixed bottom-4 right-4 z-[9999] pointer-events-none select-none opacity-40 transition-opacity hover:opacity-100 hidden md:block">
+          <div className="scale-50 origin-bottom-right">
+            <KirikINSLogo size="medium" />
+          </div>
+        </div>
 
       </main>
     </div>

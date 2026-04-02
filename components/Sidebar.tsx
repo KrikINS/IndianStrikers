@@ -20,7 +20,6 @@ import {
   UserPlus
 } from 'lucide-react';
 import { UserRole, Match } from '../types';
-import KirikINSLogo from './KirikINSLogo';
 import MembershipRequestForm from './MembershipRequestForm';
 
 interface SidebarProps {
@@ -37,8 +36,6 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', onSignOut, teamLogo, onUpdateLogo, matches = [], currentUser, linkedPlayer }) => {
   const [imgError, setImgError] = useState(false);
-  const [nextMatch, setNextMatch] = useState<Match | null>(null);
-  const [timeLeft, setTimeLeft] = useState<string>('');
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,55 +43,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
   useEffect(() => {
     setImgError(false);
   }, [teamLogo]);
-
-  // Next Match Logic
-  useEffect(() => {
-    if (!matches || !Array.isArray(matches)) {
-      setNextMatch(null);
-      return;
-    }
-
-    const upcoming = matches
-      .filter(m => m.isUpcoming)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    setNextMatch(upcoming.length > 0 ? upcoming[0] : null);
-  }, [matches]);
-
-  // Countdown Logic
-  useEffect(() => {
-    if (!nextMatch) return;
-
-    const calculateTimeLeft = () => {
-      const matchDateStr = nextMatch.date;
-      const matchTimeStr = nextMatch.tossTime || '00:00';
-
-      const targetDate = new Date(`${matchDateStr}T${matchTimeStr}`);
-      const now = new Date();
-      const diff = targetDate.getTime() - now.getTime();
-
-      if (diff <= 0) {
-        if (targetDate.toDateString() === now.toDateString()) {
-          return "Today!";
-        }
-        return "Started";
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-      if (days > 0) return `${days}d ${hours}h`;
-      return `${hours}h ${minutes}m`;
-    };
-
-    setTimeLeft(calculateTimeLeft());
-    const interval = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [nextMatch]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -149,9 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
         <div className="p-5 flex flex-col gap-2 shrink-0 bg-slate-950/30">
           <div className="flex items-center justify-between">
             {/* Brand Logo - Top Corner */}
-            <div className="opacity-90 hover:opacity-100 transition-opacity">
-              <KirikINSLogo size="medium" />
-            </div>
+            <div className="w-8 h-8"></div>
             <button onClick={toggle} className="md:hidden text-gray-400 hover:text-white" title="Close sidebar">
               <X size={24} />
             </button>
@@ -268,50 +214,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
             </button>
           )}
 
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-xl border border-slate-700/50 shadow-inner min-h-[140px] flex flex-col justify-center">
-            {nextMatch ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-green-400 uppercase tracking-widest flex items-center gap-1">
-                    <Calendar size={12} /> Next Match
-                  </p>
-                  {timeLeft && <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded font-bold animate-pulse">{timeLeft}</span>}
-                </div>
-
-                <div>
-                  <p className="text-slate-400 text-[10px] font-bold uppercase mb-0.5">VS Opponent</p>
-                  <p className="text-white font-bold text-lg leading-tight truncate">{nextMatch.opponent}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase">Date</p>
-                    <p className="text-slate-200">{new Date(nextMatch.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase">Ground</p>
-                    <p className="text-slate-200 truncate" title={nextMatch.venue}>{nextMatch.venue}</p>
-                  </div>
-                </div>
-
-                {nextMatch.tossTime && (
-                  <div className="flex items-center gap-1 text-xs text-orange-300 font-medium">
-                    <Clock size={12} /> Toss at {nextMatch.tossTime}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-2 space-y-2">
-                <div className="w-10 h-10 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto text-slate-500">
-                  <Calendar size={20} />
-                </div>
-                <div>
-                  <p className="text-slate-300 font-bold text-sm">No Upcoming Matches</p>
-                  <p className="text-slate-500 text-xs mt-1">Match announcement coming soon</p>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </aside >
 
