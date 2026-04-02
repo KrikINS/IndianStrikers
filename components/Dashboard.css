@@ -5,7 +5,7 @@
 
 /* Progress bar containers - width is set dynamically via CSS custom properties */
 .progress-bar-fill {
-    width: var(--progress-width, 0%);
+    height: 100%;
 }
 
 @keyframes flash-text {

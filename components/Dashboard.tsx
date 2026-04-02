@@ -133,6 +133,18 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
     return isBatsmanHero || isBowlerHero;
   }).slice(0, 6);
 
+  const statsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (statsRef.current) {
+      const bars = statsRef.current.querySelectorAll('[data-width]');
+      bars.forEach((bar) => {
+        const width = (bar as HTMLElement).getAttribute('data-width');
+        if (width) (bar as HTMLElement).style.width = width;
+      });
+    }
+  }, [topRunScorers, topWicketTakers]);
+
   // -- Table Logic --
   const handleAddRow = () => {
     const newEntry: TournamentTableEntry = {
@@ -546,7 +558,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 relative z-10">
+        <div ref={statsRef} className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 relative z-10">
           {/* Batting */}
           <div className="space-y-3 md:space-y-4">
             <h4 className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1 border-b border-slate-100 pb-2 mb-2">
@@ -566,7 +578,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                     <span className="text-xs font-black text-slate-600">{player.displayRuns}</span>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden w-full">
-                    <div className="h-full bg-orange-500 rounded-full transition-all duration-1000 progress-bar-fill" style={{ '--progress-width': `${(player.displayRuns / (topRunScorers[0]?.displayRuns || 1)) * 100}%` } as React.CSSProperties}></div>
+                    <div className="h-full bg-orange-500 rounded-full transition-all duration-1000 progress-bar-fill" data-width={`${(player.displayRuns / (topRunScorers[0]?.displayRuns || 1)) * 100}%`}></div>
                   </div>
                 </div>
               </div>
@@ -592,7 +604,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                     <span className="text-xs font-black text-slate-600">{player.displayWickets}</span>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden w-full">
-                    <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 progress-bar-fill" style={{ '--progress-width': `${(player.displayWickets / (topWicketTakers[0]?.displayWickets || 1)) * 100}%` } as React.CSSProperties}></div>
+                    <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 progress-bar-fill" data-width={`${(player.displayWickets / (topWicketTakers[0]?.displayWickets || 1)) * 100}%`}></div>
                   </div>
                 </div>
               </div>
@@ -600,6 +612,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
           </div>
         </div>
       </div>
+
 
       {/* Floating Next Match Modal (Relocated from Sidebar) */}
       {nextMatch && showNextMatchModal && (

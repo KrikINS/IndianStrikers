@@ -65,16 +65,17 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
   const [isGenerating, setIsGenerating] = useState(false);
   const [imgError, setImgError] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const location = useLocation();
 
-  // Find next match as fallback
+  // Find next match fallback
   const nextMatchFallback = matches
     .filter(m => m.isUpcoming)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
 
   // Prioritize match from state else use next match
-  const nextMatch = location.state?.selectedMatch || nextMatchFallback;
+  const nextMatch = (location.state as any)?.selectedMatch || nextMatchFallback;
 
   const canEdit = userRole === 'admin' && nextMatch && (!nextMatch.isSquadLocked || userRole === 'admin');
   // Admin can always edit? "can only be changed by the admin once locked" -> implies admin CAN change it.
@@ -127,6 +128,16 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
   const bowlers = selectedPlayers.filter(p => p.role === PlayerRole.BOWLER).length;
   const allRounders = selectedPlayers.filter(p => p.role === PlayerRole.ALL_ROUNDER).length;
   const keepers = selectedPlayers.filter(p => p.role === PlayerRole.WICKET_KEEPER).length;
+
+  useEffect(() => {
+    if (containerRef.current) {
+      const bars = containerRef.current.querySelectorAll('[data-width]');
+      bars.forEach((bar) => {
+        const width = (bar as HTMLElement).getAttribute('data-width');
+        if (width) (bar as HTMLElement).style.width = width;
+      });
+    }
+  }, [batsmen, bowlers, allRounders, keepers]);
 
   const handleGenerateImage = async () => {
     if (!cardRef.current || selectedIds.size === 0) return;
@@ -212,7 +223,7 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
         </div>
 
         {/* Middle Column: Visualizer (Desktop) or Spacer */}
-        <div className="lg:col-span-4 hidden lg:flex flex-col justify-center items-center space-y-6 order-2">
+        <div ref={containerRef} className="lg:col-span-4 hidden lg:flex flex-col justify-center items-center space-y-6 order-2">
           <div className="bg-white p-6 rounded-2xl shadow-xl w-full border border-slate-100">
             <h3 className="text-center font-bold text-slate-800 mb-6 flex items-center justify-center gap-2">
               <Trophy size={18} className="text-yellow-500" /> Balance
@@ -223,8 +234,8 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-500">Batsmen</span>
                   <span className="text-slate-800">{batsmen}</span>
                 </div>
-                <div className={styles.progressBar} style={{ '--progress-width': `${(batsmen / 6) * 100}%` } as React.CSSProperties}>
-                  <div className={`${styles.progressBarFill} ${styles.progressBarFillBatsmen}`}></div>
+                <div className={styles.progressBar}>
+                  <div className={`${styles.progressBarFill} ${styles.progressBarFillBatsmen}`} data-width={`${(batsmen / 6) * 100}%`}></div>
                 </div>
               </div>
 
@@ -233,8 +244,8 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-500">Bowlers</span>
                   <span className="text-slate-800">{bowlers}</span>
                 </div>
-                <div className={styles.progressBar} style={{ '--progress-width': `${(bowlers / 4) * 100}%` } as React.CSSProperties}>
-                  <div className={`${styles.progressBarFill} ${styles.progressBarFillBowlers}`}></div>
+                <div className={styles.progressBar}>
+                  <div className={`${styles.progressBarFill} ${styles.progressBarFillBowlers}`} data-width={`${(bowlers / 4) * 100}%`}></div>
                 </div>
               </div>
 
@@ -243,8 +254,8 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-500">All-Rounders</span>
                   <span className="text-slate-800">{allRounders}</span>
                 </div>
-                <div className={styles.progressBar} style={{ '--progress-width': `${(allRounders / 2) * 100}%` } as React.CSSProperties}>
-                  <div className={`${styles.progressBarFill} ${styles.progressBarFillAllRounders}`}></div>
+                <div className={styles.progressBar}>
+                  <div className={`${styles.progressBarFill} ${styles.progressBarFillAllRounders}`} data-width={`${(allRounders / 2) * 100}%`}></div>
                 </div>
               </div>
 
@@ -253,8 +264,8 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                   <span className="text-slate-500">Wicket Keeper</span>
                   <span className="text-slate-800">{keepers}</span>
                 </div>
-                <div className={styles.progressBar} style={{ '--progress-width': `${(keepers / 1) * 100}%` } as React.CSSProperties}>
-                  <div className={`${styles.progressBarFill} ${styles.progressBarFillKeeper}`}></div>
+                <div className={styles.progressBar}>
+                  <div className={`${styles.progressBarFill} ${styles.progressBarFillKeeper}`} data-width={`${(keepers / 1) * 100}%`}></div>
                 </div>
               </div>
             </div>

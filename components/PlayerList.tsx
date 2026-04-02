@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
 import { getAppUsers } from '../services/storageService';
 import { Plus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search } from 'lucide-react';
+import styles from './PlayerList.module.css';
 
 interface PlayerListProps {
   players: Player[];
@@ -334,12 +335,13 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
       <div className={`h-20 md:h-24 bg-gradient-to-r ${player.isAvailable ? 'from-slate-800 to-slate-900' : 'from-slate-200 to-slate-300'} relative overflow-hidden`}>
         {/* Jersey Number Watermark */}
         {player.jerseyNumber && (
-          <div className={`absolute top-1 right-2 text-[4rem] font-black italic select-none z-0 pointer-events-none ${player.isAvailable ? 'text-white/25' : 'text-slate-900/15'}`} style={{ fontFamily: 'Impact, sans-serif' }}>
+          <div className={`absolute top-1 right-2 text-[4rem] font-black italic select-none z-0 pointer-events-none ${styles.jerseyWatermark} ${player.isAvailable ? 'text-white/25' : 'text-slate-900/15'}`}>
             {player.jerseyNumber}
           </div>
         )}
 
         <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
+
           {player.isCaptain && (
             <span className="bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded shadow-sm tracking-wider">CPT</span>
           )}

@@ -8,7 +8,6 @@
 .progressBarFill {
     height: 100%;
     transition: all 500ms;
-    width: var(--progress-width);
 }
 
 .progressBarFillBatsmen {

@@ -1,0 +1,12 @@
+.jerseyWatermark {
+    font-family: 'Impact', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif;
+    letter-spacing: -0.05em;
+}
+
+.playerAvatar {
+    transition: transform 0.3s ease;
+}
+
+.playerCard:hover .playerAvatar {
+    transform: scale(1.05);
+}
