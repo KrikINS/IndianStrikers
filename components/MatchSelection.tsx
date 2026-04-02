@@ -322,30 +322,25 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
           <div className="absolute inset-0 opacity-10 bg-dot-white-grid"></div>
           
           {/* Cricket Ground Background */}
-          <div 
-            className="absolute inset-0 opacity-10 blur-[2px] transition-opacity"
-            style={{ 
-              backgroundImage: 'url("/assets/cricket_ground_bg.png")',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }}
-          ></div>
+          <div className="absolute inset-0 opacity-10 blur-[2px] transition-opacity bg-cricket-ground"></div>
           
           <div className="relative z-10 p-6 flex justify-between items-center border-b border-white/10 bg-black/30 backdrop-blur-md shrink-0">
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 bg-white/10 rounded-xl p-2 flex items-center justify-center backdrop-blur-md border border-white/20">
-                {!imgError ? <img src={teamLogo} className="w-full h-full object-contain" onError={() => setImgError(true)} crossOrigin="anonymous" /> : <Shield className="w-16 h-16 text-blue-400" />}
+                {!imgError ? <img src={teamLogo} className="w-full h-full object-contain" onError={() => setImgError(true)} crossOrigin="anonymous" title="Team Logo" alt="Team Logo" /> : <Shield className="w-16 h-16 text-blue-400" />}
               </div>
               <div>
                 <h2 className="text-3xl font-black italic tracking-tighter uppercase">INDIAN STRIKERS</h2>
                 <div className="flex items-center gap-6 mt-2 text-blue-200 font-medium">
                   {nextMatch ? (
                     <>
-                      <span className="inline-flex items-center gap-2 underline decoration-blue-500/30 underline-offset-4">
-                        <Sword size={18} className="text-blue-400 shrink-0" /> <span className="leading-none">vs {nextMatch.opponent}</span>
+                      <span className="inline-flex items-center gap-2 underline decoration-blue-500/30 underline-offset-4 leading-none">
+                        <Sword size={18} className="text-blue-400 shrink-0" />
+                        <span className="leading-none flex items-center h-full pt-0.5">vs {nextMatch.opponent}</span>
                       </span>
-                      <span className="inline-flex items-center gap-2 underline decoration-blue-500/30 underline-offset-4">
-                        <Calendar size={18} className="text-blue-400 shrink-0" /> <span className="leading-none">{new Date(nextMatch.date).toLocaleDateString()}</span>
+                      <span className="inline-flex items-center gap-2 underline decoration-blue-500/30 underline-offset-4 leading-none">
+                        <Calendar size={18} className="text-blue-400 shrink-0" />
+                        <span className="leading-none flex items-center h-full pt-0.5">{new Date(nextMatch.date).toLocaleDateString()}</span>
                       </span>
                     </>
                   ) : (
@@ -356,7 +351,7 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
             </div>
             {nextMatch && (
               <div className="text-right">
-                <div className="bg-white/10 px-6 py-3 rounded-xl border border-white/10 inline-flex items-center justify-center gap-3 text-sm font-bold tracking-wide backdrop-blur-sm shadow-xl">
+                <div className="bg-white/10 px-6 py-3 rounded-xl border border-white/10 inline-flex items-center justify-center gap-3 text-sm font-bold tracking-wide backdrop-blur-sm shadow-xl leading-none">
                   <MapPin size={18} className="text-orange-400 shrink-0" /> <span className="leading-none">{nextMatch.venue}</span>
                 </div>
               </div>
@@ -374,10 +369,18 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
                     </div>
                   </div>
                   <div className="flex flex-col justify-center">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="font-bold text-lg leading-none tracking-tight">{p.name}</h3>
-                      {p.isCaptain && <span className="bg-yellow-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border border-yellow-400/50 flex self-center items-center h-[18px]">C</span>}
-                      {p.isViceCaptain && <span className="bg-blue-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border border-blue-400/50 flex self-center items-center h-[18px]">VC</span>}
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-black tracking-tight leading-none h-[22px] flex items-center">{p.name}</span>
+                      {p.isCaptain && (
+                        <span className="bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg h-4 flex items-center justify-center uppercase leading-none mt-0.5">
+                          C
+                        </span>
+                      )}
+                      {p.isViceCaptain && (
+                        <span className="bg-slate-200 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg h-4 flex items-center justify-center uppercase leading-none mt-0.5">
+                          VC
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-slate-400 uppercase font-black tracking-widest">{p.role}</p>
                   </div>

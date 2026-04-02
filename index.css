@@ -50,6 +50,9 @@ body {
   background: radial-gradient(circle, #10b981 0%, #059669 40%, #047857 100%);
 }
 
-.mowing-stripes {
-  background-image: repeating-linear-gradient(0deg, transparent, transparent 20px, #000 20px, #000 40px);
+
+.bg-cricket-ground {
+  background-image: url("/assets/cricket_ground_bg.png");
+  background-size: cover;
+  background-position: center;
 }
