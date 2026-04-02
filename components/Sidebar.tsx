@@ -41,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 1024);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset error state when prop changes
