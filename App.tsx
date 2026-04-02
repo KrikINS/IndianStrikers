@@ -39,8 +39,6 @@ const AppContent: React.FC<{
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string },
   linkedPlayer?: Player
 }> = ({ players, matches, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onAddMatch, onUpdateMatch, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer }) => {
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
-
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -67,8 +65,6 @@ const AppContent: React.FC<{
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
       <Sidebar
-        isOpen={isSidebarOpen}
-        toggle={() => setSidebarOpen(!isSidebarOpen)}
         userRole={userRole}
         onSignOut={onSignOut}
         teamLogo={teamLogo}
@@ -79,19 +75,6 @@ const AppContent: React.FC<{
       />
 
       <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
-        <header className="md:hidden bg-slate-900 border-b border-slate-800 p-3 flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-2">
-            <KirikINSLogo size="small" className="scale-75 origin-left" />
-            <div className="h-4 w-px bg-slate-700 mx-1"></div>
-            <h1 className="font-bold text-sm tracking-wide">
-              <span className="text-white">INDIAN</span> <span className="text-[#4169E1]">STRIKERS</span>
-            </h1>
-          </div>
-          <button onClick={() => setSidebarOpen(true)} className="text-slate-400 p-1 hover:text-white" title="Open Menu">
-            <Menu size={24} />
-          </button>
-        </header>
-
         <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
           <Routes>
             <Route path="/home" element={<Dashboard players={players} matches={matches} userRole={userRole} teamLogo={teamLogo} />} />

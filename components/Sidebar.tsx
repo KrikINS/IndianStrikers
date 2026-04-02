@@ -26,8 +26,6 @@ import { UserRole, Match } from '../types';
 import MembershipRequestForm from './MembershipRequestForm';
 
 interface SidebarProps {
-  isOpen: boolean;
-  toggle: () => void;
   userRole?: UserRole;
   onSignOut: () => void;
   teamLogo: string;
@@ -37,7 +35,7 @@ interface SidebarProps {
   linkedPlayer?: { id?: string; name: string; avatarUrl?: string }; // Minimal player type needed
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', onSignOut, teamLogo, onUpdateLogo, matches = [], currentUser, linkedPlayer }) => {
+const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLogo, onUpdateLogo, matches = [], currentUser, linkedPlayer }) => {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
@@ -85,32 +83,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
 
   return (
     <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-20 md:hidden"
-          onClick={toggle}
-        />
-      )}
-
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full bg-slate-900 text-white z-30 transform transition-all duration-300 ease-in-out shadow-xl
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:translate-x-0 md:static md:h-screen flex flex-col
-        ${isCollapsed ? 'w-20' : 'w-64'}
+        sticky top-0 h-screen bg-slate-900 text-white z-30 transition-all duration-300 ease-in-out flex flex-col shrink-0 shadow-xl border-r border-slate-800
+        ${isCollapsed ? 'w-20' : 'w-60 md:w-64'}
       `}>
         <div className={`pt-2 pb-5 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30 relative transition-all ${isCollapsed ? 'items-center px-2' : ''}`}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between min-h-[32px]">
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="hidden md:flex p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all absolute -right-3 top-6 z-50 border border-slate-700 shadow-xl"
+              className="flex p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all absolute -right-3 top-6 z-50 border border-slate-700 shadow-xl"
               title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
               {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-            </button>
-            <button onClick={toggle} className="md:hidden text-gray-400 hover:text-white ml-auto" title="Close sidebar">
-              <X size={24} />
             </button>
           </div>
 
@@ -167,7 +152,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
               key={link.to}
               to={link.to}
               title={isCollapsed ? link.label : ""}
-              onClick={() => { if (window.innerWidth < 768) toggle(); }}
               className={({ isActive }) => `
                 flex items-center rounded-xl transition-all duration-200
                 ${isCollapsed ? 'justify-center p-3' : 'space-x-3 px-4 py-3'}
@@ -189,7 +173,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
             onClick={() => {
               if (linkedPlayer?.id) {
                 navigate(`/roster?id=${linkedPlayer.id}`);
-                if (window.innerWidth < 768) toggle();
               }
             }}
             title={isCollapsed ? (linkedPlayer?.name || currentUser?.name || userRole) : ""}
