@@ -321,6 +321,16 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
           <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-slate-900 to-black"></div>
           <div className="absolute inset-0 opacity-10 bg-dot-white-grid"></div>
           
+          {/* Cricket Ground Background */}
+          <div 
+            className="absolute inset-0 opacity-10 blur-[2px] transition-opacity"
+            style={{ 
+              backgroundImage: 'url("/assets/cricket_ground_bg.png")',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          ></div>
+          
           <div className="relative z-10 p-8 flex justify-between items-start border-b border-white/10 bg-black/20 backdrop-blur-sm">
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 bg-white/10 rounded-xl p-2 flex items-center justify-center backdrop-blur-md border border-white/20">
@@ -328,35 +338,60 @@ const MatchSelection: React.FC<MatchSelectionProps> = ({ players, userRole, matc
               </div>
               <div>
                 <h2 className="text-3xl font-black italic tracking-tighter uppercase">INDIAN STRIKERS</h2>
-                <div className="flex items-center gap-4 mt-2 text-blue-200 font-medium">
-                  {nextMatch ? <><span className="flex items-center gap-1.5"><Sword size={18} /> vs {nextMatch.opponent}</span><span className="flex items-center gap-1.5"><Calendar size={18} /> {new Date(nextMatch.date).toLocaleDateString()}</span></> : <span>Match TBD</span>}
+                <div className="flex items-center justify-center gap-6 mt-2 text-blue-200 font-medium">
+                  {nextMatch ? (
+                    <>
+                      <span className="flex items-center gap-2 underline decoration-blue-500/30 underline-offset-4">
+                        <Sword size={18} className="text-blue-400" /> vs {nextMatch.opponent}
+                      </span>
+                      <span className="flex items-center gap-2 underline decoration-blue-500/30 underline-offset-4">
+                        <Calendar size={18} className="text-blue-400" /> {new Date(nextMatch.date).toLocaleDateString()}
+                      </span>
+                    </>
+                  ) : (
+                    <span>Match TBD</span>
+                  )}
                 </div>
               </div>
             </div>
-            {nextMatch && <div className="text-right"><div className="bg-white/10 px-4 py-2 rounded-lg border border-white/10 inline-flex items-center gap-2 text-sm font-bold tracking-wide"><MapPin size={16} className="text-orange-400" /> {nextMatch.venue}</div></div>}
+            {nextMatch && (
+              <div className="text-right">
+                <div className="bg-white/10 px-6 py-3 rounded-xl border border-white/10 flex items-center justify-center gap-3 text-sm font-bold tracking-wide backdrop-blur-sm shadow-xl">
+                  <MapPin size={18} className="text-orange-400" /> {nextMatch.venue}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="relative z-10 flex-1 p-8 overflow-hidden">
             <div className="grid grid-cols-2 gap-4 h-full content-center">
               {selectedPlayers.map(p => (
                 <div key={p.id} className="flex items-center gap-4 bg-white/5 p-3 rounded-xl border border-white/5 shadow-sm">
-                  <img src={p.avatarUrl} className="w-14 h-14 rounded-full border-2 border-white/30 object-cover" crossOrigin="anonymous" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-lg leading-none">{p.name}</h3>
-                      {p.isCaptain && <span className="bg-yellow-500 text-slate-900 text-[10px] font-black px-1.5 py-0.5 rounded">C</span>}
-                      {p.isViceCaptain && <span className="bg-blue-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded">VC</span>}
+                  <div className="relative">
+                    <img src={p.avatarUrl} className="w-16 h-16 rounded-full border-2 border-white/30 object-cover shadow-lg" crossOrigin="anonymous" alt={p.name} />
+                    <div className="absolute -bottom-1 -right-1 bg-slate-900 p-1.5 rounded-full border border-slate-600 text-slate-300 shadow-md">
+                      {getRoleIcon(p.role)}
                     </div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wide mt-0.5">{p.role}</p>
+                  </div>
+                  <div className="flex flex-col justify-center">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="font-bold text-lg leading-none tracking-tight">{p.name}</h3>
+                      {p.isCaptain && <span className="bg-yellow-500 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border border-yellow-400/50">C</span>}
+                      {p.isViceCaptain && <span className="bg-blue-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border border-blue-400/50">VC</span>}
+                    </div>
+                    <p className="text-xs text-slate-400 uppercase font-black tracking-widest">{p.role}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="relative z-10 p-4 bg-black/40 text-center border-t border-white/10 flex justify-between items-center px-8">
-            <p className="text-sm font-bold tracking-[0.2em] text-slate-400 uppercase">#IndianStrikers</p>
-            <p className="text-xs text-slate-500">Generated by IS Management App</p>
+          <div className="relative z-10 p-5 bg-black/40 text-center border-t border-white/10 flex justify-between items-center px-10">
+            <p className="text-sm font-black tracking-[0.3em] text-blue-400/80 uppercase">www.indianstrikers.club</p>
+            <div className="flex flex-col items-end">
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Official Squad Release</p>
+              <p className="text-[9px] text-slate-600">IS Management System v2.0</p>
+            </div>
           </div>
         </div>
       </div>

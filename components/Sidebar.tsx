@@ -18,7 +18,9 @@ import {
   Upload,
   Settings,
   UserPlus,
-  ArrowRight
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { UserRole, Match } from '../types';
 import MembershipRequestForm from './MembershipRequestForm';
@@ -39,6 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset error state when prop changes
@@ -92,19 +95,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-64 bg-slate-900 text-white z-30 transform transition-transform duration-300 ease-in-out shadow-xl
+        fixed top-0 left-0 h-full bg-slate-900 text-white z-30 transform transition-all duration-300 ease-in-out shadow-xl
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0 md:static md:h-screen flex flex-col
+        ${isCollapsed ? 'w-20' : 'w-64'}
       `}>
-        <div className="pt-2 pb-5 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30">
+        <div className={`pt-2 pb-5 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30 relative transition-all ${isCollapsed ? 'items-center px-2' : ''}`}>
           <div className="flex items-center justify-between">
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="hidden md:flex p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all absolute -right-3 top-6 z-50 border border-slate-700 shadow-xl"
+              title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            >
+              {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
             <button onClick={toggle} className="md:hidden text-gray-400 hover:text-white ml-auto" title="Close sidebar">
               <X size={24} />
             </button>
           </div>
 
           {/* Restored Team Name Section with Upload Capability */}
-          <div className="flex items-center space-x-3 pt-4 border-t border-slate-800/50 mt-2">
+          <div className={`flex items-center pt-4 border-t border-slate-800/50 mt-2 transition-all ${isCollapsed ? 'justify-center space-x-0' : 'space-x-3'}`}>
             <div
               onClick={() => userRole === 'admin' && fileInputRef.current?.click()}
               className={`
@@ -141,35 +152,38 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
                 title="Upload Team Logo"
               />
             </div>
-            <Link to="/home" className="text-xl font-black tracking-tight leading-none hover:opacity-80 transition-opacity block">
-              <span className="text-white">INDIAN</span><br />
-              {/* Removed text stroke for simpler styling as requested previously */}
-              <span className="text-[#4169E1]">STRIKERS</span>
-            </Link>
+            {!isCollapsed && (
+              <Link to="/home" className="text-xl font-black tracking-tight leading-none hover:opacity-80 transition-opacity block truncate">
+                <span className="text-white">INDIAN</span><br />
+                <span className="text-[#4169E1]">STRIKERS</span>
+              </Link>
+            )}
           </div>
         </div>
 
-        <nav className="mt-2 px-4 space-y-2 flex-1 overflow-y-auto custom-scrollbar">
+        <nav className={`mt-2 px-4 space-y-2 flex-1 overflow-y-auto custom-scrollbar transition-all ${isCollapsed ? 'px-2' : ''}`}>
           {links.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
+              title={isCollapsed ? link.label : ""}
               onClick={() => { if (window.innerWidth < 768) toggle(); }}
               className={({ isActive }) => `
-                flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200
+                flex items-center rounded-xl transition-all duration-200
+                ${isCollapsed ? 'justify-center p-3' : 'space-x-3 px-4 py-3'}
                 ${isActive
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-900/50 translate-x-1'
-                  : 'text-slate-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-900/50' + (isCollapsed ? '' : ' translate-x-1')
+                  : 'text-slate-400 hover:bg-white/5 hover:text-white' + (isCollapsed ? '' : ' hover:translate-x-1')
                 }
               `}
             >
-              {link.icon}
-              <span className="font-medium">{link.label}</span>
+              <div className="shrink-0">{link.icon}</div>
+              {!isCollapsed && <span className="font-medium truncate">{link.label}</span>}
             </NavLink>
           ))}
         </nav>
 
-        <div className="p-6 mt-auto border-t border-slate-800 bg-slate-900/80 backdrop-blur-md">
+        <div className={`mt-auto border-t border-slate-800 bg-slate-900/80 backdrop-blur-md transition-all ${isCollapsed ? 'p-2' : 'p-6'}`}>
           {/* User Badge */}
           <div
             onClick={() => {
@@ -178,11 +192,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
                 if (window.innerWidth < 768) toggle();
               }
             }}
-            className={`mb-4 flex items-center justify-between p-3 bg-slate-800 rounded-xl border border-slate-700 ${linkedPlayer?.id ? 'cursor-pointer hover:bg-slate-700/50 transition-colors group/user' : ''}`}
+            title={isCollapsed ? (linkedPlayer?.name || currentUser?.name || userRole) : ""}
+            className={`mb-4 flex items-center bg-slate-800 rounded-xl border border-slate-700 transition-all ${isCollapsed ? 'justify-center p-2' : 'justify-between p-3'} ${linkedPlayer?.id ? 'cursor-pointer hover:bg-slate-700/50 group/user' : ''}`}
           >
-            <div className="flex items-center gap-3 overflow-hidden">
+            <div className={`flex items-center transition-all ${isCollapsed ? 'justify-center' : 'gap-3 overflow-hidden'}`}>
               <div className={`
-                  w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden
+                  rounded-full flex items-center justify-center shrink-0 overflow-hidden transition-all
+                  ${isCollapsed ? 'w-8 h-8' : 'w-10 h-10'}
                   ${!effectiveAvatar ? (
                   userRole === 'admin' ? 'bg-blue-600 text-white' :
                     userRole === 'member' ? 'bg-emerald-600 text-white' :
@@ -197,33 +213,40 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
                       userRole === 'scorer' ? <ClipboardList size={18} /> : <Ticket size={18} />
                 )}
               </div>
-              <div className="overflow-hidden">
-                <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Logged In</p>
-                {/* Use linked player name if available, else current user name */}
-                <p className="text-sm font-bold text-white capitalize truncate group-hover/user:text-blue-300 transition-colors">{linkedPlayer?.name || currentUser?.name || userRole}</p>
-              </div>
+              {!isCollapsed && (
+                <div className="overflow-hidden">
+                  <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Logged In</p>
+                  <p className="text-sm font-bold text-white capitalize truncate group-hover/user:text-blue-300 transition-colors">
+                    {linkedPlayer?.name || currentUser?.name || userRole}
+                  </p>
+                </div>
+              )}
             </div>
-            {linkedPlayer?.id ? (
-              <div className="p-1.5 text-slate-500 group-hover/user:text-blue-400">
-                <ArrowRight size={14} />
-              </div>
-            ) : (
-              <button
-                onClick={(e) => { e.stopPropagation(); onSignOut(); }}
-                className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-all"
-                title="Sign Out"
-              >
-                <LogOut size={18} />
-              </button>
+            {!isCollapsed && (
+              linkedPlayer?.id ? (
+                <div className="p-1.5 text-slate-500 group-hover/user:text-blue-400">
+                  <ArrowRight size={14} />
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onSignOut(); }}
+                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-all"
+                  title="Sign Out"
+                >
+                  <LogOut size={18} />
+                </button>
+              )
             )}
           </div>
 
           {linkedPlayer?.id && (
             <button
               onClick={onSignOut}
-              className="w-full py-2 flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30"
+              title={isCollapsed ? "Sign Out" : ""}
+              className={`w-full flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-xs'}`}
             >
-              <LogOut size={14} /> SIGN OUT
+              <LogOut size={isCollapsed ? 18 : 14} />
+              {!isCollapsed && <span>SIGN OUT</span>}
             </button>
           )}
 
@@ -231,9 +254,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
           {userRole === 'guest' && (
             <button
               onClick={() => setIsJoinModalOpen(true)}
-              className="w-full mb-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+              title={isCollapsed ? "Join Us" : ""}
+              className={`w-full mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-blue-900/40 flex items-center justify-center transition-all hover:scale-[1.02] ${isCollapsed ? 'p-3' : 'p-3 gap-2'}`}
             >
-              <UserPlus size={18} /> Join Us / Apply
+              <UserPlus size={isCollapsed ? 20 : 18} />
+              {!isCollapsed && <span>Join Us / Apply</span>}
             </button>
           )}
 
