@@ -295,10 +295,21 @@ const App: React.FC = () => {
   };
 
   const handleUpdateMatch = async (updatedMatch: Match) => {
-    if (userRole !== 'admin' && userRole !== 'member') {
+    const prevMatch = matches.find(m => m.id === updatedMatch.id);
+    const isLockedStateChange = updatedMatch.isSquadLocked !== prevMatch?.isSquadLocked;
+    const isSquadChange = JSON.stringify(updatedMatch.squad) !== JSON.stringify(prevMatch?.squad);
+
+    if (userRole !== 'admin' && (isLockedStateChange || isSquadChange)) {
+      console.warn("Attempt to modify squad or lock status without admin permission");
+      alert("Only an admin can lock/unlock or modify the team sheet.");
+      return;
+    }
+
+    if (userRole !== 'admin' && userRole !== 'member' && userRole !== 'scorer') {
       console.warn("Attempt to update match without permission");
       return;
     }
+
     console.log("Updating match:", updatedMatch);
     try {
       await updateMatch(updatedMatch);
