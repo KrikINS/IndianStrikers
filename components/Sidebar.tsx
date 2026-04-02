@@ -68,7 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
     { to: '/roster', icon: <Users size={20} />, label: 'Squad Roster' },
     { to: '/opponents', icon: <Swords size={20} />, label: 'Opponent Teams' },
     { to: '/matches', icon: <Calendar size={20} />, label: 'Matches' },
-    { to: '/selection', icon: <ClipboardList size={20} />, label: 'Match Selection' },
+    { to: '/selection', icon: <ClipboardList size={20} />, label: 'Playing XI' },
     { to: '/fielding', icon: <Map size={20} />, label: 'Fielding Board' },
     { to: '/live-scoring', icon: <Shield size={20} />, label: 'Live Scoring' },
     { to: '/memories', icon: <Image size={20} />, label: 'Memories' },
@@ -96,7 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle, userRole = 'guest', o
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0 md:static md:h-screen flex flex-col
       `}>
-        <div className="p-5 flex flex-col gap-2 shrink-0 bg-slate-950/30">
+        <div className="pt-2 pb-5 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30">
           <div className="flex items-center justify-between">
             <button onClick={toggle} className="md:hidden text-gray-400 hover:text-white ml-auto" title="Close sidebar">
               <X size={24} />

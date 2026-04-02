@@ -616,7 +616,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
 
       {/* Floating Next Match Modal (Relocated from Sidebar) */}
       {nextMatch && showNextMatchModal && (
-        <div className="fixed bottom-24 right-4 md:bottom-8 md:right-8 z-40 max-w-[280px] w-full animate-fade-in-up">
+        <div className="fixed top-20 right-4 md:top-24 md:right-8 z-40 max-w-[280px] w-full animate-fade-in-down">
           <div className="next-match-floating-modal rounded-2xl p-5 border border-white/10 shadow-2xl relative overflow-hidden group">
             <button 
               onClick={() => setShowNextMatchModal(false)}
