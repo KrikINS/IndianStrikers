@@ -12,19 +12,28 @@
     justify-content: center;
     pointer-events: none;
     transition: all 0.3s;
-    /* Use CSS custom properties for dynamic positioning */
-    left: var(--marker-left);
-    top: var(--marker-top);
     transform: translate(-50%, -50%);
+}
+
+.marker-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translate(-50%, 0);
+    margin-bottom: 0.75rem;
+    width: 10rem;
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem;
+    z-index: 50;
 }
 
 /* Player Position Markers */
 .player-marker {
     position: absolute;
     z-index: 30;
-    /* Use CSS custom properties for dynamic positioning */
-    left: var(--marker-left);
-    top: var(--marker-top);
     transform: translate(-50%, -50%);
     touch-action: none;
 }

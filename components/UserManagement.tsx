@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppUser, UserRole, MembershipRequest } from '../types';
-import { getAppUsers, addAppUser, deleteAppUser, getMembershipRequests, updateMembershipRequestStatus, deleteMembershipRequest, updateAppUser } from '../services/storageService';
+import { AppUser, UserRole, MembershipRequest, Player } from '../types';
+import { getAppUsers, addAppUser, deleteAppUser, getMembershipRequests, updateMembershipRequestStatus, deleteMembershipRequest, updateAppUser, getPlayers } from '../services/storageService';
 import { Plus, Trash2, Edit2, Shield, User, Ticket, X, Check, Search, Lock, UserPlus, FileText, CheckCircle } from 'lucide-react';
 
 const UserManagement: React.FC = () => {
@@ -11,6 +11,7 @@ const UserManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [players, setPlayers] = useState<Player[]>([]);
 
   // Form State
   const [formData, setFormData] = useState<Partial<AppUser>>({
@@ -23,13 +24,20 @@ const UserManagement: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [usersData, requestsData] = await Promise.all([
+        const [usersData, requestsData, playersData] = await Promise.all([
           getAppUsers(),
-          getMembershipRequests()
+          getMembershipRequests(),
+          getPlayers()
         ]);
         setUsers(usersData);
         setRequests(requestsData);
-      } catch (e) { console.error(e); }
+        setPlayers(playersData);
+      } catch (e: any) { 
+        console.error('Failed to load user management data:', e);
+        if (e.message.includes('401') || e.message.includes('Auth session')) {
+          alert("Your session has expired. Please log out and log back in as an administrator to manage users.");
+        }
+      }
     };
     load();
   }, []);
@@ -51,7 +59,8 @@ const UserManagement: React.FC = () => {
       name: user.name,
       username: user.username,
       password: user.password,
-      role: user.role
+      role: user.role,
+      playerId: user.playerId
     });
     setIsModalOpen(true);
   };
@@ -69,9 +78,9 @@ const UserManagement: React.FC = () => {
     if (formData.username && formData.role) {
       if (editingUser) {
         // Update
-        updateAppUser(editingUser.id, formData).then(() => {
+        updateAppUser(editingUser.id, formData).then((updatedUser) => {
+          setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...formData } : u));
           alert("User updated successfully");
-          window.location.reload();
         }).catch(e => alert("Failed to update user: " + e.message));
       } else {
         // Add
@@ -80,8 +89,8 @@ const UserManagement: React.FC = () => {
           return;
         }
         addAppUser(formData).then(newUser => {
+          setUsers(prev => [...prev, newUser]);
           alert("User created successfully");
-          window.location.reload();
         }).catch(e => alert("Failed to create user: " + e.message));
       }
       setIsModalOpen(false);
@@ -91,11 +100,15 @@ const UserManagement: React.FC = () => {
   const handleApproveRequest = (req: MembershipRequest) => {
     if (window.confirm(`Approve ${req.name}? This will open the user creation form.`)) {
       // Pre-fill form
+      // Automatically try to link player if name matches
+      const matchingPlayer = players.find(p => p.name.toLowerCase() === req.name.toLowerCase());
+      
       setFormData({
         name: req.name,
         username: req.email.split('@')[0], // Suggest username
         password: 'changeme123', // Default password
-        role: 'member'
+        role: 'member' as UserRole,
+        playerId: matchingPlayer ? String(matchingPlayer.id) : undefined
       });
       setEditingUser(null);
       setIsModalOpen(true);
@@ -182,6 +195,7 @@ const UserManagement: React.FC = () => {
                   <th className="p-4">User</th>
                   <th className="p-4">User ID (Login)</th>
                   <th className="p-4">Role</th>
+                  <th className="p-4">Linked Player</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -220,6 +234,18 @@ const UserManagement: React.FC = () => {
                       `}>
                         {user.role}
                       </span>
+                    </td>
+                    <td className="p-4">
+                      {user.playerId ? (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle size={14} className="text-emerald-500" />
+                          <span className="font-medium text-slate-700">
+                            {players.find(p => String(p.id) === String(user.playerId))?.name || 'Unknown Player'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic">None</span>
+                      )}
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -401,6 +427,24 @@ const UserManagement: React.FC = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Link to Squad Player</label>
+                <select
+                  title="Select a player to link this user to"
+                  value={formData.playerId || ''}
+                  onChange={e => setFormData({ ...formData, playerId: e.target.value || undefined })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- No Player Linked --</option>
+                  {players.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Linking a user to a player allows them to see their own stats and edit their profile.
+                </p>
               </div>
 
               <button type="submit" className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black shadow-lg shadow-slate-900/20 mt-4">

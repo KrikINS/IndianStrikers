@@ -1,28 +1,24 @@
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import PlayerList from './components/PlayerList';
-import MatchSchedule from './components/MatchSchedule';
-
-import MatchSelection from './components/MatchSelection';
 import FieldingMap from './components/FieldingMap';
 import OpponentTeams from './components/OpponentTeams';
-import Scorecard from './components/Scorecard';
-import ManualScorecard from './components/ManualScorecard';
 import Memories from './components/Memories';
 import SplashScreen from './components/SplashScreen';
 import UserManagement from './components/UserManagement';
-import { Player, Match, UserRole, OpponentTeam } from './types';
-import { getPlayers, addPlayer, updatePlayer, deletePlayer, getMatches, addMatch, updateMatch, getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo } from './services/storageService';
+import ScorerDashboard from './components/ScorerDashboard';
+import LegacyEditor from './components/LegacyEditor';
+import MatchCenter from './components/MatchCenter';
+import { Player, UserRole, OpponentTeam } from './types';
+import { getPlayers, addPlayer, updatePlayer, deletePlayer, getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo } from './services/storageService';
 import { Menu } from 'lucide-react';
 import KirikINSLogo from './components/KirikINSLogo';
 
 const AppContent: React.FC<{
   players: Player[],
-  matches: Match[],
   opponents: OpponentTeam[],
   userRole: UserRole,
   onAddPlayer: (p: Player) => void,
@@ -31,14 +27,12 @@ const AppContent: React.FC<{
   onAddOpponent: (t: OpponentTeam) => void,
   onUpdateOpponent: (t: OpponentTeam) => void,
   onDeleteOpponent: (id: string) => void,
-  onAddMatch: (m: Match) => void,
-  onUpdateMatch: (m: Match) => void,
   onSignOut: () => void,
   teamLogo: string,
   onUpdateLogo: (url: string) => void,
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string },
   linkedPlayer?: Player
-}> = ({ players, matches, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onAddMatch, onUpdateMatch, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer }) => {
+}> = ({ players, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -69,7 +63,6 @@ const AppContent: React.FC<{
         onSignOut={onSignOut}
         teamLogo={teamLogo}
         onUpdateLogo={onUpdateLogo}
-        matches={matches}
         currentUser={currentUser}
         linkedPlayer={linkedPlayer}
       />
@@ -77,7 +70,7 @@ const AppContent: React.FC<{
       <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
         <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
           <Routes>
-            <Route path="/home" element={<Dashboard players={players} matches={matches} userRole={userRole} teamLogo={teamLogo} />} />
+            <Route path="/home" element={<Dashboard players={players} userRole={userRole} teamLogo={teamLogo} />} />
             <Route
               path="/roster"
               element={
@@ -90,19 +83,6 @@ const AppContent: React.FC<{
                 />
               }
             />
-            <Route
-              path="/matches"
-              element={
-                <MatchSchedule
-                  matches={matches}
-                  opponents={opponents}
-                  onAddMatch={onAddMatch}
-                  onUpdateMatch={onUpdateMatch}
-                  userRole={userRole}
-                />
-              }
-            />
-            <Route path="/selection" element={<MatchSelection players={players} userRole={userRole} matches={matches} teamLogo={teamLogo} onUpdateMatch={onUpdateMatch} />} />
             <Route path="/fielding" element={<FieldingMap userRole={userRole} />} />
             <Route
               path="/opponents"
@@ -116,11 +96,13 @@ const AppContent: React.FC<{
                 />
               }
             />
-            <Route path="/live-scoring" element={<Scorecard opponents={opponents} players={players} matches={matches} onUpdateMatch={onUpdateMatch} userRole={userRole} />} />
-            <Route path="/manual-scorecard" element={<ManualScorecard players={players} opponents={opponents} />} />
             <Route path="/memories" element={<Memories userRole={userRole} currentUser={currentUser} />} />
-            {/* User Management Route - Only visible if admin */}
+            <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={userRole} teamLogo={teamLogo} />} />
+            <Route path="/scorer" element={(userRole === 'admin' || userRole === 'scorer') ? <ScorerDashboard /> : <Navigate to="/home" />} />
+            {/* Control Panel Routes - Admin only */}
             <Route path="/users" element={userRole === 'admin' ? <UserManagement /> : <Navigate to="/home" />} />
+            <Route path="/legacy-editor" element={userRole === 'admin' ? <LegacyEditor players={players} onUpdatePlayer={onUpdatePlayer} /> : <Navigate to="/home" />} />
+            
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
         </div>
@@ -139,7 +121,6 @@ const AppContent: React.FC<{
 
 const App: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [showSplash, setShowSplash] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>('guest');
@@ -150,21 +131,19 @@ const App: React.FC = () => {
     const loadData = async () => {
       try {
         console.log("Fetching data from backend...");
-        const [p, m, o, l] = await Promise.all([
+        const [p, o, l] = await Promise.all([
           getPlayers(),
-          getMatches(),
           getOpponents(),
           getTeamLogo()
         ]);
-        console.log("Data received:", { players: p.length, matches: m.length, opponents: o.length });
+        console.log("Data received:", { players: p.length, opponents: o.length });
 
-        if (p.length === 0 && m.length === 0) {
+        if (p.length === 0) {
           console.warn("Received empty data. Backend might be connected but empty, or request failed silently.");
           // Optional: alert check
         }
 
         setPlayers(p);
-        setMatches(m);
         setOpponents(o);
         setTeamLogo(l);
       } catch (e: any) {
@@ -269,40 +248,7 @@ const App: React.FC = () => {
     } catch (e) { console.error(e); }
   };
 
-  const handleAddMatch = async (match: Match) => {
-    if (userRole !== 'admin') return;
-    try {
-      const savedMatch = await addMatch(match);
-      setMatches(prev => [...prev, { ...match, id: savedMatch.id }]);
-    } catch (e) { console.error(e); }
-  };
 
-  const handleUpdateMatch = async (updatedMatch: Match) => {
-    const prevMatch = matches.find(m => m.id === updatedMatch.id);
-    const isLockedStateChange = updatedMatch.isSquadLocked !== prevMatch?.isSquadLocked;
-    const isSquadChange = JSON.stringify(updatedMatch.squad) !== JSON.stringify(prevMatch?.squad);
-
-    if (userRole !== 'admin' && (isLockedStateChange || isSquadChange)) {
-      console.warn("Attempt to modify squad or lock status without admin permission");
-      alert("Only an admin can lock/unlock or modify the team sheet.");
-      return;
-    }
-
-    if (userRole !== 'admin' && userRole !== 'member' && userRole !== 'scorer') {
-      console.warn("Attempt to update match without permission");
-      return;
-    }
-
-    console.log("Updating match:", updatedMatch);
-    try {
-      await updateMatch(updatedMatch);
-      console.log("Match updated successfully in backend");
-      setMatches(prev => prev.map(m => m.id === updatedMatch.id ? updatedMatch : m));
-    } catch (e: any) {
-      console.error("Match update failed:", e);
-      alert(`Failed to update match: ${e.message}`);
-    }
-  };
 
   const handleUpdateLogo = async (url: string) => {
     if (userRole !== 'admin') return;
@@ -318,7 +264,6 @@ const App: React.FC = () => {
     <HashRouter>
       <AppContent
         players={players}
-        matches={matches}
         opponents={opponents}
         userRole={userRole}
         onAddPlayer={handleAddPlayer}
@@ -327,8 +272,6 @@ const App: React.FC = () => {
         onAddOpponent={handleAddOpponent}
         onUpdateOpponent={handleUpdateOpponent}
         onDeleteOpponent={handleDeleteOpponent}
-        onAddMatch={handleAddMatch}
-        onUpdateMatch={handleUpdateMatch}
         onSignOut={handleSignOut}
         teamLogo={teamLogo}
         onUpdateLogo={handleUpdateLogo}

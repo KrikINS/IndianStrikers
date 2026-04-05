@@ -3,10 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   Users,
-  Calendar,
   Map,
-  ClipboardList,
   Shield,
+  ClipboardList,
   Swords,
   X,
   User,
@@ -14,38 +13,59 @@ import {
   LogOut,
   Home,
   Image,
-  Clock,
   Upload,
   Settings,
   UserPlus,
   ArrowRight,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Trophy,
+  MapPin,
+  History as HistoryIcon,
+  Calendar
 } from 'lucide-react';
-import { UserRole, Match } from '../types';
+import { UserRole, MembershipRequest } from '../types';
 import MembershipRequestForm from './MembershipRequestForm';
+import { getMembershipRequests } from '../services/storageService';
 
 interface SidebarProps {
   userRole?: UserRole;
   onSignOut: () => void;
   teamLogo: string;
   onUpdateLogo: (url: string) => void;
-  matches: Match[];
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string };
   linkedPlayer?: { id?: string; name: string; avatarUrl?: string }; // Minimal player type needed
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLogo, onUpdateLogo, matches = [], currentUser, linkedPlayer }) => {
+const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer }) => {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 1024);
+  const [pendingRequests, setPendingRequests] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset error state when prop changes
   useEffect(() => {
     setImgError(false);
   }, [teamLogo]);
+
+  // Fetch pending membership requests for admin
+  useEffect(() => {
+    if (userRole === 'admin') {
+      const fetchCount = async () => {
+        try {
+          const reqs = await getMembershipRequests();
+          const pending = reqs.filter(r => r.status === 'Pending').length;
+          setPendingRequests(pending);
+        } catch (e) { console.error("Sidebar: Failed to fetch requests", e); }
+      };
+      fetchCount();
+      // Poll every 5 minutes
+      const interval = setInterval(fetchCount, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [userRole]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -64,19 +84,38 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
     }
   };
 
-  const links = [
+  interface SidebarLink {
+    to: string;
+    icon: React.ReactNode;
+    label: string;
+    badge?: number;
+  }
+
+  const mainLinks: SidebarLink[] = [
     { to: '/home', icon: <Home size={20} />, label: 'Home' },
+    { to: '/match-center', icon: <Calendar size={20} />, label: 'Match Center' },
     { to: '/roster', icon: <Users size={20} />, label: 'Squad Roster' },
     { to: '/opponents', icon: <Swords size={20} />, label: 'Opponent Teams' },
-    { to: '/matches', icon: <Calendar size={20} />, label: 'Matches' },
-    { to: '/selection', icon: <ClipboardList size={20} />, label: 'Playing XI' },
     { to: '/fielding', icon: <Map size={20} />, label: 'Fielding Board' },
-    { to: '/live-scoring', icon: <Shield size={20} />, label: 'Live Scoring' },
     { to: '/memories', icon: <Image size={20} />, label: 'Memories' },
   ];
 
+  const controlPanelLinks: SidebarLink[] = [];
+
+  if (userRole === 'admin' || userRole === 'scorer') {
+    mainLinks.push({ to: '/scorer', icon: <ClipboardList size={20} />, label: 'Scorer Dashboard' });
+  }
+
   if (userRole === 'admin') {
-    links.push({ to: '/users', icon: <Settings size={20} />, label: 'User Management' });
+    controlPanelLinks.push({ to: '/grounds', icon: <MapPin size={20} />, label: 'Grounds' });
+    controlPanelLinks.push({ to: '/tournaments', icon: <Trophy size={20} />, label: 'Tournaments' });
+    controlPanelLinks.push({ to: '/legacy-editor', icon: <HistoryIcon size={20} />, label: 'Legacy Editor' });
+    controlPanelLinks.push({ 
+      to: '/users', 
+      icon: <Settings size={20} />, 
+      label: 'User Management',
+      badge: pendingRequests > 0 ? pendingRequests : undefined
+    });
   }
 
   const effectiveAvatar = linkedPlayer?.avatarUrl || currentUser?.avatarUrl;
@@ -147,13 +186,14 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
         </div>
 
         <nav className={`mt-2 px-4 space-y-2 flex-1 overflow-y-auto custom-scrollbar transition-all ${isCollapsed ? 'px-2' : ''}`}>
-          {links.map((link) => (
+          {/* Main Links */}
+          {mainLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               title={isCollapsed ? link.label : ""}
               className={({ isActive }) => `
-                flex items-center rounded-xl transition-all duration-200
+                flex items-center rounded-xl transition-all duration-200 relative
                 ${isCollapsed ? 'justify-center p-3' : 'space-x-3 px-4 py-3'}
                 ${isActive
                   ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-900/50' + (isCollapsed ? '' : ' translate-x-1')
@@ -163,8 +203,57 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
             >
               <div className="shrink-0">{link.icon}</div>
               {!isCollapsed && <span className="font-medium truncate">{link.label}</span>}
+              
+              {/* Notification Badge */}
+              {(link as any).badge && (
+                <span className={`
+                  absolute flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full
+                  ${isCollapsed ? 'top-1 right-1 w-4 h-4' : 'right-4 px-1.5 py-0.5 min-w-[18px]'}
+                `}>
+                  {(link as any).badge}
+                </span>
+              )}
             </NavLink>
           ))}
+
+          {/* Control Panel Section */}
+          {controlPanelLinks.length > 0 && (
+            <div className="pt-4 mt-2 border-t border-slate-800/50">
+              {!isCollapsed && (
+                <p className="px-4 text-[10px] uppercase font-black tracking-widest text-slate-500 mb-2">Control Panel</p>
+              )}
+              <div className="space-y-2">
+                {controlPanelLinks.map((link) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    title={isCollapsed ? link.label : ""}
+                    className={({ isActive }) => `
+                      flex items-center rounded-xl transition-all duration-200 relative
+                      ${isCollapsed ? 'justify-center p-3' : 'space-x-3 px-4 py-3'}
+                      ${isActive
+                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-900/50' + (isCollapsed ? '' : ' translate-x-1')
+                        : 'text-slate-400 hover:bg-white/5 hover:text-white' + (isCollapsed ? '' : ' hover:translate-x-1')
+                      }
+                    `}
+                  >
+                    <div className="shrink-0">{link.icon}</div>
+                    {!isCollapsed && <span className="font-medium truncate">{link.label}</span>}
+                    
+                    {/* Notification Badge */}
+                    {(link as any).badge && (
+                      <span className={`
+                        absolute flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full
+                        ${isCollapsed ? 'top-1 right-1 w-4 h-4' : 'right-4 px-1.5 py-0.5 min-w-[18px]'}
+                      `}>
+                        {(link as any).badge}
+                      </span>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          )}
         </nav>
 
         <div className={`mt-auto border-t border-slate-800 bg-slate-900/80 backdrop-blur-md transition-all ${isCollapsed ? 'p-2' : 'p-6'}`}>

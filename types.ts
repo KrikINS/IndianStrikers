@@ -29,6 +29,7 @@ export interface AppUser {
   password: string;
   role: UserRole;
   avatarUrl?: string;
+  playerId?: string;
 }
 
 export interface BattingStats {
@@ -82,26 +83,6 @@ export interface Player {
   battingStats?: BattingStats;
   bowlingStats?: BowlingStats;
   linkedUserId?: string;
-}
-
-export interface Match {
-  id: string;
-  opponent: string;
-  teamAName?: string; // Home Team Name Overlay
-  teamBName?: string; // Opponent Team Name Overlay
-  date: string;
-  venue: string; // Ground
-  result?: 'Won' | 'Lost' | 'Draw' | 'Pending';
-  scoreFor?: string;
-  scoreAgainst?: string;
-  isUpcoming: boolean;
-  tournament?: string;
-  tossTime?: string;
-  squad?: string[]; // Array of player IDs
-  opponentSquad?: string[]; // Array of player Names
-  isSquadLocked?: boolean;
-  scorecardData?: any; // JSONB for full scorecard details
-  statsUpdated?: boolean;
 }
 
 export interface OpponentPlayer {

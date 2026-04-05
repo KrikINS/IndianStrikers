@@ -1,5 +1,4 @@
-
-import { Player, Match, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest } from '../types';
+import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001/api';
 
@@ -50,6 +49,7 @@ export const getAppUsers = async (): Promise<AppUser[]> => {
     name: u.name || u.username,
     role: u.role,
     avatarUrl: u.avatar_url,
+    playerId: u.player_id,
     password: ''
   }));
 };
@@ -58,7 +58,14 @@ export const updateAppUser = async (id: string, user: Partial<AppUser>) => {
   const res = await fetch(`${API_URL}/users/${id}`, {
     method: 'PUT',
     headers: getHeaders(),
-    body: JSON.stringify(user)
+    body: JSON.stringify({
+      username: user.username,
+      password: user.password,
+      role: user.role,
+      name: user.name,
+      avatar_url: user.avatarUrl,
+      player_id: user.playerId
+    })
   });
   return handleResponse(res);
 };
@@ -67,7 +74,14 @@ export const addAppUser = async (user: Partial<AppUser>) => {
   const res = await fetch(`${API_URL}/users`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify(user)
+    body: JSON.stringify({
+      username: user.username,
+      password: user.password,
+      role: user.role,
+      name: user.name,
+      avatar_url: user.avatarUrl,
+      player_id: user.playerId
+    })
   });
   return handleResponse(res);
 };
@@ -196,61 +210,6 @@ export const deletePlayer = async (id: string) => {
   return handleResponse(res);
 };
 
-
-// MATCHES
-export const getMatches = async (): Promise<Match[]> => {
-  const res = await fetch(`${API_URL}/matches`);
-  const data = await handleResponse(res);
-  return data.map((m: any) => ({
-    ...m,
-    isUpcoming: m.is_upcoming,
-    tossTime: m.toss_time
-  }));
-};
-
-export const addMatch = async (match: Partial<Match>) => {
-  const dbMatch = {
-    opponent: match.opponent,
-    date: match.date,
-    venue: match.venue,
-    result: match.result,
-    score_for: match.scoreFor,
-    score_against: match.scoreAgainst,
-    is_upcoming: match.isUpcoming,
-    tournament: match.tournament,
-    toss_time: match.tossTime
-  };
-  const res = await fetch(`${API_URL}/matches`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify(dbMatch)
-  });
-  return handleResponse(res);
-};
-
-export const updateMatch = async (match: Match) => {
-  const dbMatch = {
-    opponent: match.opponent,
-    date: match.date,
-    venue: match.venue,
-    result: match.result,
-    score_for: match.scoreFor,
-    score_against: match.scoreAgainst,
-    is_upcoming: match.isUpcoming,
-    tournament: match.tournament,
-    toss_time: match.tossTime,
-    squad: match.squad, // JSONB or array, Supabase handles it
-    is_squad_locked: match.isSquadLocked,
-    scorecard_data: match.scorecardData, // JSONB
-    stats_updated: match.statsUpdated
-  };
-  const res = await fetch(`${API_URL}/matches/${match.id}`, {
-    method: 'PUT',
-    headers: getHeaders(),
-    body: JSON.stringify(dbMatch)
-  });
-  return handleResponse(res);
-};
 
 // OPPONENTS
 export const getOpponents = async (): Promise<OpponentTeam[]> => {
@@ -458,7 +417,6 @@ export const deleteMembershipRequest = async (id: string) => {
 
 /* DEPRECATED / STUBS */
 export const savePlayers = (p: Player[]) => console.warn("savePlayers deprecated");
-export const saveMatches = (m: Match[]) => console.warn("saveMatches deprecated");
 export const saveOpponents = (o: OpponentTeam[]) => console.warn("saveOpponents deprecated");
 
 // MEMORIES

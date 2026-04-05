@@ -10,13 +10,31 @@ const cloudinary = require('cloudinary').v2;
 const app = express();
 const PORT = process.env.PORT || 4001;
 
-app.use(express.json({ limit: '2mb' }));
-app.use(cors({ origin: true, credentials: true }));
+const allowedOrigins = [
+  process.env.FRONTEND_LOCAL || 'http://localhost:3000',
+  process.env.FRONTEND_PROD || 'https://indianstrikers.club'
+];
 
-app.use((req, res, next) => {
-  console.log(`[Incoming Request] ${req.method} ${req.path}`);
+app.use(cors({
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      console.warn(`[CORS] Rejected Origin: ${origin}`);
+      return callback(null, true); // Allow for now but log. Set to error for strict.
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
+
+// Request Logger
+app.use((req, _res, next) => {
+  console.log(`[Incoming Request] ${req.method} ${req.url}`);
   next();
 });
+
+app.use(express.json({ limit: '2mb' }));
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -31,19 +49,20 @@ function authGuard(roles = []) {
     const token = (req.headers.authorization || '').replace('Bearer ', '');
     // console.log(`[AuthGuard] Checking ${req.method} ${req.path}, Token present: ${!!token}`);
     if (!token) {
-      console.warn(`[AuthGuard] Missing token for ${req.path}`);
+      console.warn(`[AuthGuard] No token provided for ${req.method} ${req.url}`);
       return res.status(401).json({ error: 'Missing token' });
     }
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
       if (roles.length && !roles.includes(payload.role)) {
-        console.warn(`[AuthGuard] Role mismatch for ${payload.username}: has ${payload.role}, needs ${roles}`);
+        console.warn(`[AuthGuard] Access Denied for ${payload.username}: role '${payload.role}' not in permitted list [${roles}]`);
         return res.status(403).json({ error: 'Forbidden' });
       }
-      req.user = payload; next();
+      req.user = payload; 
+      next();
     } catch (e) {
-      console.error(`[AuthGuard] Invalid token: ${e.message}`);
-      return res.status(401).json({ error: 'Invalid token' });
+      console.error(`[AuthGuard] Failed to verify token for ${req.method} ${req.url}: ${e.message}`);
+      return res.status(401).json({ error: 'Auth session invalid' });
     }
   };
 }
@@ -68,7 +87,7 @@ app.post('/api/login', async (req, res) => {
 // USERS (Admin only)
 app.get('/api/users', authGuard(['admin', 'member']), async (req, res) => {
   console.log(`[GET /api/users] Request received from ${req.user?.username} (${req.user?.role})`);
-  const { data, error } = await supabase.from('app_users').select('id,username,role,avatar_url,created_at'); // Show all users
+  const { data, error } = await supabase.from('app_users').select('id,username,role,avatar_url,player_id,created_at'); // Show all users
   if (error) {
     console.error('[GET /api/users] Database error:', error);
     return res.status(500).json({ error: error.message });
@@ -77,7 +96,7 @@ app.get('/api/users', authGuard(['admin', 'member']), async (req, res) => {
   res.json(data);
 });
 app.post('/api/users', authGuard(['admin']), async (req, res) => {
-  const { username, password, role, name, avatar_url } = req.body;
+  const { username, password, role, name, avatar_url, player_id } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
   const hash = await bcrypt.hash(password, 10);
   const { data, error } = await supabase.from('app_users').insert([{
@@ -85,14 +104,15 @@ app.post('/api/users', authGuard(['admin']), async (req, res) => {
     password_hash: hash,
     role,
     name,
-    avatar_url
+    avatar_url,
+    player_id
   }]).select().single();
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 app.put('/api/users/:id', authGuard(['admin']), async (req, res) => {
-  const { username, password, role, name, avatar_url } = req.body;
-  const updates = { username, role, name, avatar_url, updated_at: new Date() };
+  const { username, password, role, name, avatar_url, player_id } = req.body;
+  const updates = { username, role, name, avatar_url, player_id, updated_at: new Date() };
   
   if (password && password.trim().length > 0) {
     updates.password_hash = await bcrypt.hash(password, 10);

@@ -1,20 +1,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Player, Match, TournamentTableEntry, OpponentTeam, UserRole } from '../types';
+import { Player, TournamentTableEntry, OpponentTeam, UserRole } from '../types';
 import { getOpponents, getTournamentTable, saveTournamentTableEntry, deleteTournamentTableEntry } from '../services/storageService';
-import { Trophy, Medal, Star, Flame, Crown, Plus, Trash2, Zap, Award, Target, Hash, Calendar, History, X, Share2, Loader2, Download, Shield, Clock } from 'lucide-react';
+import { Trophy, Medal, Star, Flame, Crown, Plus, Trash2, Zap, Award, Target, Hash, Calendar, History as HistoryIcon, X, Share2, Loader2, Download, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import './Dashboard.css';
 
 interface DashboardProps {
   players: Player[];
-  matches: Match[];
   userRole?: UserRole;
   teamLogo?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'guest', teamLogo }) => {
+const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', teamLogo }) => {
   const [tournamentName, setTournamentName] = useState('Winter Cup 2024');
   const [groupNumber, setGroupNumber] = useState('A');
   const [tableData, setTableData] = useState<TournamentTableEntry[]>([]);
@@ -26,59 +25,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
   // Stats Mode State (Default: Career)
   const [statsMode, setStatsMode] = useState<'career' | 'season'>('career');
 
-  // Next Match Logic (Relocated from Sidebar)
-  const [nextMatch, setNextMatch] = useState<Match | null>(null);
-  const [timeLeft, setTimeLeft] = useState<string>('');
-  const [showNextMatchModal, setShowNextMatchModal] = useState(true);
 
-  // Next Match Logic Calculation
-  useEffect(() => {
-    if (!matches || !Array.isArray(matches)) {
-      setNextMatch(null);
-      return;
-    }
-
-    const upcoming = matches
-      .filter(m => m.isUpcoming)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    setNextMatch(upcoming.length > 0 ? upcoming[0] : null);
-  }, [matches]);
-
-  // Countdown Logic
-  useEffect(() => {
-    if (!nextMatch) return;
-
-    const calculateTimeLeft = () => {
-      const matchDateStr = nextMatch.date;
-      const matchTimeStr = nextMatch.tossTime || '00:00';
-
-      const targetDate = new Date(`${matchDateStr}T${matchTimeStr}`);
-      const now = new Date();
-      const diff = targetDate.getTime() - now.getTime();
-
-      if (diff <= 0) {
-        if (targetDate.toDateString() === now.toDateString()) {
-          return "Today!";
-        }
-        return "Started";
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-      if (days > 0) return `${days}d ${hours}h`;
-      return `${hours}h ${minutes}m`;
-    };
-
-    setTimeLeft(calculateTimeLeft());
-    const interval = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [nextMatch]);
 
   // Load opponents and table data
   useEffect(() => {
@@ -122,16 +69,8 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
     .slice(0, 5);
 
   // -- Latest Match Performers Logic --
-  // Find the most recent completed match
-  const lastCompletedMatch = matches
-    .filter(m => !m.isUpcoming && m.result)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-
-  const latestMatchHeroes = players.filter(p => {
-    const isBatsmanHero = (p.role === 'Batsman' || p.role === 'All-Rounder') && p.runsScored > 200;
-    const isBowlerHero = (p.role === 'Bowler' || p.role === 'All-Rounder') && p.wicketsTaken > 10;
-    return isBatsmanHero || isBowlerHero;
-  }).slice(0, 6);
+  // Use current top players as demo performers since we're removing specific match tracking
+  const latestMatchHeroes = processedPlayers.slice(0, 6);
 
   const statsRef = useRef<HTMLDivElement>(null);
 
@@ -286,7 +225,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
                     <span className="bg-yellow-500 text-slate-950 font-black text-xs px-2 py-0.5 rounded uppercase tracking-wider">Match Day Hero</span>
                   </div>
                   <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none mb-1">{selectedHero.player.name}</h2>
-                  <p className="text-slate-400 text-sm font-medium mb-4">{lastCompletedMatch ? `vs ${lastCompletedMatch.opponent}` : 'Match Day'}</p>
+                  <p className="text-slate-400 text-sm font-medium mb-4">Match Day</p>
 
                   <div className="flex items-center justify-center gap-4">
                     <div className="bg-white/10 backdrop-blur border border-white/10 rounded-xl px-4 py-2 min-w-[120px]">
@@ -363,18 +302,13 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
         <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-center space-y-3 md:space-y-4 overflow-hidden">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 px-1">
             <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
-              <Zap className="text-yellow-500 fill-yellow-500" size={20} /> Match Day Heroes
+              <Zap className="text-yellow-500 fill-yellow-500" size={20} /> Featured Performers
             </h3>
-            {lastCompletedMatch && (
-              <span className="text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
-                vs {lastCompletedMatch.opponent} ({new Date(lastCompletedMatch.date).toLocaleDateString()})
-              </span>
-            )}
           </div>
 
-          {!lastCompletedMatch ? (
+          {latestMatchHeroes.length === 0 ? (
             <div className="bg-slate-100 rounded-2xl p-8 text-center text-slate-400 font-medium border border-slate-200 h-full flex items-center justify-center">
-              No completed matches to show performers.
+              No performers to show.
             </div>
           ) : (
             <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x w-full">
@@ -547,7 +481,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
               onClick={() => setStatsMode('career')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${statsMode === 'career' ? 'bg-white shadow-sm text-blue-700' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              <History size={12} /> Career
+              <HistoryIcon size={12} /> Career
             </button>
             <button
               onClick={() => setStatsMode('season')}
@@ -614,67 +548,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, matches, userRole = 'gue
       </div>
 
 
-      {/* Floating Next Match Modal (Relocated from Sidebar) */}
-      {nextMatch && showNextMatchModal && (
-        <div className="fixed top-20 right-4 md:top-24 md:right-8 z-40 max-w-[280px] w-full animate-fade-in-down">
-          <div className="next-match-floating-modal rounded-2xl p-5 border border-white/10 shadow-2xl relative overflow-hidden group">
-            <button 
-              onClick={() => setShowNextMatchModal(false)}
-              className="absolute top-2 right-2 p-1 text-slate-500 hover:text-white transition-colors z-10"
-              title="Dismiss"
-            >
-              <X size={16} />
-            </button>
 
-            <Link to="/matches" className="block space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] animate-flash">
-                  Next Match Alert
-                </p>
-                {timeLeft && (
-                  <span className="text-[10px] bg-red-600/20 text-red-400 px-2 py-0.5 rounded-full font-bold border border-red-500/20">
-                    {timeLeft}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Opponent</p>
-                <p className="text-white font-black text-xl leading-tight group-hover:text-blue-400 transition-colors">
-                  {nextMatch.opponent}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-1">
-                <div>
-                  <p className="text-slate-500 text-[10px] font-bold uppercase mb-0.5">Schedule</p>
-                  <p className="text-slate-200 text-xs font-bold">
-                    {new Date(nextMatch.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-[10px] font-bold uppercase mb-0.5">Venue</p>
-                  <p className="text-slate-200 text-xs font-bold truncate" title={nextMatch.venue}>
-                    {nextMatch.venue}
-                  </p>
-                </div>
-              </div>
-
-              {nextMatch.tossTime && (
-                <div className="flex items-center gap-1.5 text-xs text-orange-400 font-bold bg-orange-400/10 py-1.5 px-3 rounded-lg border border-orange-400/10">
-                  <Clock size={14} /> Toss at {nextMatch.tossTime}
-                </div>
-              )}
-              
-              <div className="pt-2">
-                <span className="text-[10px] text-blue-400 font-bold flex items-center gap-1 group-hover:gap-2 transition-all">
-                  View full schedule <span>→</span>
-                </span>
-              </div>
-            </Link>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

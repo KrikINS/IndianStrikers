@@ -411,11 +411,10 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
 
             {/* Ghost Guide Markers */}
             {showGuides && guidePositions.map((pos, idx) => (
-              // eslint-disable-next-line react/forbid-component-props
               <div
                 key={`guide-${idx}`}
                 className="guide-marker"
-                style={{ '--marker-left': `${pos.left}%`, '--marker-top': `${pos.top}%` } as React.CSSProperties}
+                style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
               >
                 <div className="opacity-0 group-hover:opacity-100 absolute -top-5 bg-black/60 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full whitespace-nowrap transition-opacity z-10 border border-white/10">
                   {pos.label}
@@ -453,25 +452,21 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
               // Visual warning if being dragged out
               const isDraggingOut = draggedId === pos.playerId && (pos.left < 0 || pos.left > 100 || pos.top < 0 || pos.top > 100);
 
-              // eslint-disable-next-line react/forbid-component-props
               return (
                 <button
                   type="button"
                   key={pos.playerId}
                   className={`player-marker animate-zoom-in ${isDraggingOut ? 'opacity-50 scale-90 grayscale' : 'scale-100'} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
-                  style={{ '--marker-left': `${pos.left}%`, '--marker-top': `${pos.top}%` } as React.CSSProperties}
+                  style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
                   onPointerDown={(e) => handlePointerDown(e, pos.playerId)}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
                   onClick={(e) => handleMarkerClick(e, pos.playerId)}
                 >
-                  {/* Interactive Tooltip Card (On Click) */}
                   {isSelected && (
-                    // eslint-disable-next-line react/forbid-component-props
                     <div
-                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white rounded-xl shadow-xl border border-slate-200 p-3 w-40 z-50 animate-fade-in"
+                      className="marker-tooltip animate-fade-in"
                       onClick={(e) => e.stopPropagation()}
-                      style={{ transform: 'translate(-50%, 0)' }}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
