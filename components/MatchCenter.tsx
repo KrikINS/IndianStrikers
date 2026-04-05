@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Player, OpponentTeam, UserRole } from '../types';
-import { useMatchCenter } from './matchCenterStore';
+import { useMatchCenter, ScheduledMatch } from './matchCenterStore';
 import MatchCenterTile from './MatchCenterTile';
-import PlayingXIModal from './PlayingXIModal';
+import { PlayingXIModal } from './PlayingXIModal';
+import EditMatchModal from './EditMatchModal';
 import { Calendar, Shield } from 'lucide-react';
 
 interface MatchCenterProps {
@@ -18,6 +19,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
     const [modalMode, setModalMode] = useState<'home' | 'away' | 'view' | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    
+    // Edit Modal State
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [matchToEdit, setMatchToEdit] = useState<ScheduledMatch | null>(null);
 
     const activeMatch = sortedMatches.find(m => m.id === activeMatchId);
 
@@ -32,8 +37,37 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
 
     const handleSaveXI = (matchId: string, teamType: 'home' | 'away', selection: string[]) => {
         updateMatch(matchId, {
-            [teamType === 'home' ? 'homeXI' : 'awayXI']: selection
+            [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: selection
         });
+    };
+
+    const handleEditMatch = (match: ScheduledMatch) => {
+        setMatchToEdit(match);
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveEdit = (updatedMatch: ScheduledMatch) => {
+        updateMatch(updatedMatch.id, updatedMatch);
+        setIsEditModalOpen(false);
+        setMatchToEdit(null);
+    };
+
+    const handleStartScoring = (matchId: string) => {
+        // Logic to transition to Live Scorer
+        console.log(`Starting Live Scoring for match: ${matchId}`);
+        // In a real app, this would use a router: navigate(`/scorer/${matchId}`);
+        alert(`Navigating to Live Scorer for Match ${matchId}`);
+        
+        // Update status to live if it was upcoming
+        const match = sortedMatches.find(m => m.id === matchId);
+        if (match && match.status === 'upcoming') {
+            updateMatch(matchId, { status: 'live' });
+        }
+    };
+
+    const handleViewScorecard = (matchId: string) => {
+        setActiveMatchId(matchId);
+        setModalMode('view');
     };
 
     const handleLockSquads = async (id: string) => {
@@ -42,7 +76,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         
         // Then trigger graphic generation if it's the home team (Indian Strikers)
         const match = sortedMatches.find(m => m.id === id);
-        if (match && match.homeXI && match.homeXI.length === 11) {
+        if (match && match.homeTeamXI && match.homeTeamXI.length === 11) {
             // We'll show the view modal briefly or use a hidden ref to capture
             setActiveMatchId(id);
             setModalMode('view');
@@ -81,11 +115,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     return (
         <div className="space-y-6 md:space-y-8 animate-fade-in w-full max-w-7xl mx-auto">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-3">
-                    <Calendar className="text-blue-600" size={36} /> Match Center
-                </h1>
-                <p className="text-slate-500 font-medium md:text-lg max-w-2xl mt-1">Live updates, upcoming schedules, and completed playing XI setups.</p>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-3">
+                        <Calendar className="text-blue-600" size={36} /> Match Center
+                    </h1>
+                    <p className="text-slate-500 font-medium md:text-lg max-w-2xl mt-1">Live updates, upcoming schedules, and completed playing XI setups.</p>
+                </div>
             </div>
 
             {sortedMatches.length === 0 ? (
@@ -100,12 +136,28 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                             match={m}
                             homeTeamName="Indian Strikers"
                             homeTeamLogo={teamLogo}
-                            opponent={opponents.find(o => o.id === m.opponentTeamId)}
+                            opponent={opponents.find(o => o.id === m.opponentId)}
                             onSelectPlayingXI={handleSelectPlayingXI}
+                            onEditMatch={handleEditMatch}
+                            onStartScoring={handleStartScoring}
+                            onViewScorecard={handleViewScorecard}
                             isAdmin={userRole === 'admin'}
                         />
                     ))}
                 </div>
+            )}
+
+            {/* Edit Match Modal */}
+            {matchToEdit && (
+                <EditMatchModal 
+                    match={matchToEdit}
+                    isOpen={isEditModalOpen}
+                    onClose={() => {
+                        setIsEditModalOpen(false);
+                        setMatchToEdit(null);
+                    }}
+                    onSave={handleSaveEdit}
+                />
             )}
 
             {/* Playing XI Modal Rendering */}
@@ -115,9 +167,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                         matchId={activeMatchId}
                         homePlayers={players}
                         opponentTeams={opponents}
-                        opponentId={activeMatch?.opponentTeamId || ''}
+                        opponentId={activeMatch?.opponentId || ''}
                         teamType={modalMode}
-                        initialSelection={modalMode === 'home' ? activeMatch?.homeXI : (modalMode === 'away' ? activeMatch?.awayXI : activeMatch?.homeXI)}
+                        initialSelection={modalMode === 'home' ? activeMatch?.homeTeamXI : (modalMode === 'away' ? activeMatch?.opponentTeamXI : activeMatch?.homeTeamXI)}
                         onClose={() => {
                             setActiveMatchId(null);
                             setModalMode(null);
@@ -141,12 +193,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                     </div>
                                     <div className="text-right">
                                         <p className="text-slate-500 font-bold uppercase text-xs">Versus</p>
-                                        <p className="text-2xl font-black text-slate-300">{opponents.find(o => o.id === activeMatch?.opponentTeamId)?.name || 'Opponent'}</p>
+                                        <p className="text-2xl font-black text-slate-300">{opponents.find(o => o.id === activeMatch?.opponentId)?.name || 'Opponent'}</p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-y-6 gap-x-12">
-                                    {players.filter(p => activeMatch?.homeXI?.includes(p.id!)).map((player, idx) => (
+                                    {players.filter(p => activeMatch?.homeTeamXI?.includes(p.id!)).map((player, idx) => (
                                         <div key={player.id} className="flex items-center gap-5 border-b border-white/5 pb-4">
                                             <span className="text-slate-700 font-black text-2xl italic w-8">{idx + 1}</span>
                                             <div className="w-16 h-16 rounded-full border-2 border-emerald-500/30 overflow-hidden bg-slate-950">
