@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, Radio, Edit2, Trash2, Users } from 'lucide-react';
+import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Check } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground } from '../types';
 
 interface MatchCenterTileProps {
@@ -92,10 +92,10 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         }
                         <button
                             onClick={() => onSelectPlayingXI(match.id, 'home')}
-                            className="xi-overlay-btn"
+                            className={`xi-overlay-btn ${match.homeTeamXI?.length ? 'bg-emerald-500 border-white ring-4 ring-emerald-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
                             title="Playing XI"
                         >
-                            <Users size={10} />
+                            <Users size={14} className="text-white" />
                         </button>
                     </div>
                     <h4 className="team-name-display">{(homeTeamName || 'Home Team').toUpperCase()}</h4>
@@ -123,10 +123,10 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         }
                         <button
                             onClick={() => onSelectPlayingXI(match.id, 'opponent')}
-                            className="xi-overlay-btn"
+                            className={`xi-overlay-btn ${match.opponentTeamXI?.length ? 'bg-emerald-500 border-white ring-4 ring-emerald-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
                             title="Playing XI"
                         >
-                            <Users size={10} />
+                            <Users size={14} className="text-white" />
                         </button>
                     </div>
                     <h4 className="team-name-display">{(opponentName || 'Opponent').toUpperCase()}</h4>

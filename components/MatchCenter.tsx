@@ -130,7 +130,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         });
     };
 
-    const handleSaveXI = (matchId: string, teamType: 'home' | 'opponent', selection: string[]) => {
+    const handleSaveXI = async (matchId: string, teamType: 'home' | 'opponent', selection: string[]) => {
         const match = matches.find(m => m.id === matchId);
         if (!match) return;
 
@@ -181,7 +181,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             // But the rule says: "their career stats... must be rolled back".
         }
 
-        setPlayingXI(matchId, teamType, selection);
+        await setPlayingXI(matchId, teamType, selection);
     };
 
     const handleStartScoring = (matchId: string) => {
@@ -440,19 +440,16 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             position: absolute;
             top: -6px;
             right: -6px;
-            background: #3b82f6;
-            color: white;
-            border: 2px solid white;
-            border-radius: 50%;
-            width: 22px;
-            height: 22px;
-            font-size: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(59,130,246,0.4);
-            transition: background 0.2s, transform 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
           }
           .xi-overlay-btn:hover {
             background: #2563eb;
@@ -829,8 +826,17 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             {manualScoreConfig && manualScoreConfig.showPlayers && (
                 <FullScorecardModal 
                     match={matches.find(m => m.id === manualScoreConfig.matchId)!}
-                    homeSquad={players.filter(p => (p.isActive !== false && p.isAvailable !== false) && (!matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.length || matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.includes(p.id)))}
-                    opponentSquad={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.players || []}
+                    homeSquad={players.filter(p => {
+                        const m = matches.find(match => match.id === manualScoreConfig.matchId);
+                        const xi = m?.homeTeamXI || [];
+                        const isAvailable = p.isActive !== false && p.isAvailable !== false;
+                        return isAvailable && (xi.length === 0 || xi.some(pid => String(pid) === String(p.id)));
+                    })}
+                    opponentSquad={(opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.players || []).filter(p => {
+                        const m = matches.find(match => match.id === manualScoreConfig.matchId);
+                        const xi = m?.opponentTeamXI || [];
+                        return (xi.length === 0 || xi.some(pid => String(pid) === String(p.id)));
+                    })}
                     opponentName={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.name || 'Opponent'}
                     homeTeamLogo={teamLogo || '/IS-LOGO.png'}
                     opponentLogo={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.logoUrl}

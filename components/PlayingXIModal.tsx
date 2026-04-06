@@ -56,7 +56,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     };
 
     const handleSave = () => {
-        if (selectedPlayers.length !== 11) return;
+        if (selectedPlayers.length === 0) return;
         if (teamType === 'home' || teamType === 'opponent') {
             onSave(matchId, teamType, selectedPlayers);
         }
@@ -175,7 +175,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                             disabled={selectedPlayers.length === 0}
                             title={selectedPlayers.length === 11 ? "Save Squad" : `Need ${11 - selectedPlayers.length} more players`}
                             className={`flex items-center gap-2 px-8 py-3 rounded-xl font-black uppercase transition-all
-                                ${selectedPlayers.length === 11 
+                                ${selectedPlayers.length > 0 
                                     ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40' 
                                     : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
                         >

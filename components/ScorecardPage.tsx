@@ -1,9 +1,10 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMatchCenter } from './matchCenterStore';
+import { useMasterData } from './masterDataStore';
 import { FullScorecard } from './FullScorecard';
 import { ArrowLeft, Share2, Download } from 'lucide-react';
-import { OpponentTeam } from '../types';
+import { OpponentTeam, ScheduledMatch, Ground } from '../types';
 
 interface ScorecardPageProps {
     opponents: OpponentTeam[];
@@ -14,9 +15,11 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTea
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const matches = useMatchCenter(state => state.matches);
+    const grounds = useMasterData(state => state.grounds);
     
     const match = matches.find(m => m.id === id);
     const opponent = opponents.find(o => o.id === match?.opponentId);
+    const ground = grounds.find(g => g.id === match?.groundId);
 
     if (!match) {
         return (
@@ -61,6 +64,7 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTea
                 match={match}
                 homeTeamName={homeTeamName}
                 opponentName={opponent?.name || match.opponentId.replace(/-/g, ' ')}
+                groundName={ground?.name}
             />
         </div>
     );

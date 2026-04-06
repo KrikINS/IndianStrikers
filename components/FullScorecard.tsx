@@ -1,16 +1,17 @@
 import React from 'react';
-import { ScheduledMatch, Performer } from './matchCenterStore';
+import { ScheduledMatch, Performer } from '../types';
 import { Trophy, Calendar, MapPin, User, Target, Shield, Award, Zap } from 'lucide-react';
 
 interface FullScorecardProps {
   match: ScheduledMatch;
   homeTeamName: string;
   opponentName: string;
+  groundName?: string;
 }
 
-export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamName, opponentName }) => {
-  const battingPerformers = match.performers?.filter(p => p.runs > 0 || p.balls > 0 || p.isNotOut) || [];
-  const bowlingPerformers = match.performers?.filter(p => p.bowlingOvers > 0) || [];
+export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamName, opponentName, groundName }) => {
+  const battingPerformers = match.performers?.filter((p: Performer) => p.runs > 0 || p.balls > 0 || p.isNotOut) || [];
+  const bowlingPerformers = match.performers?.filter((p: Performer) => p.bowlingOvers > 0) || [];
 
   return (
     <div className="scorecard-container shadow-2xl animate-in fade-in zoom-in-95 duration-500">
@@ -28,8 +29,8 @@ export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamNam
             </div>
             <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Full Scorecard</h2>
             <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm font-medium">
-              <span className="flex items-center gap-1.5"><Calendar size={16} className="text-blue-500" /> {new Date(match.date).toDateString()}</span>
-              <span className="flex items-center gap-1.5"><MapPin size={16} className="text-emerald-500" /> {match.ground.toUpperCase()}</span>
+              <span className="flex items-center gap-1.5"><Calendar size={16} className="text-blue-500" /> {match.date ? new Date(match.date).toDateString() : 'Date TBD'}</span>
+              <span className="flex items-center gap-1.5"><MapPin size={16} className="text-emerald-500" /> {(groundName || (match as any).ground || 'Home Ground').toUpperCase()}</span>
             </div>
           </div>
           
@@ -44,7 +45,7 @@ export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamNam
 
       {/* BATTING SECTION */}
       <section className="mb-10">
-        <h4 className="table-title">BATTING: {homeTeamName.toUpperCase()}</h4>
+        <h4 className="table-title">BATTING: {(homeTeamName || 'Home Team').toUpperCase()}</h4>
         <table className="scorecard-table">
           <thead>
             <tr>
@@ -58,7 +59,7 @@ export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamNam
             </tr>
           </thead>
           <tbody>
-            {battingPerformers.length > 0 ? battingPerformers.map((player, idx) => (
+            {(battingPerformers as Performer[]).length > 0 ? (battingPerformers as Performer[]).map((player: Performer, idx: number) => (
               <tr key={idx}>
                 <td style={{ fontWeight: 'bold' }}>{player.playerName || 'Player Name'}</td>
                 <td style={{ fontSize: '11px', color: player.isNotOut ? '#2ecc71' : '#888' }}>
@@ -83,7 +84,7 @@ export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamNam
 
       {/* BOWLING SECTION */}
       <section>
-        <h4 className="table-title">BOWLING: {homeTeamName.toUpperCase()}</h4>
+        <h4 className="table-title">BOWLING: {(homeTeamName || 'Home Team').toUpperCase()}</h4>
         <table className="scorecard-table">
           <thead>
             <tr>
@@ -96,7 +97,7 @@ export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamNam
             </tr>
           </thead>
           <tbody>
-            {bowlingPerformers.length > 0 ? bowlingPerformers.map((bowler, idx) => (
+            {(bowlingPerformers as Performer[]).length > 0 ? (bowlingPerformers as Performer[]).map((bowler: Performer, idx: number) => (
               <tr key={idx}>
                 <td style={{ fontWeight: 'bold' }}>{bowler.playerName || 'Bowler Name'}</td>
                 <td>{bowler.bowlingOvers}</td>
