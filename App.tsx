@@ -8,10 +8,15 @@ import FieldingMap from './components/FieldingMap';
 import OpponentTeams from './components/OpponentTeams';
 import Memories from './components/Memories';
 import SplashScreen from './components/SplashScreen';
-import UserManagement from './components/UserManagement';
 import ScorerDashboard from './components/ScorerDashboard';
 import LegacyEditor from './components/LegacyEditor';
 import MatchCenter from './components/MatchCenter';
+import ControlPanel from './components/ControlPanel';
+import { useMatchCenter } from './components/matchCenterStore';
+import GroundsManager from './components/GroundsManager';
+import TournamentsManager from './components/TournamentsManager';
+import UserManagement from './components/UserManagement';
+import { ScorecardPage } from './components/ScorecardPage';
 import { Player, UserRole, OpponentTeam } from './types';
 import { getPlayers, addPlayer, updatePlayer, deletePlayer, getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo } from './services/storageService';
 import { Menu } from 'lucide-react';
@@ -97,11 +102,18 @@ const AppContent: React.FC<{
               }
             />
             <Route path="/memories" element={<Memories userRole={userRole} currentUser={currentUser} />} />
-            <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={userRole} teamLogo={teamLogo} />} />
+            <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={userRole} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} />} />
             <Route path="/scorer" element={(userRole === 'admin' || userRole === 'scorer') ? <ScorerDashboard /> : <Navigate to="/home" />} />
             {/* Control Panel Routes - Admin only */}
-            <Route path="/users" element={userRole === 'admin' ? <UserManagement /> : <Navigate to="/home" />} />
-            <Route path="/legacy-editor" element={userRole === 'admin' ? <LegacyEditor players={players} onUpdatePlayer={onUpdatePlayer} /> : <Navigate to="/home" />} />
+            <Route path="/control-panel" element={userRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Navigate to="/home" />}>
+              <Route index element={<Navigate to="grounds" replace />} />
+              <Route path="grounds" element={<GroundsManager />} />
+              <Route path="tournaments" element={<TournamentsManager />} />
+              <Route path="legacy" element={<LegacyEditor players={players} onUpdatePlayer={onUpdatePlayer} />} />
+              <Route path="users" element={<UserManagement />} />
+            </Route>
+            
+            <Route path="/scorecard/:id" element={<ScorecardPage opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />
             
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
@@ -126,6 +138,12 @@ const App: React.FC = () => {
   const [userRole, setUserRole] = useState<UserRole>('guest');
   const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; username: string; avatarUrl?: string }>();
   const [teamLogo, setTeamLogo] = useState<string>('');
+  const resetZombieMatches = useMatchCenter(state => state.resetZombieMatches);
+
+  // Auto-reset "Zombie" matches (Live matches from previous days)
+  useEffect(() => {
+    resetZombieMatches();
+  }, [resetZombieMatches]);
 
   useEffect(() => {
     const loadData = async () => {

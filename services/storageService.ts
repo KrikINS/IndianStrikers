@@ -1,4 +1,4 @@
-import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest } from '../types';
+import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001/api';
 
@@ -465,4 +465,68 @@ export const updateMemory = async (id: string, updates: Partial<Memory>): Promis
     body: JSON.stringify(updates)
   });
   if (!res.ok) throw new Error('Failed to update memory');
+};
+
+// GROUNDS
+export const getGrounds = async (): Promise<Ground[]> => {
+  const res = await fetch(`${API_URL}/grounds`);
+  return handleResponse(res);
+};
+
+export const addGround = async (ground: Partial<Ground>) => {
+  const res = await fetch(`${API_URL}/grounds`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(ground)
+  });
+  return handleResponse(res);
+};
+
+export const updateGround = async (id: string, ground: Partial<Ground>) => {
+  const res = await fetch(`${API_URL}/grounds/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(ground)
+  });
+  return handleResponse(res);
+};
+
+export const deleteGround = async (id: string) => {
+  const res = await fetch(`${API_URL}/grounds/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
+// TOURNAMENTS
+export const getTournaments = async (): Promise<Tournament[]> => {
+  const res = await fetch(`${API_URL}/tournaments`);
+  return handleResponse(res);
+};
+
+export const addTournament = async (tournament: Partial<Tournament>) => {
+  const res = await fetch(`${API_URL}/tournaments`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(tournament)
+  });
+  return handleResponse(res);
+};
+
+export const updateTournament = async (id: string, tournament: Partial<Tournament>) => {
+  const res = await fetch(`${API_URL}/tournaments/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(tournament)
+  });
+  return handleResponse(res);
+};
+
+export const deleteTournament = async (id: string) => {
+  const res = await fetch(`${API_URL}/tournaments/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
 };

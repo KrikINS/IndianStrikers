@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useCricketScorer, BallRecord } from './matchStore';
-import { RotateCcw, History, Zap, TrendingUp, AlertCircle, Shield } from 'lucide-react';
+import { useMatchCenter } from './matchCenterStore';
+import { RotateCcw, History, Zap, TrendingUp, AlertCircle, Shield, Home } from 'lucide-react';
 
 /* --- STYLED COMPONENTS: DARK SPORTS THEME --- */
 const DashboardContainer = styled.div`
@@ -118,12 +120,47 @@ const TargetBox = styled.div`
 `;
 
 export default function ScorerDashboard() {
-    const { match, recordBall, undoLastBall, startSecondInnings, resetMatch, getOvers } = useCricketScorer();
+    const { matchId } = useParams<{ matchId: string }>();
+    const navigate = useNavigate();
+    const { matches } = useMatchCenter();
+    const { 
+        matchId: currentMatchId,
+        totalRuns,
+        wickets,
+        totalBalls,
+        history,
+        striker,
+        nonStriker,
+        target,
+        isFirstInnings,
+        initializeMatch, 
+        recordBall, 
+        undoLastBall, 
+        startSecondInnings, 
+        resetMatch, 
+        getOvers 
+    } = useCricketScorer();
     const [showWicketModal, setShowWicketModal] = useState(false);
 
+    // Initialize store with match data if provided
+    useEffect(() => {
+        if (matchId) {
+            const matchData = matches.find(m => m.id === matchId);
+            if (matchData) {
+                // Determine who bats first (simplified: home team bats first if it's 1st innings)
+                // In a real app, this would be based on tossDetails
+                initializeMatch(
+                    matchId, 
+                    matchData.homeTeamXI, 
+                    matchData.opponentTeamXI
+                );
+            }
+        }
+    }, [matchId, matches, initializeMatch]);
+
     // Calculation for Chase
-    const runsNeeded = match.target ? match.target - match.totalRuns : 0;
-    const ballsRemaining = 120 - match.totalBalls; // 20 Over match simulation
+    const runsNeeded = target ? target - totalRuns : 0;
+    const ballsRemaining = 120 - totalBalls; // 20 Over match simulation
     const rrr = ballsRemaining > 0 ? (runsNeeded / (ballsRemaining / 6)).toFixed(2) : "0.00";
 
     const getBallColor = (ball: BallRecord) => {
@@ -137,7 +174,7 @@ export default function ScorerDashboard() {
     return (
         <DashboardContainer>
             {/* 1. Header & Innings Control - STYLED COMPONENTS APPLIED */}
-            <PremiumHeader $isFirstInnings={match.isFirstInnings}>
+            <PremiumHeader $isFirstInnings={isFirstInnings}>
                 <DecorLayer>
                     <Shield size={180} className="text-white" />
                 </DecorLayer>
@@ -146,21 +183,30 @@ export default function ScorerDashboard() {
                     <div className="w-full flex justify-between items-center mb-4">
                         <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 flex items-center gap-1.5">
                             <Zap size={12} className="text-[#2ECC71] fill-[#2ECC71]" />
-                            {match.isFirstInnings ? "1st Innings" : "2nd Innings"}
+                            {isFirstInnings ? "1st Innings" : "2nd Innings"}
                         </span>
-                        <button 
-                            onClick={resetMatch} 
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
-                            aria-label="Refresh Match"
-                            title="Refresh Match"
-                        >
-                            <RotateCcw size={18} />
-                        </button>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => navigate('/match-center')} 
+                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
+                                title="Back to Match Center"
+                            >
+                                <Home size={18} />
+                            </button>
+                            <button 
+                                onClick={resetMatch} 
+                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
+                                aria-label="Refresh Match"
+                                title="Refresh Match"
+                            >
+                                <RotateCcw size={18} />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex flex-col items-center space-y-1">
                         <ScoreDisplay>
-                            {match.totalRuns}<span className="text-3xl opacity-40 mx-2 font-normal">/</span><StatAccent>{match.wickets}</StatAccent>
+                            {totalRuns}<span className="text-3xl opacity-40 mx-2 font-normal">/</span><StatAccent>{wickets}</StatAccent>
                         </ScoreDisplay>
                         <OversBadge>
                             Overs: <StatAccent>{getOvers()}</StatAccent><span className="opacity-40 text-xs ml-1 font-normal">/ 20.0</span>
@@ -170,11 +216,11 @@ export default function ScorerDashboard() {
             </PremiumHeader>
 
             {/* 2. Target Info - STYLED COMPONENTS APPLIED */}
-            {!match.isFirstInnings && match.target && (
+            {!isFirstInnings && target && (
                 <TargetBox>
                     <div className="pl-2">
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Target</p>
-                        <p className="text-2xl font-black text-white">{match.target}</p>
+                        <p className="text-2xl font-black text-white">{target}</p>
                     </div>
                     <div className="text-right">
                         <p className="text-sm font-black text-[#2ECC71]">Need {runsNeeded} of {ballsRemaining}</p>
@@ -186,7 +232,7 @@ export default function ScorerDashboard() {
             <div className="max-w-md mx-auto p-4 space-y-6">
                 {/* 3. Batsmen Tracking (Adapted to Dark theme via Tailwind) */}
                 <div className="grid grid-cols-2 gap-3">
-                    {[match.striker, match.nonStriker].map((p, idx) => (
+                    {[striker, nonStriker].map((p, idx) => (
                         <div key={idx} className={`bg-[#262B32] rounded-2xl p-4 transition-all ${idx === 0 ? 'border border-[#2ECC71]/30 ring-2 ring-[#2ECC71]/20' : 'border border-white/5'}`}>
                             <div className="flex items-center gap-2 mb-2">
                                 <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-[#2ECC71] shadow-[0_0_8px_#2ECC71] animate-pulse' : 'bg-slate-600'}`}></div>
@@ -203,12 +249,12 @@ export default function ScorerDashboard() {
                 {/* 4. Recent Balls Timeline (Dark mode adapted) */}
                 <div className="flex flex-col items-center gap-3">
                     <div className="flex items-center gap-1.5 justify-center py-2 px-4 bg-[#262B32] rounded-full border border-white/5">
-                        {match.history.length === 0 ? (
+                        {history.length === 0 ? (
                             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Waiting for first ball</span>
                         ) : (
-                            match.history.slice(-6).map((ball, i, arr) => {
-                                const actualIndex = match.history.length - arr.length + i;
-                                const isNewest = actualIndex === match.history.length - 1;
+                            history.slice(-6).map((ball: BallRecord, i: number, arr: BallRecord[]) => {
+                                const actualIndex = history.length - arr.length + i;
+                                const isNewest = actualIndex === history.length - 1;
                                 const animClass = isNewest 
                                     ? (ball.isWicket ? 'animate-wicket-shake' : 'animate-slide-pulse') 
                                     : '';
@@ -236,7 +282,7 @@ export default function ScorerDashboard() {
                             return (
                                 <ScoreButton 
                                     key={n} 
-                                    onClick={() => recordBall(n)}
+                                    onClick={() => recordBall(n, 'legal', false)}
                                     $boundaryType={boundaryType}
                                 >
                                     {n}
@@ -251,13 +297,13 @@ export default function ScorerDashboard() {
                     {/* 6. EXTRAS & WICKET ACTIONS (Dark Mode Tailwind) */}
                     <div className="grid grid-cols-3 gap-3">
                         <button 
-                            onClick={() => recordBall(0, 'wide')} 
+                            onClick={() => recordBall(0, 'wide', false)} 
                             className="bg-[#262B32] border border-amber-500/50 text-amber-500 hover:bg-amber-500/10 h-14 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-all"
                         >
                             WIDE
                         </button>
                         <button 
-                            onClick={() => recordBall(0, 'no-ball')} 
+                            onClick={() => recordBall(0, 'no-ball', false)} 
                             className="bg-[#262B32] border border-orange-500/50 text-orange-500 hover:bg-orange-500/10 h-14 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-all"
                         >
                             NB
@@ -278,7 +324,7 @@ export default function ScorerDashboard() {
                         >
                             <History size={14} /> Undo Ball
                         </button>
-                        {match.isFirstInnings && (
+                        {isFirstInnings && (
                             <button 
                                 onClick={startSecondInnings} 
                                 className="flex-1 bg-[#2ECC71] hover:bg-[#27AE60] text-[#1A1D21] h-12 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-[#2ECC71]/20 flex items-center justify-center gap-2 transition-all active:scale-95"

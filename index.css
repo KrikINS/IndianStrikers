@@ -77,3 +77,81 @@ body {
 .animate-wicket-shake {
   animation: slideInRightPulse 0.4s ease-out forwards, wicketShake 0.4s ease-in-out 0.4s;
 }
+
+/* Sidebar Styles */
+.control-panel-section {
+  margin-top: 30px;
+  padding: 0 20px;
+}
+
+.section-header {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: #565d6d; /* Muted gray */
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  color: #a0aec0;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+/* Typical Cricket Scorecard Styles */
+.scorecard-container {
+  background: #1A1D21;
+  color: white;
+  padding: 30px;
+  border-radius: 15px;
+  max-width: 800px;
+  margin: auto;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.table-title {
+  background: #25282C;
+  padding: 12px 15px;
+  border-left: 4px solid #3498db;
+  margin-bottom: 0;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  font-size: 14px;
+}
+
+.scorecard-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+}
+
+.scorecard-table th {
+  color: #565d6d;
+  font-size: 11px;
+  text-transform: uppercase;
+  padding: 15px 10px;
+  border-bottom: 1px solid #333;
+  letter-spacing: 1px;
+  font-weight: 800;
+}
+
+.scorecard-table td {
+  padding: 15px 10px;
+  border-bottom: 1px solid #222;
+  text-align: center;
+  font-size: 13px;
+}
+
+.scorecard-table td:first-child {
+  text-align: left;
+}

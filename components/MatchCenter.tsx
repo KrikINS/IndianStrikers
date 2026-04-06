@@ -1,108 +1,122 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Player, OpponentTeam, UserRole } from '../types';
 import { useMatchCenter, ScheduledMatch } from './matchCenterStore';
 import MatchCenterTile from './MatchCenterTile';
 import { PlayingXIModal } from './PlayingXIModal';
 import EditMatchModal from './EditMatchModal';
-import { Calendar, Shield } from 'lucide-react';
+import AddMatchModal from './AddMatchModal';
+import ManualScoreModal from './ManualScoreModal';
+import { Calendar, Shield, Plus } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
+import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
 
 interface MatchCenterProps {
     players: Player[];
     opponents: OpponentTeam[];
     userRole: UserRole;
     teamLogo?: string;
+    onUpdatePlayer: (p: Player) => void;
 }
 
-const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole, teamLogo }) => {
-    const { getSortedMatches, updateMatch } = useMatchCenter();
-    const sortedMatches = getSortedMatches();
-    const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
-    const [modalMode, setModalMode] = useState<'home' | 'away' | 'view' | null>(null);
+const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole, teamLogo, onUpdatePlayer }) => {
+    const navigate = useNavigate();
+    const { 
+        matches, 
+        updateMatch, 
+        setPlayingXI, 
+        updateMatchStatus,
+        getSortedMatches 
+    } = useMatchCenter();
+
     const [isGenerating, setIsGenerating] = useState(false);
-    
-    // Edit Modal State
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [matchToEdit, setMatchToEdit] = useState<ScheduledMatch | null>(null);
+    const [editingMatch, setEditingMatch] = useState<ScheduledMatch | null>(null);
+    const [manualScoreConfig, setManualScoreConfig] = useState<{
+        matchId: string;
+        showPlayers: boolean;
+    } | null>(null);
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [xiModalConfig, setXiModalConfig] = useState<{
+        isOpen: boolean;
+        matchId: string;
+        teamType: 'home' | 'away' | 'view';
+        opponentId: string;
+    }>({
+        isOpen: false,
+        matchId: '',
+        teamType: 'home',
+        opponentId: ''
+    });
 
-    const activeMatch = sortedMatches.find(m => m.id === activeMatchId);
-
-    const handleSelectPlayingXI = (id: string, mode: 'home' | 'away' | 'lock' | 'view') => {
-        if (mode === 'lock') {
-            handleLockSquads(id);
-        } else {
-            setActiveMatchId(id);
-            setModalMode(mode);
-        }
+    const handleSaveMatch = (updatedMatch: ScheduledMatch) => {
+        updateMatch(updatedMatch.id, updatedMatch);
+        setEditingMatch(null);
     };
 
-    const handleSaveXI = (matchId: string, teamType: 'home' | 'away', selection: string[]) => {
-        updateMatch(matchId, {
-            [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: selection
+    const handleSelectPlayingXI = (matchId: string, mode: 'home' | 'away' | 'lock' | 'view') => {
+        const match = matches.find(m => m.id === matchId);
+        if (!match) return;
+
+        if (mode === 'lock') {
+            handleLockSquads(matchId);
+            return;
+        }
+
+        setXiModalConfig({
+            isOpen: true,
+            matchId,
+            teamType: mode as 'home' | 'away' | 'view',
+            opponentId: match.opponentId
         });
     };
 
-    const handleEditMatch = (match: ScheduledMatch) => {
-        setMatchToEdit(match);
-        setIsEditModalOpen(true);
-    };
-
-    const handleSaveEdit = (updatedMatch: ScheduledMatch) => {
-        updateMatch(updatedMatch.id, updatedMatch);
-        setIsEditModalOpen(false);
-        setMatchToEdit(null);
+    const handleSaveXI = (matchId: string, teamType: 'home' | 'away', selection: string[]) => {
+        setPlayingXI(matchId, teamType, selection);
     };
 
     const handleStartScoring = (matchId: string) => {
-        // Logic to transition to Live Scorer
-        console.log(`Starting Live Scoring for match: ${matchId}`);
-        // In a real app, this would use a router: navigate(`/scorer/${matchId}`);
-        alert(`Navigating to Live Scorer for Match ${matchId}`);
-        
-        // Update status to live if it was upcoming
-        const match = sortedMatches.find(m => m.id === matchId);
-        if (match && match.status === 'upcoming') {
-            updateMatch(matchId, { status: 'live' });
+        const match = matches.find(m => m.id === matchId);
+        if (!match) return;
+
+        if (match.homeTeamXI.length !== 11) {
+            alert("Please select exactly 11 players for Indian Strikers before starting.");
+            handleSelectPlayingXI(matchId, 'home');
+            return;
         }
-    };
 
-    const handleViewScorecard = (matchId: string) => {
-        setActiveMatchId(matchId);
-        setModalMode('view');
-    };
-
-    const handleLockSquads = async (id: string) => {
-        // First lock the match in store
-        updateMatch(id, { isLocked: true });
-        
-        // Then trigger graphic generation if it's the home team (Indian Strikers)
-        const match = sortedMatches.find(m => m.id === id);
-        if (match && match.homeTeamXI && match.homeTeamXI.length === 11) {
-            // We'll show the view modal briefly or use a hidden ref to capture
-            setActiveMatchId(id);
-            setModalMode('view');
-            
-            // Give UI time to render the modal
-            setTimeout(() => {
-                const element = document.getElementById('team-sheet-graphic');
-                if (element) {
-                    captureGraphic(element, `IndianStrikers_XI_${id}`);
-                }
-            }, 500);
+        if (match.status === 'upcoming') {
+            updateMatchStatus(matchId, 'live');
         }
+        
+        navigate(`/scorer/${matchId}`);
     };
 
-    const captureGraphic = async (element: HTMLElement, filename: string) => {
-        const html2canvas = (await import('html2canvas')).default;
+    const handleLockSquads = (matchId: string) => {
+        const match = matches.find(m => m.id === matchId);
+        if (!match || match.homeTeamXI.length !== 11) {
+            alert("Cannot lock team. Please select 11 players first.");
+            return;
+        }
+        
+        updateMatch(matchId, { isLocked: true });
+        setTimeout(() => captureGraphic(matchId), 500);
+    };
+
+    const captureGraphic = async (matchId: string) => {
+        const element = document.getElementById('team-sheet-graphic');
+        if (!element) return;
+        
         setIsGenerating(true);
         try {
             const canvas = await html2canvas(element, {
-                backgroundColor: '#0f172a', // slate-950
+                backgroundColor: '#0f172a',
                 scale: 2,
                 useCORS: true,
                 logging: false
             });
             const link = document.createElement('a');
-            link.download = `${filename}.png`;
+            link.download = `IndianStrikers_XI_${matchId}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         } catch (err) {
@@ -112,73 +126,187 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         }
     };
 
+    const handleManualScoreSubmit = async (data: any) => {
+        if (!manualScoreConfig) return;
+        
+        const match = matches.find(m => m.id === manualScoreConfig.matchId);
+        if (!match) return;
+
+        // 1. Update the match in the store
+        updateMatch(manualScoreConfig.matchId, {
+            ...data,
+            status: 'completed'
+        });
+
+        // 2. Sync career stats to the roster (for all players in the XI + performers)
+        // First, get all players that should be updated
+        const playingXI = match.homeTeamXI || [];
+        const performerMap = new Map(data.performers.map((p: any) => [p.playerId, p]));
+        
+        // Combine IDs from playingXI and performers (in case someone not in XI was added as a performer)
+        const allPlayerIdsToUpdate = Array.from(new Set([...playingXI, ...data.performers.map((p: any) => p.playerId)]));
+
+        if (allPlayerIdsToUpdate.length > 0) {
+            console.log(`[Sync] Starting career stat sync for ${allPlayerIdsToUpdate.length} players...`);
+            try {
+                for (const pId of allPlayerIdsToUpdate) {
+                    const player = players.find(p => p.id === pId);
+                    if (!player) continue;
+
+                    const entry = performerMap.get(pId);
+                    const perf: Performer = entry ? (entry as Performer) : {
+                        playerId: pId,
+                        runs: 0,
+                        balls: 0,
+                        wickets: 0,
+                        bowlingRuns: 0,
+                        bowlingOvers: 0,
+                        isNotOut: false
+                    };
+
+                    // Deep clone or provide defaults
+                    const currentBatting = player.battingStats || {
+                        matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, average: 0, strikeRate: 0, highestScore: '0', hundreds: 0, fifties: 0, ducks: 0, fours: 0, sixes: 0
+                    };
+                    const currentBowling = player.bowlingStats || {
+                        matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0, wickets: 0, average: 0, economy: 0, strikeRate: 0, bestBowling: '0/0', fourWickets: 0, fiveWickets: 0
+                    };
+
+                    // Update stats using Logic Engine
+                    const updatedBatting = updateBattingCareerStats(currentBatting, perf);
+                    const updatedBowling = updateBowlingCareerStats(currentBowling, perf);
+
+                    // Push update to backend/service
+                    const updatedPlayer = {
+                        ...player,
+                        matchesPlayed: Math.max(updatedBatting.matches, updatedBowling.matches),
+                        runsScored: updatedBatting.runs,
+                        wicketsTaken: updatedBowling.wickets,
+                        battingStats: updatedBatting,
+                        bowlingStats: updatedBowling
+                    };
+
+                    onUpdatePlayer(updatedPlayer);
+                }
+                console.log("[Sync] Career stats sync completed successfully for the full squad.");
+            } catch (err) {
+                console.error("[Sync] Career stats sync failed:", err);
+            }
+        }
+
+        setManualScoreConfig(null);
+    };
+
+
     return (
         <div className="space-y-6 md:space-y-8 animate-fade-in w-full max-w-7xl mx-auto">
-            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
+                <div 
+                    onDoubleClick={() => {
+                        if (userRole !== 'admin') return;
+                        const matchId = prompt("Super Admin: Enter Match ID to reset to 'upcoming':");
+                        if (matchId && matches.find(m => m.id === matchId)) {
+                            updateMatchStatus(matchId, 'upcoming');
+                            alert(`Match ${matchId} reset to upcoming.`);
+                        } else if (matchId) {
+                            alert("Match not found.");
+                        }
+                    }}
+                    className="cursor-default select-none"
+                    title={userRole === 'admin' ? "Double-click for Debug" : ""}
+                >
                     <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-3">
                         <Calendar className="text-blue-600" size={36} /> Match Center
                     </h1>
                     <p className="text-slate-500 font-medium md:text-lg max-w-2xl mt-1">Live updates, upcoming schedules, and completed playing XI setups.</p>
                 </div>
+                {userRole === 'admin' && (
+                    <button 
+                        onClick={() => setShowAddModal(true)}
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl shadow-xl shadow-blue-900/20 transition-all active:scale-95 flex items-center gap-2"
+                    >
+                        <Plus size={20} /> SCHEDULE NEW MATCH
+                    </button>
+                )}
             </div>
 
-            {sortedMatches.length === 0 ? (
+            {getSortedMatches().length === 0 ? (
                 <div className="bg-slate-900 rounded-2xl p-12 text-center text-slate-400 font-medium border border-slate-800">
                     No matches presently configured. Check back soon for scheduling updates!
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-                    {sortedMatches.map(m => (
-                        <MatchCenterTile
-                            key={m.id}
-                            match={m}
-                            homeTeamName="Indian Strikers"
-                            homeTeamLogo={teamLogo}
-                            opponent={opponents.find(o => o.id === m.opponentId)}
-                            onSelectPlayingXI={handleSelectPlayingXI}
-                            onEditMatch={handleEditMatch}
-                            onStartScoring={handleStartScoring}
-                            onViewScorecard={handleViewScorecard}
-                            isAdmin={userRole === 'admin'}
-                        />
+                    {getSortedMatches().map(match => (
+                                <MatchCenterTile 
+                                    key={match.id}
+                                    match={match}
+                                    homeTeamName="Indian Strikers"
+                                    homeTeamLogo={teamLogo}
+                                    opponent={opponents.find((t: OpponentTeam) => t.id === match.opponentId)}
+                                    onSelectPlayingXI={handleSelectPlayingXI}
+                                    onEditMatch={(m: ScheduledMatch) => setEditingMatch(m)}
+                                    onStartScoring={handleStartScoring}
+                                    onViewScorecard={(id: string) => navigate(`/scorecard/${id}`)}
+                                    onUpdateManualScore={(id: string, mode?: 'summary' | 'full') => {
+                                        setManualScoreConfig({
+                                            matchId: id,
+                                            showPlayers: mode === 'full'
+                                        });
+                                    }}
+                                    isAdmin={userRole === 'admin'}
+                                />
                     ))}
                 </div>
             )}
 
-            {/* Edit Match Modal */}
-            {matchToEdit && (
+            {editingMatch && (
                 <EditMatchModal 
-                    match={matchToEdit}
-                    isOpen={isEditModalOpen}
-                    onClose={() => {
-                        setIsEditModalOpen(false);
-                        setMatchToEdit(null);
-                    }}
-                    onSave={handleSaveEdit}
+                    match={editingMatch}
+                    isOpen={!!editingMatch}
+                    onClose={() => setEditingMatch(null)}
+                    onSave={handleSaveMatch}
+                />
+            )}
+
+            {showAddModal && (
+                <AddMatchModal 
+                    opponents={opponents}
+                    onClose={() => setShowAddModal(false)}
+                />
+            )}
+
+            {manualScoreConfig && (
+                <ManualScoreModal 
+                    match={matches.find(m => m.id === manualScoreConfig.matchId)!}
+                    opponent={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)}
+                    players={manualScoreConfig.showPlayers ? players : []}
+                    onClose={() => setManualScoreConfig(null)}
+                    onSubmit={handleManualScoreSubmit}
                 />
             )}
 
             {/* Playing XI Modal Rendering */}
-            {activeMatchId && modalMode && (
+            {xiModalConfig.isOpen && (
                 <div id="team-sheet-container">
                     <PlayingXIModal 
-                        matchId={activeMatchId}
+                        matchId={xiModalConfig.matchId}
                         homePlayers={players}
                         opponentTeams={opponents}
-                        opponentId={activeMatch?.opponentId || ''}
-                        teamType={modalMode}
-                        initialSelection={modalMode === 'home' ? activeMatch?.homeTeamXI : (modalMode === 'away' ? activeMatch?.opponentTeamXI : activeMatch?.homeTeamXI)}
-                        onClose={() => {
-                            setActiveMatchId(null);
-                            setModalMode(null);
-                        }}
+                        opponentId={xiModalConfig.opponentId}
+                        teamType={xiModalConfig.teamType}
+                        initialSelection={
+                            xiModalConfig.teamType === 'home' 
+                                ? (matches.find(m => m.id === xiModalConfig.matchId)?.homeTeamXI || []) 
+                                : (xiModalConfig.teamType === 'away' 
+                                    ? (matches.find(m => m.id === xiModalConfig.matchId)?.opponentTeamXI || []) 
+                                    : (matches.find(m => m.id === xiModalConfig.matchId)?.homeTeamXI || []))
+                        }
+                        onClose={() => setXiModalConfig({ ...xiModalConfig, isOpen: false })}
                         onSave={handleSaveXI}
                     />
                     
                     {/* Hidden Graphic for Capture during viewing/locking */}
-                    {modalMode === 'view' && (
+                    {xiModalConfig.teamType === 'view' && (
                         <div className="fixed -left-[2000px] top-0">
                              <div id="team-sheet-graphic" className="w-[800px] bg-slate-950 p-12 text-white border-4 border-emerald-500 shadow-2xl">
                                 <div className="flex justify-between items-center mb-12">
@@ -193,16 +321,18 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                     </div>
                                     <div className="text-right">
                                         <p className="text-slate-500 font-bold uppercase text-xs">Versus</p>
-                                        <p className="text-2xl font-black text-slate-300">{opponents.find(o => o.id === activeMatch?.opponentId)?.name || 'Opponent'}</p>
+                                        <p className="text-2xl font-black text-slate-300">
+                                            {opponents.find((o: OpponentTeam) => o.id === xiModalConfig.opponentId)?.name || 'Opponent'}
+                                        </p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-y-6 gap-x-12">
-                                    {players.filter(p => activeMatch?.homeTeamXI?.includes(p.id!)).map((player, idx) => (
+                                    {players.filter((p: Player) => (matches.find((m: ScheduledMatch) => m.id === xiModalConfig.matchId)?.homeTeamXI || []).includes(p.id!)).map((player: Player, idx: number) => (
                                         <div key={player.id} className="flex items-center gap-5 border-b border-white/5 pb-4">
                                             <span className="text-slate-700 font-black text-2xl italic w-8">{idx + 1}</span>
                                             <div className="w-16 h-16 rounded-full border-2 border-emerald-500/30 overflow-hidden bg-slate-950">
-                                                <img src={player.avatarUrl} className="w-full h-full object-cover" alt={player.name} />
+                                                {player.avatarUrl && <img src={player.avatarUrl} className="w-full h-full object-cover" alt={player.name} />}
                                             </div>
                                             <div>
                                                 <p className="font-extrabold text-xl uppercase tracking-tighter">{player.name}</p>

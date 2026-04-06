@@ -27,14 +27,26 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     const isViewOnly = teamType === 'view';
     const opponent = opponentTeams.find(t => t.id === opponentId);
 
-    const togglePlayer = (id: string) => {
+    const togglePlayer = (id: string, name: string) => {
         if (isViewOnly) return;
-        setSelectedPlayers(prev => 
-            prev.includes(id) ? prev.filter(p => p !== id) : (prev.length < 11 ? [...prev, id] : prev)
-        );
+        
+        // Use different logic for IDs vs Names if necessary, 
+        // but here we treat both as unique identifiers in the selection array
+        setSelectedPlayers(prev => {
+            const isAlreadySelected = prev.includes(id);
+            if (isAlreadySelected) {
+                return prev.filter(p => p !== id);
+            } else {
+                if (prev.length < 11) {
+                    return [...prev, id];
+                }
+                return prev;
+            }
+        });
     };
 
     const handleSave = () => {
+        if (selectedPlayers.length !== 11) return;
         if (teamType === 'home' || teamType === 'away') {
             onSave(matchId, teamType, selectedPlayers);
         }
@@ -77,11 +89,15 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {displayPlayers.map(player => {
-                            const isSelected = selectedPlayers.includes(player.id!);
+                            const isSelected = selectedPlayers.includes(player.id || player.name);
+                            // Safety for different player structures
+                            const playerImage = (player as any).avatarUrl || (player as any).photo || '';
+                            const playerRoleStr = (player as any).role || 'Player';
+
                             return (
                                 <div 
-                                    key={player.id}
-                                    onClick={() => togglePlayer(player.id!)}
+                                    key={player.id || player.name}
+                                    onClick={() => togglePlayer(player.id || player.name, player.name)}
                                     className={`group flex items-center gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer
                                         ${isSelected ? 'bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'}`}
                                 >
@@ -89,8 +105,8 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                                         <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 
                                             ${isSelected ? 'border-blue-500' : 'border-slate-700'}`}
                                         >
-                                            {('avatarUrl' in player) ? (
-                                                <img src={(player as any).avatarUrl} alt={player.name} className="w-full h-full object-cover" />
+                                            {playerImage ? (
+                                                <img src={playerImage} alt={player.name} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
                                                     <Users size={24} />
@@ -107,7 +123,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                                         <h4 className={`font-bold uppercase tracking-tight ${isSelected ? 'text-white' : 'text-slate-300'}`}>
                                             {player.name}
                                         </h4>
-                                        <p className="text-xs font-bold text-slate-500 uppercase">{player.role}</p>
+                                        <p className="text-xs font-bold text-slate-500 uppercase">{playerRoleStr}</p>
                                     </div>
                                 </div>
                             );

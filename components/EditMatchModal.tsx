@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScheduledMatch, MatchStatus, MatchStage } from './matchCenterStore';
+import { useMasterData } from './masterDataStore';
 import { X, Save, AlertCircle } from 'lucide-react';
 
 interface EditMatchModalProps {
@@ -10,6 +11,7 @@ interface EditMatchModalProps {
 }
 
 const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, isOpen, onClose, onSave }) => {
+    const { grounds, tournaments } = useMasterData();
     const [formData, setFormData] = useState<ScheduledMatch>(match);
 
     useEffect(() => {
@@ -93,23 +95,33 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, isOpen, onClose,
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Ground</label>
-                            <input 
-                                type="text"
+                            <select 
                                 value={formData.ground}
                                 onChange={(e) => setFormData({...formData, ground: e.target.value})}
-                                placeholder="e.g. Lords Cricket Ground"
-                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
-                            />
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
+                                title="Select Ground"
+                            >
+                                <option value="">Select Ground...</option>
+                                {grounds.map(g => (
+                                    <option key={g.id} value={g.name}>{g.name} ({g.city})</option>
+                                ))}
+                                <option value="Other">Other Ground</option>
+                            </select>
                         </div>
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Tournament</label>
-                            <input 
-                                type="text"
+                            <select 
                                 value={formData.tournament}
                                 onChange={(e) => setFormData({...formData, tournament: e.target.value})}
-                                placeholder="e.g. World Cup"
-                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
-                            />
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
+                                title="Select Tournament"
+                            >
+                                <option value="">Select Tournament...</option>
+                                {tournaments.map(t => (
+                                    <option key={t.id} value={t.name}>{t.name} ({t.year})</option>
+                                ))}
+                                <option value="Other">Other Tournament</option>
+                            </select>
                         </div>
                     </div>
 

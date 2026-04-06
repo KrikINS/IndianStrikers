@@ -211,25 +211,33 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
           const innings = Number(s.innings || 0);
           const notOuts = Number(s.notOuts || 0);
 
+          // Batting SR: (Runs / Balls) * 100
           s.strikeRate = balls > 0 ? parseFloat(((runs / balls) * 100).toFixed(2)) : 0;
+          
+          // Batting AVE: Runs / (Innings - Not Outs)
           const dismissals = innings - notOuts;
-          s.average = dismissals > 0 ? parseFloat((runs / dismissals).toFixed(2)) : (runs > 0 ? runs : 0);
+          s.average = dismissals > 0 ? parseFloat((runs / dismissals).toFixed(2)) : 0;
         }
       } else {
         const s = stats as BowlingStats;
         if (['runs', 'wickets', 'overs'].includes(field as string)) {
           const runs = Number(s.runs || 0);
           const wickets = Number(s.wickets || 0);
-          const overs = Number(s.overs || 0);
+          const oversInput = Number(s.overs || 0);
 
-          const wholeOvers = Math.floor(overs);
-          const balls = Math.round((overs % 1) * 10);
-          const totalBalls = (wholeOvers * 6) + balls;
+          // Calculate "True Overs" for Economy (Total Balls / 6)
+          const wholeOvers = Math.floor(oversInput);
+          const ballsRemaining = Math.round((oversInput % 1) * 10);
+          const totalBalls = (wholeOvers * 6) + ballsRemaining;
           const trueOvers = totalBalls / 6;
 
+          // Bowling ECON: Runs / True Overs
           s.economy = trueOvers > 0 ? parseFloat((runs / trueOvers).toFixed(2)) : 0;
+          
           if (wickets > 0) {
+            // Bowling AVE: Runs / Wickets
             s.average = parseFloat((runs / wickets).toFixed(2));
+            // Bowling SR: Total Balls / Wickets
             s.strikeRate = parseFloat((totalBalls / wickets).toFixed(2));
           } else {
             s.average = 0;

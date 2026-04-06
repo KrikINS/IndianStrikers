@@ -32,6 +32,64 @@ export interface AppUser {
   playerId?: string;
 }
 
+export type MatchStatus = 'upcoming' | 'live' | 'completed';
+export type MatchStage = 'League' | 'Quarter-Final' | 'Semi-Final' | 'Final';
+
+export interface Performer {
+  playerId: string;
+  playerName?: string; // Cache the name for scorecard display
+  runs: number;
+  balls: number;
+  wickets: number;
+  bowlingRuns: number;
+  bowlingOvers: number;
+  isNotOut: boolean;
+  fours?: number;
+  sixes?: number;
+  maidens?: number;
+  outHow?: string;
+}
+
+export interface InningsBattingEntry {
+  playerId: string;
+  name: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  outHow: string;
+}
+
+export interface InningsBowlingEntry {
+  playerId: string;
+  name: string;
+  overs: number;
+  maidens: number;
+  runsConceded: number;
+  wickets: number;
+}
+
+export interface InningsExtras {
+  wide: number;
+  noBall: number;
+  legByes: number;
+  byes: number;
+}
+
+export interface InningsData {
+  batting: InningsBattingEntry[];
+  bowling: InningsBowlingEntry[];
+  extras: InningsExtras;
+  totalRuns: number;
+  totalWickets: number;
+  totalOvers: number;
+}
+
+export interface FullScorecardData {
+  innings1: InningsData;
+  innings2: InningsData;
+}
+
 export interface BattingStats {
   matches: number;
   innings: number;
@@ -139,4 +197,20 @@ export interface MembershipRequest {
   associationYear?: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   date: string;
+}
+
+export interface Ground {
+  id: string;
+  name: string;
+  city: string;
+  capacity?: number;
+  coordinates?: { lat: number; lng: number };
+}
+
+export interface Tournament {
+  id: string;
+  name: string;
+  year: number;
+  status: 'active' | 'completed' | 'upcoming';
+  logoUrl?: string;
 }

@@ -5,6 +5,7 @@ import { getOpponents, getTournamentTable, saveTournamentTableEntry, deleteTourn
 import { Trophy, Medal, Star, Flame, Crown, Plus, Trash2, Zap, Award, Target, Hash, Calendar, History as HistoryIcon, X, Share2, Loader2, Download, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
+import { useMasterData } from './masterDataStore';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -21,6 +22,8 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
   const [selectedHero, setSelectedHero] = useState<{ player: Player, statsType: 'batting' | 'bowling', statsValue: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const heroPosterRef = useRef<HTMLDivElement>(null);
+
+  const { legacy } = useMasterData();
 
   // Stats Mode State (Default: Career)
   const [statsMode, setStatsMode] = useState<'career' | 'season'>('career');
@@ -282,17 +285,17 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
           <div className="flex md:grid md:grid-cols-3 gap-3 md:gap-4 relative z-10 overflow-x-auto pb-2 md:pb-0 snap-x no-scrollbar md:custom-scrollbar">
             <div className="min-w-[110px] md:min-w-0 bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors snap-center">
               <div className="text-yellow-400 mb-2 flex justify-center"><Trophy size={24} className="md:w-7 md:h-7" /></div>
-              <div className="text-2xl md:text-3xl font-black mb-1">7</div>
+              <div className="text-2xl md:text-3xl font-black mb-1">{legacy.winnersTrophies}</div>
               <div className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-300">Winners</div>
             </div>
             <div className="min-w-[110px] md:min-w-0 bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors snap-center">
               <div className="text-slate-300 mb-2 flex justify-center"><Medal size={24} className="md:w-7 md:h-7" /></div>
-              <div className="text-2xl md:text-3xl font-black mb-1">5</div>
+              <div className="text-2xl md:text-3xl font-black mb-1">{legacy.runnersUp}</div>
               <div className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-300">Runners-Up</div>
             </div>
             <div className="min-w-[110px] md:min-w-0 bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors snap-center">
               <div className="text-orange-400 mb-2 flex justify-center"><Star size={24} className="md:w-7 md:h-7" /></div>
-              <div className="text-2xl md:text-3xl font-black mb-1">22</div>
+              <div className="text-2xl md:text-3xl font-black mb-1">{legacy.runnersUp + 17 /* Demo offset for Semi-Finals */}</div>
               <div className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-300">Semi Finalist</div>
             </div>
           </div>

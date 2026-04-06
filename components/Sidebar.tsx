@@ -107,13 +107,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
   }
 
   if (userRole === 'admin') {
-    controlPanelLinks.push({ to: '/grounds', icon: <MapPin size={20} />, label: 'Grounds' });
-    controlPanelLinks.push({ to: '/tournaments', icon: <Trophy size={20} />, label: 'Tournaments' });
-    controlPanelLinks.push({ to: '/legacy-editor', icon: <HistoryIcon size={20} />, label: 'Legacy Editor' });
     controlPanelLinks.push({ 
-      to: '/users', 
+      to: '/control-panel/grounds', 
       icon: <Settings size={20} />, 
-      label: 'User Management',
+      label: 'Control Panel',
       badge: pendingRequests > 0 ? pendingRequests : undefined
     });
   }
@@ -127,16 +124,14 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
         sticky top-0 h-screen bg-slate-900 text-white z-30 transition-all duration-300 ease-in-out flex flex-col shrink-0 shadow-xl border-r border-slate-800
         ${isCollapsed ? 'w-20' : 'w-60 md:w-64'}
       `}>
-        <div className={`pt-2 pb-5 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30 relative transition-all ${isCollapsed ? 'items-center px-2' : ''}`}>
-          <div className="flex items-center justify-between min-h-[32px]">
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="flex p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all absolute -right-3 top-6 z-50 border border-slate-700 shadow-xl"
-              title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-            >
-              {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-            </button>
-          </div>
+        <div className={`pt-6 pb-5 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30 relative transition-all ${isCollapsed ? 'items-center px-2' : ''}`}>
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="flex p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all absolute -right-3 top-8 z-50 border border-slate-700 shadow-xl"
+            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
 
           {/* Restored Team Name Section with Upload Capability */}
           <div className={`flex items-center pt-4 border-t border-slate-800/50 mt-2 transition-all ${isCollapsed ? 'justify-center space-x-0' : 'space-x-3'}`}>
@@ -218,41 +213,34 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
 
           {/* Control Panel Section */}
           {controlPanelLinks.length > 0 && (
-            <div className="pt-4 mt-2 border-t border-slate-800/50">
-              {!isCollapsed && (
-                <p className="px-4 text-[10px] uppercase font-black tracking-widest text-slate-500 mb-2">Control Panel</p>
-              )}
-              <div className="space-y-2">
-                {controlPanelLinks.map((link) => (
-                  <NavLink
-                    key={link.to}
-                    to={link.to}
-                    title={isCollapsed ? link.label : ""}
-                    className={({ isActive }) => `
-                      flex items-center rounded-xl transition-all duration-200 relative
-                      ${isCollapsed ? 'justify-center p-3' : 'space-x-3 px-4 py-3'}
-                      ${isActive
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-900/50' + (isCollapsed ? '' : ' translate-x-1')
-                        : 'text-slate-400 hover:bg-white/5 hover:text-white' + (isCollapsed ? '' : ' hover:translate-x-1')
-                      }
-                    `}
-                  >
-                    <div className="shrink-0">{link.icon}</div>
-                    {!isCollapsed && <span className="font-medium truncate">{link.label}</span>}
-                    
-                    {/* Notification Badge */}
-                    {(link as any).badge && (
-                      <span className={`
-                        absolute flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full
-                        ${isCollapsed ? 'top-1 right-1 w-4 h-4' : 'right-4 px-1.5 py-0.5 min-w-[18px]'}
-                      `}>
-                        {(link as any).badge}
-                      </span>
-                    )}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
+            controlPanelLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                title={isCollapsed ? link.label : ""}
+                className={({ isActive }) => `
+                  flex items-center rounded-xl transition-all duration-200 relative
+                  ${isCollapsed ? 'justify-center p-3' : 'space-x-3 px-4 py-3'}
+                  ${isActive
+                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-900/50' + (isCollapsed ? '' : ' translate-x-1')
+                    : 'text-slate-400 hover:bg-white/5 hover:text-white' + (isCollapsed ? '' : ' hover:translate-x-1')
+                  }
+                `}
+              >
+                <div className="shrink-0">{link.icon}</div>
+                {!isCollapsed && <span className="font-medium truncate">{link.label}</span>}
+                
+                {/* Notification Badge */}
+                {(link as any).badge && (
+                  <span className={`
+                    absolute flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full
+                    ${isCollapsed ? 'top-1 right-1 w-4 h-4' : 'right-4 px-1.5 py-0.5 min-w-[18px]'}
+                  `}>
+                    {(link as any).badge}
+                  </span>
+                )}
+              </NavLink>
+            ))
           )}
         </nav>
 

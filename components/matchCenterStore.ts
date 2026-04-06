@@ -1,108 +1,119 @@
-import { useState, useEffect } from 'react';
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { Performer, MatchStatus, MatchStage } from '../types';
 
-export type MatchStatus = 'upcoming' | 'live' | 'completed';
-export type MatchStage = 'League' | 'Quarter-Final' | 'Semi-Final' | 'Final';
+export const isPastMatch = (matchDateStr: string): boolean => {
+  const now = new Date();
+  const matchDate = new Date(matchDateStr);
+  
+  // Set match day to midnight for accurate day comparison
+  const matchDay = new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  return matchDay.getTime() < today.getTime();
+};
+
 
 export interface ScheduledMatch {
-    id: string;
-    opponentId: string; // From Opponent Teams
-    date: string;
-    ground: string;
-    tournament: string;
-    stage: MatchStage;
-    status: MatchStatus;
-    homeTeamXI: string[]; // Array of Player IDs from Squad Roster
-    opponentTeamXI: string[]; // Array of Names/IDs
-    tossDetails?: string;
-    resultSummary?: string; // e.g., "Indian Strikers won by 4 wickets"
-    isLocked?: boolean; // Persisted from previous UI logic
+  id: string;
+  opponentId: string; // References the ID in OpponentTeam
+  date: string;
+  ground: string;
+  tournament: string;
+  stage: MatchStage;
+  status: MatchStatus;
+  homeTeamXI: string[]; // Array of Player IDs from Squad Roster
+  opponentTeamXI: string[]; // Array of Names/IDs from OpponentTeam players
+  tossDetails?: string;
+  resultSummary?: string; // e.g., "Indian Strikers won by 4 wickets"
+  finalScoreHome?: { runs: number; wickets: number; overs: number };
+  finalScoreAway?: { runs: number; wickets: number; overs: number };
+  resultNote?: string; 
+  isLiveScored?: boolean;
+  isLocked?: boolean;
+  isHomeBattingFirst?: boolean;
+  performers?: Performer[];
 }
 
-// Initial mock data just for testing sorting functionality immediately
-const MOCK_MATCHES: ScheduledMatch[] = [
-    {
-        id: '1',
-        opponentId: 'desert-vipers',
-        ground: 'ICC Academy',
-        tournament: 'Winter Cup 2024',
-        stage: 'League',
-        status: 'completed',
-        date: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
-        homeTeamXI: [],
-        opponentTeamXI: [],
-        resultSummary: 'Indian Strikers won by 4 wickets'
-    },
-    {
-        id: '2',
-        opponentId: 'riyadh-kings',
-        ground: 'Sheikh Zayed Stadium',
-        tournament: 'Winter Cup 2024',
-        stage: 'Semi-Final',
-        status: 'live',
-        date: new Date().toISOString(), // Now
-        homeTeamXI: [],
-        opponentTeamXI: []
-    },
-    {
-        id: '3',
-        opponentId: 'royal-challengers',
-        ground: 'Dubai International Cricket Stadium',
-        tournament: 'Winter Cup 2024',
-        stage: 'Final',
-        status: 'upcoming',
-        date: new Date(Date.now() + 86400000 * 5).toISOString(), // 5 days from now
-        homeTeamXI: [],
-        opponentTeamXI: []
-    }
-];
+interface MatchStore {
+  matches: ScheduledMatch[];
+  addMatch: (match: Omit<ScheduledMatch, 'id'>) => void;
+  updateMatch: (id: string, updates: Partial<ScheduledMatch>) => void;
+  deleteMatch: (id: string) => void;
+  setPlayingXI: (id: string, teamType: 'home' | 'away', playerIds: string[]) => void;
+  updateMatchStatus: (id: string, status: MatchStatus) => void;
+  getSortedMatches: () => ScheduledMatch[];
+  resetZombieMatches: () => void;
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
+}
 
-export const useMatchCenter = () => {
-    const [matches, setMatches] = useState<ScheduledMatch[]>(() => {
-        const saved = localStorage.getItem('insMatchCenter');
-        return saved ? JSON.parse(saved) : MOCK_MATCHES;
-    });
+export const useMatchCenter = create<MatchStore>()(
+  persist(
+    (set, get) => ({
+      matches: [], // Initially empty, will load from storage via persist
+      
+      _hasHydrated: false,
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
 
-    useEffect(() => {
-        localStorage.setItem('insMatchCenter', JSON.stringify(matches));
-    }, [matches]);
-
-    const addMatch = (match: Omit<ScheduledMatch, 'id'>) => {
-        const newMatch: ScheduledMatch = {
-            ...match,
-            id: crypto.randomUUID()
-        };
-        setMatches(prev => [...prev, newMatch]);
-    };
-
-    const updateMatch = (id: string, updates: Partial<ScheduledMatch>) => {
-        setMatches(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
-    };
-
-    const deleteMatch = (id: string) => {
-        setMatches(prev => prev.filter(m => m.id !== id));
-    };
-
-    const getSortedMatches = () => {
-        return [...matches].sort((a, b) => {
-            // 1. Sort by Status Priority: live (0) -> upcoming (1) -> completed (2)
-            const statusOrder = { 'live': 0, 'upcoming': 1, 'completed': 2 };
-            if (statusOrder[a.status] !== statusOrder[b.status]) {
-                return statusOrder[a.status] - statusOrder[b.status];
-            }
-
-            // 2. Sort by date if status is the same
-            const timeA = new Date(a.date).getTime();
-            const timeB = new Date(b.date).getTime();
-
-            if (a.status === 'upcoming') {
-                // Earliest upcoming match first (Ascending)
-                return timeA - timeB;
-            } else {
-                // Most recent completed match first (Descending)
-                return timeB - timeA;
-            }
+      resetZombieMatches: () => set((state: MatchStore) => {
+        const today = new Date().setHours(0,0,0,0);
+        const updatedMatches: ScheduledMatch[] = state.matches.map(match => {
+          const matchDate = new Date(match.date).setHours(0,0,0,0);
+          // If it's still marked 'Live' but the day has passed, 
+          // change it back to 'upcoming' so we can see the "Add Summary" buttons
+          if (match.status === 'live' && matchDate < today) {
+            return { ...match, status: 'upcoming' as MatchStatus };
+          }
+          return match;
         });
-    };
+        return { matches: updatedMatches };
+      }),
+      
+      addMatch: (match) => set((state) => ({
+        matches: [...state.matches, { ...match, id: crypto.randomUUID() }]
+      })),
 
-    return { matches, addMatch, updateMatch, deleteMatch, getSortedMatches, setMatches };
-};
+      updateMatch: (id, updates) => set((state) => ({
+        matches: state.matches.map(m => m.id === id ? { ...m, ...updates } : m)
+      })),
+
+      deleteMatch: (id) => set((state) => ({
+        matches: state.matches.filter(m => m.id !== id)
+      })),
+
+      setPlayingXI: (id, teamType, playerIds) => set((state) => ({
+        matches: state.matches.map(m => m.id === id ? { 
+          ...m, 
+          [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: playerIds 
+        } : m)
+      })),
+
+      updateMatchStatus: (id, status) => set((state) => ({
+        matches: state.matches.map(m => m.id === id ? { ...m, status } : m)
+      })),
+
+      getSortedMatches: () => {
+        const { matches } = get();
+        return [...matches].sort((a, b) => {
+          const statusOrder = { 'live': 0, 'upcoming': 1, 'completed': 2 };
+          if (statusOrder[a.status] !== statusOrder[b.status]) {
+            return statusOrder[a.status] - statusOrder[b.status];
+          }
+
+          const timeA = new Date(a.date).getTime();
+          const timeB = new Date(b.date).getTime();
+
+          if (a.status === 'upcoming') {
+            return timeA - timeB; // Earliest first
+          } else {
+            return timeB - timeA; // Most recent first
+          }
+        });
+      },
+    }),
+    {
+      name: 'ins-match-center-storage', // Key for localStorage
+    }
+  )
+);
