@@ -351,7 +351,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                           title={`Home ${label}`}
                           className="compact-input compact-input-wide"
                           value={(homeScore as any)[field]}
-                          onChange={e => setHomeScore({ ...homeScore, [field]: field === 'overs' ? parseFloat(e.target.value) : parseInt(e.target.value) || 0 })}
+                          onChange={e => setHomeScore({ ...homeScore, [field]: e.target.valueAsNumber || 0 })}
                         />
                       </div>
                     ))}
@@ -369,7 +369,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                           title={`Away ${label}`}
                           className="compact-input compact-input-wide"
                           value={(awayScore as any)[field]}
-                          onChange={e => setAwayScore({ ...awayScore, [field]: field === 'overs' ? parseFloat(e.target.value) : parseInt(e.target.value) || 0 })}
+                          onChange={e => setAwayScore({ ...awayScore, [field]: e.target.valueAsNumber || 0 })}
                         />
                       </div>
                     ))}
@@ -422,10 +422,10 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                         return (
                           <tr key={p.id}>
                             <td style={{ paddingLeft: '8px' }}>{p.name}</td>
-                            <td><input type="number" min="0" title="Runs" className="compact-input" value={entry.runs} onChange={e => updateBatting(activeInnings, p.id, p.name, 'runs', parseInt(e.target.value) || 0)} /></td>
-                            <td><input type="number" min="0" title="Balls" className="compact-input" value={entry.balls} onChange={e => updateBatting(activeInnings, p.id, p.name, 'balls', parseInt(e.target.value) || 0)} /></td>
-                            <td><input type="number" min="0" title="Fours" className="compact-input" value={entry.fours} onChange={e => updateBatting(activeInnings, p.id, p.name, 'fours', parseInt(e.target.value) || 0)} /></td>
-                            <td><input type="number" min="0" title="Sixes" className="compact-input" value={entry.sixes} onChange={e => updateBatting(activeInnings, p.id, p.name, 'sixes', parseInt(e.target.value) || 0)} /></td>
+                            <td><input type="number" min="0" title="Runs" className="compact-input" value={entry.runs} onChange={e => updateBatting(activeInnings, p.id, p.name, 'runs', e.target.valueAsNumber || 0)} /></td>
+                            <td><input type="number" min="0" title="Balls" className="compact-input" value={entry.balls} onChange={e => updateBatting(activeInnings, p.id, p.name, 'balls', e.target.valueAsNumber || 0)} /></td>
+                            <td><input type="number" min="0" title="Fours" className="compact-input" value={entry.fours} onChange={e => updateBatting(activeInnings, p.id, p.name, 'fours', e.target.valueAsNumber || 0)} /></td>
+                            <td><input type="number" min="0" title="Sixes" className="compact-input" value={entry.sixes} onChange={e => updateBatting(activeInnings, p.id, p.name, 'sixes', e.target.valueAsNumber || 0)} /></td>
                             <td>
                               <select title="Dismissal" className="dismissal-select" value={entry.outHow} onChange={e => updateBatting(activeInnings, p.id, p.name, 'outHow', e.target.value)}>
                                 {['Not Out','Bowled','Caught','LBW','Run Out','Stumped','Did Not Bat','Hit Wicket'].map(o => <option key={o}>{o}</option>)}
@@ -485,7 +485,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                                 step={field === 'overs' ? 0.1 : 1}
                                 className="compact-input"
                                 value={row[field]}
-                                onChange={e => updateBowlingRow(activeInnings, idx, field, e.target.value)}
+                                onChange={e => updateBowlingRow(activeInnings, idx, field, e.target.valueAsNumber || 0)}
                               />
                             </td>
                           ))}
