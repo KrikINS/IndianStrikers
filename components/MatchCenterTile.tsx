@@ -8,7 +8,7 @@ interface MatchCenterTileProps {
     homeTeamName: string;
     homeTeamLogo?: string;
     opponent: OpponentTeam | undefined;
-    onSelectPlayingXI: (matchId: string, mode: 'home' | 'away' | 'lock' | 'view') => void;
+    onSelectPlayingXI: (matchId: string, mode: 'home' | 'opponent' | 'lock' | 'view') => void;
     onEditMatch: (match: ScheduledMatch) => void;
     onStartScoring: (matchId: string) => void;
     onViewScorecard: (matchId: string) => void;
@@ -94,6 +94,15 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         <Trophy size={14} className={isLive ? 'text-yellow-500' : 'text-blue-500'} />
                         {match.stage} • {match.tournament.toUpperCase()}
                     </div>
+                    {match.matchFormat && (
+                        <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            match.matchFormat === 'T20'
+                                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        }`}>
+                            {match.matchFormat === 'T20' ? '⚡ T20' : '🏏 One Day'}
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -154,16 +163,6 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     </div>
                 </div>
 
-                {/* Score Summary for Home Team (Moved inside Teams row logic or kept below) */}
-                {isCompleted && match.finalScoreHome && (
-                    <div className="absolute left-1/4 translate-y-20 text-center">
-                         <span className="text-lg md:text-xl font-black text-white">
-                            {match.finalScoreHome.runs}/{match.finalScoreHome.wickets}
-                        </span>
-                        <span className="text-[10px] text-slate-500 block">({match.finalScoreHome.overs} ov)</span>
-                    </div>
-                )}
-
                 {/* Toss Details Badge */}
                 {match.tossDetails && (
                     <div className="px-3 py-1 bg-slate-800/50 border border-slate-700/50 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center">
@@ -206,10 +205,27 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         </button>
                     )}
                 </div>
-                
+
+                {/* SQUAD MANAGEMENT ROW */}
+                <div className="squad-management-row">
+                    <button 
+                        className="btn-outline-sm" 
+                        onClick={() => onSelectPlayingXI(match.id, 'home')}
+                    >
+                        {match.homeTeamXI?.length > 0 ? "EDIT HOME XI" : "SELECT HOME XI"}
+                    </button>
+
+                    <button 
+                        className="btn-outline-sm" 
+                        onClick={() => onSelectPlayingXI(match.id, 'opponent')}
+                    >
+                        {match.opponentTeamXI?.length > 0 ? "EDIT OPPONENT XI" : "SELECT OPPONENT XI"}
+                    </button>
+                </div>
+
                 {/* REQUIREMENT-DRIVEN ACTIONS */}
                 <div className="flex flex-wrap gap-2 pt-2">
-                    {/* Live Match Actions (Override date context if status is already LIVE) */}
+                    {/* Live Match Actions */}
                     {isLive ? (
                         <button 
                             onClick={() => onStartScoring(match.id)}
@@ -220,7 +236,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     ) : (
                         <>
                             {/* CASE 1: Match is Today - Allow Live Scoring */}
-                            {isToday && (
+                            {isToday && !isCompleted && (
                                 <>
                                     <button 
                                         onClick={() => onStartScoring(match.id)}
@@ -238,13 +254,13 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             )}
 
                             {/* CASE 2: Match is in the Past - No Live Scoring, prioritize Summary/Scorecard */}
-                            {isPast && (
-                                <>
+                            {(isPast || isCompleted) && (
+                                <div className="flex flex-wrap gap-2 w-full">
                                     <button 
                                         onClick={() => onUpdateManualScore(match.id, 'summary')}
                                         className="flex-1 px-4 py-2 text-xs font-bold bg-slate-800 text-white rounded-xl hover:bg-slate-700 border border-slate-700 transition-all active:scale-95"
                                     >
-                                        ADD MATCH SUMMARY
+                                        MATCH SUMMARY
                                     </button>
                                     <button 
                                         onClick={() => onUpdateManualScore(match.id, 'full')} 
@@ -252,26 +268,18 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                     >
                                         UPDATE FULL SCORECARD
                                     </button>
-                                </>
+                                </div>
                             )}
 
                             {/* CASE 3: Match is in the Future */}
-                            {timeContext === 'FUTURE' && (
-                                <>
-                                    <button 
-                                        onClick={() => onSelectPlayingXI(match.id, 'home')}
-                                        className="flex-1 px-4 py-2 text-xs font-bold bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 hover:text-white border border-slate-700 transition-all active:scale-95 whitespace-nowrap uppercase"
-                                    >
-                                        Select Playing XI
-                                    </button>
-                                    <p className="w-full text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">
-                                        Scoring opens on {new Date(match.date).toLocaleDateString()}
-                                    </p>
-                                </>
+                            {timeContext === 'FUTURE' && !isCompleted && (
+                                <p className="w-full text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-2">
+                                    Scoring opens on {new Date(match.date).toLocaleDateString()}
+                                </p>
                             )}
 
-                            {/* Always show View Scorecard if completed, regardless of date context */}
-                            {isCompleted && match.resultSummary && (
+                            {/* Always show View Scorecard if completed */}
+                            {isCompleted && (
                                 <button 
                                     onClick={() => onViewScorecard(match.id)}
                                     className="w-full px-4 py-2 text-xs font-black bg-emerald-600/20 text-emerald-500 rounded-xl hover:bg-emerald-600 hover:text-white border border-emerald-500/20 transition-all active:scale-95 whitespace-nowrap flex items-center justify-center gap-2 mt-2"
