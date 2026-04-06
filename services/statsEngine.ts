@@ -51,6 +51,18 @@ export const calculateBattingAverage = (runs: number, innings: number, notOuts: 
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DATA ARCHITECT HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * syncMatchValue: Forces numeric addition to prevent string concatenation (the "13180" issue).
+ * Ensures both legacy and match values are treated as numbers.
+ */
+const syncMatchValue = (legacyVal: number | string, matchVal: number | string): number => {
+  return Number(legacyVal || 0) + Number(matchVal || 0);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // BATTING CAREER STATS SYNC
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -58,33 +70,31 @@ export const updateBattingCareerStats = (current: BattingStats, perf: Performer)
   const updated = { ...current };
 
   // MAT always increments for all Playing XI members
-  updated.matches += 1;
+  updated.matches = syncMatchValue(current.matches, 1);
 
   // Only count as an innings if the player actually batted:
-  // - They faced at least 1 ball, OR
-  // - They scored 0 and were dismissed (not a DNB)
   const didBat = Number(perf.balls) > 0 || (Number(perf.runs) === 0 && !perf.isNotOut);
 
   if (didBat) {
     const matchRuns = Number(perf.runs || 0);
     const matchBalls = Number(perf.balls || 0);
 
-    updated.innings += 1;
-    updated.runs += matchRuns;
-    updated.balls += matchBalls;
-    updated.fours += Number(perf.fours || 0);
-    updated.sixes += Number(perf.sixes || 0);
+    updated.innings = syncMatchValue(current.innings, 1);
+    updated.runs = syncMatchValue(current.runs, matchRuns);
+    updated.balls = syncMatchValue(current.balls, matchBalls);
+    updated.fours = syncMatchValue(current.fours || 0, perf.fours || 0);
+    updated.sixes = syncMatchValue(current.sixes || 0, perf.sixes || 0);
 
     // Not Out / Duck Logic
     if (perf.isNotOut) {
-      updated.notOuts += 1;
+      updated.notOuts = syncMatchValue(current.notOuts, 1);
     } else {
-      if (matchRuns === 0) updated.ducks += 1;
+      if (matchRuns === 0) updated.ducks = syncMatchValue(current.ducks, 1);
     }
 
     // Milestones
-    if (matchRuns >= 100) updated.hundreds += 1;
-    else if (matchRuns >= 50) updated.fifties += 1;
+    if (matchRuns >= 100) updated.hundreds = syncMatchValue(current.hundreds, 1);
+    else if (matchRuns >= 50) updated.fifties = syncMatchValue(current.fifties, 1);
 
     // High Score: Parse legacy HS which may have '*' suffix (e.g., "87*")
     const currentHS = parseInt(current.highestScore) || 0;
@@ -117,20 +127,19 @@ export const updateBowlingCareerStats = (current: BowlingStats, perf: Performer)
   const matchWkts = Number(perf.wickets || 0);
   const matchMaidens = Number(perf.maidens || 0);
 
-  updated.matches += 1;
-  updated.innings += 1;
+  updated.matches = syncMatchValue(current.matches, 1);
+  updated.innings = syncMatchValue(current.innings, 1);
 
   // ✅ CRITICAL FIX: Use addCricketOvers instead of float addition
-  // Bug: 3.5 + 2.4 = 5.9 (wrong) → addCricketOvers(3.5, 2.4) = 6.3 (correct)
-  updated.overs = addCricketOvers(updated.overs, matchOvers);
+  updated.overs = addCricketOvers(Number(current.overs || 0), matchOvers);
 
-  updated.maidens += matchMaidens;
-  updated.runs += matchRuns;
-  updated.wickets += matchWkts;
+  updated.maidens = syncMatchValue(current.maidens, matchMaidens);
+  updated.runs = syncMatchValue(current.runs, matchRuns);
+  updated.wickets = syncMatchValue(current.wickets, matchWkts);
 
   // Milestones
-  if (matchWkts >= 5) updated.fiveWickets += 1;
-  else if (matchWkts >= 4) updated.fourWickets += 1;
+  if (matchWkts >= 5) updated.fiveWickets = syncMatchValue(current.fiveWickets, 1);
+  else if (matchWkts >= 4) updated.fourWickets = syncMatchValue(current.fourWickets, 1);
 
   // Best Bowling (BBI): Higher wickets = better; at equal wickets, fewer runs = better
   const [bestWkts, bestRuns] = (current.bestBowling || '0/999').split('/').map(Number);

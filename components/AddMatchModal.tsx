@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useMasterData } from './masterDataStore';
 import { useMatchCenter, MatchStatus, MatchStage, ScheduledMatch } from './matchCenterStore';
 import { OpponentTeam } from '../types';
-import { X, Calendar, MapPin, Trophy, Shield, Save } from 'lucide-react';
+import { X, Calendar, MapPin, Trophy, Shield, Save, Zap } from 'lucide-react';
 
 interface AddMatchModalProps {
     onClose: () => void;
@@ -15,11 +15,12 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
 
     const [formData, setFormData] = useState({
         opponentId: '',
-        date: new Date().toISOString().slice(0, 16), // Format for datetime-local
+        date: new Date().toISOString().slice(0, 16),
         groundId: '',
         tournamentId: '',
         stage: 'League' as MatchStage,
         status: 'upcoming' as MatchStatus,
+        matchFormat: 'T20' as 'T20' | 'One Day',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -35,6 +36,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
             tournament: selectedTournament,
             stage: formData.stage,
             status: formData.status,
+            matchFormat: formData.matchFormat,
             homeTeamXI: [],
             opponentTeamXI: [],
             isLocked: false
@@ -111,6 +113,28 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                                 <option value="Semi-Final">Semi-Final</option>
                                 <option value="Final">Final</option>
                             </select>
+                        </div>
+                    </div>
+
+                    {/* Match Format */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Match Format</label>
+                        <div className="flex gap-3">
+                            {(['T20', 'One Day'] as const).map(fmt => (
+                                <button
+                                    key={fmt}
+                                    type="button"
+                                    onClick={() => setFormData({...formData, matchFormat: fmt})}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border font-black text-sm transition-all ${
+                                        formData.matchFormat === fmt
+                                            ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/30'
+                                            : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-white'
+                                    }`}
+                                >
+                                    <Zap size={14} />
+                                    {fmt === 'T20' ? 'T20 (20 Overs)' : 'One Day (50 Overs)'}
+                                </button>
+                            ))}
                         </div>
                     </div>
 

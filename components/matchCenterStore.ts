@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Performer, MatchStatus, MatchStage } from '../types';
-export type { Performer, MatchStatus, MatchStage };
+import { Performer, MatchStatus, MatchStage, FullScorecardData } from '../types';
+export type { Performer, MatchStatus, MatchStage, FullScorecardData };
 
 export const isPastMatch = (matchDateStr: string): boolean => {
   const now = new Date();
@@ -25,14 +25,24 @@ export interface ScheduledMatch {
   status: MatchStatus;
   homeTeamXI: string[]; // Array of Player IDs from Squad Roster
   opponentTeamXI: string[]; // Array of Names/IDs from OpponentTeam players
-  tossDetails?: string;
+  toss?: {
+    winner: string;
+    choice: 'Bat' | 'Field';
+  };
+  maxOvers?: number;
   resultSummary?: string; // e.g., "Indian Strikers won by 4 wickets"
   finalScoreHome?: { runs: number; wickets: number; overs: number };
   finalScoreAway?: { runs: number; wickets: number; overs: number };
   resultNote?: string; 
+  resultType?: string; // e.g., "Normal Result", "Abandoned"
+  scorecard?: FullScorecardData;
   isLiveScored?: boolean;
   isLocked?: boolean;
   isHomeBattingFirst?: boolean;
+  matchFormat?: 'T20' | 'One Day';
+  opponentName?: string;
+  homeLogo?: string;
+  opponentLogo?: string;
   performers?: Performer[];
 }
 
@@ -41,7 +51,8 @@ interface MatchStore {
   addMatch: (match: Omit<ScheduledMatch, 'id'>) => void;
   updateMatch: (id: string, updates: Partial<ScheduledMatch>) => void;
   deleteMatch: (id: string) => void;
-  setPlayingXI: (id: string, teamType: 'home' | 'away', playerIds: string[]) => void;
+  setPlayingXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => void;
+  updateMatchXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => void;
   updateMatchStatus: (id: string, status: MatchStatus) => void;
   getSortedMatches: () => ScheduledMatch[];
   resetZombieMatches: () => void;
@@ -89,6 +100,14 @@ export const useMatchCenter = create<MatchStore>()(
           [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: playerIds 
         } : m)
       })),
+
+      updateMatchXI: (id, teamType, playerIds) => set((state) => ({
+        matches: state.matches.map(m => m.id === id ? { 
+          ...m, 
+          [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: playerIds 
+        } : m)
+      })),
+
 
       updateMatchStatus: (id, status) => set((state) => ({
         matches: state.matches.map(m => m.id === id ? { ...m, status } : m)

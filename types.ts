@@ -47,6 +47,7 @@ export interface Performer {
   fours?: number;
   sixes?: number;
   maidens?: number;
+  dotBalls?: number;
   outHow?: string;
 }
 
@@ -67,6 +68,9 @@ export interface InningsBowlingEntry {
   maidens: number;
   runsConceded: number;
   wickets: number;
+  wides?: number;
+  noBalls?: number;
+  dotBalls?: number;
 }
 
 export interface InningsExtras {
@@ -83,6 +87,7 @@ export interface InningsData {
   totalRuns: number;
   totalWickets: number;
   totalOvers: number;
+  fallOfWickets?: string;
 }
 
 export interface FullScorecardData {
@@ -134,6 +139,7 @@ export interface Player {
   isCaptain?: boolean;
   isViceCaptain?: boolean;
   isAvailable?: boolean;
+  isActive?: boolean;
   avatarUrl?: string;
   dob?: string;
   externalId?: string;

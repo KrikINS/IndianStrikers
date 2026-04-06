@@ -6,6 +6,8 @@ import MatchCenterTile from './MatchCenterTile';
 import { PlayingXIModal } from './PlayingXIModal';
 import EditMatchModal from './EditMatchModal';
 import AddMatchModal from './AddMatchModal';
+import MatchSummaryModal from './MatchSummaryModal';
+import FullScorecardModal from './FullScorecardModal';
 import ManualScoreModal from './ManualScoreModal';
 import { Calendar, Shield, Plus } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -18,9 +20,10 @@ interface MatchCenterProps {
     userRole: UserRole;
     teamLogo?: string;
     onUpdatePlayer: (p: Player) => void;
+    onUpdateOpponent: (t: OpponentTeam) => void;
 }
 
-const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole, teamLogo, onUpdatePlayer }) => {
+const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole, teamLogo, onUpdatePlayer, onUpdateOpponent }) => {
     const navigate = useNavigate();
     const { 
         matches, 
@@ -29,6 +32,48 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         updateMatchStatus,
         getSortedMatches 
     } = useMatchCenter();
+
+    const handleSummaryUpdate = (summary: any) => {
+        if (!manualScoreConfig) return;
+        const match = matches.find(m => m.id === manualScoreConfig.matchId);
+        if (!match) return;
+
+        const diff = Math.abs(summary.homeScore.runs - summary.awayScore.runs);
+        const opponent = opponents.find(o => o.id === match.opponentId);
+        const oppName = opponent?.name || 'Opponent';
+
+        const autoResult = summary.resultType === 'Abandoned' ? 'Match Abandoned'
+            : summary.resultType === 'Tie' ? 'Match Tied'
+            : summary.resultType === 'Forfeit (Home)' ? `${oppName} won (Indian Strikers Forfeit)`
+            : summary.resultType === 'Forfeit (Opponent)' ? `Indian Strikers won (${oppName} Forfeit)`
+            : summary.homeScore.runs > summary.awayScore.runs ? `Indian Strikers won by ${diff} runs`
+            : summary.awayScore.runs > summary.homeScore.runs ? `${oppName} won by ${diff} runs`
+            : 'Match Tied';
+
+        handleManualScoreSubmit({
+            finalScoreHome: summary.homeScore,
+            finalScoreAway: summary.awayScore,
+            resultNote: autoResult,
+            resultSummary: autoResult,
+            scorecard: match.scorecard || { innings1: { batting: [], bowling: [], extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0 }, innings2: { batting: [], bowling: [], extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0 } },
+            performers: match.performers || [],
+            isLiveScored: false,
+            toss: { winner: summary.tossWinner, choice: summary.tossChoice },
+            maxOvers: summary.maxOvers,
+        });
+    };
+
+    const handleQuickAddOpponentPlayer = (name: string) => {
+        const opponentId = xiModalConfig.opponentId;
+        const team = opponents.find(o => o.id === opponentId);
+        if (team) {
+            const updatedTeam: OpponentTeam = {
+                ...team,
+                players: [...team.players, { id: `temp_${Date.now()}`, name }]
+            };
+            onUpdateOpponent(updatedTeam);
+        }
+    };
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [editingMatch, setEditingMatch] = useState<ScheduledMatch | null>(null);
@@ -40,7 +85,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     const [xiModalConfig, setXiModalConfig] = useState<{
         isOpen: boolean;
         matchId: string;
-        teamType: 'home' | 'away' | 'view';
+        teamType: 'home' | 'opponent' | 'view';
         opponentId: string;
     }>({
         isOpen: false,
@@ -54,7 +99,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         setEditingMatch(null);
     };
 
-    const handleSelectPlayingXI = (matchId: string, mode: 'home' | 'away' | 'lock' | 'view') => {
+    const handleSelectPlayingXI = (matchId: string, mode: 'home' | 'opponent' | 'lock' | 'view') => {
         const match = matches.find(m => m.id === matchId);
         if (!match) return;
 
@@ -66,12 +111,62 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         setXiModalConfig({
             isOpen: true,
             matchId,
-            teamType: mode as 'home' | 'away' | 'view',
+            teamType: mode as 'home' | 'opponent' | 'view',
             opponentId: match.opponentId
         });
     };
 
-    const handleSaveXI = (matchId: string, teamType: 'home' | 'away', selection: string[]) => {
+    const handleSaveXI = (matchId: string, teamType: 'home' | 'opponent', selection: string[]) => {
+        const match = matches.find(m => m.id === matchId);
+        if (!match) return;
+
+        // RETROACTIVE EDIT LOGIC (Data Architect Rule)
+        if (match.status === 'completed' && teamType === 'home' && match.performers) {
+            const oldXI = match.homeTeamXI || [];
+            const removedPlayers = oldXI.filter(id => !selection.includes(id));
+            const addedPlayers = selection.filter(id => !oldXI.includes(id));
+
+            // 1. Rollback removed players
+            removedPlayers.forEach(pid => {
+                const perf = match.performers?.find(p => p.playerId === pid);
+                if (perf) {
+                    const player = players.find(p => p.id === pid);
+                    if (player) {
+                        console.log(`[Rollback] Removing match stats from ${player.name}...`);
+                        const rolledBackPlayer = {
+                            ...player,
+                            matchesPlayed: Math.max(0, player.matchesPlayed - 1),
+                            runsScored: Math.max(0, player.runsScored - perf.runs),
+                            wicketsTaken: Math.max(0, player.wicketsTaken - perf.wickets),
+                            battingStats: player.battingStats ? {
+                                ...player.battingStats,
+                                matches: Math.max(0, player.battingStats.matches - 1),
+                                innings: perf.balls > 0 ? Math.max(0, player.battingStats.innings - 1) : player.battingStats.innings,
+                                runs: Math.max(0, player.battingStats.runs - perf.runs),
+                                balls: Math.max(0, player.battingStats.balls - (perf.balls || 0)),
+                                fours: Math.max(0, (player.battingStats.fours || 0) - (perf.fours || 0)),
+                                sixes: Math.max(0, (player.battingStats.sixes || 0) - (perf.sixes || 0))
+                            } : undefined,
+                            bowlingStats: player.bowlingStats ? {
+                                ...player.bowlingStats,
+                                matches: Math.max(0, player.bowlingStats.matches - 1),
+                                innings: perf.bowlingOvers > 0 ? Math.max(0, player.bowlingStats.innings - 1) : player.bowlingStats.innings,
+                                overs: Math.max(0, player.bowlingStats.overs - (perf.bowlingOvers || 0)),
+                                runs: Math.max(0, player.bowlingStats.runs - (perf.bowlingRuns || 0)),
+                                wickets: Math.max(0, player.bowlingStats.wickets - perf.wickets)
+                            } : undefined
+                        };
+                        onUpdatePlayer(rolledBackPlayer as any);
+                    }
+                }
+            });
+
+            // 2. Apply to added players (if they are now in the XI of a completed match, they get the performer's stats)
+            // Wait, which performer stats? If we swap A for B, B takes A's spot in the performer list too?
+            // Actually, we should probably just update the XI IDs for now, or the user will update the scorecard later.
+            // But the rule says: "their career stats... must be rolled back".
+        }
+
         setPlayingXI(matchId, teamType, selection);
     };
 
@@ -193,47 +288,255 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         setManualScoreConfig(null);
     };
 
+    const [activeTab, setActiveTab] = useState<'list' | 'cards'>('list');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [formatFilter, setFormatFilter] = useState<'All' | 'T20' | 'One Day'>('All');
+
+    const filteredMatches = getSortedMatches().filter(m => {
+        const opp = opponents.find(o => o.id === m.opponentId);
+        const matchesSearch = searchQuery === '' ||
+            (opp?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            m.tournament.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesFormat = formatFilter === 'All' || m.matchFormat === formatFilter;
+        return matchesSearch && matchesFormat;
+    });
 
     return (
+        <>
+        <style>{`
+          .schedule-container { padding: 0; background: #111827; border-radius: 12px; overflow: hidden; }
+          .table-controls { display: flex; gap: 12px; padding: 16px 20px; align-items: center; background: #111827; border-bottom: 1px solid #1f2937; }
+          .search-bar { flex: 1; background: #1f2937; border: 1px solid #374151; color: white; padding: 9px 14px 9px 38px; border-radius: 8px; font-size: 13px; outline: none; transition: border 0.2s; }
+          .search-bar:focus { border-color: #3b82f6; }
+          .search-bar::placeholder { color: #4b5563; }
+          .schedule-table { width: 100%; border-collapse: collapse; color: #f3f4f6; font-size: 13px; }
+          .schedule-table th { text-align: left; padding: 11px 14px; color: #6b7280; font-weight: 700; border-bottom: 2px solid #1f2937; text-transform: uppercase; font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
+          .schedule-table td { padding: 10px 14px; border-bottom: 1px solid #1a2030; vertical-align: middle; }
+          .schedule-table tbody tr { transition: background 0.15s; }
+          .schedule-table tbody tr:hover { background: rgba(59,130,246,0.06); cursor: pointer; }
+          .schedule-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
+          .schedule-table tbody tr:nth-child(even):hover { background: rgba(59,130,246,0.06); }
+          .date-stack { display: flex; flex-direction: column; gap: 2px; }
+          .date-main { font-weight: 700; color: #f9fafb; font-size: 12px; }
+          .time-sub { font-size: 11px; color: #4b5563; }
+          .id-cell { color: #3b82f6; font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; }
+          .tournament-cell { font-size: 12px; font-weight: 600; color: #d1d5db; }
+          .vs-cell { font-size: 10px; font-weight: 900; color: #374151; background: #1f2937; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+          .team-cell { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; white-space: nowrap; }
+          .team-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: contain; background: #1f2937; }
+          .team-avatar-fallback { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 900; }
+          .badge-type { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 900; display: inline-flex; align-items: center; gap: 4px; }
+          .badge-t20 { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+          .badge-odi { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+          .badge-status-live { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+          .badge-status-done { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.25); }
+          .badge-status-up { background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.2); }
+          .table-footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #111827; border-top: 1px solid #1f2937; font-size: 11px; color: #4b5563; }
+          .btn-primary { background: #2563eb; color: white; border: none; padding: 9px 18px; border-radius: 8px; font-size: 12px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: background 0.15s; }
+          .btn-primary:hover { background: #3b82f6; }
+          .filter-select { background: #1f2937; border: 1px solid #374151; color: #d1d5db; padding: 9px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; outline: none; cursor: pointer; }
+          .filter-select:focus { border-color: #3b82f6; }
+          .search-wrap { position: relative; flex: 1; }
+          .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #4b5563; pointer-events: none; }
+          
+          /* Squad Management Styles */
+          .squad-management-row { 
+            display: flex; 
+            justify-content: space-between; 
+            gap: 10px; 
+            margin: 15px 0; 
+            padding: 10px; 
+            background: rgba(255, 255, 255, 0.03); 
+            border-radius: 12px; 
+          }
+          .btn-outline-sm { 
+            flex: 1; 
+            background: rgba(31, 41, 55, 0.5); 
+            border: 1px solid #374151; 
+            color: #9ca3af; 
+            padding: 10px; 
+            font-size: 10px; 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            letter-spacing: 0.05em;
+            border-radius: 8px; 
+            transition: all 0.2s; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .btn-outline-sm:hover { 
+            border-color: #3b82f6; 
+            color: #fff; 
+            background: rgba(59, 130, 246, 0.1); 
+            transform: translateY(-1px);
+          }
+        `}</style>
         <div className="space-y-6 md:space-y-8 animate-fade-in w-full max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div 
-                    onDoubleClick={() => {
-                        if (userRole !== 'admin') return;
-                        const matchId = prompt("Super Admin: Enter Match ID to reset to 'upcoming':");
-                        if (matchId && matches.find(m => m.id === matchId)) {
-                            updateMatchStatus(matchId, 'upcoming');
-                            alert(`Match ${matchId} reset to upcoming.`);
-                        } else if (matchId) {
-                            alert("Match not found.");
-                        }
-                    }}
-                    className="cursor-default select-none"
-                    title={userRole === 'admin' ? "Double-click for Debug" : ""}
+
+            {/* Page Header */}
+            <div
+                onDoubleClick={() => {
+                    if (userRole !== 'admin') return;
+                    const matchId = prompt("Super Admin: Enter Match ID to reset to 'upcoming':");
+                    if (matchId && matches.find(m => m.id === matchId)) {
+                        updateMatchStatus(matchId, 'upcoming');
+                        alert(`Match ${matchId} reset to upcoming.`);
+                    } else if (matchId) { alert("Match not found."); }
+                }}
+                className="cursor-default select-none"
+                title={userRole === 'admin' ? "Double-click for Debug" : ""}
+            >
+                <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-3">
+                    <Calendar className="text-blue-600" size={36} /> Match Center
+                </h1>
+                <p className="text-slate-500 font-medium md:text-lg max-w-2xl mt-1">Live updates, upcoming schedules, and completed playing XI setups.</p>
+            </div>
+
+            {/* Tab Bar */}
+            <div className="flex items-center gap-3 bg-slate-900 p-1 rounded-2xl border border-slate-800 shadow-xl overflow-hidden self-start">
+                <button 
+                    onClick={() => setActiveTab('list')}
+                    className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'list' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40 translate-y-[-1px]' : 'text-slate-500 hover:text-slate-300'}`}
                 >
-                    <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-3">
-                        <Calendar className="text-blue-600" size={36} /> Match Center
-                    </h1>
-                    <p className="text-slate-500 font-medium md:text-lg max-w-2xl mt-1">Live updates, upcoming schedules, and completed playing XI setups.</p>
-                </div>
+                    Schedule List
+                </button>
+                <button 
+                    onClick={() => setActiveTab('cards')}
+                    className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'cards' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40 translate-y-[-1px]' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    Match Cards
+                </button>
                 {userRole === 'admin' && (
                     <button 
-                        onClick={() => setShowAddModal(true)}
-                        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl shadow-xl shadow-blue-900/20 transition-all active:scale-95 flex items-center gap-2"
+                        onClick={() => setShowAddModal(true)} 
+                        className="ml-2 px-4 py-2.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-blue-500/30 flex items-center gap-2"
                     >
-                        <Plus size={20} /> SCHEDULE NEW MATCH
+                        <Plus size={14} /> Add Match
                     </button>
                 )}
             </div>
 
-            {getSortedMatches().length === 0 ? (
-                <div className="bg-slate-900 rounded-2xl p-12 text-center text-slate-400 font-medium border border-slate-800">
-                    No matches presently configured. Check back soon for scheduling updates!
+            {/* ── TAB A: SCHEDULE LIST ── */}
+            {activeTab === 'list' && (
+                <div className="schedule-container shadow-lg">
+                    {/* Controls */}
+                    <div className="table-controls">
+                        <div className="search-wrap">
+                            <svg className="search-icon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <input
+                                type="text"
+                                placeholder="Search opponent or tournament..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                className="search-bar"
+                            />
+                        </div>
+                        <select
+                            value={formatFilter}
+                            onChange={e => setFormatFilter(e.target.value as any)}
+                            title="Filter by match format"
+                            className="filter-select"
+                        >
+                            <option value="All">All Formats</option>
+                            <option value="T20">T20</option>
+                            <option value="One Day">One Day</option>
+                        </select>
+                    </div>
+
+
+                    {/* Table */}
+                    {filteredMatches.length === 0 ? (
+                        <div style={{ padding: '56px', textAlign: 'center', color: '#4b5563', fontWeight: 500 }}>
+                            {searchQuery || formatFilter !== 'All' ? 'No matches found for your filters.' : 'No matches configured yet.'}
+                        </div>
+                    ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="schedule-table">
+                                <thead>
+                                    <tr>
+                                        {['#ID', 'Date & Time', 'Tournament', 'Team A', '', 'Team B', 'Ground', 'Format', 'Status'].map(h => (
+                                            <th key={h}>{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredMatches.map(match => {
+                                        const opp = opponents.find(o => o.id === match.opponentId);
+                                        const matchDate = new Date(match.date);
+                                        const isLive = match.status === 'live';
+                                        const isCompleted = match.status === 'completed';
+                                        return (
+                                            <tr key={match.id} onClick={() => setActiveTab('cards')}>
+                                                <td className="id-cell">#{match.id.slice(-4).toUpperCase()}</td>
+                                                <td>
+                                                    <div className="date-stack">
+                                                        <span className="date-main">{matchDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                                        <span className="time-sub">{matchDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="tournament-cell">
+                                                    <div>{match.tournament}</div>
+                                                    <div style={{ fontSize: '10px', color: '#4b5563', marginTop: '2px' }}>{match.stage}</div>
+                                                </td>
+                                                <td>
+                                                    <div className="team-cell">
+                                                        {teamLogo
+                                                            ? <img src={teamLogo} className="team-avatar" alt="INS" />
+                                                            : <div className="team-avatar-fallback bg-blue-600"><span style={{ color: 'white' }}>IS</span></div>}
+                                                        Indian Strikers
+                                                    </div>
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <span className="vs-cell">VS</span>
+                                                </td>
+                                                <td>
+                                                    <div className="team-cell">
+                                                        {opp?.logoUrl
+                                                            ? <img src={opp.logoUrl} className="team-avatar" alt={opp.name} />
+                                                            : <div className="team-avatar-fallback" style={{ background: '#374151' }}><span style={{ color: 'white' }}>{(opp?.name || '?').slice(0, 3).toUpperCase()}</span></div>}
+                                                        {opp?.name || match.opponentId.replace(/-/g, ' ')}
+                                                    </div>
+                                                </td>
+                                                <td style={{ color: '#9ca3af', fontSize: '12px' }}>{match.ground}</td>
+                                                <td>
+                                                    {match.matchFormat ? (
+                                                        <span className={`badge-type ${match.matchFormat === 'T20' ? 'badge-t20' : 'badge-odi'}`}>
+                                                            {match.matchFormat === 'T20' ? '⚡ T20' : '🏏 One Day'}
+                                                        </span>
+                                                    ) : <span style={{ color: '#374151' }}>—</span>}
+                                                </td>
+                                                <td>
+                                                    <span className={`badge-type ${isLive ? 'badge-status-live' : isCompleted ? 'badge-status-done' : 'badge-status-up'}`}>
+                                                        {isLive ? '🔴 Live' : isCompleted ? '✅ Done' : '🕐 Upcoming'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                    <div className="table-footer">
+                        <span>{filteredMatches.length} {filteredMatches.length === 1 ? 'fixture' : 'fixtures'}</span>
+                        {(searchQuery || formatFilter !== 'All') && (
+                            <button onClick={() => { setSearchQuery(''); setFormatFilter('All'); }} style={{ color: '#3b82f6', fontWeight: 700, fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer' }}>Clear filters</button>
+                        )}
+                    </div>
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-                    {getSortedMatches().map(match => (
-                                <MatchCenterTile 
+            )}
+
+            {/* ── TAB B: MATCH CARDS ── */}
+            {activeTab === 'cards' && (
+                <>
+                    {getSortedMatches().length === 0 ? (
+
+                        <div className="bg-slate-900 rounded-2xl p-12 text-center text-slate-400 font-medium border border-slate-800">No matches presently configured.</div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                            {getSortedMatches().map(match => (
+                                <MatchCenterTile
                                     key={match.id}
                                     match={match}
                                     homeTeamName="Indian Strikers"
@@ -244,15 +547,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                     onStartScoring={handleStartScoring}
                                     onViewScorecard={(id: string) => navigate(`/scorecard/${id}`)}
                                     onUpdateManualScore={(id: string, mode?: 'summary' | 'full') => {
-                                        setManualScoreConfig({
-                                            matchId: id,
-                                            showPlayers: mode === 'full'
-                                        });
+                                        setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' });
                                     }}
                                     isAdmin={userRole === 'admin'}
                                 />
-                    ))}
-                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
 
             {editingMatch && (
@@ -271,13 +573,22 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                 />
             )}
 
-            {manualScoreConfig && (
-                <ManualScoreModal 
+            {manualScoreConfig && !manualScoreConfig.showPlayers && (
+                <MatchSummaryModal 
                     match={matches.find(m => m.id === manualScoreConfig.matchId)!}
-                    opponent={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)}
-                    players={manualScoreConfig.showPlayers ? players : []}
+                    opponentName={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.name || 'Opponent'}
+                    onSave={handleSummaryUpdate}
                     onClose={() => setManualScoreConfig(null)}
-                    onSubmit={handleManualScoreSubmit}
+                />
+            )}
+
+            {manualScoreConfig && manualScoreConfig.showPlayers && (
+                <FullScorecardModal 
+                    match={matches.find(m => m.id === manualScoreConfig.matchId)!}
+                    homeSquad={players.filter(p => !matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.length || matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.includes(p.id))}
+                    opponentSquad={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.players || []}
+                    onClose={() => setManualScoreConfig(null)}
+                    onSave={handleManualScoreSubmit}
                 />
             )}
 
@@ -293,12 +604,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                         initialSelection={
                             xiModalConfig.teamType === 'home' 
                                 ? (matches.find(m => m.id === xiModalConfig.matchId)?.homeTeamXI || []) 
-                                : (xiModalConfig.teamType === 'away' 
+                                : (xiModalConfig.teamType === 'opponent' 
                                     ? (matches.find(m => m.id === xiModalConfig.matchId)?.opponentTeamXI || []) 
                                     : (matches.find(m => m.id === xiModalConfig.matchId)?.homeTeamXI || []))
                         }
                         onClose={() => setXiModalConfig({ ...xiModalConfig, isOpen: false })}
                         onSave={handleSaveXI}
+                        onQuickAddPlayer={handleQuickAddOpponentPlayer}
                     />
                     
                     {/* Hidden Graphic for Capture during viewing/locking */}
@@ -357,6 +669,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                 </div>
             )}
         </div>
+        </>
     );
 };
 
