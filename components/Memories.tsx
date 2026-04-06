@@ -167,7 +167,7 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
               <button
                 key={f}
                 onClick={() => setFilter(f as any)}
-                className={`flex-1 px-4 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${filter === f ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex-1 px-4 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${filter === f ? 'bg-blue-600 text-white shadow-lg' : 'text-white hover:bg-blue-600/30 hover:text-white'}`}
               >
                 {f}
               </button>

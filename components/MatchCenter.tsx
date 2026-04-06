@@ -12,6 +12,7 @@ import ManualScoreModal from './ManualScoreModal';
 import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
+import { useMasterData } from './masterDataStore';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
 
 interface MatchCenterProps {
@@ -35,6 +36,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         syncWithCloud,
         getSortedMatches 
     } = useMatchCenter();
+    const { grounds } = useMasterData();
 
     const handleSummaryUpdate = (summary: any) => {
         if (!manualScoreConfig) return;
@@ -611,14 +613,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                     <button
                         onClick={() => setActiveTab('list')}
                         className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
-                            ${activeTab === 'list' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+                            ${activeTab === 'list' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
                     >
                         <List size={16} /> Schedule List
                     </button>
                     <button
                         onClick={() => setActiveTab('cards')}
                         className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
-                            ${activeTab === 'cards' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+                            ${activeTab === 'cards' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
                     >
                         <LayoutIcon size={16} /> Match Cards
                     </button>
@@ -712,7 +714,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                                                 <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="text-slate-500 text-xs font-bold uppercase">{m.ground}</td>
+                                                        <td className="text-slate-500 text-xs font-bold uppercase">{grounds.find(g => g.id === m.groundId)?.name || 'TBD'}</td>
                                                         <td>
                                                             <span className={`badge-type ${m.matchFormat === 'T20' ? 'badge-t20' : 'badge-odi'}`}>
                                                                 {(m.matchFormat || 'T20').toUpperCase()}
@@ -769,6 +771,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                             }}
                                             onDeleteMatch={deleteMatch}
                                             isAdmin={userRole === 'admin'}
+                                            grounds={grounds}
                                         />
                                     ))}
                                 </div>

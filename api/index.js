@@ -184,6 +184,44 @@ app.delete('/api/players/:id', authGuard(['admin']), async (req, res) => {
   res.json({ ok: true });
 });
 
+// Helpers for mapping
+const mapMatchToDB = (m) => {
+  const mapped = { ...m };
+  
+  // Property mapping: camelCase -> snake_case
+  const keyMap = {
+    'opponentId': 'opponent_id',
+    'groundId': 'ground_id',
+    'homeTeamXI': 'home_team_xi',
+    'opponentTeamXI': 'opponent_team_xi',
+    'isLiveScored': 'is_live_scored',
+    'isLocked': 'is_locked',
+    'isHomeBattingFirst': 'is_home_batting_first',
+    'matchFormat': 'match_format',
+    'tournamentId': 'tournament_id'
+  };
+
+  for (const [key, dbKey] of Object.entries(keyMap)) {
+    if (key in mapped) {
+      mapped[dbKey] = mapped[key];
+      delete mapped[key];
+    }
+  }
+
+  // Handle 'ground' if sent directly (backwards compatibility)
+  if ('ground' in mapped && !mapped.ground_id) {
+    mapped.ground_id = mapped.ground;
+    delete mapped.ground;
+  }
+
+  // If ID starts with 'match_', remove it for inserts (let Supabase generate UUID)
+  if (mapped.id && String(mapped.id).startsWith('match_')) {
+    delete mapped.id;
+  }
+
+  return mapped;
+};
+
 // MATCHES
 app.get('/api/matches', async (_req, res) => {
   const { data, error } = await supabase.from('matches').select('*').order('date', { ascending: false });
@@ -191,12 +229,14 @@ app.get('/api/matches', async (_req, res) => {
   res.json(data);
 });
 app.post('/api/matches', authGuard(['admin', 'member']), async (req, res) => {
-  const { data, error } = await supabase.from('matches').insert([req.body]).select().single();
+  const dbMatch = mapMatchToDB(req.body);
+  const { data, error } = await supabase.from('matches').insert([dbMatch]).select().single();
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 app.put('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => {
-  const { error } = await supabase.from('matches').update(req.body).eq('id', req.params.id);
+  const dbMatch = mapMatchToDB(req.body);
+  const { error } = await supabase.from('matches').update(dbMatch).eq('id', req.params.id);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });

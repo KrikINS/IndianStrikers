@@ -280,7 +280,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                     {['Indian Strikers', opponentName].map(team => (
                       <button key={team} type="button"
                         onClick={() => setTossWinner(team)}
-                        className={`flex-1 py-2 px-3 rounded-lg text-[11px] font-black border transition-all ${tossWinner === team ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300' : 'bg-white/[0.03] border-white/10 text-slate-500 hover:text-slate-300'}`}
+                        className={`flex-1 py-2 px-3 rounded-lg text-[11px] font-black border transition-all ${tossWinner === team ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300' : 'bg-white/[0.03] border-white/10 text-white hover:bg-yellow-500/10 hover:border-yellow-500/30 hover:text-yellow-200'}`}
                       >{team === 'Indian Strikers' ? '🏠 Home' : `🏟️ ${team.split(' ')[0]}`}</button>
                     ))}
                   </div>
@@ -292,7 +292,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                     {(['Bat', 'Field'] as const).map(c => (
                       <button key={c} type="button"
                         onClick={() => setTossChoice(c)}
-                        className={`flex-1 py-2 rounded-lg text-[11px] font-black border transition-all ${tossChoice === c ? 'bg-blue-600/30 border-blue-500/50 text-blue-300' : 'bg-white/[0.03] border-white/10 text-slate-500 hover:text-slate-300'}`}
+                        className={`flex-1 py-2 rounded-lg text-[11px] font-black border transition-all ${tossChoice === c ? 'bg-blue-600/30 border-blue-500/50 text-blue-300' : 'bg-white/[0.03] border-white/10 text-white hover:bg-blue-600/10 hover:border-blue-500/30 hover:text-blue-200'}`}
                       >{c === 'Bat' ? '🏏 Bat' : '🫸 Field'}</button>
                     ))}
                   </div>
@@ -384,7 +384,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                   {RESULT_OPTIONS.map(opt => (
                     <button key={opt.value} type="button"
                       onClick={() => setResultType(opt.value)}
-                      className={`py-1.5 px-3 rounded-lg text-[11px] font-black border transition-all ${resultType === opt.value ? 'bg-blue-600/30 border-blue-500/50 text-blue-200' : 'bg-white/[0.03] border-white/10 text-slate-500 hover:text-slate-300'}`}
+                      className={`py-1.5 px-3 rounded-lg text-[11px] font-black border transition-all ${resultType === opt.value ? 'bg-blue-600/30 border-blue-500/50 text-blue-200' : 'bg-white/[0.03] border-white/10 text-white hover:bg-blue-600/10 hover:border-blue-500/30 hover:text-blue-200'}`}
                     >{opt.label}</button>
                   ))}
                 </div>
@@ -394,7 +394,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
               <div className="flex bg-white/[0.04] p-0.5 rounded-xl border border-white/5">
                 {([1, 2] as const).map(i => (
                   <button key={i} type="button" onClick={() => setActiveInnings(i)}
-                    className={`flex-1 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${activeInnings === i ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                    className={`flex-1 py-2.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${activeInnings === i ? 'bg-blue-600 text-white shadow-lg' : 'text-white hover:bg-blue-600/30 hover:text-white'}`}
                   >
                     Innings {i}: {i === 1 ? inn1BatLabel : inn2BatLabel} Batting
                   </button>

@@ -38,7 +38,6 @@ const TournamentsManager: React.FC = () => {
       updateTourneyStore({ ...editingItem, ...form } as Tournament);
     } else {
       addTourneyStore({ 
-        id: Date.now().toString(), 
         name: form.name || '', 
         year: form.year || new Date().getFullYear(), 
         status: form.status as any || 'upcoming' 

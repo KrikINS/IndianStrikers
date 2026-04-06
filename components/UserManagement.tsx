@@ -99,13 +99,13 @@ const UserManagement: React.FC = () => {
            <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
              <button 
                onClick={() => setActiveSubTab('users')}
-               className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${activeSubTab === 'users' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+               className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${activeSubTab === 'users' ? 'bg-blue-600 text-white shadow-lg' : 'text-white hover:bg-blue-600/40 hover:text-white'}`}
              >
                Manage Users
              </button>
              <button 
                onClick={() => setActiveSubTab('requests')}
-               className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all relative ${activeSubTab === 'requests' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+               className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all relative ${activeSubTab === 'requests' ? 'bg-blue-600 text-white shadow-lg' : 'text-white hover:bg-blue-600/40 hover:text-white'}`}
              >
                Requests
                {requests.filter(r => r.status === 'Pending').length > 0 && (

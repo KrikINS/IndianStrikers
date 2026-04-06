@@ -16,11 +16,11 @@ interface MasterDataState {
     legacy: ClubLegacy;
     
     // Actions
-    addGround: (ground: Ground) => Promise<void>;
+    addGround: (ground: Omit<Ground, 'id'>) => Promise<void>;
     updateGround: (ground: Ground) => Promise<void>;
     removeGround: (id: string) => Promise<void>;
     
-    addTournament: (tournament: Tournament) => Promise<void>;
+    addTournament: (tournament: Omit<Tournament, 'id'>) => Promise<void>;
     updateTournament: (tournament: Tournament) => Promise<void>;
     removeTournament: (id: string) => Promise<void>;
     

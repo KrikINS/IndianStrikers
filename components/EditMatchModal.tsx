@@ -96,14 +96,14 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, isOpen, onClose,
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Ground</label>
                             <select 
-                                value={formData.ground}
-                                onChange={(e) => setFormData({...formData, ground: e.target.value})}
+                                value={formData.groundId}
+                                onChange={(e) => setFormData({...formData, groundId: e.target.value})}
                                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
                                 title="Select Ground"
                             >
                                 <option value="">Select Ground...</option>
                                 {grounds.map(g => (
-                                    <option key={g.id} value={g.name}>{g.name} ({g.city})</option>
+                                    <option key={g.id} value={g.id}>{g.name} ({g.location})</option>
                                 ))}
                                 <option value="Other">Other Ground</option>
                             </select>

@@ -28,7 +28,7 @@ const ControlPanel: React.FC<ControlPanelProps> = () => {
     <button
       onClick={() => navigate(`/control-panel/${id}`)}
       className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
-        ${activeTab === id ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+        ${activeTab === id ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
     >
       <Icon size={16} /> {label}
     </button>

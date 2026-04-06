@@ -170,7 +170,7 @@ export interface ScheduledMatch {
   id: string;
   opponentId: string; // References the ID in OpponentTeam
   date: string;
-  ground: string;
+  groundId: string;
   tournament: string;
   stage: MatchStage;
   status: MatchStatus;
@@ -241,7 +241,7 @@ export interface MembershipRequest {
 export interface Ground {
   id: string;
   name: string;
-  city: string;
+  location: string;
   capacity?: number;
   coordinates?: { lat: number; lng: number };
 }

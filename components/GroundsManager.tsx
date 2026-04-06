@@ -8,11 +8,11 @@ const GroundsManager: React.FC = () => {
   const { grounds, addGround: addGroundStore, updateGround: updateGroundStore, removeGround } = useMasterData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Ground | null>(null);
-  const [form, setForm] = useState<Partial<Ground>>({ name: '', city: '', capacity: 0 });
+  const [form, setForm] = useState<Partial<Ground>>({ name: '', location: '', capacity: 0 });
 
   const handleOpenAdd = () => {
     setEditingItem(null);
-    setForm({ name: '', city: '', capacity: 0 });
+    setForm({ name: '', location: '', capacity: 0 });
     setIsModalOpen(true);
   };
 
@@ -33,7 +33,7 @@ const GroundsManager: React.FC = () => {
     if (editingItem) {
       updateGroundStore({ ...editingItem, ...form } as Ground);
     } else {
-      addGroundStore({ id: Date.now().toString(), name: form.name || '', city: form.city || '', capacity: form.capacity || 0 });
+      addGroundStore({ name: form.name || '', location: form.location || '', capacity: form.capacity || 0 });
     }
     setIsModalOpen(false);
   };
@@ -61,7 +61,7 @@ const GroundsManager: React.FC = () => {
           <thead className="bg-black/40 text-slate-500 text-[10px] uppercase font-black tracking-widest border-b border-slate-800">
             <tr>
               <th className="px-6 py-4">Ground Details</th>
-              <th className="px-6 py-4">City</th>
+              <th className="px-6 py-4">City / Location</th>
               <th className="px-6 py-4">Capacity</th>
               <th className="px-6 py-4 text-right">Actions</th>
             </tr>
@@ -77,7 +77,7 @@ const GroundsManager: React.FC = () => {
                     <span className="font-bold text-slate-200">{g.name}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-slate-400 font-medium">{g.city}</td>
+                <td className="px-6 py-4 text-slate-400 font-medium">{g.location}</td>
                 <td className="px-6 py-4 text-slate-400 font-medium">{g.capacity || 'N/A'}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
@@ -131,9 +131,9 @@ const GroundsManager: React.FC = () => {
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">City</label>
                   <input 
                     required 
-                    value={form.city} 
+                    value={form.location} 
                     placeholder="e.g. London"
-                    onChange={e => setForm({...form, city: e.target.value})} 
+                    onChange={e => setForm({...form, location: e.target.value})} 
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-600" 
                   />
                 </div>

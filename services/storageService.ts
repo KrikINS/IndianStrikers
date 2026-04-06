@@ -220,6 +220,7 @@ export const getMatches = async (): Promise<ScheduledMatch[]> => {
     homeTeamXI: m.homeTeamXI || m.home_team_xi || [],
     opponentTeamXI: m.opponentTeamXI || m.opponent_team_xi || [],
     opponentId: m.opponentId || m.opponent_id,
+    groundId: m.groundId || m.ground_id,
     isLiveScored: m.isLiveScored ?? m.is_live_scored ?? false,
     isLocked: m.isLocked ?? m.is_locked ?? false,
     isHomeBattingFirst: m.isHomeBattingFirst ?? m.is_home_batting_first ?? true,

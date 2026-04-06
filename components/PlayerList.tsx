@@ -458,13 +458,13 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
         <div className="flex bg-slate-800/50 p-1 rounded-xl w-full md:w-auto">
           <button
             onClick={() => setRosterTab('active')}
-            className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'active' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'active' ? 'bg-blue-600 text-white shadow-lg' : 'text-white hover:bg-blue-600/30 hover:text-white'}`}
           >
              <Users size={14} /> Active Squad
           </button>
           <button
             onClick={() => setRosterTab('inactive')}
-            className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'inactive' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'inactive' ? 'bg-red-600 text-white shadow-lg' : 'text-white hover:bg-red-600/30 hover:text-white'}`}
           >
              <UserMinus size={14} /> Inactive
           </button>

@@ -35,7 +35,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
             const newMatch: Omit<ScheduledMatch, 'id'> = {
                 opponentId: formData.opponentId,
                 date: new Date(formData.date).toISOString(),
-                ground: selectedGround,
+                groundId: formData.groundId,
                 tournament: selectedTournament,
                 stage: formData.stage,
                 status: formData.status,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Calendar, MapPin, Radio, Edit2, Trash2, Users } from 'lucide-react';
-import { ScheduledMatch, OpponentTeam } from '../types';
+import { ScheduledMatch, OpponentTeam, Ground } from '../types';
 
 interface MatchCenterTileProps {
     match: ScheduledMatch;
@@ -14,6 +14,7 @@ interface MatchCenterTileProps {
     onUpdateManualScore: (matchId: string, mode?: 'summary' | 'full') => void;
     onDeleteMatch: (matchId: string) => void;
     isAdmin: boolean;
+    grounds: Ground[];
 }
 
 const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
@@ -27,7 +28,8 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     onViewScorecard,
     onUpdateManualScore,
     onDeleteMatch,
-    isAdmin
+    isAdmin,
+    grounds
 }) => {
     const isLive = match.status === 'live';
     const isUpcoming = match.status === 'upcoming';
@@ -152,7 +154,10 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 <div className="flex items-center justify-between mb-3 text-[9px] font-bold text-slate-400 uppercase tracking-tight px-1">
                     <div className="flex gap-3">
                         <span className="flex items-center gap-1"><Calendar size={10} /> {dateFormatted}</span>
-                        <span className="flex items-center gap-1"><MapPin size={10} /> {(match.ground || 'TBD').split(' ')[0]}</span>
+                        <span className="flex items-center gap-1">
+                            <MapPin size={10} /> 
+                            {grounds.find(g => g.id === match.groundId)?.name || 'TBD'}
+                        </span>
                     </div>
                     {isAdmin && (
                         <div className="flex gap-2">
