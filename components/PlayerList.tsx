@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
 import { getAppUsers } from '../services/storageService';
-import { Plus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search } from 'lucide-react';
+import { Plus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList } from 'lucide-react';
 import styles from './PlayerList.module.css';
 
 interface PlayerListProps {
@@ -75,6 +75,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
 
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [viewingPlayer, setViewingPlayer] = useState<Player | null>(null);
+  const [rosterTab, setRosterTab] = useState<'active' | 'inactive'>('active');
   const [activeStatTab, setActiveStatTab] = useState<'batting' | 'bowling'>('batting');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEditTab, setActiveEditTab] = useState<'general' | 'batting' | 'bowling'>('general');
@@ -128,12 +129,15 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
     bowlingStats: { ...defaultBowlingStats }
   });
 
+
   const filteredPlayers = players.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const activePlayers = filteredPlayers.filter(p => p.isAvailable);
-  const inactivePlayers = filteredPlayers.filter(p => !p.isAvailable);
+  // Active players = marked Active AND NOT Away
+  const activePlayers = filteredPlayers.filter(p => p.isActive !== false && p.isAvailable !== false);
+  // Inactive players = marked Inactive OR Away
+  const inactivePlayers = filteredPlayers.filter(p => p.isActive === false || p.isAvailable === false);
 
   const handleOpenAdd = () => {
     setEditingPlayer(null);
@@ -144,6 +148,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
       isCaptain: false,
       isViceCaptain: false,
       isAvailable: true,
+      isActive: true,
       matchesPlayed: 0,
       runsScored: 0,
       wicketsTaken: 0,
@@ -289,11 +294,12 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
         average: summaryAvg,
         isCaptain: !!formData.isCaptain,
         isViceCaptain: !!formData.isViceCaptain,
-        isAvailable: formData.isAvailable !== undefined ? formData.isAvailable : true,
+        isActive: formData.isActive !== false,
+        isAvailable: formData.isAvailable !== false,
         avatarUrl: formData.avatarUrl || `https://picsum.photos/200/200?random=${Date.now()}`,
         dob: formData.dob,
         externalId: formData.externalId,
-        jerseyNumber: formData.jerseyNumber ? Number(formData.jerseyNumber) : undefined,
+        jerseyNumber: (formData.jerseyNumber !== undefined && (formData.jerseyNumber as any) !== '' && formData.jerseyNumber !== null) ? Number(formData.jerseyNumber) : undefined,
         battingStats: batting,
         bowlingStats: bowling,
         linkedUserId: formData.linkedUserId
@@ -340,10 +346,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
       className="group relative bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
     >
       {/* Header / Background */}
-      <div className={`h-20 md:h-24 bg-gradient-to-r ${player.isAvailable ? 'from-slate-800 to-slate-900' : 'from-slate-200 to-slate-300'} relative overflow-hidden`}>
-        {/* Jersey Number Watermark */}
-        {player.jerseyNumber && (
-          <div className={`absolute top-1 right-2 text-[4rem] font-black italic select-none z-0 pointer-events-none ${styles.jerseyWatermark} ${player.isAvailable ? 'text-white/25' : 'text-slate-900/15'}`}>
+      <div className={`h-[60px] md:h-[72px] ${player.isAvailable ? 'bg-slate-900' : 'bg-slate-100'} relative overflow-hidden`}>
+        {/* Jersey Number Watermark (Top Right) */}
+        {(player.jerseyNumber !== undefined && player.jerseyNumber !== null) && (
+          <div className={`absolute top-0 right-2 text-[3.4rem] font-black italic select-none z-0 pointer-events-none ${styles.jerseyWatermark} text-white/40`}>
             {player.jerseyNumber}
           </div>
         )}
@@ -357,26 +363,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
             <span className="bg-blue-400 text-blue-900 text-[10px] font-black px-2 py-0.5 rounded shadow-sm tracking-wider">VC</span>
           )}
         </div>
-
-        {/* Quick Availability Toggle */}
-        {canManagePlayers && (
-          <button
-            onClick={(e) => handleToggleAvailability(player, e)}
-            className={`absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold shadow-md transition-all z-10
-              ${player.isAvailable
-                ? 'bg-green-500 text-white hover:bg-green-600'
-                : 'bg-red-500 text-white hover:bg-red-600'}
-            `}
-            title="Toggle Availability"
-          >
-            {player.isAvailable ? <UserCheck size={10} /> : <UserX size={10} />}
-            {player.isAvailable ? 'ACTIVE' : 'AWAY'}
-          </button>
-        )}
       </div>
 
       {/* Avatar */}
-      <div className="absolute top-8 md:top-10 left-6">
+      <div className="absolute top-5 left-6 z-10 transition-transform duration-300 group-hover:scale-110">
         <div className="relative">
           <img
             src={player.avatarUrl}
@@ -387,22 +377,37 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
         </div>
       </div>
 
-      <div className="pt-8 md:pt-10 p-4 md:p-6">
-        <div className="flex justify-between items-start mb-1">
-          <h3 className={`text-base md:text-lg font-bold ${player.isAvailable ? 'text-slate-800' : 'text-slate-500'}`}>{player.name}</h3>
-          {canEdit && (
-            <div className="flex gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
-              {canEditProfile && (
-                <button
-                  onClick={(e) => handleOpenEdit(player, e)}
-                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1"
-                  title="Edit Profile"
-                >
-                  <Edit2 size={16} /> <span className="text-xs font-bold">Edit</span>
-                </button>
-              )}
-            </div>
-          )}
+      <div className="pt-8 md:pt-10 px-4 md:px-6 pb-2 md:pb-3">
+        <div className="flex justify-between items-center mb-1">
+          <h3 className={`text-base md:text-lg font-bold truncate pr-1 ${player.isAvailable ? 'text-slate-800' : 'text-slate-500'}`}>{player.name}</h3>
+          
+          <div className="flex items-center gap-2">
+            {/* Quick Availability Toggle */}
+            {canManagePlayers && (
+              <button
+                onClick={(e) => handleToggleAvailability(player, e)}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black shadow-sm transition-all whitespace-nowrap
+                  ${player.isAvailable
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    : 'bg-red-100 text-red-700 hover:bg-red-200'}
+                `}
+                title="Toggle Availability"
+              >
+                {player.isAvailable ? <UserCheck size={10} /> : <UserX size={10} />}
+                {player.isAvailable ? 'ACTIVE' : 'AWAY'}
+              </button>
+            )}
+
+            {canEdit && canEditProfile && (
+              <button
+                onClick={(e) => handleOpenEdit(player, e)}
+                className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Edit Profile"
+              >
+                <Edit2 size={14} />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
@@ -433,70 +438,86 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
             {canEdit ? 'Manage players, stats, and availability' : 'View player profiles and stats'}
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex items-center gap-3 w-full md:w-auto">
           {canManagePlayers && (
             <button
               onClick={handleOpenAdd}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-600/20 hover:scale-105 w-full md:w-auto justify-center"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-600/20 hover:scale-105 w-full md:w-auto justify-center font-bold"
             >
               <Plus size={20} />
               Recruit Player
             </button>
           )}
-
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-        <input
-          type="text"
-          placeholder="Search players by name..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 shadow-sm transition-all"
-        />
+      <div className="flex flex-col md:flex-row gap-4 items-center">
+        {/* Roster Tabs */}
+        <div className="flex p-1 bg-slate-900 border border-slate-800 rounded-xl w-full md:w-auto">
+          <button
+            onClick={() => setRosterTab('active')}
+            className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'active' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+          >
+             <Users size={16} /> Active Squad
+          </button>
+          <button
+            onClick={() => setRosterTab('inactive')}
+            className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'inactive' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+          >
+             <UserMinus size={16} /> Inactive Players
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+          <input
+            type="text"
+            placeholder="Search roster by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-200 shadow-sm transition-all text-sm font-medium"
+          />
+        </div>
       </div>
 
       <div className="space-y-10">
-        {/* Active Players Section */}
-        {activePlayers.length > 0 && (
-          <section>
+        {rosterTab === 'active' ? (
+          /* Active Players Section */
+          <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
               <span className="w-1.5 h-6 bg-blue-600 rounded-full"></span>
-              Active Squad
+              Current Squad
               <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{activePlayers.length}</span>
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-              {activePlayers.map(renderPlayerCard)}
-            </div>
+            {activePlayers.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                {activePlayers.map(renderPlayerCard)}
+              </div>
+            ) : (
+              <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">
+                No active players found matching your criteria.
+              </div>
+            )}
           </section>
-        )}
-
-        {/* Inactive Players Section */}
-        {inactivePlayers.length > 0 && (
-          <section>
-            {activePlayers.length > 0 && <div className="h-px bg-slate-200 my-8 block w-full opacity-50"></div>}
-            <h3 className="text-xl font-bold text-slate-500 mb-5 flex items-center gap-3">
-              <span className="w-1.5 h-6 bg-slate-300 rounded-full"></span>
-              Inactive / Away
+        ) : (
+          /* Inactive Players Section */
+          <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
+              <span className="w-1.5 h-6 bg-red-600 rounded-full"></span>
+              Inactive / Retired Players
               <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{inactivePlayers.length}</span>
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 opacity-75 grayscale-[25%] hover:grayscale-0 transition-all">
-              {inactivePlayers.map(renderPlayerCard)}
-            </div>
+            {inactivePlayers.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                {inactivePlayers.map(renderPlayerCard)}
+              </div>
+            ) : (
+              <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">
+                No inactive players found.
+              </div>
+            )}
           </section>
-        )}
-
-        {filteredPlayers.length === 0 && (
-          <div className="py-16 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 text-slate-400 mb-4">
-              <Search size={32} />
-            </div>
-            <h3 className="text-lg font-bold text-slate-700">No players found</h3>
-            <p className="text-slate-500">We couldn't find any players matching "{searchQuery}"</p>
-          </div>
         )}
       </div>
 
@@ -584,6 +605,32 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                     <div className="flex-1 space-y-4 w-full">
                       <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Full Name</label>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              title="Active Status"
+                              name="isActive"
+                              id="isActive"
+                              checked={formData.isActive !== false}
+                              onChange={handleInputChange}
+                              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                            />
+                            <label htmlFor="isActive" className="text-sm font-bold text-slate-700">Active Squad Member</label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              title="Match Availability"
+                              name="isAvailable"
+                              id="isAvailable"
+                              checked={formData.isAvailable || false}
+                              onChange={handleInputChange}
+                              className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
+                            />
+                            <label htmlFor="isAvailable" className="text-sm font-bold text-slate-700">Available for Matches</label>
+                          </div>
+                        </div>
                         <input
                           required
                           name="name"
@@ -833,16 +880,23 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
             </button>
 
             {/* Hero Section */}
-            <div className="relative h-40 md:h-48 bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 shrink-0">
+            <div className="relative h-32 md:h-36 bg-slate-900 shrink-0">
               <div className="absolute inset-0 opacity-20 bg-dot-white-grid"></div>
-              <div className="absolute -bottom-12 md:-bottom-16 left-6 md:left-8">
+              {/* Jersey Number Watermark (Top Right) */}
+              {(viewingPlayer.jerseyNumber !== undefined && viewingPlayer.jerseyNumber !== null) && (
+                <div className={`absolute top-0 right-6 text-[5.5rem] font-black italic select-none z-0 pointer-events-none ${styles.jerseyWatermark} text-white/40`}>
+                  {viewingPlayer.jerseyNumber}
+                </div>
+              )}
+              {/* Hero Section Content Alignment */}
+              <div className="absolute top-5 left-6 md:left-8 z-10">
                 <img
                   src={viewingPlayer.avatarUrl}
                   alt={viewingPlayer.name}
                   className="w-24 h-24 md:w-32 md:h-32 rounded-2xl border-4 border-white shadow-xl object-cover bg-slate-200"
                 />
               </div>
-              <div className="absolute bottom-4 left-32 md:left-44 text-white pr-4">
+              <div className="absolute top-10 md:top-12 left-32 md:left-44 text-white pr-4">
                 <h2 className="text-2xl md:text-3xl font-black truncate">{viewingPlayer.name}</h2>
                 <div className="flex flex-wrap items-center gap-2 md:gap-3 text-blue-200 mt-1 text-xs md:text-sm">
                   <span className="font-medium">{viewingPlayer.role}</span>

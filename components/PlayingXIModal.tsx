@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { Player, OpponentTeam } from '../types';
-import { X, Users, Check, Save } from 'lucide-react';
+import { X, Users, Check, Save, Plus } from 'lucide-react';
 
 interface PlayingXIModalProps {
     matchId: string;
     homePlayers: Player[]; // Roster from PlayerList/SquadRoster
     opponentTeams: OpponentTeam[];
     opponentId: string;
-    teamType: 'home' | 'away' | 'view';
+    teamType: 'home' | 'opponent' | 'view';
     initialSelection?: string[];
     onClose: () => void;
-    onSave: (matchId: string, teamType: 'home' | 'away', selection: string[]) => void;
+    onSave: (matchId: string, teamType: 'home' | 'opponent', selection: string[]) => void;
+    onQuickAddPlayer?: (name: string) => void;
 }
+
 
 export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({ 
     matchId, 
@@ -21,9 +23,11 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     teamType,
     initialSelection = [],
     onClose,
-    onSave
+    onSave,
+    onQuickAddPlayer
 }) => {
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>(initialSelection);
+    const [quickAddName, setQuickAddName] = useState('');
     const isViewOnly = teamType === 'view';
     const opponent = opponentTeams.find(t => t.id === opponentId);
 
@@ -45,9 +49,15 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
         });
     };
 
+    const handleQuickAdd = () => {
+        if (!quickAddName.trim() || !onQuickAddPlayer) return;
+        onQuickAddPlayer(quickAddName.trim());
+        setQuickAddName('');
+    };
+
     const handleSave = () => {
         if (selectedPlayers.length !== 11) return;
-        if (teamType === 'home' || teamType === 'away') {
+        if (teamType === 'home' || teamType === 'opponent') {
             onSave(matchId, teamType, selectedPlayers);
         }
         onClose();
@@ -55,9 +65,9 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
 
     // Use home roster for 'home' and 'view' (Indian Strikers), 
     // for 'away' we use the specific opponent's roster if available
-    const displayPlayers = teamType === 'away' ? (opponent?.players || []) : homePlayers;
+    const displayPlayers = teamType === 'opponent' ? (opponent?.players || []) : homePlayers;
     const title = teamType === 'home' ? 'Select Indian Strikers XI' : 
-                  teamType === 'away' ? `Select ${opponent?.name || 'Opponent'} XI` : 
+                  teamType === 'opponent' ? `Select ${opponent?.name || 'Opponent'} XI` : 
                   'Match Day Team Sheet';
 
     return (
@@ -85,46 +95,65 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                     </button>
                 </div>
 
-                {/* Content */}
+                {/* Content Area */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* QUICK ADD SECTION - Only for Opponents */}
+                    {teamType === 'opponent' && onQuickAddPlayer && (
+                        <div className="flex gap-2 mb-6 p-4 bg-blue-600/5 rounded-2xl border border-blue-500/20 shadow-sm">
+                            <input 
+                                type="text" 
+                                placeholder="Quick Player Name..." 
+                                className="flex-1 px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-600 text-sm"
+                                value={quickAddName}
+                                onChange={(e) => setQuickAddName(e.target.value)}
+                                onKeyDown={(e) => { 
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleQuickAdd();
+                                    }
+                                }}
+                            />
+                            <button 
+                                onClick={handleQuickAdd}
+                                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold uppercase tracking-wider transition-all text-xs"
+                            >
+                                <Plus size={16} className="stroke-[3]" />
+                                Add
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2">
                         {displayPlayers.map(player => {
                             const isSelected = selectedPlayers.includes(player.id || player.name);
-                            // Safety for different player structures
                             const playerImage = (player as any).avatarUrl || (player as any).photo || '';
-                            const playerRoleStr = (player as any).role || 'Player';
 
                             return (
                                 <div 
                                     key={player.id || player.name}
                                     onClick={() => togglePlayer(player.id || player.name, player.name)}
-                                    className={`group flex items-center gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer
-                                        ${isSelected ? 'bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'}`}
+                                    className={`group flex items-center gap-3 p-2 rounded-xl border transition-all cursor-pointer shadow-sm
+                                        ${isSelected ? 'bg-blue-600/10 border-blue-500 shadow-blue-900/20' : 'bg-slate-800/50 border-transparent hover:border-slate-600'}`}
                                 >
-                                    <div className="relative">
-                                        <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 
+                                    <div className="relative shrink-0">
+                                        <div className={`w-8 h-8 rounded-full overflow-hidden border 
                                             ${isSelected ? 'border-blue-500' : 'border-slate-700'}`}
                                         >
                                             {playerImage ? (
                                                 <img src={playerImage} alt={player.name} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
-                                                    <Users size={24} />
+                                                    <Users size={14} />
                                                 </div>
                                             )}
                                         </div>
-                                        {isSelected && (
-                                            <div className="absolute -top-1 -right-1 bg-blue-500 text-white rounded-full p-1 shadow-lg">
-                                                <Check size={12} strokeWidth={4} />
-                                            </div>
-                                        )}
                                     </div>
-                                    <div className="flex-1">
-                                        <h4 className={`font-bold uppercase tracking-tight ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className={`font-bold uppercase tracking-tighter truncate text-[11px] ${isSelected ? 'text-white' : 'text-slate-300'}`}>
                                             {player.name}
                                         </h4>
-                                        <p className="text-xs font-bold text-slate-500 uppercase">{playerRoleStr}</p>
                                     </div>
+                                    {isSelected && <Check size={12} className="text-blue-500 stroke-[4]" />}
                                 </div>
                             );
                         })}
