@@ -358,57 +358,204 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
           .search-wrap { position: relative; flex: 1; }
           .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #4b5563; pointer-events: none; }
           
-          /* Compact Match Card Styles */
+          /* ─── TABS ─── */
+          .tab-inactive {
+            color: #FFFFFF !important;
+            opacity: 0.85;
+            transition: all 0.3s ease;
+          }
+          .tab-inactive:hover {
+            background-color: rgba(59,130,246,0.15);
+            color: #FFFFFF;
+            opacity: 1;
+          }
+
+          /* ─── COMPACT CARD ─── */
           .match-card-compact {
             background: #ffffff;
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 0;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.07);
             transition: transform 0.2s, box-shadow 0.2s;
           }
           .match-card-compact:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
           }
-          .name-with-action {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            justify-content: center;
-          }
-          .icon-btn-squad {
-            background: none;
-            border: none;
-            color: #3b82f6;
-            cursor: pointer;
-            padding: 2px;
-            opacity: 0.6;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-          }
-          .icon-btn-squad:hover {
-            opacity: 1;
-            transform: scale(1.1);
-          }
-          .result-ribbon-slim {
-            background: #ecfdf5;
-            color: #059669;
-            text-align: center;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 6px;
-            margin: 12px 0;
-            border-radius: 6px;
+
+          /* Status tag */
+          .status-tag-completed {
+            color: #6b7280;
+            font-weight: 800;
+            font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
           }
+
+          /* ─── VERTICAL TEAM LAYOUT ─── */
+          .vs-container-revised {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 16px 12px;
+            gap: 8px;
+          }
+          .team-vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+            gap: 6px;
+          }
+
+          /* ─── LOGO + XI OVERLAY ─── */
+          .logo-wrapper {
+            position: relative;
+            display: inline-block;
+          }
+          .team-logo-md {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            border: 2px solid #f1f5f9;
+            background: #f8fafc;
+            object-fit: contain;
+            display: block;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+          }
+          .xi-overlay-btn {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #3b82f6;
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(59,130,246,0.4);
+            transition: background 0.2s, transform 0.2s;
+          }
+          .xi-overlay-btn:hover {
+            background: #2563eb;
+            transform: scale(1.15);
+          }
+
+          /* ─── TEAM TEXT ─── */
+          .team-name-display {
+            color: #111827;
+            font-weight: 800;
+            font-size: 11px;
+            text-transform: uppercase;
+            text-align: center;
+            letter-spacing: 0.03em;
+            line-height: 1.2;
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .team-score-display {
+            color: #1f2937;
+            font-weight: 800;
+            font-size: 17px;
+            text-align: center;
+            line-height: 1;
+          }
+
+          /* ─── INTERACTIVE VS ─── */
+          .vs-interactive {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            flex-shrink: 0;
+          }
+          .vs-circle-pulse {
+            background: #1f2937;
+            color: #3b82f6;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 10px;
+            border: 2px solid #3b82f6;
+            box-shadow: 0 0 12px rgba(59,130,246,0.25);
+            letter-spacing: 0.02em;
+          }
+          .vs-line {
+            width: 2px;
+            height: 14px;
+            background: linear-gradient(to bottom, transparent, #3b82f6, transparent);
+          }
+
+          /* ─── RESULT RIBBON ─── */
+          .result-ribbon-bold {
+            background: linear-gradient(90deg, #064e3b, #065f46);
+            color: #6ee7b7;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 8px 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+          }
+
+          /* ─── FOOTER BUTTONS ─── */
           .card-footer-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
-            padding-top: 10px;
+            padding-top: 8px;
+          }
+          .btn-action-dark {
+            padding: 9px 6px;
+            background: #f1f5f9;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+          .btn-action-dark:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+            border-color: #cbd5e1;
+          }
+          .btn-primary-bold {
+            grid-column: span 2;
+            margin-top: 2px;
+            padding: 10px;
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(16,185,129,0.25);
+          }
+          .btn-primary-bold:hover {
+            background: linear-gradient(135deg, #047857, #059669);
+            box-shadow: 0 4px 12px rgba(16,185,129,0.35);
           }
           .btn-primary-full {
             grid-column: span 2;
@@ -429,25 +576,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             background: #10b981;
             color: white;
           }
-          .btn-secondary-sm {
-            padding: 10px;
-            background: #f8fafc;
-            color: #475569;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            cursor: pointer;
-            transition: all 0.2s;
-          }
-          .btn-secondary-sm:hover {
-            background: #eff6ff;
-            color: #3b82f6;
-            border-color: #3b82f6;
-          }
         `}</style>
+
         <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
             {/* Standardized Page Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
