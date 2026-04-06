@@ -110,6 +110,7 @@ export const useMatchCenter = create<MatchStore>()(
 
       syncWithCloud: async () => {
         try {
+          console.log("[Sync] Starting Cloud Check...");
           const rawDbMatches = await api.getMatches();
           // Filter out Ghost/Dummy data from DB
           const dbMatches = rawDbMatches.filter(m => 
@@ -121,16 +122,18 @@ export const useMatchCenter = create<MatchStore>()(
           const dbIds = new Set(dbMatches.map(m => m.id));
           const unsynced = get().matches.filter(m => !dbIds.has(m.id));
           
-          if (unsynced.length === 0) return;
-          
-          console.log(`[Sync] Pushing ${unsynced.length} unsynced matches...`);
-          for (const m of unsynced) {
-             await api.addMatch(m);
+          if (unsynced.length > 0) {
+            console.log(`[Sync] Pushing ${unsynced.length} unsynced matches...`);
+            for (const m of unsynced) {
+               await api.addMatch(m);
+            }
+            // Refresh after push
+            const fresh = await api.getMatches();
+            set({ matches: fresh });
+          } else {
+            console.log("[Sync] Pulling latest from cloud...");
+            set({ matches: dbMatches });
           }
-          
-          // Refresh after push
-          const fresh = await api.getMatches();
-          set({ matches: fresh });
         } catch (e) {
           console.error("Cloud sync failed:", e);
           throw e;

@@ -219,7 +219,7 @@ const mapMatchToDB = (m) => {
     'is_locked', 'toss_winner_id', 'toss_choice', 'toss_details', 
     'max_overs', 'result_summary', 'result_note', 'result_type', 
     'final_score_home', 'final_score_away', 'is_live_scored', 
-    'is_home_batting_first', 'tournament_id', 'performers'
+    'is_home_batting_first', 'tournament_id', 'performers', 'scorecard'
   ];
 
   // 1. First, map camelCase to snake_case

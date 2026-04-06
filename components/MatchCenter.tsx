@@ -38,6 +38,11 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     } = useMatchCenter();
     const { grounds } = useMasterData();
 
+    // Auto-sync on mount
+    React.useEffect(() => {
+        syncWithCloud().catch(err => console.error("Auto-sync error:", err));
+    }, [syncWithCloud]);
+
     const handleSummaryUpdate = (summary: any) => {
         if (!manualScoreConfig) return;
         const match = matches.find(m => m.id === manualScoreConfig.matchId);
@@ -824,7 +829,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             {manualScoreConfig && manualScoreConfig.showPlayers && (
                 <FullScorecardModal 
                     match={matches.find(m => m.id === manualScoreConfig.matchId)!}
-                    homeSquad={players.filter(p => (p.isActive === true) && (!matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.length || matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.includes(p.id)))}
+                    homeSquad={players.filter(p => (p.isActive !== false && p.isAvailable !== false) && (!matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.length || matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.includes(p.id)))}
                     opponentSquad={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.players || []}
                     opponentName={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.name || 'Opponent'}
                     homeTeamLogo={teamLogo || '/IS-LOGO.png'}
@@ -839,7 +844,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                 <div id="team-sheet-container">
                     <PlayingXIModal 
                         matchId={xiModalConfig.matchId}
-                        homePlayers={players.filter(p => p.isActive === true)}
+                        homePlayers={players.filter(p => p.isActive !== false && p.isAvailable !== false)}
                         opponentTeams={opponents}
                         opponentId={xiModalConfig.opponentId}
                         teamType={xiModalConfig.teamType}
