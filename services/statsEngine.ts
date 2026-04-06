@@ -6,81 +6,146 @@ import { BattingStats, BowlingStats, Performer } from '../types';
  * Adheres to professional Cricket Data Scientist standards for AVE, SR, and ECON.
  */
 
+/**
+ * addCricketOvers: Correctly adds two cricket over values.
+ * Cricket overs are NOT decimal numbers. 3.5 means "3 overs and 5 balls".
+ * So 3.5 + 2.4 = 6.3 (not 5.9).
+ * 
+ * @param a - First overs value (e.g., 3.5)
+ * @param b - Second overs value (e.g., 2.4)
+ * @returns Sum in cricket notation (e.g., 6.3)
+ */
+export const addCricketOvers = (a: number, b: number): number => {
+  const wholeA = Math.floor(a);
+  const ballsA = Math.round((a % 1) * 10);
+  const wholeB = Math.floor(b);
+  const ballsB = Math.round((b % 1) * 10);
+
+  let totalBalls = ballsA + ballsB;
+  let totalOvers = wholeA + wholeB;
+
+  // Every 6 balls = 1 over
+  totalOvers += Math.floor(totalBalls / 6);
+  totalBalls = totalBalls % 6;
+
+  return parseFloat(`${totalOvers}.${totalBalls}`);
+};
+
+/**
+ * oversToTotalBalls: Converts cricket overs notation to total balls.
+ * Needed for accurate ECON, AVE, SR calculations.
+ */
+export const oversToTotalBalls = (overs: number): number => {
+  const wholeOvers = Math.floor(overs);
+  const balls = Math.round((overs % 1) * 10);
+  return (wholeOvers * 6) + balls;
+};
+
+/**
+ * calculateBattingAverage: Runs / (Innings - Not Outs)
+ * If all innings are not outs, returns total runs (standard cricket rule).
+ */
+export const calculateBattingAverage = (runs: number, innings: number, notOuts: number): number => {
+  const outs = innings - notOuts;
+  return outs > 0 ? parseFloat((runs / outs).toFixed(2)) : runs;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BATTING CAREER STATS SYNC
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const updateBattingCareerStats = (current: BattingStats, perf: Performer): BattingStats => {
   const updated = { ...current };
-  
-  // Logic: Only update if the player actually participated in the match (has runs or balls)
-  // or if they are explicitly marked as a participant (in the XI)
+
+  // MAT always increments for all Playing XI members
   updated.matches += 1;
-  updated.innings += 1; // Assuming if in XI and match completed, they had an innings (standard sim logic)
-  
-  updated.runs += Number(perf.runs || 0);
-  updated.balls += Number(perf.balls || 0);
-  updated.fours += Number(perf.fours || 0);
-  updated.sixes += Number(perf.sixes || 0);
-  
-  // Not Out Logic
-  if (perf.isNotOut) {
-    updated.notOuts += 1;
-  } else {
-    updated.ducks += (Number(perf.runs) === 0 ? 1 : 0);
+
+  // Only count as an innings if the player actually batted:
+  // - They faced at least 1 ball, OR
+  // - They scored 0 and were dismissed (not a DNB)
+  const didBat = Number(perf.balls) > 0 || (Number(perf.runs) === 0 && !perf.isNotOut);
+
+  if (didBat) {
+    const matchRuns = Number(perf.runs || 0);
+    const matchBalls = Number(perf.balls || 0);
+
+    updated.innings += 1;
+    updated.runs += matchRuns;
+    updated.balls += matchBalls;
+    updated.fours += Number(perf.fours || 0);
+    updated.sixes += Number(perf.sixes || 0);
+
+    // Not Out / Duck Logic
+    if (perf.isNotOut) {
+      updated.notOuts += 1;
+    } else {
+      if (matchRuns === 0) updated.ducks += 1;
+    }
+
+    // Milestones
+    if (matchRuns >= 100) updated.hundreds += 1;
+    else if (matchRuns >= 50) updated.fifties += 1;
+
+    // High Score: Parse legacy HS which may have '*' suffix (e.g., "87*")
+    const currentHS = parseInt(current.highestScore) || 0;
+    if (matchRuns > currentHS) {
+      updated.highestScore = `${matchRuns}${perf.isNotOut ? '*' : ''}`;
+    }
   }
 
-  // Milestones
-  const matchRuns = Number(perf.runs || 0);
-  if (matchRuns >= 100) updated.hundreds += 1;
-  else if (matchRuns >= 50) updated.fifties += 1;
-
-  // High Score Logic (Comparison of strings for legacy reasons, but needs to handle numeric)
-  const currentHS = parseInt(current.highestScore) || 0;
-  if (matchRuns > currentHS) {
-    updated.highestScore = `${matchRuns}${perf.isNotOut ? '*' : ''}`;
-  }
-
-  // Recalculate Derived Stats (AVE & SR)
-  const dismissals = updated.innings - updated.notOuts;
-  updated.average = dismissals > 0 ? parseFloat((updated.runs / dismissals).toFixed(2)) : updated.runs;
-  updated.strikeRate = updated.balls > 0 ? parseFloat(((updated.runs / updated.balls) * 100).toFixed(2)) : 0;
+  // Recalculate derived stats
+  updated.average = calculateBattingAverage(updated.runs, updated.innings, updated.notOuts);
+  updated.strikeRate = updated.balls > 0
+    ? parseFloat(((updated.runs / updated.balls) * 100).toFixed(2))
+    : 0;
 
   return updated;
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BOWLING CAREER STATS SYNC
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const updateBowlingCareerStats = (current: BowlingStats, perf: Performer): BowlingStats => {
   const updated = { ...current };
-  
+
+  // Skip bowling update if player didn't bowl
   if (Number(perf.bowlingOvers || 0) <= 0) return updated;
+
+  const matchOvers = Number(perf.bowlingOvers);
+  const matchRuns = Number(perf.bowlingRuns || 0);
+  const matchWkts = Number(perf.wickets || 0);
+  const matchMaidens = Number(perf.maidens || 0);
 
   updated.matches += 1;
   updated.innings += 1;
-  updated.overs = parseFloat((updated.overs + Number(perf.bowlingOvers || 0)).toFixed(1));
-  updated.maidens += Number(perf.maidens || 0);
-  updated.runs += Number(perf.bowlingRuns || 0);
-  updated.wickets += Number(perf.wickets || 0);
+
+  // ✅ CRITICAL FIX: Use addCricketOvers instead of float addition
+  // Bug: 3.5 + 2.4 = 5.9 (wrong) → addCricketOvers(3.5, 2.4) = 6.3 (correct)
+  updated.overs = addCricketOvers(updated.overs, matchOvers);
+
+  updated.maidens += matchMaidens;
+  updated.runs += matchRuns;
+  updated.wickets += matchWkts;
 
   // Milestones
-  if (Number(perf.wickets) >= 5) updated.fiveWickets += 1;
-  else if (Number(perf.wickets) >= 4) updated.fourWickets += 1;
+  if (matchWkts >= 5) updated.fiveWickets += 1;
+  else if (matchWkts >= 4) updated.fourWickets += 1;
 
-  // Best Bowling (BBI) Logic
-  // Format: "W/R" e.g. "5/24"
-  const [bestWkts, bestRuns] = (current.bestBowling || "0/999").split('/').map(Number);
-  const currentWkts = Number(perf.wickets || 0);
-  const currentRuns = Number(perf.bowlingRuns || 0);
-
-  if (currentWkts > bestWkts || (currentWkts === bestWkts && currentRuns < bestRuns)) {
-    updated.bestBowling = `${currentWkts}/${currentRuns}`;
+  // Best Bowling (BBI): Higher wickets = better; at equal wickets, fewer runs = better
+  const [bestWkts, bestRuns] = (current.bestBowling || '0/999').split('/').map(Number);
+  if (matchWkts > bestWkts || (matchWkts === bestWkts && matchRuns < bestRuns)) {
+    updated.bestBowling = `${matchWkts}/${matchRuns}`;
   }
 
-  // Recalculate Derived Stats (ECON, AVE, SR)
-  // 1. Economy
-  const wholeOvers = Math.floor(updated.overs);
-  const balls = Math.round((updated.overs % 1) * 10);
-  const totalBalls = (wholeOvers * 6) + balls;
+  // Recalculate ECON, AVE, SR using correct ball count
+  const totalBalls = oversToTotalBalls(updated.overs);
   const trueOvers = totalBalls / 6;
 
-  updated.economy = trueOvers > 0 ? parseFloat((updated.runs / trueOvers).toFixed(2)) : 0;
-  
-  // 2. Average & Strike Rate
+  updated.economy = trueOvers > 0
+    ? parseFloat((updated.runs / trueOvers).toFixed(2))
+    : 0;
+
   if (updated.wickets > 0) {
     updated.average = parseFloat((updated.runs / updated.wickets).toFixed(2));
     updated.strikeRate = parseFloat((totalBalls / updated.wickets).toFixed(2));

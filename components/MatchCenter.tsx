@@ -132,54 +132,47 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         const match = matches.find(m => m.id === manualScoreConfig.matchId);
         if (!match) return;
 
-        // 1. Update the match in the store
+        // 1. Update the match record in the store (scores, scorecard, result note)
         updateMatch(manualScoreConfig.matchId, {
             ...data,
-            status: 'completed'
+            status: 'completed' as MatchStatus
         });
 
-        // 2. Sync career stats to the roster (for all players in the XI + performers)
-        // First, get all players that should be updated
-        const playingXI = match.homeTeamXI || [];
-        const performerMap = new Map(data.performers.map((p: any) => [p.playerId, p]));
-        
-        // Combine IDs from playingXI and performers (in case someone not in XI was added as a performer)
-        const allPlayerIdsToUpdate = Array.from(new Set([...playingXI, ...data.performers.map((p: any) => p.playerId)]));
+        // 2. Sync career stats for every performer in the XI
+        // ManualScoreModal guarantees all homeTeamXI players are in data.performers
+        const performers: Performer[] = data.performers || [];
 
-        if (allPlayerIdsToUpdate.length > 0) {
-            console.log(`[Sync] Starting career stat sync for ${allPlayerIdsToUpdate.length} players...`);
+        if (performers.length > 0) {
+            console.log(`[Sync] Starting career stat sync for ${performers.length} players...`);
+            let syncedCount = 0;
             try {
-                for (const pId of allPlayerIdsToUpdate) {
-                    const player = players.find(p => p.id === pId);
-                    if (!player) continue;
+                for (const perf of performers) {
+                    const player = players.find(p => p.id === perf.playerId);
+                    if (!player) {
+                        console.warn(`[Sync] Player ID ${perf.playerId} not found in roster. Skipping.`);
+                        continue;
+                    }
 
-                    const entry = performerMap.get(pId);
-                    const perf: Performer = entry ? (entry as Performer) : {
-                        playerId: pId,
-                        runs: 0,
-                        balls: 0,
-                        wickets: 0,
-                        bowlingRuns: 0,
-                        bowlingOvers: 0,
-                        isNotOut: false
+                    // Default stats if player has no career history yet
+                    const currentBatting: BattingStats = player.battingStats || {
+                        matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0,
+                        average: 0, strikeRate: 0, highestScore: '0',
+                        hundreds: 0, fifties: 0, ducks: 0, fours: 0, sixes: 0
+                    };
+                    const currentBowling: BowlingStats = player.bowlingStats || {
+                        matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0,
+                        wickets: 0, average: 0, economy: 0, strikeRate: 0,
+                        bestBowling: '0/0', fourWickets: 0, fiveWickets: 0
                     };
 
-                    // Deep clone or provide defaults
-                    const currentBatting = player.battingStats || {
-                        matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, average: 0, strikeRate: 0, highestScore: '0', hundreds: 0, fifties: 0, ducks: 0, fours: 0, sixes: 0
-                    };
-                    const currentBowling = player.bowlingStats || {
-                        matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0, wickets: 0, average: 0, economy: 0, strikeRate: 0, bestBowling: '0/0', fourWickets: 0, fiveWickets: 0
-                    };
-
-                    // Update stats using Logic Engine
+                    // Run through the Logic Engine  
+                    // addCricketOvers is used internally (e.g., 3.5 + 2.4 = 6.3, not 5.9)
                     const updatedBatting = updateBattingCareerStats(currentBatting, perf);
                     const updatedBowling = updateBowlingCareerStats(currentBowling, perf);
 
-                    // Push update to backend/service
                     const updatedPlayer = {
                         ...player,
-                        matchesPlayed: Math.max(updatedBatting.matches, updatedBowling.matches),
+                        matchesPlayed: updatedBatting.matches,
                         runsScored: updatedBatting.runs,
                         wicketsTaken: updatedBowling.wickets,
                         battingStats: updatedBatting,
@@ -187,10 +180,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                     };
 
                     onUpdatePlayer(updatedPlayer);
+                    syncedCount++;
                 }
-                console.log("[Sync] Career stats sync completed successfully for the full squad.");
+                console.log(`[Sync] ✅ Career stats synced for ${syncedCount}/${performers.length} players.`);
+                alert(`✅ Match Synced! Career stats updated for ${syncedCount} players.`);
             } catch (err) {
-                console.error("[Sync] Career stats sync failed:", err);
+                console.error('[Sync] ❌ Career stats sync failed:', err);
+                alert('⚠️ Sync partially failed. Check console for details.');
             }
         }
 

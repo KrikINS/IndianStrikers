@@ -241,7 +241,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                     id="home-runs"
                     type="number" required min="0" title="Home Runs"
                     className="w-full bg-[#111417] border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:border-blue-500 transition-all outline-none"
-                    value={homeScore.runs} onChange={e => setHomeScore({...homeScore, runs: parseInt(e.target.value)})}
+                    value={homeScore.runs} onChange={e => setHomeScore({...homeScore, runs: parseInt(e.target.value) || 0})}
                   />
                 </div>
                 <div>
@@ -250,7 +250,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                     id="home-wickets"
                     type="number" required min="0" max="10" title="Home Wickets"
                     className="w-full bg-[#111417] border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:border-blue-500 transition-all outline-none"
-                    value={homeScore.wickets} onChange={e => setHomeScore({...homeScore, wickets: parseInt(e.target.value)})}
+                    value={homeScore.wickets} onChange={e => setHomeScore({...homeScore, wickets: parseInt(e.target.value) || 0})}
                   />
                 </div>
                 <div>
@@ -282,7 +282,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                     id="away-runs"
                     type="number" required min="0" title="Away Runs"
                     className="w-full bg-[#111417] border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:border-blue-500 transition-all outline-none"
-                    value={awayScore.runs} onChange={e => setAwayScore({...awayScore, runs: parseInt(e.target.value)})}
+                    value={awayScore.runs} onChange={e => setAwayScore({...awayScore, runs: parseInt(e.target.value) || 0})}
                   />
                 </div>
                 <div>
@@ -291,7 +291,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                     id="away-wickets"
                     type="number" required min="0" max="10" title="Away Wickets"
                     className="w-full bg-[#111417] border border-white/10 rounded-xl px-4 py-3 text-white font-bold focus:border-blue-500 transition-all outline-none"
-                    value={awayScore.wickets} onChange={e => setAwayScore({...awayScore, wickets: parseInt(e.target.value)})}
+                    value={awayScore.wickets} onChange={e => setAwayScore({...awayScore, wickets: parseInt(e.target.value) || 0})}
                   />
                 </div>
                 <div>

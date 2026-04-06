@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Performer, MatchStatus, MatchStage } from '../types';
+export type { Performer, MatchStatus, MatchStage };
 
 export const isPastMatch = (matchDateStr: string): boolean => {
   const now = new Date();
