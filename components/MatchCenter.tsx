@@ -713,21 +713,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                                     <tr key={m.id} onClick={() => setActiveTab('cards')}>
                                                         <td className="id-cell">#{(String(m.id).slice(-4) || "0000").toUpperCase()}</td>
                                                         <td>
-                                                            {m.status === 'completed' ? (
-                                                                <div className="flex flex-col items-start bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-100">
-                                                                    <span className="text-[10px] font-black uppercase tracking-tighter opacity-70">Final Score</span>
-                                                                    <div className="font-black text-xs space-x-1 tabular-nums">
-                                                                        {m.finalScoreHome ? `${m.finalScoreHome.runs}/${m.finalScoreHome.wickets}` : '0/0'}
-                                                                        <span className="opacity-40 font-bold mx-0.5">V</span>
-                                                                        {m.finalScoreAway ? `${m.finalScoreAway.runs}/${m.finalScoreAway.wickets}` : '0/0'}
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="date-stack">
-                                                                    <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                                                                    <span className="time-sub">{new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                </div>
-                                                            )}
+                                                            <div className="date-stack">
+                                                                <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                                                <span className="time-sub">{new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+                                                            </div>
                                                         </td>
                                                         <td className="tournament-cell uppercase">{(m.tournament || "No Tournament").toUpperCase()}</td>
                                                         <td>
