@@ -13,6 +13,7 @@ import LegacyEditor from './components/LegacyEditor';
 import MatchCenter from './components/MatchCenter';
 import ControlPanel from './components/ControlPanel';
 import { useMatchCenter } from './components/matchCenterStore';
+import { useMasterData } from './components/masterDataStore';
 import GroundsManager from './components/GroundsManager';
 import TournamentsManager from './components/TournamentsManager';
 import UserManagement from './components/UserManagement';
@@ -152,7 +153,8 @@ const App: React.FC = () => {
         const [p, o, l] = await Promise.all([
           getPlayers(),
           getOpponents(),
-          getTeamLogo()
+          getTeamLogo(),
+          useMasterData.getState().syncMasterData()
         ]);
         console.log("Data received:", { players: p.length, opponents: o.length });
 

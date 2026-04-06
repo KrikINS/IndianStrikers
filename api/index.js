@@ -231,23 +231,49 @@ app.delete('/api/opponents/:id', authGuard(['admin']), async (req, res) => {
   res.json({ ok: true });
 });
 
-// STRATEGIES
-app.get('/api/strategies', async (_req, res) => {
-  const { data, error } = await supabase.from('strategies').select('*');
+// GROUNDS
+app.get('/api/grounds', async (_req, res) => {
+  const { data, error } = await supabase.from('grounds').select('*');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-app.post('/api/strategies', authGuard(['admin', 'member']), async (req, res) => {
-  const { data, error } = await supabase.from('strategies').insert([req.body]).select().single();
+app.post('/api/grounds', authGuard(['admin']), async (req, res) => {
+  const { data, error } = await supabase.from('grounds').insert([req.body]).select().single();
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
-app.delete('/api/strategies/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('strategies').delete().eq('id', req.params.id);
+app.put('/api/grounds/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await supabase.from('grounds').update(req.body).eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+app.delete('/api/grounds/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await supabase.from('grounds').delete().eq('id', req.params.id);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 
+// TOURNAMENTS
+app.get('/api/tournaments', async (_req, res) => {
+  const { data, error } = await supabase.from('tournaments').select('*');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+app.post('/api/tournaments', authGuard(['admin']), async (req, res) => {
+  const { data, error } = await supabase.from('tournaments').insert([req.body]).select().single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+app.put('/api/tournaments/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await supabase.from('tournaments').update(req.body).eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+app.delete('/api/tournaments/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await supabase.from('tournaments').delete().eq('id', req.params.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
 
 // SETTINGS (Logo)
 app.get('/api/settings/:key', async (req, res) => {

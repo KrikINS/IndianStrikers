@@ -350,7 +350,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                           step={field === 'overs' ? 0.1 : 1}
                           title={`Home ${label}`}
                           className="compact-input compact-input-wide"
-                          value={(homeScore as any)[field]}
+                          value={(homeScore as any)?.[field] || 0}
                           onChange={e => setHomeScore({ ...homeScore, [field]: e.target.valueAsNumber || 0 })}
                         />
                       </div>
@@ -368,7 +368,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                           step={field === 'overs' ? 0.1 : 1}
                           title={`Away ${label}`}
                           className="compact-input compact-input-wide"
-                          value={(awayScore as any)[field]}
+                          value={(awayScore as any)?.[field] || 0}
                           onChange={e => setAwayScore({ ...awayScore, [field]: e.target.valueAsNumber || 0 })}
                         />
                       </div>
