@@ -370,13 +370,15 @@ export const saveTeamLogo = async (url: string) => {
 };
 
 // TOURNAMENT TABLE
-export const getTournamentTable = async (): Promise<TournamentTableEntry[]> => {
-  const res = await fetch(`${API_URL}/table`);
+export const getTournamentTable = async (tournament?: string): Promise<TournamentTableEntry[]> => {
+  const url = tournament ? `${API_URL}/table?tournament=${encodeURIComponent(tournament)}` : `${API_URL}/table`;
+  const res = await fetch(url);
   const data = await handleResponse(res);
   return data.map((t: any) => ({
     id: t.id,
     teamId: t.team_id,
     teamName: t.team_name,
+    tournamentName: t.tournament_name,
     matches: t.matches,
     won: t.won,
     lost: t.lost,
@@ -391,6 +393,7 @@ export const saveTournamentTableEntry = async (entry: TournamentTableEntry) => {
     id: entry.id,
     team_id: entry.teamId,
     team_name: entry.teamName,
+    tournament_name: entry.tournamentName,
     matches: entry.matches,
     won: entry.won,
     lost: entry.lost,

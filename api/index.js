@@ -263,15 +263,22 @@ app.post('/api/settings', authGuard(['admin']), async (req, res) => {
 });
 
 // TOURNAMENT TABLE
-app.get('/api/table', async (_req, res) => {
-  const { data, error } = await supabase.from('tournament_table').select('*').order('points', { ascending: false });
+app.get('/api/table', async (req, res) => {
+  const { tournament } = req.query;
+  let query = supabase.from('tournament_table').select('*');
+  
+  if (tournament) {
+    query = query.eq('tournament_name', tournament);
+  }
+  
+  const { data, error } = await query.order('points', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 app.post('/api/table', authGuard(['admin']), async (req, res) => {
-  const { id, team_id, team_name, matches, won, lost, nr, points, nrr } = req.body;
+  const { id, team_id, team_name, tournament_name, matches, won, lost, nr, points, nrr } = req.body;
   const { data, error } = await supabase.from('tournament_table').upsert({
-    id, team_id, team_name, matches, won, lost, nr, points, nrr
+    id, team_id, team_name, tournament_name, matches, won, lost, nr, points, nrr
   }).select().single();
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);

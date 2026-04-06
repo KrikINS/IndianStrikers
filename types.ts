@@ -218,6 +218,7 @@ export interface TournamentTableEntry {
   id: string;
   teamId: string;
   teamName: string;
+  tournamentName?: string;
   matches: number;
   won: number;
   lost: number;

@@ -15,15 +15,17 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', teamLogo }) => {
-  const [tournamentName, setTournamentName] = useState('Winter Cup 2024');
+  const { legacy, tournaments } = useMasterData();
+  const [tournamentName, setTournamentName] = useState(tournaments.length > 0 ? tournaments[0].name : '');
   const [groupNumber, setGroupNumber] = useState('A');
   const [tableData, setTableData] = useState<TournamentTableEntry[]>([]);
+  const [savedTableData, setSavedTableData] = useState<TournamentTableEntry[]>([]);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [selectedHero, setSelectedHero] = useState<{ player: Player, statsType: 'batting' | 'bowling', statsValue: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const heroPosterRef = useRef<HTMLDivElement>(null);
-
-  const { legacy } = useMasterData();
 
   // Stats Mode State (Default: Career)
   const [statsMode, setStatsMode] = useState<'career' | 'season'>('career');
@@ -34,7 +36,10 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
   useEffect(() => {
     const load = async () => {
       try {
-        const [opp, tbl] = await Promise.all([getOpponents(), getTournamentTable()]);
+        const [opp, tbl] = await Promise.all([
+          getOpponents(), 
+          getTournamentTable(tournamentName)
+        ]);
         setOpponents(opp);
 
         // Fix missing names in fetched table data
@@ -48,10 +53,12 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
         });
 
         setTableData(hydratedTable);
+        setSavedTableData(hydratedTable);
+        setIsDirty(false);
       } catch (e) { console.error("Failed to load dashboard data", e); }
     };
     load();
-  }, []);
+  }, [tournamentName]);
 
   // -- Top Performers Logic --
   const processedPlayers = players.map(p => {
@@ -87,12 +94,15 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
     }
   }, [topRunScorers, topWicketTakers]);
 
+  const canEdit = userRole === 'admin' || userRole === 'scorer';
+
   // -- Table Logic --
   const handleAddRow = () => {
     const newEntry: TournamentTableEntry = {
       id: crypto.randomUUID(),
       teamId: '',
       teamName: '',
+      tournamentName: tournamentName,
       matches: 0,
       won: 0,
       lost: 0,
@@ -102,6 +112,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
     };
     const updated = [...tableData, newEntry];
     setTableData(updated);
+    setIsDirty(true);
   };
 
   const handleDeleteRow = async (id: string) => {
@@ -109,6 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
       // Optimistically remove from UI immediately so it feels responsive
       const updated = tableData.filter(t => t.id !== id);
       setTableData(updated);
+      setIsDirty(true);
 
       try {
         await deleteTournamentTableEntry(id);
@@ -127,27 +139,29 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
       return row;
     });
     setTableData(updated);
+    setIsDirty(true);
   };
 
   const handleSaveTable = async () => {
+    if (!isDirty || isSaving) return;
+    setIsSaving(true);
     try {
-      // Only save rows that have a valid team selected
       const validRows = tableData.filter(entry => entry.teamId);
-
       if (validRows.length === 0 && tableData.length > 0) {
         alert("No valid teams selected to save.");
         return;
       }
-
-      await Promise.all(validRows.map(entry => saveTournamentTableEntry(entry)));
-
-      // Optional: Clean up local state if we want to remove empty rows after save
-      // setTableData(validRows); 
-
-      alert("Table updated successfully!");
+      await Promise.all(validRows.map(entry => {
+        const entryToSave = { ...entry, tournamentName: entry.tournamentName || tournamentName };
+        return saveTournamentTableEntry(entryToSave);
+      }));
+      setSavedTableData(tableData);
+      setIsDirty(false);
     } catch (e: any) {
       console.error(e);
       alert(`Failed to save table: ${e.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -371,12 +385,29 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
             <div className="flex flex-wrap items-center gap-3 mt-4">
               <div className="flex-1 min-w-[150px]">
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tournament</label>
-                <input
-                  value={tournamentName}
-                  onChange={(e) => setTournamentName(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 text-white text-sm font-bold px-3 py-1.5 rounded-lg w-full focus:ring-1 focus:ring-blue-500 outline-none"
-                  aria-label="Tournament Name"
-                />
+                {tournaments && tournaments.length > 0 ? (
+                  <select
+                    value={tournamentName}
+                    onChange={(e) => setTournamentName(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-white text-sm font-bold px-3 py-1.5 rounded-lg w-full focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
+                    aria-label="Tournament Name"
+                  >
+                    <option value="" className="text-slate-500">Select Tournament...</option>
+                    {tournaments.map((t) => (
+                      <option key={t.id} value={t.name} className="bg-slate-900">
+                        {t.name} ({t.year})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={tournamentName}
+                    onChange={(e) => setTournamentName(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 text-white text-sm font-bold px-3 py-1.5 rounded-lg w-full focus:ring-1 focus:ring-blue-500 outline-none"
+                    placeholder="Enter Tournament Name"
+                    aria-label="Tournament Name"
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Group</label>
@@ -390,20 +421,32 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
             </div>
           </div>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <button
-            onClick={handleSaveTable}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 text-xs md:text-sm transition-colors flex-1 md:flex-none shadow-lg shadow-blue-900/20"
-          >
-            Update Table
-          </button>
-          <button
-            onClick={handleAddRow}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 text-xs md:text-sm transition-colors flex-1 md:flex-none shadow-lg shadow-green-900/20"
-          >
-            <Plus size={16} /> Add
-          </button>
-        </div>
+        {canEdit && (
+          <div className="flex gap-2 w-full md:w-auto">
+            <button
+              onClick={handleSaveTable}
+              disabled={!isDirty || isSaving}
+              className={`px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 text-xs md:text-sm transition-all flex-1 md:flex-none shadow-lg ${
+                isDirty && !isSaving
+                  ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/30 text-white cursor-pointer'
+                  : 'bg-slate-700 text-slate-500 cursor-not-allowed shadow-none'
+              }`}
+              aria-label="Save Table"
+            >
+              {isSaving ? (
+                <><Loader2 size={14} className="animate-spin" /> Saving...</>
+              ) : (
+                <>Save{isDirty && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block ml-0.5" />}</>
+              )}
+            </button>
+            <button
+              onClick={handleAddRow}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 text-xs md:text-sm transition-colors flex-1 md:flex-none shadow-lg shadow-green-900/20"
+            >
+              <Plus size={16} /> Add
+            </button>
+          </div>
+        )}
 
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-xs md:text-sm min-w-[600px]">
@@ -429,6 +472,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
                   <tr key={row.id || idx} className="bg-slate-900 hover:bg-slate-800 transition-colors group">
                     <td className="p-2 md:p-4 text-slate-400 font-mono">{idx + 1}</td>
                     <td className="p-2 md:p-4">
+                      {canEdit ? (
                       <select
                         value={row.teamId}
                         onChange={(e) => handleTeamSelect(row.id, e.target.value)}
@@ -436,13 +480,9 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
                         aria-label="Select team for table row"
                       >
                         <option value="" className="bg-slate-900 text-slate-500">Select...</option>
-
-                        {/* Only show 'home' if not used elsewhere, or if it is THIS row's selection */}
                         {(!tableData.some(t => t.teamId === 'home' && t.id !== row.id)) && (
                           <option value="home" className="bg-slate-900 text-white font-bold">Indian Strikers</option>
                         )}
-
-                        {/* Filter opponents similarly */}
                         {opponents
                           .filter(opp => !tableData.some(t => t.teamId === opp.id && t.id !== row.id))
                           .map(opp => (
@@ -450,16 +490,19 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
                           ))
                         }
                       </select>
+                    ) : (
+                      <span className="text-white font-bold text-xs md:text-sm">{row.teamName || '—'}</span>
+                    )}
                     </td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.matches} onChange={(e) => handleTableChange(row.id, 'matches', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-white outline-none focus:bg-slate-800 rounded" aria-label="Matches played" /></td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.won} onChange={(e) => handleTableChange(row.id, 'won', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-green-400 font-bold outline-none focus:bg-slate-800 rounded" aria-label="Matches won" /></td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.lost} onChange={(e) => handleTableChange(row.id, 'lost', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-red-400 font-bold outline-none focus:bg-slate-800 rounded" aria-label="Matches lost" /></td>
-                    <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="number" value={row.nr} onChange={(e) => handleTableChange(row.id, 'nr', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-slate-400 outline-none focus:bg-slate-800 rounded" aria-label="No result matches" /></td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.points} onChange={(e) => handleTableChange(row.id, 'points', Number(e.target.value))} className="w-8 md:w-12 bg-transparent text-center text-yellow-400 font-black text-sm md:text-lg outline-none focus:bg-slate-800 rounded" aria-label="Points" /></td>
+                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.matches} onChange={(e) => handleTableChange(row.id, 'matches', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-white outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Matches played" /></td>
+                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.won} onChange={(e) => handleTableChange(row.id, 'won', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-green-400 font-bold outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Matches won" /></td>
+                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.lost} onChange={(e) => handleTableChange(row.id, 'lost', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-red-400 font-bold outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Matches lost" /></td>
+                    <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="number" value={row.nr} onChange={(e) => handleTableChange(row.id, 'nr', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-slate-400 outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="No result matches" /></td>
+                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.points} onChange={(e) => handleTableChange(row.id, 'points', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-yellow-400 font-black text-sm md:text-lg outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Points" /></td>
                     <td className="p-2 md:p-4 text-center text-slate-300 font-mono text-[10px] md:text-xs">{calculateWinPercentage(row.won, row.matches)}</td>
-                    <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="text" value={row.nrr} onChange={(e) => handleTableChange(row.id, 'nrr', e.target.value)} className="w-16 bg-transparent text-center text-blue-300 font-mono outline-none focus:bg-slate-800 rounded" aria-label="Net run rate" /></td>
+                    <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="text" value={row.nrr} onChange={(e) => handleTableChange(row.id, 'nrr', e.target.value)} readOnly={!canEdit} className={`w-16 bg-transparent text-center text-blue-300 font-mono outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Net run rate" /></td>
                     <td className="p-2 md:p-4 text-center">
-                      <button onClick={() => handleDeleteRow(row.id)} className="text-slate-600 hover:text-red-500 transition-all" title="Delete Team" aria-label="Delete Team"><Trash2 size={16} /></button>
+                      {canEdit && <button onClick={() => handleDeleteRow(row.id)} className="text-slate-600 hover:text-red-500 transition-all" title="Delete Team" aria-label="Delete Team"><Trash2 size={16} /></button>}
                     </td>
                   </tr>
                 ))
