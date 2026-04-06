@@ -27,27 +27,27 @@ const ControlPanel: React.FC<ControlPanelProps> = () => {
   const renderTabButton = (id: ControlTab, label: string, Icon: any) => (
     <button
       onClick={() => navigate(`/control-panel/${id}`)}
-      className={`flex items-center gap-2 px-6 py-3 text-sm font-black uppercase tracking-widest transition-all border-b-2 
-        ${activeTab === id ? 'border-blue-500 text-blue-500 bg-blue-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+      className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
+        ${activeTab === id ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
     >
-      <Icon size={18} /> {label}
+      <Icon size={16} /> {label}
     </button>
   );
 
   return (
-    <div className="space-y-8 animate-fade-in pb-12">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
+      {/* Standardized Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-3">
-            <Settings className="text-blue-600" size={36} /> Control Panel
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-2">
+            <Settings className="text-blue-600" size={28} /> Control Panel
           </h1>
-          <p className="text-slate-500 font-medium md:text-lg mt-1">Global management hub for club masters and users.</p>
+          <p className="text-slate-500 font-medium text-sm mt-0.5">Global management hub for club masters and users.</p>
         </div>
       </div>
 
-      {/* Glassmorphism Tabs */}
-      <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+      {/* Standardized Glassmorphism Tabs Container */}
+      <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
         <div className="flex overflow-x-auto border-b border-slate-800 no-scrollbar">
           {renderTabButton('grounds', 'Grounds', MapPin)}
           {renderTabButton('tournaments', 'Tournaments', Trophy)}

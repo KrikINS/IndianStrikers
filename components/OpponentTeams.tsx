@@ -144,18 +144,22 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
+      {/* Standardized Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Opponent Management</h2>
-          <p className="text-slate-500">Analyze rivals and manage their squads</p>
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-2">
+            <Swords className="text-blue-600" size={28} /> Opponent Management
+          </h1>
+          <p className="text-slate-500 font-medium text-sm mt-0.5">Analyze rivals and manage their squads</p>
         </div>
+
         {canEdit && (
           <button
             onClick={handleOpenAdd}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-600/20"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95"
           >
-            <Plus size={20} />
+            <Plus size={16} />
             Add Team
           </button>
         )}

@@ -177,11 +177,11 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     const diff = Math.abs(homeScore.runs - awayScore.runs);
     const autoResult = resultType === 'Abandoned' ? 'Match Abandoned'
       : resultType === 'Tie' ? 'Match Tied'
-      : resultType === 'Forfeit-Home' ? `${opponentName} won (Indian Strikers Forfeit)`
-      : resultType === 'Forfeit-Away' ? `Indian Strikers won (${opponentName} Forfeit)`
-      : homeScore.runs > awayScore.runs ? `Indian Strikers won by ${diff} runs`
-      : awayScore.runs > homeScore.runs ? `${opponentName} won by ${diff} runs`
-      : 'Match Tied';
+        : resultType === 'Forfeit-Home' ? `${opponentName} won (Indian Strikers Forfeit)`
+          : resultType === 'Forfeit-Away' ? `Indian Strikers won (${opponentName} Forfeit)`
+            : homeScore.runs > awayScore.runs ? `Indian Strikers won by ${diff} runs`
+              : awayScore.runs > homeScore.runs ? `${opponentName} won by ${diff} runs`
+                : 'Match Tied';
 
     onSubmit({
       finalScoreHome: homeScore,
@@ -428,7 +428,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                             <td><input type="number" min="0" title="Sixes" className="compact-input" value={entry.sixes} onChange={e => updateBatting(activeInnings, p.id, p.name, 'sixes', e.target.valueAsNumber || 0)} /></td>
                             <td>
                               <select title="Dismissal" className="dismissal-select" value={entry.outHow} onChange={e => updateBatting(activeInnings, p.id, p.name, 'outHow', e.target.value)}>
-                                {['Not Out','Bowled','Caught','LBW','Run Out','Stumped','Did Not Bat','Hit Wicket'].map(o => <option key={o}>{o}</option>)}
+                                {['Not Out', 'Bowled', 'Caught', 'LBW', 'Run Out', 'Stumped', 'Did Not Bat', 'Hit Wicket'].map(o => <option key={o}>{o}</option>)}
                               </select>
                             </td>
                           </tr>
@@ -478,7 +478,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                               <span style={{ color: '#374151', fontSize: '11px' }}>No squad</span>
                             )}
                           </td>
-                          {['overs','maidens','runs','wickets','wd','nb','dots'].map(field => (
+                          {['overs', 'maidens', 'runs', 'wickets', 'wd', 'nb', 'dots'].map(field => (
                             <td key={field} style={{ textAlign: 'center' }}>
                               <input
                                 type="number" min="0" title={field}
@@ -508,8 +508,8 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                 </div>
                 <div className="extras-field">
                   <span className="extras-label">LEGBYES</span>
-                  <input 
-                    type="number" min="0" title="Leg Byes" 
+                  <input
+                    type="number" min="0" title="Leg Byes"
                     className="compact-input"
                     value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras.legByes || 0}
                     onChange={e => updateExtras(activeInnings, 'legByes', parseInt(e.target.value) || 0)}
@@ -517,8 +517,8 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                 </div>
                 <div className="extras-field">
                   <span className="extras-label">BYES</span>
-                  <input 
-                    type="number" min="0" title="Byes" 
+                  <input
+                    type="number" min="0" title="Byes"
                     className="compact-input"
                     value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras.byes || 0}
                     onChange={e => updateExtras(activeInnings, 'byes', parseInt(e.target.value) || 0)}

@@ -97,7 +97,14 @@ export const useMatchCenter = create<MatchStore>()(
 
       syncWithCloud: async () => {
         try {
-          const dbMatches = await api.getMatches();
+          const rawDbMatches = await api.getMatches();
+          // Filter out Ghost/Dummy data from DB
+          const dbMatches = rawDbMatches.filter(m => 
+            m.tournament !== "Dummy Tournament" && 
+            m.opponentName !== "Unknown" &&
+            !String(m.id).toLowerCase().includes("dummy")
+          );
+
           const dbIds = new Set(dbMatches.map(m => m.id));
           const unsynced = get().matches.filter(m => !dbIds.has(m.id));
           
@@ -119,7 +126,14 @@ export const useMatchCenter = create<MatchStore>()(
 
       getSortedMatches: () => {
         const { matches } = get();
-        return [...matches].sort((a, b) => {
+        // Automatic cleanup filter for Ghost/Dummy entries
+        const cleanMatches = matches.filter(m => 
+          m.tournament !== "Dummy Tournament" && 
+          m.opponentName !== "Unknown" &&
+          !String(m.id).toLowerCase().includes("dummy")
+        );
+
+        return [...cleanMatches].sort((a, b) => {
           const statusOrder = { 'live': 0, 'upcoming': 1, 'completed': 2 };
           if (statusOrder[a.status] !== statusOrder[b.status]) {
             return statusOrder[a.status] - statusOrder[b.status];

@@ -9,7 +9,7 @@ import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import FullScorecardModal from './FullScorecardModal';
 import ManualScoreModal from './ManualScoreModal';
-import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
@@ -327,8 +327,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     return (
         <>
         <style>{`
-          .schedule-container { padding: 0; background: #111827; border-radius: 12px; overflow: hidden; }
-          .table-controls { display: flex; gap: 12px; padding: 16px 20px; align-items: center; background: #111827; border-bottom: 1px solid #1f2937; }
+          .schedule-container { padding: 0; background: transparent; border-radius: 0; overflow: hidden; }
+          .table-controls { display: flex; gap: 12px; padding: 16px 20px; align-items: center; background: transparent; border-bottom: 1px solid #1f2937; }
           .search-bar { flex: 1; background: #1f2937; border: 1px solid #374151; color: white; padding: 9px 14px 9px 38px; border-radius: 8px; font-size: 13px; outline: none; transition: border 0.2s; }
           .search-bar:focus { border-color: #3b82f6; }
           .search-bar::placeholder { color: #4b5563; }
@@ -337,8 +337,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
           .schedule-table td { padding: 10px 14px; border-bottom: 1px solid #1a2030; vertical-align: middle; }
           .schedule-table tbody tr { transition: background 0.15s; }
           .schedule-table tbody tr:hover { background: rgba(59,130,246,0.06); cursor: pointer; }
-          .schedule-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
-          .schedule-table tbody tr:nth-child(even):hover { background: rgba(59,130,246,0.06); }
           .date-stack { display: flex; flex-direction: column; gap: 2px; }
           .date-main { font-weight: 700; color: #f9fafb; font-size: 12px; }
           .time-sub { font-size: 11px; color: #4b5563; }
@@ -354,249 +352,308 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
           .badge-status-live { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
           .badge-status-done { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.25); }
           .badge-status-up { background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.2); }
-          .table-footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #111827; border-top: 1px solid #1f2937; font-size: 11px; color: #4b5563; }
-          .btn-primary { background: #2563eb; color: white; border: none; padding: 9px 18px; border-radius: 8px; font-size: 12px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: background 0.15s; }
-          .btn-primary:hover { background: #3b82f6; }
+          .table-footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: transparent; border-top: 1px solid #1f2937; font-size: 11px; color: #4b5563; }
           .filter-select { background: #1f2937; border: 1px solid #374151; color: #d1d5db; padding: 9px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; outline: none; cursor: pointer; }
           .filter-select:focus { border-color: #3b82f6; }
           .search-wrap { position: relative; flex: 1; }
           .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #4b5563; pointer-events: none; }
           
-          /* Squad Management Styles */
-          .squad-management-row { 
-            display: flex; 
-            justify-content: space-between; 
-            gap: 10px; 
-            margin: 15px 0; 
-            padding: 10px; 
-            background: rgba(255, 255, 255, 0.03); 
-            border-radius: 12px; 
+          /* Compact Match Card Styles */
+          .match-card-compact {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
           }
-          .btn-outline-sm { 
-            flex: 1; 
-            background: rgba(31, 41, 55, 0.5); 
-            border: 1px solid #374151; 
-            color: #9ca3af; 
-            padding: 10px; 
-            font-size: 10px; 
-            font-weight: 900; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em;
-            border-radius: 8px; 
-            transition: all 0.2s; 
+          .match-card-compact:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+          }
+          .name-with-action {
             display: flex;
             align-items: center;
+            gap: 6px;
             justify-content: center;
           }
-          .btn-outline-sm:hover { 
-            border-color: #3b82f6; 
-            color: #fff; 
-            background: rgba(59, 130, 246, 0.1); 
-            transform: translateY(-1px);
+          .icon-btn-squad {
+            background: none;
+            border: none;
+            color: #3b82f6;
+            cursor: pointer;
+            padding: 2px;
+            opacity: 0.6;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+          }
+          .icon-btn-squad:hover {
+            opacity: 1;
+            transform: scale(1.1);
+          }
+          .result-ribbon-slim {
+            background: #ecfdf5;
+            color: #059669;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px;
+            margin: 12px 0;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
+          .card-footer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding-top: 10px;
+          }
+          .btn-primary-full {
+            grid-column: span 2;
+            margin-top: 4px;
+            padding: 10px;
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+          .btn-primary-full:hover {
+            background: #10b981;
+            color: white;
+          }
+          .btn-secondary-sm {
+            padding: 10px;
+            background: #f8fafc;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+          .btn-secondary-sm:hover {
+            background: #eff6ff;
+            color: #3b82f6;
+            border-color: #3b82f6;
           }
         `}</style>
-        <div className="space-y-6 md:space-y-8 animate-fade-in w-full max-w-7xl mx-auto">
-
-            {/* Page Header */}
-            <div
-                onDoubleClick={() => {
-                    if (userRole !== 'admin') return;
-                    const matchId = prompt("Super Admin: Enter Match ID to reset to 'upcoming':");
-                    if (matchId && matches.find(m => m.id === matchId)) {
-                        updateMatchStatus(matchId, 'upcoming');
-                        alert(`Match ${matchId} reset to upcoming.`);
-                    } else if (matchId) { alert("Match not found."); }
-                }}
-                className="cursor-default select-none"
-                title={userRole === 'admin' ? "Double-click for Debug" : ""}
-            >
-                <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-3">
-                    <Calendar className="text-blue-600" size={36} /> Match Center
-                </h1>
-                <p className="text-slate-500 font-medium md:text-lg max-w-2xl mt-1">Live updates, upcoming schedules, and completed playing XI setups.</p>
-            </div>
-
-            {/* Tab Bar */}
-            <div className="flex items-center gap-3 bg-slate-900 p-1 rounded-2xl border border-slate-800 shadow-xl overflow-hidden self-start">
-                <button 
-                    onClick={() => setActiveTab('list')}
-                    className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'list' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40 translate-y-[-1px]' : 'text-slate-500 hover:text-slate-300'}`}
+        <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
+            {/* Standardized Page Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div
+                    onDoubleClick={() => {
+                        if (userRole !== 'admin') return;
+                        const matchId = prompt("Super Admin: Enter Match ID to reset to 'upcoming':");
+                        if (matchId && matches.find(m => m.id === matchId)) {
+                            updateMatchStatus(matchId, 'upcoming');
+                            alert(`Match ${matchId} reset to upcoming.`);
+                        } else if (matchId) { alert("Match not found."); }
+                    }}
+                    className="cursor-default select-none"
+                    title={userRole === 'admin' ? "Double-click for Debug" : ""}
                 >
-                    Schedule List
-                </button>
-                <button 
-                    onClick={() => setActiveTab('cards')}
-                    className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'cards' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40 translate-y-[-1px]' : 'text-slate-500 hover:text-slate-300'}`}
-                >
-                    Match Cards
-                </button>
+                    <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-2">
+                        <Calendar className="text-blue-600" size={28} /> Match Center
+                    </h1>
+                    <p className="text-slate-500 font-medium text-sm mt-0.5">Live updates, upcoming schedules, and completed playing XI setups.</p>
+                </div>
+                
                 {userRole === 'admin' && (
                     <button 
                         onClick={() => setShowAddModal(true)} 
-                        className="ml-2 px-4 py-2.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-blue-500/30 flex items-center gap-2"
+                        className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
                     >
-                        <Plus size={14} /> Add Match
+                        <Plus size={16} /> Schedule Match
                     </button>
                 )}
             </div>
 
-            {/* ── TAB A: SCHEDULE LIST ── */}
-            {activeTab === 'list' && (
-                <div className="schedule-container shadow-lg">
-                    {/* Controls */}
-                    <div className="table-controls">
-                        <div className="search-wrap">
-                            <svg className="search-icon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                            <input
-                                type="text"
-                                placeholder="Search opponent or tournament..."
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                className="search-bar"
-                            />
-                        </div>
-                        <select
-                            value={formatFilter}
-                            onChange={e => setFormatFilter(e.target.value as any)}
-                            title="Filter by match format"
-                            className="filter-select"
-                        >
-                            <option value="All">All Formats</option>
-                            <option value="T20">T20</option>
-                            <option value="One Day">One Day</option>
-                        </select>
-
-                        {userRole === 'admin' && (
-                            <button
-                                onClick={handleCloudSync}
-                                disabled={isSyncing}
-                                className={`ml-auto flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                    isSyncing 
-                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
-                                    : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-500/30'
-                                }`}
-                                title="Push local matches to website"
-                            >
-                                {isSyncing ? <Loader2 className="animate-spin" size={14} /> : <Cloud size={14} />}
-                                {isSyncing ? 'Syncing...' : 'Sync Cloud'}
-                            </button>
-                        )}
-                    </div>
-
-
-                    {/* Table */}
-                    {filteredMatches.length === 0 ? (
-                        <div style={{ padding: '56px', textAlign: 'center', color: '#4b5563', fontWeight: 500 }}>
-                            {searchQuery || formatFilter !== 'All' ? 'No matches found for your filters.' : 'No matches configured yet.'}
-                        </div>
-                    ) : (
-                        <div style={{ overflowX: 'auto' }}>
-                            <table className="schedule-table">
-                                <thead>
-                                    <tr>
-                                        {['#ID', 'Date & Time', 'Tournament', 'Team A', '', 'Team B', 'Ground', 'Format', 'Status'].map(h => (
-                                            <th key={h}>{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredMatches.map(match => {
-                                        const opp = opponents.find(o => o.id === match.opponentId);
-                                        const matchDate = new Date(match.date);
-                                        const isLive = match.status === 'live';
-                                        const isCompleted = match.status === 'completed';
-                                        return (
-                                            <tr key={match.id} onClick={() => setActiveTab('cards')}>
-                                                <td className="id-cell">#{match.id.slice(-4).toUpperCase()}</td>
-                                                <td>
-                                                    <div className="date-stack">
-                                                        <span className="date-main">{matchDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                                                        <span className="time-sub">{matchDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="tournament-cell">
-                                                    <div>{match.tournament}</div>
-                                                    <div style={{ fontSize: '10px', color: '#4b5563', marginTop: '2px' }}>{match.stage}</div>
-                                                </td>
-                                                <td>
-                                                    <div className="team-cell">
-                                                        {teamLogo
-                                                            ? <img src={teamLogo} className="team-avatar" alt="INS" />
-                                                            : <div className="team-avatar-fallback bg-blue-600"><span style={{ color: 'white' }}>IS</span></div>}
-                                                        Indian Strikers
-                                                    </div>
-                                                </td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <span className="vs-cell">VS</span>
-                                                </td>
-                                                <td>
-                                                    <div className="team-cell">
-                                                        {opp?.logoUrl
-                                                            ? <img src={opp.logoUrl} className="team-avatar" alt={opp.name} />
-                                                            : <div className="team-avatar-fallback" style={{ background: '#374151' }}><span style={{ color: 'white' }}>{(opp?.name || '?').slice(0, 3).toUpperCase()}</span></div>}
-                                                        {opp?.name || match.opponentId.replace(/-/g, ' ')}
-                                                    </div>
-                                                </td>
-                                                <td style={{ color: '#9ca3af', fontSize: '12px' }}>{match.ground}</td>
-                                                <td>
-                                                    {match.matchFormat ? (
-                                                        <span className={`badge-type ${match.matchFormat === 'T20' ? 'badge-t20' : 'badge-odi'}`}>
-                                                            {match.matchFormat === 'T20' ? '⚡ T20' : '🏏 One Day'}
-                                                        </span>
-                                                    ) : <span style={{ color: '#374151' }}>—</span>}
-                                                </td>
-                                                <td>
-                                                    <span className={`badge-type ${isLive ? 'badge-status-live' : isCompleted ? 'badge-status-done' : 'badge-status-up'}`}>
-                                                        {isLive ? '🔴 Live' : isCompleted ? '✅ Done' : '🕐 Upcoming'}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                    <div className="table-footer">
-                        <span>{filteredMatches.length} {filteredMatches.length === 1 ? 'fixture' : 'fixtures'}</span>
-                        {(searchQuery || formatFilter !== 'All') && (
-                            <button onClick={() => { setSearchQuery(''); setFormatFilter('All'); }} style={{ color: '#3b82f6', fontWeight: 700, fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer' }}>Clear filters</button>
-                        )}
-                    </div>
+            {/* Standardized Glassmorphism Tabs Container */}
+            <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+                {/* Tabs Header */}
+                <div className="flex overflow-x-auto border-b border-slate-800 no-scrollbar">
+                    <button
+                        onClick={() => setActiveTab('list')}
+                        className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
+                            ${activeTab === 'list' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+                    >
+                        <List size={16} /> Schedule List
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('cards')}
+                        className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
+                            ${activeTab === 'cards' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+                    >
+                        <LayoutIcon size={16} /> Match Cards
+                    </button>
                 </div>
-            )}
 
-            {/* ── TAB B: MATCH CARDS ── */}
-            {activeTab === 'cards' && (
-                <>
-                    {getSortedMatches().length === 0 ? (
+                {/* Content Area */}
+                <div className="p-0">
+                    {activeTab === 'list' && (
+                        <div className="schedule-container">
+                            {/* Controls */}
+                            <div className="table-controls px-6">
+                                <div className="search-wrap">
+                                    <svg className="search-icon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                    </svg>
+                                    <input
+                                        type="text"
+                                        placeholder="Search opponent or tournament..."
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                        className="search-bar"
+                                    />
+                                </div>
+                                <select
+                                    value={formatFilter}
+                                    onChange={e => setFormatFilter(e.target.value as any)}
+                                    title="Filter by match format"
+                                    className="filter-select"
+                                >
+                                    <option value="All">All Formats</option>
+                                    <option value="T20">T20</option>
+                                    <option value="One Day">One Day</option>
+                                </select>
 
-                        <div className="bg-slate-900 rounded-2xl p-12 text-center text-slate-400 font-medium border border-slate-800">No matches presently configured.</div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-                            {getSortedMatches().map(match => (
-                                <MatchCenterTile
-                                    key={match.id}
-                                    match={match}
-                                    homeTeamName="Indian Strikers"
-                                    homeTeamLogo={teamLogo}
-                                    opponent={opponents.find((t: OpponentTeam) => t.id === match.opponentId)}
-                                    onSelectPlayingXI={handleSelectPlayingXI}
-                                    onEditMatch={(m: ScheduledMatch) => setEditingMatch(m)}
-                                    onStartScoring={handleStartScoring}
-                                    onViewScorecard={(id: string) => navigate(`/scorecard/${id}`)}
-                                    onUpdateManualScore={(id: string, mode?: 'summary' | 'full') => {
-                                        setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' });
-                                    }}
-                                    onDeleteMatch={deleteMatch}
-                                    isAdmin={userRole === 'admin'}
-                                />
-                            ))}
+                                {userRole === 'admin' && (
+                                    <button
+                                        onClick={handleCloudSync}
+                                        disabled={isSyncing}
+                                        className={`ml-auto flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                            isSyncing 
+                                            ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
+                                            : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-500/30'
+                                        }`}
+                                        title="Push local matches to website"
+                                    >
+                                        {isSyncing ? <Loader2 className="animate-spin" size={14} /> : <Cloud size={14} />}
+                                        {isSyncing ? 'Syncing...' : 'Sync Cloud'}
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Table */}
+                            {filteredMatches.length === 0 ? (
+                                <div className="p-14 text-center text-slate-500 font-medium bg-slate-900/20">
+                                    {searchQuery || formatFilter !== 'All' ? 'No matches found matches your filters.' : 'No matches configured yet.'}
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="schedule-table">
+                                        <thead>
+                                            <tr>
+                                                <th>#ID</th>
+                                                <th>Date & Time</th>
+                                                <th>Tournament</th>
+                                                <th>Fixture</th>
+                                                <th>Ground</th>
+                                                <th>Format</th>
+                                                <th>Status</th>
+                                                {userRole === 'admin' && <th>Actions</th>}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredMatches.map(m => {
+                                                const opp = opponents.find(o => o.id === m.opponentId);
+                                                return (
+                                                    <tr key={m.id} onClick={() => setActiveTab('cards')}>
+                                                        <td className="id-cell">#{(String(m.id).slice(-4) || "0000").toUpperCase()}</td>
+                                                        <td>
+                                                            <div className="date-stack">
+                                                                <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                                                <span className="time-sub">{new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="tournament-cell uppercase">{(m.tournament || "No Tournament").toUpperCase()}</td>
+                                                        <td>
+                                                            <div className="team-cell">
+                                                                <img src="/IS-LOGO.png" alt="INS" className="team-avatar" />
+                                                                <span>INDIAN STRIKERS</span>
+                                                                <span className="vs-cell">VS</span>
+                                                                {opp?.logoUrl ? <img src={opp.logoUrl} alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback bg-slate-800 text-slate-500">?</div>}
+                                                                <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="text-slate-500 text-xs font-bold uppercase">{m.ground}</td>
+                                                        <td>
+                                                            <span className={`badge-type ${m.matchFormat === 'T20' ? 'badge-t20' : 'badge-odi'}`}>
+                                                                {(m.matchFormat || 'T20').toUpperCase()}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <span className={`badge-type ${m.status === 'live' ? 'badge-status-live' : m.status === 'completed' ? 'badge-status-done' : 'badge-status-up'}`}>
+                                                                {(m.status || "Unknown").toUpperCase()}
+                                                            </span>
+                                                        </td>
+                                                        {userRole === 'admin' && (
+                                                            <td onClick={(e) => e.stopPropagation()}>
+                                                                <div className="flex items-center gap-2">
+                                                                    <button onClick={() => setEditingMatch(m)} className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors" title="Edit Metadata"><Plus size={14}/></button>
+                                                                    <button onClick={() => { if(window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Shield size={14}/></button>
+                                                                </div>
+                                                            </td>
+                                                        )}
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            <div className="table-footer px-6">
+                                <span>{filteredMatches.length} {filteredMatches.length === 1 ? 'fixture' : 'fixtures'} found</span>
+                                {(searchQuery || formatFilter !== 'All') && (
+                                    <button onClick={() => { setSearchQuery(''); setFormatFilter('All'); }} className="text-blue-500 font-bold hover:underline">Clear filters</button>
+                                )}
+                            </div>
                         </div>
                     )}
-                </>
-            )}
 
+                    {activeTab === 'cards' && (
+                        <div className="p-6 md:p-8">
+                            {getSortedMatches().length === 0 ? (
+                                <div className="py-20 text-center text-slate-500 font-medium">No matches available.</div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                    {getSortedMatches().map(match => (
+                                        <MatchCenterTile
+                                            key={match.id}
+                                            match={match}
+                                            homeTeamName="Indian Strikers"
+                                            homeTeamLogo={teamLogo || '/IS-LOGO.png'}
+                                            opponent={opponents.find((t: OpponentTeam) => t.id === match.opponentId)}
+                                            onSelectPlayingXI={handleSelectPlayingXI}
+                                            onEditMatch={(m: ScheduledMatch) => setEditingMatch(m)}
+                                            onStartScoring={handleStartScoring}
+                                            onViewScorecard={(id: string) => navigate(`/scorecard/${id}`)}
+                                            onUpdateManualScore={(id: string, mode?: 'summary' | 'full') => {
+                                                setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' });
+                                            }}
+                                            onDeleteMatch={deleteMatch}
+                                            isAdmin={userRole === 'admin'}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Modals & Overlays */}
             {editingMatch && (
                 <EditMatchModal 
                     match={editingMatch}

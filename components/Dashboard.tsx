@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Player, TournamentTableEntry, OpponentTeam, UserRole } from '../types';
 import { getOpponents, getTournamentTable, saveTournamentTableEntry, deleteTournamentTableEntry } from '../services/storageService';
-import { Trophy, Medal, Star, Flame, Crown, Plus, Trash2, Zap, Award, Target, Hash, Calendar, History as HistoryIcon, X, Share2, Loader2, Download, Shield } from 'lucide-react';
+import { Trophy, Medal, Star, Flame, Crown, Plus, Trash2, Zap, Award, Target, Hash, Calendar, History as HistoryIcon, X, Share2, Loader2, Download, Shield, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { useMasterData } from './masterDataStore';
@@ -194,7 +194,16 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
   };
 
   return (
-    <div className="space-y-4 md:space-y-8 animate-fade-in pb-12 w-full overflow-hidden">
+    <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto overflow-hidden px-4 md:px-0">
+      {/* Standardized Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-2">
+            <Activity className="text-blue-600" size={28} /> Dashboard
+          </h1>
+          <p className="text-slate-500 font-medium text-sm mt-0.5 italic">One Team, One Dream • Performance Overview</p>
+        </div>
+      </div>
 
       {/* Hero Poster Modal */}
       {selectedHero && (
@@ -262,14 +271,6 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
           </div>
         </div>
       )}
-
-      {/* 1. Hero Section */}
-      <div className="text-center py-4 md:py-6">
-        <h1 className="text-3xl md:text-6xl font-black tracking-tighter uppercase transparent bg-clip-text bg-gradient-to-r from-orange-500 via-white to-green-500 drop-shadow-sm leading-tight hero-heading-stroke">
-          One Team, One Dream
-        </h1>
-        <div className="h-1 w-16 md:w-24 bg-blue-600 mx-auto mt-2 md:mt-4 rounded-full"></div>
-      </div>
 
       {/* 2. Team Legacy & Match Heroes */}
       <div className="grid lg:grid-cols-12 gap-4 md:gap-8">

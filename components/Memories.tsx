@@ -150,21 +150,24 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
   const filteredMemories = memories.filter(m => filter === 'all' || m.type === filter);
 
   return (
-    <div className="space-y-8 animate-fade-in pb-20">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+    <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
+      {/* Standardized Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-4xl font-black text-slate-800 tracking-tight">Team Memories</h2>
-          <p className="text-slate-500 mt-2 font-medium">Reliving the glory days, one frame at a time.</p>
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-2">
+            <Film className="text-blue-600" size={28} /> Team Memories
+          </h1>
+          <p className="text-slate-500 font-medium text-sm mt-0.5">Reliving the glory days, one frame at a time.</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Filter standard block */}
+          <div className="flex flex-1 md:flex-none p-1 bg-slate-900 border border-slate-800 rounded-xl">
             {['all', 'image', 'video'].map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f as any)}
-                className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-all ${filter === f ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                className={`flex-1 px-4 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${filter === f ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
               >
                 {f}
               </button>
@@ -174,7 +177,7 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
           {(isAdmin || canComment) && (
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg shadow-blue-500/30 transition-all hover:scale-105"
+              className="bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
               title="Add Memory"
             >
               <Plus size={20} />

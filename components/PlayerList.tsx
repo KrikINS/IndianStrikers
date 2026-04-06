@@ -430,53 +430,55 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
   );
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
+      {/* Standardized Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Squad Roster</h2>
-          <p className="text-slate-500">
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-2">
+            <Users className="text-blue-600" size={28} /> Squad Roster
+          </h1>
+          <p className="text-slate-500 font-medium text-sm mt-0.5">
             {canEdit ? 'Manage players, stats, and availability' : 'View player profiles and stats'}
           </p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          {canManagePlayers && (
-            <button
-              onClick={handleOpenAdd}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-600/20 hover:scale-105 w-full md:w-auto justify-center font-bold"
-            >
-              <Plus size={20} />
-              Recruit Player
-            </button>
-          )}
-        </div>
+        
+        {canManagePlayers && (
+          <button
+            onClick={handleOpenAdd}
+            className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+          >
+            <Plus size={16} /> Recruit Player
+          </button>
+        )}
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 items-center">
+      {/* Standardized Glassmorphism Controls Section */}
+      <div className="bg-slate-900/95 backdrop-blur-md p-2 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row gap-4 items-center">
         {/* Roster Tabs */}
-        <div className="flex p-1 bg-slate-900 border border-slate-800 rounded-xl w-full md:w-auto">
+        <div className="flex bg-slate-800/50 p-1 rounded-xl w-full md:w-auto">
           <button
             onClick={() => setRosterTab('active')}
-            className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'active' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+            className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'active' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
           >
-             <Users size={16} /> Active Squad
+             <Users size={14} /> Active Squad
           </button>
           <button
             onClick={() => setRosterTab('inactive')}
-            className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'inactive' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+            className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'inactive' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
           >
-             <UserMinus size={16} /> Inactive Players
+             <UserMinus size={14} /> Inactive
           </button>
         </div>
 
-        {/* Search Bar */}
+        {/* Search Bar - Integrated into the glass bar */}
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
           <input
             type="text"
             placeholder="Search roster by name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-200 shadow-sm transition-all text-sm font-medium"
+            className="w-full pl-11 pr-4 py-2.5 bg-slate-800/30 border border-slate-700/50 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-200 text-xs font-medium placeholder:text-slate-600 transition-all"
           />
         </div>
       </div>
