@@ -253,6 +253,15 @@ export const updateMatch = async (id: string, match: Partial<ScheduledMatch>) =>
   return handleResponse(res);
 };
 
+export const finalizeMatch = async (id: string, matchData: any, updatedPlayers: any[]) => {
+  const res = await fetch(`${API_URL}/matches/${id}/finalize`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ matchData, updatedPlayers })
+  });
+  return handleResponse(res);
+};
+
 export const deleteMatch = async (id: string) => {
   const res = await fetch(`${API_URL}/matches/${id}`, {
     method: 'DELETE',

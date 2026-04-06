@@ -31,6 +31,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         deleteMatch,
         setPlayingXI, 
         updateMatchStatus,
+        finalizeMatch,
         syncWithCloud,
         getSortedMatches 
     } = useMatchCenter();
@@ -229,62 +230,56 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         const match = matches.find(m => m.id === manualScoreConfig.matchId);
         if (!match) return;
 
-        // 1. Update the match record in the store (scores, scorecard, result note)
-        updateMatch(manualScoreConfig.matchId, {
-            ...data,
-            status: 'completed' as MatchStatus
-        });
-
-        // 2. Sync career stats for every performer in the XI
-        // ManualScoreModal guarantees all homeTeamXI players are in data.performers
         const performers: Performer[] = data.performers || [];
+        const updatedPlayersArray: any[] = [];
 
         if (performers.length > 0) {
-            console.log(`[Sync] Starting career stat sync for ${performers.length} players...`);
-            let syncedCount = 0;
-            try {
-                for (const perf of performers) {
-                    const player = players.find(p => p.id === perf.playerId);
-                    if (!player) {
-                        console.warn(`[Sync] Player ID ${perf.playerId} not found in roster. Skipping.`);
-                        continue;
-                    }
+            console.log(`[Sync] Calculating career stat updates for ${performers.length} players...`);
+            
+            for (const perf of performers) {
+                const player = players.find(p => p.id === perf.playerId);
+                if (!player) continue;
 
-                    // Default stats if player has no career history yet
-                    const currentBatting: BattingStats = player.battingStats || {
-                        matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0,
-                        average: 0, strikeRate: 0, highestScore: '0',
-                        hundreds: 0, fifties: 0, ducks: 0, fours: 0, sixes: 0
-                    };
-                    const currentBowling: BowlingStats = player.bowlingStats || {
-                        matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0,
-                        wickets: 0, average: 0, economy: 0, strikeRate: 0,
-                        bestBowling: '0/0', fourWickets: 0, fiveWickets: 0
-                    };
+                // Reset and calculate new stats safely
+                const currentBatting: BattingStats = player.battingStats || {
+                    matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0,
+                    average: 0, strikeRate: 0, highestScore: '0',
+                    hundreds: 0, fifties: 0, ducks: 0, fours: 0, sixes: 0
+                };
+                const currentBowling: BowlingStats = player.bowlingStats || {
+                    matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0,
+                    wickets: 0, average: 0, economy: 0, strikeRate: 0,
+                    bestBowling: '0/0', fourWickets: 0, fiveWickets: 0
+                };
 
-                    // Run through the Logic Engine  
-                    // addCricketOvers is used internally (e.g., 3.5 + 2.4 = 6.3, not 5.9)
-                    const updatedBatting = updateBattingCareerStats(currentBatting, perf);
-                    const updatedBowling = updateBowlingCareerStats(currentBowling, perf);
+                const updatedBatting = updateBattingCareerStats(currentBatting, perf);
+                const updatedBowling = updateBowlingCareerStats(currentBowling, perf);
 
-                    const updatedPlayer = {
-                        ...player,
-                        matchesPlayed: updatedBatting.matches,
-                        runsScored: updatedBatting.runs,
-                        wicketsTaken: updatedBowling.wickets,
-                        battingStats: updatedBatting,
-                        bowlingStats: updatedBowling
-                    };
+                const updatedPlayer = {
+                    ...player,
+                    matchesPlayed: updatedBatting.matches,
+                    runsScored: updatedBatting.runs,
+                    wicketsTaken: updatedBowling.wickets,
+                    battingStats: updatedBatting,
+                    bowlingStats: updatedBowling
+                };
 
-                    onUpdatePlayer(updatedPlayer);
-                    syncedCount++;
-                }
-                console.log(`[Sync] ✅ Career stats synced for ${syncedCount}/${performers.length} players.`);
-                alert(`✅ Match Synced! Career stats updated for ${syncedCount} players.`);
-            } catch (err) {
-                console.error('[Sync] ❌ Career stats sync failed:', err);
-                alert('⚠️ Sync partially failed. Check console for details.');
+                updatedPlayersArray.push(updatedPlayer);
             }
+        }
+
+        try {
+            console.log(`[Sync] Finalizing match ${match.id} on cloud...`);
+            await finalizeMatch(match.id, data, updatedPlayersArray);
+            
+            // Local state update (for the players list in parent if needed)
+            updatedPlayersArray.forEach(up => onUpdatePlayer(up));
+            
+            console.log(`[Sync] ✅ Match finalized and career stats synced.`);
+            alert(`✅ Match Finalized! Career stats updated for ${updatedPlayersArray.length} players.`);
+        } catch (err: any) {
+            console.error('[Sync] ❌ Finalize failed:', err);
+            alert('⚠️ Sync failed: ' + (err.message || 'Check console.'));
         }
 
         setManualScoreConfig(null);

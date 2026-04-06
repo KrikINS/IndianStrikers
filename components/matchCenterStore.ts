@@ -14,6 +14,7 @@ interface MatchStore {
   setPlayingXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => Promise<void>;
   updateMatchXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => Promise<void>;
   updateMatchStatus: (id: string, status: MatchStatus) => Promise<void>;
+  finalizeMatch: (id: string, matchData: any, updatedPlayers: any[]) => Promise<void>;
   syncWithCloud: () => Promise<void>;
   getSortedMatches: () => ScheduledMatch[];
   resetZombieMatches: () => void;
@@ -93,6 +94,18 @@ export const useMatchCenter = create<MatchStore>()(
 
       updateMatchStatus: async (id, status) => {
         await get().updateMatch(id, { status });
+      },
+
+      finalizeMatch: async (id, matchData, updatedPlayers) => {
+        try {
+          await api.finalizeMatch(id, matchData, updatedPlayers);
+          set((state) => ({
+            matches: state.matches.map(m => m.id === id ? { ...m, ...matchData, status: 'completed' as MatchStatus } : m)
+          }));
+        } catch (e) {
+          console.error("Failed to finalize match:", e);
+          throw e;
+        }
       },
 
       syncWithCloud: async () => {

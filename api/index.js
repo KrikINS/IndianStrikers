@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -199,6 +199,60 @@ app.put('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => 
   const { error } = await supabase.from('matches').update(req.body).eq('id', req.params.id);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
+});
+
+// FINALIZE MATCH (Update results and player stats)
+app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req, res) => {
+  const { id } = req.params;
+  const { matchData, updatedPlayers } = req.body;
+
+  try {
+    // 1. Update Match record
+    const { error: matchError } = await supabase
+      .from('matches')
+      .update({
+        ...matchData,
+        status: 'completed',
+        updated_at: new Date()
+      })
+      .eq('id', id);
+
+    if (matchError) throw matchError;
+
+    // 2. Bulk Update Players (if provided)
+    if (updatedPlayers && Array.isArray(updatedPlayers)) {
+      console.log(`[Finalize] Updating career stats for ${updatedPlayers.length} players...`);
+      
+      // We perform updates in a loop. For higher performance, we could use a single UPSERT if we have PKs.
+      // But since we have extra fields, individual updates are safer if we don't have the full object here.
+      // However, the frontend is sending the full updated player objects.
+      for (const p of updatedPlayers) {
+        const { id: pid, ...stats } = p;
+        
+        // Ensure critical counters are numbers
+        const cleanStats = {
+          matches_played: Number(stats.matchesPlayed || 0),
+          runs_scored: Number(stats.runsScored || 0),
+          wickets_taken: Number(stats.wicketsTaken || 0),
+          batting_stats: stats.battingStats,
+          bowling_stats: stats.bowlingStats,
+          updated_at: new Date()
+        };
+
+        const { error: pError } = await supabase
+          .from('players')
+          .update(cleanStats)
+          .eq('id', pid);
+
+        if (pError) console.error(`[Finalize] Failed to update player ${pid}:`, pError);
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[Finalize Match Error]', e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // OPPONENTS
