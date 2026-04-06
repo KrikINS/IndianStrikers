@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Award, Target, Zap } from 'lucide-react';
-import { Player, FullScorecardData, InningsData } from '../types';
-import { ScheduledMatch, Performer } from './matchCenterStore';
+import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types';
+import { Performer } from './matchCenterStore';
 
 interface FullScorecardModalProps {
   match: ScheduledMatch;

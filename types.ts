@@ -166,6 +166,38 @@ export interface OpponentTeam {
   color?: string;
 }
 
+export interface ScheduledMatch {
+  id: string;
+  opponentId: string; // References the ID in OpponentTeam
+  date: string;
+  ground: string;
+  tournament: string;
+  stage: MatchStage;
+  status: MatchStatus;
+  homeTeamXI: string[]; // Array of Player IDs from Squad Roster
+  opponentTeamXI: string[]; // Array of Names/IDs from OpponentTeam players
+  toss?: {
+    winner: string;
+    choice: 'Bat' | 'Field';
+  };
+  tossDetails?: string;
+  maxOvers?: number;
+  resultSummary?: string; 
+  finalScoreHome?: { runs: number; wickets: number; overs: number };
+  finalScoreAway?: { runs: number; wickets: number; overs: number };
+  resultNote?: string; 
+  resultType?: string; 
+  scorecard?: FullScorecardData;
+  isLiveScored?: boolean;
+  isLocked?: boolean;
+  isHomeBattingFirst?: boolean;
+  matchFormat?: 'T20' | 'One Day';
+  opponentName?: string;
+  homeLogo?: string;
+  opponentLogo?: string;
+  performers?: Performer[];
+}
+
 export interface FieldPosition {
   playerId: string;
   left: number; // Percentage 0-100

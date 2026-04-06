@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Save, Award, Zap, Target, ChevronDown } from 'lucide-react';
-import { Player, FullScorecardData, InningsData } from '../types';
-import { ScheduledMatch } from './matchCenterStore';
+import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types';
 
 interface ManualScoreModalProps {
   match: ScheduledMatch;
@@ -140,7 +139,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
       .filter(r => r.playerId)
       .map(r => ({
         playerId: r.playerId,
-        name: [...homeSquad, ...awaySquad].find((p: any) => p.id === r.playerId)?.name || '',
+        name: [...homeSquad, ...awaySquad].find((p: { id: string }) => p.id === r.playerId)?.name || '',
         overs: parseFloat(r.overs) || 0,
         maidens: parseInt(r.maidens) || 0,
         runsConceded: parseInt(r.runs) || 0,

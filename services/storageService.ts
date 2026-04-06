@@ -1,4 +1,4 @@
-import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament } from '../types';
+import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001/api';
 
@@ -204,6 +204,57 @@ export const updatePlayer = async (player: Player) => {
 
 export const deletePlayer = async (id: string) => {
   const res = await fetch(`${API_URL}/players/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
+
+// MATCHES
+export const getMatches = async (): Promise<ScheduledMatch[]> => {
+  const res = await fetch(`${API_URL}/matches`);
+  const data = await handleResponse(res);
+  return (data || []).map((m: any) => ({
+    ...m,
+    homeTeamXI: m.homeTeamXI || m.home_team_xi || [],
+    opponentTeamXI: m.opponentTeamXI || m.opponent_team_xi || [],
+    opponentId: m.opponentId || m.opponent_id,
+    isLiveScored: m.isLiveScored ?? m.is_live_scored ?? false,
+    isLocked: m.isLocked ?? m.is_locked ?? false,
+    isHomeBattingFirst: m.isHomeBattingFirst ?? m.is_home_batting_first ?? true,
+    matchFormat: m.matchFormat || m.match_format,
+    opponentName: m.opponentName || m.opponent_name,
+    homeLogo: m.homeLogo || m.home_logo,
+    opponentLogo: m.opponentLogo || m.opponent_logo,
+    resultSummary: m.resultSummary || m.result_summary,
+    resultNote: m.resultNote || m.result_note,
+    resultType: m.resultType || m.result_type,
+    finalScoreHome: m.finalScoreHome || m.final_score_home,
+    finalScoreAway: m.finalScoreAway || m.final_score_away
+  }));
+};
+
+export const addMatch = async (match: Partial<ScheduledMatch>) => {
+  const res = await fetch(`${API_URL}/matches`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(match)
+  });
+  return handleResponse(res);
+};
+
+export const updateMatch = async (id: string, match: Partial<ScheduledMatch>) => {
+  const res = await fetch(`${API_URL}/matches/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(match)
+  });
+  return handleResponse(res);
+};
+
+export const deleteMatch = async (id: string) => {
+  const res = await fetch(`${API_URL}/matches/${id}`, {
     method: 'DELETE',
     headers: getHeaders()
   });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScheduledMatch, MatchStatus, MatchStage } from './matchCenterStore';
+import { ScheduledMatch, MatchStatus, MatchStage } from '../types';
 import { useMasterData } from './masterDataStore';
 import { X, Save, AlertCircle } from 'lucide-react';
 

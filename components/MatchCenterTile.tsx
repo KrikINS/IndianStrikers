@@ -1,7 +1,5 @@
-import React from 'react';
-import { ScheduledMatch } from './matchCenterStore';
-import { Calendar, MapPin, Radio, Trophy, Shield, Edit2, Play, TableProperties, FileText } from 'lucide-react';
-import { OpponentTeam } from '../types';
+import { Calendar, MapPin, Radio, Trophy, Edit2, Play, TableProperties, FileText, Trash2 } from 'lucide-react';
+import { ScheduledMatch, OpponentTeam } from '../types';
 
 interface MatchCenterTileProps {
     match: ScheduledMatch;
@@ -13,6 +11,7 @@ interface MatchCenterTileProps {
     onStartScoring: (matchId: string) => void;
     onViewScorecard: (matchId: string) => void;
     onUpdateManualScore: (matchId: string, mode?: 'summary' | 'full') => void;
+    onDeleteMatch: (matchId: string) => void;
     isAdmin: boolean;
 }
 
@@ -26,6 +25,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     onStartScoring,
     onViewScorecard,
     onUpdateManualScore,
+    onDeleteMatch,
     isAdmin
 }) => {
     const isLive = match.status === 'live';
@@ -196,13 +196,26 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         </div>
                     </div>
                     {isAdmin && (
+                        <>
                         <button 
                             onClick={() => onEditMatch(match)}
-                            className="p-1 text-slate-500 hover:text-white transition-colors"
+                            className="p-1 text-slate-500 hover:text-blue-400 transition-colors"
                             title="Edit Metadata"
                         >
                             <Edit2 size={14} />
                         </button>
+                        <button 
+                            onClick={() => {
+                                if (window.confirm("Are you sure you want to delete this match? This cannot be undone.")) {
+                                    onDeleteMatch(match.id);
+                                }
+                            }}
+                            className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+                            title="Delete Match"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                        </>
                     )}
                 </div>
 

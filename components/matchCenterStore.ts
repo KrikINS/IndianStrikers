@@ -1,59 +1,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Performer, MatchStatus, MatchStage, FullScorecardData } from '../types';
+import { ScheduledMatch, Performer, MatchStatus, MatchStage, FullScorecardData } from '../types';
+import * as api from '../services/storageService';
+
 export type { Performer, MatchStatus, MatchStage, FullScorecardData };
-
-export const isPastMatch = (matchDateStr: string): boolean => {
-  const now = new Date();
-  const matchDate = new Date(matchDateStr);
-  
-  // Set match day to midnight for accurate day comparison
-  const matchDay = new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate());
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
-  return matchDay.getTime() < today.getTime();
-};
-
-
-export interface ScheduledMatch {
-  id: string;
-  opponentId: string; // References the ID in OpponentTeam
-  date: string;
-  ground: string;
-  tournament: string;
-  stage: MatchStage;
-  status: MatchStatus;
-  homeTeamXI: string[]; // Array of Player IDs from Squad Roster
-  opponentTeamXI: string[]; // Array of Names/IDs from OpponentTeam players
-  toss?: {
-    winner: string;
-    choice: 'Bat' | 'Field';
-  };
-  maxOvers?: number;
-  resultSummary?: string; // e.g., "Indian Strikers won by 4 wickets"
-  finalScoreHome?: { runs: number; wickets: number; overs: number };
-  finalScoreAway?: { runs: number; wickets: number; overs: number };
-  resultNote?: string; 
-  resultType?: string; // e.g., "Normal Result", "Abandoned"
-  scorecard?: FullScorecardData;
-  isLiveScored?: boolean;
-  isLocked?: boolean;
-  isHomeBattingFirst?: boolean;
-  matchFormat?: 'T20' | 'One Day';
-  opponentName?: string;
-  homeLogo?: string;
-  opponentLogo?: string;
-  performers?: Performer[];
-}
 
 interface MatchStore {
   matches: ScheduledMatch[];
-  addMatch: (match: Omit<ScheduledMatch, 'id'>) => void;
-  updateMatch: (id: string, updates: Partial<ScheduledMatch>) => void;
-  deleteMatch: (id: string) => void;
-  setPlayingXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => void;
-  updateMatchXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => void;
-  updateMatchStatus: (id: string, status: MatchStatus) => void;
+  setMatches: (matches: ScheduledMatch[]) => void;
+  addMatch: (match: Omit<ScheduledMatch, 'id'>) => Promise<void>;
+  updateMatch: (id: string, updates: Partial<ScheduledMatch>) => Promise<void>;
+  deleteMatch: (id: string) => Promise<void>;
+  setPlayingXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => Promise<void>;
+  updateMatchXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => Promise<void>;
+  updateMatchStatus: (id: string, status: MatchStatus) => Promise<void>;
+  syncWithCloud: () => Promise<void>;
   getSortedMatches: () => ScheduledMatch[];
   resetZombieMatches: () => void;
   _hasHydrated: boolean;
@@ -63,7 +24,8 @@ interface MatchStore {
 export const useMatchCenter = create<MatchStore>()(
   persist(
     (set, get) => ({
-      matches: [], // Initially empty, will load from storage via persist
+      matches: [], 
+      setMatches: (matches) => set({ matches }),
       
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
@@ -82,36 +44,78 @@ export const useMatchCenter = create<MatchStore>()(
         return { matches: updatedMatches };
       }),
       
-      addMatch: (match) => set((state) => ({
-        matches: [...state.matches, { ...match, id: crypto.randomUUID() }]
-      })),
+      addMatch: async (match) => {
+        try {
+          const savedMatch = await api.addMatch(match);
+          set((state) => ({ matches: [...state.matches, savedMatch] }));
+        } catch (e) {
+          console.error("Failed to add match:", e);
+          throw e;
+        }
+      },
 
-      updateMatch: (id, updates) => set((state) => ({
-        matches: state.matches.map(m => m.id === id ? { ...m, ...updates } : m)
-      })),
+      updateMatch: async (id, updates) => {
+        try {
+          const currentMatch = get().matches.find(m => m.id === id);
+          if (!currentMatch) return;
+          const merged = { ...currentMatch, ...updates };
+          await api.updateMatch(id, merged);
+          set((state) => ({
+            matches: state.matches.map(m => m.id === id ? merged : m)
+          }));
+        } catch (e) {
+          console.error("Failed to update match:", e);
+          throw e;
+        }
+      },
 
-      deleteMatch: (id) => set((state) => ({
-        matches: state.matches.filter(m => m.id !== id)
-      })),
+      deleteMatch: async (id) => {
+        try {
+          await api.deleteMatch(id);
+          set((state) => ({
+            matches: state.matches.filter(m => m.id !== id)
+          }));
+        } catch (e) {
+          console.error("Failed to delete match:", e);
+          throw e;
+        }
+      },
 
-      setPlayingXI: (id, teamType, playerIds) => set((state) => ({
-        matches: state.matches.map(m => m.id === id ? { 
-          ...m, 
-          [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: playerIds 
-        } : m)
-      })),
+      setPlayingXI: async (id, teamType, playerIds) => {
+        const updates = { [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: playerIds };
+        await get().updateMatch(id, updates);
+      },
 
-      updateMatchXI: (id, teamType, playerIds) => set((state) => ({
-        matches: state.matches.map(m => m.id === id ? { 
-          ...m, 
-          [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: playerIds 
-        } : m)
-      })),
+      updateMatchXI: async (id, teamType, playerIds) => {
+        const updates = { [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: playerIds };
+        await get().updateMatch(id, updates);
+      },
 
+      updateMatchStatus: async (id, status) => {
+        await get().updateMatch(id, { status });
+      },
 
-      updateMatchStatus: (id, status) => set((state) => ({
-        matches: state.matches.map(m => m.id === id ? { ...m, status } : m)
-      })),
+      syncWithCloud: async () => {
+        try {
+          const dbMatches = await api.getMatches();
+          const dbIds = new Set(dbMatches.map(m => m.id));
+          const unsynced = get().matches.filter(m => !dbIds.has(m.id));
+          
+          if (unsynced.length === 0) return;
+          
+          console.log(`[Sync] Pushing ${unsynced.length} unsynced matches...`);
+          for (const m of unsynced) {
+             await api.addMatch(m);
+          }
+          
+          // Refresh after push
+          const fresh = await api.getMatches();
+          set({ matches: fresh });
+        } catch (e) {
+          console.error("Cloud sync failed:", e);
+          throw e;
+        }
+      },
 
       getSortedMatches: () => {
         const { matches } = get();

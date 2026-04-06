@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Trophy, Target, Calendar, Users } from 'lucide-react';
-import { ScheduledMatch } from './matchCenterStore';
+import { ScheduledMatch } from '../types';
 
 interface MatchSummaryModalProps {
   match: ScheduledMatch;

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Player, OpponentTeam, UserRole } from '../types';
-import { useMatchCenter, ScheduledMatch } from './matchCenterStore';
+import { Player, OpponentTeam, UserRole, ScheduledMatch } from '../types';
+import { useMatchCenter } from './matchCenterStore';
 import MatchCenterTile from './MatchCenterTile';
 import { PlayingXIModal } from './PlayingXIModal';
 import EditMatchModal from './EditMatchModal';
@@ -9,7 +9,7 @@ import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import FullScorecardModal from './FullScorecardModal';
 import ManualScoreModal from './ManualScoreModal';
-import { Calendar, Shield, Plus } from 'lucide-react';
+import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
@@ -28,8 +28,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     const { 
         matches, 
         updateMatch, 
+        deleteMatch,
         setPlayingXI, 
         updateMatchStatus,
+        syncWithCloud,
         getSortedMatches 
     } = useMatchCenter();
 
@@ -292,6 +294,27 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     const [searchQuery, setSearchQuery] = useState('');
     const [formatFilter, setFormatFilter] = useState<'All' | 'T20' | 'One Day'>('All');
 
+    const [isSyncing, setIsSyncing] = useState(false);
+    const unsyncedCount = useMemo(() => {
+        // Matches NOT present on server load? 
+        // We can't know for sure without checking, but syncWithCloud does this.
+        // For UI, we could assume anything not yet "fetched" is unsynced?
+        // Actually, let's just show the button if admin.
+        return matches.length; 
+    }, [matches.length]);
+
+    const handleCloudSync = async () => {
+        setIsSyncing(true);
+        try {
+            await syncWithCloud();
+            alert("✅ Cloud Sync Complete!");
+        } catch (e: any) {
+            alert("❌ Sync failed: " + e.message);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     const filteredMatches = getSortedMatches().filter(m => {
         const opp = opponents.find(o => o.id === m.opponentId);
         const matchesSearch = searchQuery === '' ||
@@ -442,6 +465,22 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                             <option value="T20">T20</option>
                             <option value="One Day">One Day</option>
                         </select>
+
+                        {userRole === 'admin' && (
+                            <button
+                                onClick={handleCloudSync}
+                                disabled={isSyncing}
+                                className={`ml-auto flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    isSyncing 
+                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
+                                    : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-500/30'
+                                }`}
+                                title="Push local matches to website"
+                            >
+                                {isSyncing ? <Loader2 className="animate-spin" size={14} /> : <Cloud size={14} />}
+                                {isSyncing ? 'Syncing...' : 'Sync Cloud'}
+                            </button>
+                        )}
                     </div>
 
 
@@ -549,6 +588,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                     onUpdateManualScore={(id: string, mode?: 'summary' | 'full') => {
                                         setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' });
                                     }}
+                                    onDeleteMatch={deleteMatch}
                                     isAdmin={userRole === 'admin'}
                                 />
                             ))}

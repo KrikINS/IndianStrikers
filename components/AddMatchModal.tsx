@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useMasterData } from './masterDataStore';
-import { useMatchCenter, MatchStatus, MatchStage, ScheduledMatch } from './matchCenterStore';
-import { OpponentTeam } from '../types';
-import { X, Calendar, MapPin, Trophy, Shield, Save, Zap } from 'lucide-react';
+import { useMatchCenter } from './matchCenterStore';
+import { OpponentTeam, ScheduledMatch, MatchStatus, MatchStage } from '../types';
+import { X, Calendar, MapPin, Trophy, Shield, Save, Zap, Loader2 } from 'lucide-react';
 
 interface AddMatchModalProps {
     onClose: () => void;
@@ -22,28 +22,37 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         status: 'upcoming' as MatchStatus,
         matchFormat: 'T20' as 'T20' | 'One Day',
     });
+    const [isSaving, setIsSaving] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSaving(true);
         
-        const selectedGround = grounds.find(g => g.id === formData.groundId)?.name || 'TBD';
-        const selectedTournament = tournaments.find(t => t.id === formData.tournamentId)?.name || 'Friendly';
+        try {
+            const selectedGround = grounds.find((g: { id: string, name: string }) => g.id === formData.groundId)?.name || 'TBD';
+            const selectedTournament = tournaments.find((t: { id: string, name: string }) => t.id === formData.tournamentId)?.name || 'Friendly';
 
-        const newMatch: Omit<ScheduledMatch, 'id'> = {
-            opponentId: formData.opponentId,
-            date: new Date(formData.date).toISOString(),
-            ground: selectedGround,
-            tournament: selectedTournament,
-            stage: formData.stage,
-            status: formData.status,
-            matchFormat: formData.matchFormat,
-            homeTeamXI: [],
-            opponentTeamXI: [],
-            isLocked: false
-        };
+            const newMatch: Omit<ScheduledMatch, 'id'> = {
+                opponentId: formData.opponentId,
+                date: new Date(formData.date).toISOString(),
+                ground: selectedGround,
+                tournament: selectedTournament,
+                stage: formData.stage,
+                status: formData.status,
+                matchFormat: formData.matchFormat,
+                homeTeamXI: [],
+                opponentTeamXI: [],
+                isLocked: false
+            };
 
-        addMatch(newMatch);
-        onClose();
+            await addMatch(newMatch);
+            onClose();
+        } catch (e: any) {
+            console.error(e);
+            alert("Failed to save match to cloud: " + e.message);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -152,7 +161,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                                     title="Select Ground"
                                 >
                                     <option value="">Select Ground...</option>
-                                    {grounds.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                    {grounds.map((g: { id: string, name: string }) => <option key={g.id} value={g.id}>{g.name}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -170,7 +179,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                                     title="Select Tournament"
                                 >
                                     <option value="">Select Tournament...</option>
-                                    {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    {tournaments.map((t: { id: string, name: string }) => <option key={t.id} value={t.id}>{t.name}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -187,9 +196,11 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                         </button>
                         <button 
                             type="submit" 
-                            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-900/40 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            disabled={isSaving}
+                            className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-900/40 transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
-                            <Save size={20} /> Schedule Match
+                            {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                            {isSaving ? 'Scheduling...' : 'Schedule Match'}
                         </button>
                     </div>
                 </form>
