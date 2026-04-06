@@ -198,28 +198,69 @@ const mapMatchToDB = (m) => {
     'isLocked': 'is_locked',
     'isHomeBattingFirst': 'is_home_batting_first',
     'matchFormat': 'match_format',
-    'tournamentId': 'tournament_id'
+    'tournamentId': 'tournament_id',
+    'tossWinnerId': 'toss_winner_id',
+    'tossChoice': 'toss_choice',
+    'tossDetails': 'toss_details',
+    'maxOvers': 'max_overs',
+    'resultSummary': 'result_summary',
+    'resultNote': 'result_note',
+    'resultType': 'result_type',
+    'finalScoreHome': 'final_score_home',
+    'finalScoreAway': 'final_score_away'
   };
 
-  for (const [key, dbKey] of Object.entries(keyMap)) {
-    if (key in mapped) {
-      mapped[dbKey] = mapped[key];
-      delete mapped[key];
-    }
+  const dbReady = {};
+  
+  // List of all valid columns in 'matches' table
+  const validColumns = [
+    'id', 'date', 'opponent_id', 'ground_id', 'tournament', 'stage', 
+    'status', 'match_format', 'home_team_xi', 'opponent_team_xi', 
+    'is_locked', 'toss_winner_id', 'toss_choice', 'toss_details', 
+    'max_overs', 'result_summary', 'result_note', 'result_type', 
+    'final_score_home', 'final_score_away', 'is_live_scored', 
+    'is_home_batting_first', 'tournament_id', 'performers'
+  ];
+
+  // 1. First, map camelCase to snake_case
+  for (const [key, value] of Object.entries(mapped)) {
+    const dbKey = keyMap[key] || key;
+    dbReady[dbKey] = value;
   }
 
-  // Handle 'ground' if sent directly (backwards compatibility)
-  if ('ground' in mapped && !mapped.ground_id) {
-    mapped.ground_id = mapped.ground;
-    delete mapped.ground;
+  // 2. Extra Mapping: toss object -> individual columns
+  if (mapped.toss) {
+    // Prioritize existing ID, then winner_id, then winner (only if it looks like a UUID)
+    const potentialId = mapped.toss.winner_id || mapped.toss.winner;
+    const isGuid = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    
+    if (!dbReady.toss_winner_id && potentialId && isGuid(potentialId)) {
+      dbReady.toss_winner_id = potentialId;
+    }
+    
+    dbReady.toss_choice = mapped.toss.choice || dbReady.toss_choice;
+    dbReady.toss_details = mapped.toss.details || dbReady.toss_details;
   }
+
+  // 3. Handle 'ground' backwards compatibility
+  if ('ground' in mapped && !dbReady.ground_id) {
+    dbReady.ground_id = mapped.ground;
+  }
+
+  // 4. Final cleaning: keep ONLY valid columns and remove null IDs
+  const final = {};
+  validColumns.forEach(col => {
+    if (col in dbReady) {
+      final[col] = dbReady[col];
+    }
+  });
 
   // If ID starts with 'match_', remove it for inserts (let Supabase generate UUID)
-  if (mapped.id && String(mapped.id).startsWith('match_')) {
-    delete mapped.id;
+  if (final.id && String(final.id).startsWith('match_')) {
+    delete final.id;
   }
 
-  return mapped;
+  return final;
 };
 
 // MATCHES
@@ -247,11 +288,11 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
   const { matchData, updatedPlayers } = req.body;
 
   try {
-    // 1. Update Match record
+    const dbMatch = mapMatchToDB(matchData);
     const { error: matchError } = await supabase
       .from('matches')
       .update({
-        ...matchData,
+        ...dbMatch,
         status: 'completed',
         updated_at: new Date()
       })

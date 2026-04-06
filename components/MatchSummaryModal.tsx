@@ -10,9 +10,11 @@ interface MatchSummaryModalProps {
 }
 
 export default function MatchSummaryModal({ match, opponentName, onSave, onClose }: MatchSummaryModalProps) {
+  const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
+
   const [summary, setSummary] = useState({
-    tossWinner: match.toss?.winner || '',
-    tossChoice: match.toss?.choice || 'Bat',
+    tossWinner: match.toss_winner_id || (match.toss?.winner === 'Indian Strikers' ? HOME_TEAM_ID : match.opponentId) || '',
+    tossChoice: match.toss_choice || match.toss?.choice || 'Bat',
     maxOvers: match.maxOvers || 20,
     resultType: match.resultType || 'Normal Result',
     homeScore: match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 },
@@ -177,26 +179,94 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
           </div>
         </div>
 
-        {/* 1. Score Display */}
-        <div className="summary-score-row">
-          <div className="score-box">
-            <span className="team-label">Indian Strikers</span>
-            <div className="main-score">
-              {summary.homeScore.runs}
-              <span className="text-slate-600 text-2xl font-black">/</span>
-              <span className="text-slate-500 text-3xl font-black">{summary.homeScore.wickets}</span>
+        {/* 1. Score Entry Grid */}
+        <div className="grid grid-cols-2 gap-6 mb-8">
+          {/* Home Team Inputs */}
+          <div className="bg-slate-800/40 p-5 rounded-2xl border border-slate-700/50">
+            <span className="team-label text-center mb-4 text-blue-400">Indian Strikers</span>
+            <div className="space-y-4">
+              <div className="flex items-end gap-2 justify-center">
+                <div className="text-center w-20">
+                  <label className="text-[10px] text-slate-500 font-black block mb-1">TOTAL RUNS</label>
+                  <input 
+                    id="home-runs"
+                    title="Home Runs"
+                    type="number" 
+                    className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-black text-xl focus:border-blue-500 outline-none"
+                    value={summary.homeScore.runs}
+                    onChange={(e) => setSummary({...summary, homeScore: {...summary.homeScore, runs: parseInt(e.target.value) || 0}})}
+                  />
+                </div>
+                <span className="text-2xl text-slate-600 font-black pb-1">/</span>
+                <div className="text-center w-16">
+                  <label className="text-[10px] text-slate-500 font-black block mb-1">WKTS</label>
+                  <input 
+                    id="home-wickets"
+                    title="Home Wickets"
+                    type="number" 
+                    className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-black text-xl focus:border-blue-500 outline-none"
+                    value={summary.homeScore.wickets}
+                    onChange={(e) => setSummary({...summary, homeScore: {...summary.homeScore, wickets: parseInt(e.target.value) || 0}})}
+                  />
+                </div>
+              </div>
+              <div className="text-center">
+                <label className="text-[10px] text-slate-500 font-black block mb-1">OVERS COMPLETED</label>
+                <input 
+                  id="home-overs"
+                  title="Home Overs"
+                  type="number"
+                  step="0.1"
+                  className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-bold text-base focus:border-blue-500 outline-none max-w-[120px] mx-auto block"
+                  value={summary.homeScore.overs}
+                  onChange={(e) => setSummary({...summary, homeScore: {...summary.homeScore, overs: parseFloat(e.target.value) || 0}})}
+                />
+              </div>
             </div>
-            <span className="over-label">{summary.homeScore.overs} OV</span>
           </div>
-          <div className="score-box px-4 opacity-20 border-r border-white/10 h-10 my-auto"></div>
-          <div className="score-box">
-            <span className="team-label text-emerald-400">{opponentName}</span>
-            <div className="main-score text-emerald-400">
-              {summary.awayScore.runs}
-              <span className="text-emerald-900 text-2xl font-black">/</span>
-              <span className="text-emerald-800 text-3xl font-black">{summary.awayScore.wickets}</span>
+
+          {/* Away Team Inputs */}
+          <div className="bg-emerald-900/10 p-5 rounded-2xl border border-emerald-900/20">
+            <span className="team-label text-center mb-4 text-emerald-400">{opponentName}</span>
+            <div className="space-y-4">
+              <div className="flex items-end gap-2 justify-center">
+                <div className="text-center w-20">
+                  <label className="text-[10px] text-emerald-900/50 font-black block mb-1">TOTAL RUNS</label>
+                  <input 
+                    id="away-runs"
+                    title="Away Runs"
+                    type="number" 
+                    className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-black text-xl focus:border-emerald-500 outline-none"
+                    value={summary.awayScore.runs}
+                    onChange={(e) => setSummary({...summary, awayScore: {...summary.awayScore, runs: parseInt(e.target.value) || 0}})}
+                  />
+                </div>
+                <span className="text-2xl text-emerald-900/30 font-black pb-1">/</span>
+                <div className="text-center w-16">
+                  <label className="text-[10px] text-emerald-900/50 font-black block mb-1">WKTS</label>
+                  <input 
+                    id="away-wickets"
+                    title="Away Wickets"
+                    type="number" 
+                    className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-black text-xl focus:border-emerald-500 outline-none"
+                    value={summary.awayScore.wickets}
+                    onChange={(e) => setSummary({...summary, awayScore: {...summary.awayScore, wickets: parseInt(e.target.value) || 0}})}
+                  />
+                </div>
+              </div>
+              <div className="text-center">
+                <label className="text-[10px] text-emerald-900/50 font-black block mb-1">OVERS COMPLETED</label>
+                <input 
+                  id="away-overs"
+                  title="Away Overs"
+                  type="number"
+                  step="0.1"
+                  className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-bold text-base focus:border-emerald-500 outline-none max-w-[120px] mx-auto block"
+                  value={summary.awayScore.overs}
+                  onChange={(e) => setSummary({...summary, awayScore: {...summary.awayScore, overs: parseFloat(e.target.value) || 0}})}
+                />
+              </div>
             </div>
-            <span className="over-label text-emerald-900/50">{summary.awayScore.overs} OV</span>
           </div>
         </div>
 
@@ -206,8 +276,8 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
             <label>TOSS WON BY</label>
             <select title="Toss Winner" value={summary.tossWinner} onChange={(e) => setSummary({...summary, tossWinner: e.target.value})}>
               <option value="">Select Team</option>
-              <option value="Indian Strikers">Indian Strikers</option>
-              <option value={opponentName}>{opponentName}</option>
+              <option value={HOME_TEAM_ID}>Indian Strikers</option>
+              <option value={match.opponentId}>{opponentName}</option>
             </select>
           </div>
           <div className="input-group">

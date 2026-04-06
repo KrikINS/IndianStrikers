@@ -9,9 +9,20 @@ async function run() {
   
   const { data, error } = await supabase.rpc('execute_sql_query', {
     sql_query: `
-      ALTER TABLE grounds ADD COLUMN IF NOT EXISTS city TEXT;
+      -- Grounds changes
+      ALTER TABLE grounds ADD COLUMN IF NOT EXISTS location TEXT;
       ALTER TABLE grounds ADD COLUMN IF NOT EXISTS capacity INTEGER;
       ALTER TABLE grounds ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
+      -- Matches changes
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS ground_id UUID;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS tournament TEXT;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS stage TEXT;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'upcoming';
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_format TEXT DEFAULT 'T20';
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS home_team_xi UUID[] DEFAULT '{}';
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS opponent_team_xi UUID[] DEFAULT '{}';
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT false;
     `
   });
   

@@ -59,6 +59,8 @@ export interface InningsBattingEntry {
   fours: number;
   sixes: number;
   outHow: string;
+  bowlerId?: string;
+  fielderId?: string;
 }
 
 export interface InningsBowlingEntry {
@@ -196,6 +198,8 @@ export interface ScheduledMatch {
   homeLogo?: string;
   opponentLogo?: string;
   performers?: Performer[];
+  toss_winner_id?: string;
+  toss_choice?: 'Bat' | 'Field';
 }
 
 export interface FieldPosition {

@@ -55,7 +55,6 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     const isPast = timeContext === 'PAST';
 
     const opponentName = opponent ? opponent.name : (match.opponentId || 'Opponent').replace(/-/g, ' ');
-    const formattedId = (match.id || 'ID-ERROR').toString().replace('match_', '#');
 
     return (
         <div className={`match-card-compact border transition-all duration-300 ${isLive ? 'border-red-400/40' : 'border-slate-100'}`}>
@@ -76,7 +75,6 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     )}
                     {isUpcoming && <span className="text-blue-600">Upcoming</span>}
                     {isCompleted && <span className="status-tag-completed">Completed</span>}
-                    <span className="text-slate-300 font-mono">{formattedId}</span>
                 </div>
                 <div className="text-slate-400">
                     {(match.stage || 'League').toUpperCase()} • {(match.tournament || 'No Tournament').toUpperCase()}

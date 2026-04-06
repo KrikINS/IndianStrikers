@@ -7,11 +7,14 @@ interface FullScorecardModalProps {
   match: ScheduledMatch;
   homeSquad: Player[];
   opponentSquad: any[];
+  opponentName: string;
+  homeTeamLogo?: string;
+  opponentLogo?: string;
   onSave: (finalData: any) => void;
   onClose: () => void;
 }
 
-export default function FullScorecardModal({ match, homeSquad, opponentSquad, onSave, onClose }: FullScorecardModalProps) {
+export default function FullScorecardModal({ match, homeSquad, opponentSquad, opponentName, homeTeamLogo, opponentLogo, onSave, onClose }: FullScorecardModalProps) {
   const [activeInnings, setActiveInnings] = useState<1 | 2>(1);
 
   // 1. Logic to determine which team bats in which Innings based on Toss
@@ -21,13 +24,13 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, on
     return (homeWon && match.toss.choice === 'Bat') || (!homeWon && match.toss.choice === 'Field');
   }, [match.toss]);
 
-  const opponentName = match.opponentName || opponentSquad[0]?.name || 'Opponent';
+  const opponentDisplay = opponentName || match.opponentName || 'Opponent';
 
-  const innings1Team = isHomeBattingFirst ? { name: 'INDIAN STRIKERS', squad: homeSquad, type: 'home' as const, logo: match.homeLogo } 
-                                          : { name: opponentName.toUpperCase(), squad: opponentSquad, type: 'away' as const, logo: match.opponentLogo };
+  const innings1Team = isHomeBattingFirst ? { name: 'INDIAN STRIKERS', squad: homeSquad, type: 'home' as const, logo: homeTeamLogo || match.homeLogo } 
+                                          : { name: opponentDisplay.toUpperCase(), squad: opponentSquad, type: 'away' as const, logo: opponentLogo || match.opponentLogo };
   
-  const innings2Team = isHomeBattingFirst ? { name: opponentName.toUpperCase(), squad: opponentSquad, type: 'away' as const, logo: match.opponentLogo } 
-                                          : { name: 'INDIAN STRIKERS', squad: homeSquad, type: 'home' as const, logo: match.homeLogo };
+  const innings2Team = isHomeBattingFirst ? { name: opponentDisplay.toUpperCase(), squad: opponentSquad, type: 'away' as const, logo: opponentLogo || match.opponentLogo } 
+                                          : { name: 'INDIAN STRIKERS', squad: homeSquad, type: 'home' as const, logo: homeTeamLogo || match.homeLogo };
 
   const initialInnings: InningsData = {
     batting: [],
@@ -43,9 +46,9 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, on
       innings2: { ...initialInnings, extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 } },
     };
 
-    if (!base.innings1.batting.length) base.innings1.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out' }));
+    if (!base.innings1.batting.length) base.innings1.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', fielderId: '', bowlerId: '' }));
     if (!base.innings1.bowling.length) base.innings1.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, noBalls: 0, dotBalls: 0 }));
-    if (!base.innings2.batting.length) base.innings2.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out' }));
+    if (!base.innings2.batting.length) base.innings2.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', fielderId: '', bowlerId: '' }));
     if (!base.innings2.bowling.length) base.innings2.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, noBalls: 0, dotBalls: 0 }));
 
     return base;
@@ -288,7 +291,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, on
         .btn-add-row:hover { background: #3b82f6; color: white; }
 
         .compact-table { width: 100%; border-collapse: collapse; }
-        .compact-table th { font-size: 8px; color: #475569; padding: 4px; border-bottom: 1px solid #1e293b; text-transform: uppercase; font-weight: 900; text-align: center; }
+        .compact-table th { font-size: 8px; color: #f8fafc; opacity: 1; padding: 4px; border-bottom: 1px solid #1e293b; text-transform: uppercase; font-weight: 900; text-align: center; }
         .compact-table td { padding: 2px; border-bottom: 1px solid rgba(255,255,255,0.02); }
 
         .player-dropdown, .status-dropdown {
@@ -307,12 +310,22 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, on
           background: #000;
           border: 1px solid #1e293b;
           color: #10b981;
-          width: 38px;
           text-align: center;
           font-size: 10px;
           font-weight: 900;
           padding: 4px;
           border-radius: 4px;
+        }
+
+        .sr-cell {
+          font-size: 9px;
+          font-weight: 900;
+          color: #94a3b8;
+          text-align: center;
+          background: rgba(148, 163, 184, 0.05);
+          border-radius: 4px;
+          padding: 4px;
+          min-width: 45px;
         }
 
         .extras-fow-container {
@@ -421,7 +434,17 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, on
             </div>
             <table className="compact-table">
               <thead>
-                <tr><th className="text-left" style={{ width: '200px' }}>BATTER</th><th>R</th><th>B</th><th>4S</th><th>6S</th><th>STATUS</th></tr>
+                <tr>
+                  <th className="text-left">BATTER</th>
+                  <th style={{ width: '100px' }}>STATUS</th>
+                  <th style={{ width: '120px' }}>FIELDER</th>
+                  <th style={{ width: '120px' }}>BOWLER</th>
+                  <th style={{ width: '45px' }}>R</th>
+                  <th style={{ width: '45px' }}>B</th>
+                  <th style={{ width: '35px' }}>4S</th>
+                  <th style={{ width: '35px' }}>6S</th>
+                  <th style={{ width: '50px' }}>SR</th>
+                </tr>
               </thead>
               <tbody>
                 {inningsData.batting.map((data, i) => {
@@ -431,17 +454,62 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, on
                       <td>
                         <select title="Select Batter" className="player-dropdown" value={data.playerId} onChange={(e) => updateBatting(activeInnings, i, 'playerId', e.target.value)}>
                           <option value="">Select Player...</option>
-                          {squad.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          {squad.map((p: any) => {
+                            const isSelectedElsewhere = inningsData.batting.some((b, idx) => b.playerId === p.id && idx !== i);
+                            return (
+                              <option key={p.id} value={p.id} disabled={isSelectedElsewhere}>
+                                {p.name} {isSelectedElsewhere ? '(Already Selected)' : ''}
+                              </option>
+                            );
+                          })}
                         </select>
                       </td>
-                      <td><input title="Runs" type="number" className="cell-input" value={data.runs} onChange={(e) => updateBatting(activeInnings, i, 'runs', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Balls" type="number" className="cell-input" value={data.balls} onChange={(e) => updateBatting(activeInnings, i, 'balls', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Fours" type="number" className="cell-input" value={data.fours} onChange={(e) => updateBatting(activeInnings, i, 'fours', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Sixes" type="number" className="cell-input" value={data.sixes} onChange={(e) => updateBatting(activeInnings, i, 'sixes', parseInt(e.target.value) || 0)} /></td>
                       <td>
-                        <select title="Dismissal Status" className="status-dropdown" value={data.outHow} onChange={(e) => updateBatting(activeInnings, i, 'outHow', e.target.value)}>
-                          {['Not Out','Bowled','Caught','LBW','Run Out','Stumped','Did Not Bat','Hit Wicket'].map(o => <option key={o}>{o}</option>)}
+                        <select 
+                          title="Dismissal Status" 
+                          className="status-dropdown" 
+                          value={data.outHow} 
+                          onChange={(e) => updateBatting(activeInnings, i, 'outHow', e.target.value)}
+                        >
+                          {['Not Out','Bowled','Caught','LBW','Run Out','Stumped','Did Not Bat','Hit Wicket','Retired Hurt','Retired Out'].map(o => <option key={o}>{o}</option>)}
                         </select>
+                      </td>
+                      <td>
+                        <select
+                          title="Select Fielder"
+                          className="status-dropdown"
+                          value={data.fielderId}
+                          disabled={['Not Out', 'Bowled', 'LBW', 'Hit Wicket', 'Retired Hurt', 'Retired Out', 'Did Not Bat'].includes(data.outHow)}
+                          onChange={(e) => updateBatting(activeInnings, i, 'fielderId', e.target.value)}
+                        >
+                          <option value="">Select...</option>
+                          {(activeInnings === 1 ? innings2Team.squad : innings1Team.squad).map((p: any) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <select
+                          title="Select Bowler"
+                          className="status-dropdown"
+                          value={data.bowlerId}
+                          disabled={['Not Out', 'Run Out', 'Retired Hurt', 'Retired Out', 'Did Not Bat'].includes(data.outHow)}
+                          onChange={(e) => updateBatting(activeInnings, i, 'bowlerId', e.target.value)}
+                        >
+                          <option value="">Select...</option>
+                          {(activeInnings === 1 ? innings2Team.squad : innings1Team.squad).map((p: any) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td><input title="Runs" type="number" className="cell-input" style={{ width: '45px' }} value={data.runs} onChange={(e) => updateBatting(activeInnings, i, 'runs', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Balls" type="number" className="cell-input" style={{ width: '45px' }} value={data.balls} onChange={(e) => updateBatting(activeInnings, i, 'balls', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Fours" type="number" className="cell-input" style={{ width: '35px' }} value={data.fours} onChange={(e) => updateBatting(activeInnings, i, 'fours', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Sixes" type="number" className="cell-input" style={{ width: '35px' }} value={data.sixes} onChange={(e) => updateBatting(activeInnings, i, 'sixes', parseInt(e.target.value) || 0)} /></td>
+                      <td>
+                        <div className="sr-cell">
+                          {data.balls > 0 ? ((data.runs / data.balls) * 100).toFixed(2) : '0.00'}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -496,7 +564,17 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, on
             </div>
             <table className="compact-table">
               <thead>
-                <tr><th className="text-left" style={{ width: '200px' }}>BOWLER</th><th>O</th><th>M</th><th>R</th><th>W</th><th>WD</th><th>NB</th><th>DOTS</th></tr>
+                <tr>
+                  <th className="text-left">BOWLER</th>
+                  <th style={{ width: '45px' }}>O</th>
+                  <th style={{ width: '35px' }}>M</th>
+                  <th style={{ width: '45px' }}>R</th>
+                  <th style={{ width: '35px' }}>W</th>
+                  <th style={{ width: '35px' }}>WD</th>
+                  <th style={{ width: '35px' }}>NB</th>
+                  <th style={{ width: '40px' }}>DOTS</th>
+                  <th style={{ width: '50px' }}>ECON</th>
+                </tr>
               </thead>
               <tbody>
                 {inningsData.bowling.map((data, i) => {
@@ -506,16 +584,32 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, on
                       <td>
                         <select title="Select Bowler" className="player-dropdown" value={data.playerId} onChange={(e) => updateBowling(activeInnings, i, 'playerId', e.target.value)}>
                           <option value="">Select Player...</option>
-                          {squad.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          {squad.map((p: any) => {
+                            const isSelectedElsewhere = inningsData.bowling.some((b, idx) => b.playerId === p.id && idx !== i);
+                            return (
+                              <option key={p.id} value={p.id} disabled={isSelectedElsewhere}>
+                                {p.name} {isSelectedElsewhere ? '(Already Selected)' : ''}
+                              </option>
+                            );
+                          })}
                         </select>
                       </td>
-                      <td><input title="Overs" type="number" step="0.1" className="cell-input" value={data.overs} onChange={(e) => updateBowling(activeInnings, i, 'overs', parseFloat(e.target.value) || 0)} /></td>
-                      <td><input title="Maidens" type="number" className="cell-input" value={data.maidens} onChange={(e) => updateBowling(activeInnings, i, 'maidens', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Runs" type="number" className="cell-input" value={data.runsConceded} onChange={(e) => updateBowling(activeInnings, i, 'runsConceded', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Wickets" type="number" className="cell-input" value={data.wickets} onChange={(e) => updateBowling(activeInnings, i, 'wickets', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Wides" type="number" className="cell-input" value={data.wides} onChange={(e) => updateBowling(activeInnings, i, 'wides', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="No Balls" type="number" className="cell-input" value={data.noBalls} onChange={(e) => updateBowling(activeInnings, i, 'noBalls', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Dot Balls" type="number" className="cell-input" value={data.dotBalls} onChange={(e) => updateBowling(activeInnings, i, 'dotBalls', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Overs" type="number" step="0.1" className="cell-input" style={{ width: '45px' }} value={data.overs} onChange={(e) => updateBowling(activeInnings, i, 'overs', parseFloat(e.target.value) || 0)} /></td>
+                      <td><input title="Maidens" type="number" className="cell-input" style={{ width: '35px' }} value={data.maidens} onChange={(e) => updateBowling(activeInnings, i, 'maidens', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Runs" type="number" className="cell-input" style={{ width: '45px' }} value={data.runsConceded} onChange={(e) => updateBowling(activeInnings, i, 'runsConceded', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Wickets" type="number" className="cell-input" style={{ width: '35px' }} value={data.wickets} onChange={(e) => updateBowling(activeInnings, i, 'wickets', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Wides" type="number" className="cell-input" style={{ width: '35px' }} value={data.wides} onChange={(e) => updateBowling(activeInnings, i, 'wides', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="No Balls" type="number" className="cell-input" style={{ width: '35px' }} value={data.noBalls} onChange={(e) => updateBowling(activeInnings, i, 'noBalls', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Dot Balls" type="number" className="cell-input" style={{ width: '40px' }} value={data.dotBalls} onChange={(e) => updateBowling(activeInnings, i, 'dotBalls', parseInt(e.target.value) || 0)} /></td>
+                      <td className="sr-cell">
+                        {(() => {
+                          const oversVal = Number(data.overs || 0);
+                          const oversPart = Math.floor(oversVal);
+                          const ballsPart = Math.round((oversVal % 1) * 10);
+                          const totalBalls = (oversPart * 6) + ballsPart;
+                          return totalBalls > 0 ? ((data.runsConceded * 6) / totalBalls).toFixed(2) : '0.00';
+                        })()}
+                      </td>
                     </tr>
                   );
                 })}
@@ -534,3 +628,4 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, on
     </div>
   );
 }
+

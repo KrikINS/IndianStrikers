@@ -9,7 +9,7 @@ import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import FullScorecardModal from './FullScorecardModal';
 import ManualScoreModal from './ManualScoreModal';
-import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties } from 'lucide-react';
+import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
 import { useMasterData } from './masterDataStore';
@@ -55,6 +55,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             : summary.awayScore.runs > summary.homeScore.runs ? `${oppName} won by ${diff} runs`
             : 'Match Tied';
 
+        const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
+        const tossWinnerName = summary.tossWinner === HOME_TEAM_ID ? 'Indian Strikers' : oppName;
+
         handleManualScoreSubmit({
             finalScoreHome: summary.homeScore,
             finalScoreAway: summary.awayScore,
@@ -63,7 +66,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             scorecard: match.scorecard || { innings1: { batting: [], bowling: [], extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0 }, innings2: { batting: [], bowling: [], extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0 } },
             performers: match.performers || [],
             isLiveScored: false,
-            toss: { winner: summary.tossWinner, choice: summary.tossChoice },
+            toss: { winner: tossWinnerName, choice: summary.tossChoice },
+            toss_winner_id: summary.tossWinner,
             maxOvers: summary.maxOvers,
         });
     };
@@ -300,10 +304,15 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         return matches.length; 
     }, [matches.length]);
 
+    const [syncStatus, setSyncStatus] = useState<'idle' | 'success'>('idle');
     const handleCloudSync = async () => {
         setIsSyncing(true);
+        setSyncStatus('idle');
         try {
             await syncWithCloud();
+            setSyncStatus('success');
+            // Revert back to idle after 5 seconds
+            setTimeout(() => setSyncStatus('idle'), 5000);
             alert("✅ Cloud Sync Complete!");
         } catch (e: any) {
             alert("❌ Sync failed: " + e.message);
@@ -413,14 +422,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             display: inline-block;
           }
           .team-logo-md {
-            width: 52px;
-            height: 52px;
-            border-radius: 12px;
-            border: 2px solid #f1f5f9;
+            width: 102px;
+            height: 102px;
+            border-radius: 18px;
+            border: 3px solid #f1f5f9;
             background: #f8fafc;
             object-fit: contain;
             display: block;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
           }
           .xi-overlay-btn {
             position: absolute;
@@ -448,16 +457,19 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
           /* ─── TEAM TEXT ─── */
           .team-name-display {
             color: #111827;
-            font-weight: 800;
-            font-size: 11px;
+            font-weight: 900;
+            font-size: 18px;
             text-transform: uppercase;
             text-align: center;
             letter-spacing: 0.03em;
-            line-height: 1.2;
-            max-width: 90px;
+            line-height: 1.1;
+            max-width: 140px;
+            min-height: 2.2em;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            white-space: normal;
           }
           .team-score-display {
             color: #1f2937;
@@ -632,8 +644,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                         <div className="schedule-container">
                             {/* Controls */}
                             <div className="table-controls px-6">
-                                <div className="search-wrap">
-                                    <svg className="search-icon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="search-wrap relative flex-1">
+                                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                                     </svg>
                                     <input
@@ -641,7 +653,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                         placeholder="Search opponent or tournament..."
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
-                                        className="search-bar"
+                                        className="w-full bg-slate-900 border border-slate-700 text-white pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:border-blue-500 transition-all"
                                     />
                                 </div>
                                 <select
@@ -662,12 +674,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                         className={`ml-auto flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                                             isSyncing 
                                             ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
+                                            : syncStatus === 'success'
+                                            ? 'bg-emerald-600 text-white border border-emerald-400 shadow-lg shadow-emerald-500/20'
                                             : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-500/30'
                                         }`}
-                                        title="Push local matches to website"
+                                        title={syncStatus === 'success' ? "All matches synced to cloud" : "Push local matches to website"}
                                     >
-                                        {isSyncing ? <Loader2 className="animate-spin" size={14} /> : <Cloud size={14} />}
-                                        {isSyncing ? 'Syncing...' : 'Sync Cloud'}
+                                        {isSyncing ? <Loader2 className="animate-spin" size={14} /> : syncStatus === 'success' ? <Check size={14} /> : <Cloud size={14} />}
+                                        {isSyncing ? 'Syncing...' : syncStatus === 'success' ? 'All Synced' : 'Sync Cloud'}
                                     </button>
                                 )}
                             </div>
@@ -699,10 +713,21 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                                     <tr key={m.id} onClick={() => setActiveTab('cards')}>
                                                         <td className="id-cell">#{(String(m.id).slice(-4) || "0000").toUpperCase()}</td>
                                                         <td>
-                                                            <div className="date-stack">
-                                                                <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                                                                <span className="time-sub">{new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
-                                                            </div>
+                                                            {m.status === 'completed' ? (
+                                                                <div className="flex flex-col items-start bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-100">
+                                                                    <span className="text-[10px] font-black uppercase tracking-tighter opacity-70">Final Score</span>
+                                                                    <div className="font-black text-xs space-x-1 tabular-nums">
+                                                                        {m.finalScoreHome ? `${m.finalScoreHome.runs}/${m.finalScoreHome.wickets}` : '0/0'}
+                                                                        <span className="opacity-40 font-bold mx-0.5">V</span>
+                                                                        {m.finalScoreAway ? `${m.finalScoreAway.runs}/${m.finalScoreAway.wickets}` : '0/0'}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="date-stack">
+                                                                    <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                                                    <span className="time-sub">{new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                </div>
+                                                            )}
                                                         </td>
                                                         <td className="tournament-cell uppercase">{(m.tournament || "No Tournament").toUpperCase()}</td>
                                                         <td>
@@ -810,8 +835,11 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             {manualScoreConfig && manualScoreConfig.showPlayers && (
                 <FullScorecardModal 
                     match={matches.find(m => m.id === manualScoreConfig.matchId)!}
-                    homeSquad={players.filter(p => !matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.length || matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.includes(p.id))}
+                    homeSquad={players.filter(p => (p.isActive !== false) && (!matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.length || matches.find(m => m.id === manualScoreConfig.matchId)?.homeTeamXI?.includes(p.id)))}
                     opponentSquad={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.players || []}
+                    opponentName={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.name || 'Opponent'}
+                    homeTeamLogo={teamLogo || '/IS-LOGO.png'}
+                    opponentLogo={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.logoUrl}
                     onClose={() => setManualScoreConfig(null)}
                     onSave={handleManualScoreSubmit}
                 />
@@ -822,7 +850,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                 <div id="team-sheet-container">
                     <PlayingXIModal 
                         matchId={xiModalConfig.matchId}
-                        homePlayers={players}
+                        homePlayers={players.filter(p => p.isActive !== false)}
                         opponentTeams={opponents}
                         opponentId={xiModalConfig.opponentId}
                         teamType={xiModalConfig.teamType}
