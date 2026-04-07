@@ -121,7 +121,8 @@ export const useMatchCenter = create<MatchStore>()(
           const dbMatches = rawDbMatches.filter(m => 
             m.tournament !== "Dummy Tournament" && 
             m.opponentName !== "Unknown" &&
-            !String(m.id).toLowerCase().includes("dummy")
+            !String(m.id).toLowerCase().includes("dummy") &&
+            m.id !== '00000000-0000-0000-0000-000000000001'
           );
 
           const dbIds = new Set(dbMatches.map(m => m.id));
@@ -151,7 +152,8 @@ export const useMatchCenter = create<MatchStore>()(
         const cleanMatches = matches.filter(m => 
           m.tournament !== "Dummy Tournament" && 
           m.opponentName !== "Unknown" &&
-          !String(m.id).toLowerCase().includes("dummy")
+          !String(m.id).toLowerCase().includes("dummy") &&
+          m.id !== '00000000-0000-0000-0000-000000000001'
         );
 
         return [...cleanMatches].sort((a, b) => {

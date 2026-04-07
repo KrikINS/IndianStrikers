@@ -115,19 +115,24 @@ async function main() {
         const runs = parseInt(cells[6]) || 0;
         const innings = parseInt(cells[7]) || 0;
         const no = parseInt(cells[8]) || 0;
+        const sr = parseFloat(cells[9]) || 0;
+        const avg = parseFloat(cells[10]) || 0;
+        const highest = parseInt(cells[11]) || 0;
         const fours = parseInt(cells[12]) || 0;
         const sixes = parseInt(cells[13]) || 0;
         const bowlRuns = parseInt(cells[14]) || 0;
         const bowlInns = parseInt(cells[15]) || 0;
         const wickets = parseInt(cells[16]) || 0;
+        const economy = parseFloat(cells[17]) || 0;
+        const bestBowling = cells[19];
+        const maidens = parseInt(cells[20]) || 0;
 
-        console.log(`Resetting ${name}...`);
+        console.log(`Resetting All Stats for ${name}...`);
 
-        // Find Player
         const { data: p } = await supabase.from('players').select('id').eq('name', name).single();
         if (!p) continue;
 
-        // 1. Reset Ledger Baseline (Historical)
+        // Create the Historical Baseline record with ALL stats mapped
         await supabase.from('player_match_stats').upsert([{
             match_id: '00000000-0000-0000-0000-000000000000',
             player_id: p.id,
@@ -135,24 +140,39 @@ async function main() {
             wickets: wickets,
             fours: fours,
             sixes: sixes,
-            bowl_runs: bowlRuns,
-            status: `HISTORICAL:${matches}` // Store match count in status
+            runs_conceded: bowlRuns,
+            maidens: maidens,
+            status: `HISTORICAL:${matches}`
         }], { onConflict: 'match_id, player_id' });
 
-        // 2. Set Career Stats to Baseline
+        // Update Career Statistics
         await supabase.from('players').update({
             runs_scored: runs,
             wickets_taken: wickets,
             matches_played: matches,
-            batting_innings: innings,
-            not_outs: no,
-            total_fours: fours,
-            total_sixes: sixes,
-            total_runs_conceded: bowlRuns,
-            bowling_innings: bowlInns
+            batting_stats: {
+                matches,
+                innings,
+                runs,
+                fours,
+                sixes,
+                notOuts: no,
+                average: avg,
+                strikeRate: sr,
+                highestScore: String(highest)
+            },
+            bowling_stats: {
+                matches,
+                innings: bowlInns,
+                runs: bowlRuns,
+                wickets,
+                economy,
+                bestBowling,
+                maidens
+            }
         }).eq('id', p.id);
     }
-    console.log('--- RESTORE COMPLETE ---');
+    console.log('--- ALL STATS RESTORED ---');
 }
 
 main();

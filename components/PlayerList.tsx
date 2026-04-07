@@ -340,39 +340,59 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
     }
   };
 
-  const handleExportCSV = () => {
+  const handleExportExcel = () => {
     if (players.length === 0) return;
     
-    // Define headers
     const headers = [
-      'Name', 'Role', 'Batting Style', 'Bowling Style', 'Jersey', 'Matches', 
-      'Batting_Runs', 'Batting_Innings', 'Batting_NotOuts', 'Batting_SR', 'Batting_AVE', 'Batting_Highest', 'Batting_4s', 'Batting_6s',
-      'Bowling_Runs', 'Bowling_Innings', 'Bowling_Wickets', 'Bowling_ECON', 'Bowling_SR', 'Bowling_Best', 'Bowling_Maidens', 'Bowling_Dots'
+      'Player Name', 'Primary Role', 'Batting Style', 'Bowling Style', 'Jersey #', 'Matches Played', 
+      'Batting Runs', 'Innings', 'Not Outs', 'Strike Rate', 'Average', 'Highest Score', '4s', '6s',
+      'Runs Conceded', 'Bowling Innings', 'Wickets Taken', 'Economy', 'Bowling SR', 'Best Bowling', 'Maidens', 'Dot Balls'
     ];
 
-    // Map players to rows
     const rows = players.map(p => {
       const b = p.battingStats || defaultBattingStats;
       const w = p.bowlingStats || defaultBowlingStats;
       return [
-        p.name, p.role, p.battingStyle, p.bowlingStyle, p.jerseyNumber || '', p.matchesPlayed,
+        p.name, p.role, p.battingStyle, p.bowlingStyle, p.jerseyNumber || '-', p.matchesPlayed,
         b.runs, b.innings, b.notOuts, b.strikeRate, b.average, b.highestScore, b.fours, b.sixes,
         w.runs, w.innings, w.wickets, w.economy, w.strikeRate, w.bestBowling, w.maidens, w.dotBalls
-      ].map(val => `"${val}"`).join(',');
+      ];
     });
 
-    const csvContent = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Create Excel-friendly HTML table string
+    const tableMarkup = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+        <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Squad Stats</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+      </head>
+      <body>
+        <table border="1">
+          <tr style="background-color: #1e293b; color: #ffffff; font-weight: bold;">
+            ${headers.map(h => `<th>${h}</th>`).join('')}
+          </tr>
+          ${rows.map(row => `
+            <tr>
+              ${row.map(val => `<td>${val}</td>`).join('')}
+            </tr>
+          `).join('')}
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([tableMarkup], { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     const timestamp = new Date().toISOString().split('T')[0];
     
     link.setAttribute('href', url);
-    link.setAttribute('download', `INS_Squad_Stats_Backup_${timestamp}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute('download', `INS_Squad_Statistics_${timestamp}.xls`);
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const renderPlayerCard = (player: Player) => (
@@ -479,14 +499,12 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
         </div>
         
         <div className="flex gap-2">
-          {canEdit && (
             <button
-              onClick={handleExportCSV}
-              className="px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:bg-slate-50 flex items-center gap-2"
+              onClick={handleExportExcel}
+              className="px-4 py-2.5 bg-white text-emerald-700 border border-emerald-100 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:bg-emerald-50 flex items-center gap-2"
             >
-              <Upload size={16} className="rotate-180" /> Export Stats
+              <Activity size={16} className="text-emerald-500" /> Export Excel
             </button>
-          )}
           
           {canManagePlayers && (
             <button

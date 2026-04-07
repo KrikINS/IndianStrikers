@@ -1,10 +1,15 @@
-
-const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-const html = `
+﻿
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+        <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Squad Stats</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+      </head>
+      <body>
+        <table border="1">
+          <tr style="background-color: #1e293b; color: #ffffff; font-weight: bold;">
+            <th>Player Name</th><th>Primary Role</th><th>Batting Style</th><th>Bowling Style</th><th>Jersey #</th><th>Matches Played</th><th>Batting Runs</th><th>Innings</th><th>Not Outs</th><th>Strike Rate</th><th>Average</th><th>Highest Score</th><th>4s</th><th>6s</th><th>Runs Conceded</th><th>Bowling Innings</th><th>Wickets Taken</th><th>Economy</th><th>Bowling SR</th><th>Best Bowling</th><th>Maidens</th><th>Dot Balls</th>
+          </tr>
+          
             <tr>
               <td>Adil Nawaz</td><td>All-Rounder</td><td>Right Handed</td><td>Right-Arm Medium</td><td>-</td><td>1</td><td>7</td><td>1</td><td>0</td><td>116.67</td><td>7</td><td>7</td><td>1</td><td>0</td><td>29</td><td>1</td><td>0</td><td>29</td><td>undefined</td><td>0/0</td><td>0</td><td>undefined</td>
             </tr>
@@ -104,55 +109,8 @@ const html = `
             <tr>
               <td>Sunil Anandan Kulai</td><td>All-Rounder</td><td>Right Handed</td><td>Right-Arm Spin</td><td>-</td><td>98</td><td>3560</td><td>96</td><td>12</td><td>125</td><td>42.38</td><td>144</td><td>420</td><td>107</td><td>1395</td><td>53</td><td>51</td><td>14.23</td><td>undefined</td><td>4/19</td><td>1</td><td>undefined</td>
             </tr>
-`;
-
-async function main() {
-    const rows = html.match(/<tr>[\s\S]*?<\/tr>/g);
-    for (const row of rows) {
-        const cells = row.match(/<td>(.*?)<\/td>/g).map(c => c.replace(/<\/?td>/g, ''));
-        const name = cells[0];
-        const matches = parseInt(cells[5]) || 0;
-        const runs = parseInt(cells[6]) || 0;
-        const innings = parseInt(cells[7]) || 0;
-        const no = parseInt(cells[8]) || 0;
-        const fours = parseInt(cells[12]) || 0;
-        const sixes = parseInt(cells[13]) || 0;
-        const bowlRuns = parseInt(cells[14]) || 0;
-        const bowlInns = parseInt(cells[15]) || 0;
-        const wickets = parseInt(cells[16]) || 0;
-
-        console.log(`Resetting ${name}...`);
-
-        // Find Player
-        const { data: p } = await supabase.from('players').select('id').eq('name', name).single();
-        if (!p) continue;
-
-        // 1. Reset Ledger Baseline (Historical)
-        await supabase.from('player_match_stats').upsert([{
-            match_id: '00000000-0000-0000-0000-000000000000',
-            player_id: p.id,
-            runs: runs,
-            wickets: wickets,
-            fours: fours,
-            sixes: sixes,
-            bowl_runs: bowlRuns,
-            status: `HISTORICAL:${matches}` // Store match count in status
-        }], { onConflict: 'match_id, player_id' });
-
-        // 2. Set Career Stats to Baseline
-        await supabase.from('players').update({
-            runs_scored: runs,
-            wickets_taken: wickets,
-            matches_played: matches,
-            batting_innings: innings,
-            not_outs: no,
-            total_fours: fours,
-            total_sixes: sixes,
-            total_runs_conceded: bowlRuns,
-            bowling_innings: bowlInns
-        }).eq('id', p.id);
-    }
-    console.log('--- RESTORE COMPLETE ---');
-}
-
-main();
+          
+        </table>
+      </body>
+      </html>
+    

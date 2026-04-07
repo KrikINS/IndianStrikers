@@ -134,6 +134,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
   };
 
   const handleSave = async () => {
+    if (isSaving) return; // Guard against rapid-clicks
     setIsSaving(true);
     const performerMap = new Map<string, Performer>();
     
@@ -489,11 +490,15 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
           </div>
           
           <div className="team-score-block">
-            <img src={match.homeLogo || ""} alt="Home" className="team-logo-small" />
+            {match.homeLogo && <img src={match.homeLogo} alt="Home" className="team-logo-small" />}
+            {!match.homeLogo && <div className="team-logo-small bg-slate-800 flex items-center justify-center text-[8px]">LOGO</div>}
+            
             <span className="team-name-big">INDIAN STRIKERS: {homeRuns}/{homeWkts}</span>
             <span className="vs-divider">VS</span>
             <span className="team-name-big">{(match as any).opponentName || opponentName}: {awayRuns}/{awayWkts}</span>
-            <img src={match.opponentLogo || ""} alt="Away" className="team-logo-small" />
+            
+            {match.opponentLogo && <img src={match.opponentLogo} alt="Away" className="team-logo-small" />}
+            {!match.opponentLogo && <div className="team-logo-small bg-slate-800 flex items-center justify-center text-[8px]">LOGO</div>}
           </div>
         </div>
 
