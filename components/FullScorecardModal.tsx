@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Award, Target, Zap } from 'lucide-react';
+import { X, Award, Target, Zap, CheckCircle2, Loader2 } from 'lucide-react';
 import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types';
 import { Performer } from './matchCenterStore';
 
@@ -53,6 +53,13 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
 
     return base;
   });
+
+  const [initialScorecard] = useState(scorecard);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const hasChanged = useMemo(() => {
+    return JSON.stringify(scorecard) !== JSON.stringify(initialScorecard);
+  }, [scorecard, initialScorecard]);
 
   const inningsData = scorecard[activeInnings === 1 ? 'innings1' : 'innings2'];
 
@@ -126,7 +133,8 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
     return inn.batting.filter(b => b.outHow !== 'Not Out' && b.outHow !== 'Did Not Bat' && b.playerId).length;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setIsSaving(true);
     const performerMap = new Map<string, Performer>();
     
     // Process home batting
@@ -191,6 +199,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
     };
     
     console.log('Players to Sync:', syncData.performers);
+    
     onSave(syncData);
   };
 
@@ -450,7 +459,17 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
           justify-content: space-between;
           align-items: center;
         }
-        .btn-save { background: #3b82f6; color: white; padding: 8px 20px; border-radius: 8px; font-weight: 900; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; }
+         .btn-save { background: #3b82f6; color: white; padding: 8px 20px; border-radius: 8px; font-weight: 900; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+         .btn-save:hover { background: #2563eb; transform: translateY(-1px); }
+         .btn-save:disabled { background: #1e293b; color: #475569; cursor: not-allowed; transform: none; box-shadow: none; border: 1px solid rgba(255,255,255,0.05); }
+         
+         .btn-close { background: #1e293b; color: #94a3b8; padding: 8px 20px; border-radius: 8px; font-weight: 900; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 1px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
+         .btn-close:hover { background: #334155; color: white; }
+
+          @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
       `}</style>
 
       <div className="scorecard-modal">
@@ -560,10 +579,10 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                           ))}
                         </select>
                       </td>
-                      <td><input title="Runs" type="number" className="cell-input" style={{ width: '45px' }} value={data.runs || ''} onChange={(e) => updateBatting(activeInnings, i, 'runs', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Balls" type="number" className="cell-input" style={{ width: '45px' }} value={data.balls || ''} onChange={(e) => updateBatting(activeInnings, i, 'balls', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Fours" type="number" className="cell-input" style={{ width: '35px' }} value={data.fours || ''} onChange={(e) => updateBatting(activeInnings, i, 'fours', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Sixes" type="number" className="cell-input" style={{ width: '35px' }} value={data.sixes || ''} onChange={(e) => updateBatting(activeInnings, i, 'sixes', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Runs" type="number" className="cell-input" style={{ width: '45px' }} value={data.runs ?? 0} onChange={(e) => updateBatting(activeInnings, i, 'runs', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Balls" type="number" className="cell-input" style={{ width: '45px' }} value={data.balls ?? 0} onChange={(e) => updateBatting(activeInnings, i, 'balls', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Fours" type="number" className="cell-input" style={{ width: '35px' }} value={data.fours ?? 0} onChange={(e) => updateBatting(activeInnings, i, 'fours', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Sixes" type="number" className="cell-input" style={{ width: '35px' }} value={data.sixes ?? 0} onChange={(e) => updateBatting(activeInnings, i, 'sixes', parseInt(e.target.value) || 0)} /></td>
                       <td>
                         <div className="sr-cell">
                           {data.balls > 0 ? ((data.runs / data.balls) * 100).toFixed(2) : '-'}
@@ -591,24 +610,24 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
               </div>
 
               <div className="extra-item">
-                <span className="tiny-label">LB:</span>
-                <input 
-                  title="Leg Byes"
-                  type="number" 
-                  className="extra-input" 
-                  value={inningsData.extras.legByes || ''}
-                  onChange={(e) => updateExtras('legByes', parseInt(e.target.value) || 0)} 
-                />
-              </div>
-
-              <div className="extra-item">
                 <span className="tiny-label">B:</span>
                 <input 
                   title="Byes"
                   type="number" 
                   className="extra-input" 
-                  value={inningsData.extras.byes || ''}
+                  value={inningsData.extras.byes ?? 0}
                   onChange={(e) => updateExtras('byes', parseInt(e.target.value) || 0)} 
+                />
+              </div>
+
+              <div className="extra-item">
+                <span className="tiny-label">LB:</span>
+                <input 
+                  title="Leg Byes"
+                  type="number" 
+                  className="extra-input" 
+                  value={inningsData.extras.legByes ?? 0}
+                  onChange={(e) => updateExtras('legByes', parseInt(e.target.value) || 0)} 
                 />
               </div>
 
@@ -667,13 +686,13 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                           })}
                         </select>
                       </td>
-                      <td><input title="Overs" type="number" step="0.1" className="cell-input" style={{ width: '45px' }} value={data.overs || ''} onChange={(e) => updateBowling(activeInnings, i, 'overs', parseFloat(e.target.value) || 0)} /></td>
-                      <td><input title="Maidens" type="number" className="cell-input" style={{ width: '35px' }} value={data.maidens || ''} onChange={(e) => updateBowling(activeInnings, i, 'maidens', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Runs" type="number" className="cell-input" style={{ width: '45px' }} value={data.runsConceded || ''} onChange={(e) => updateBowling(activeInnings, i, 'runsConceded', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Wickets" type="number" className="cell-input" style={{ width: '35px' }} value={data.wickets || ''} onChange={(e) => updateBowling(activeInnings, i, 'wickets', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Wides" type="number" className="cell-input" style={{ width: '35px' }} value={data.wides || ''} onChange={(e) => updateBowling(activeInnings, i, 'wides', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="No Balls" type="number" className="cell-input" style={{ width: '35px' }} value={data.noBalls || ''} onChange={(e) => updateBowling(activeInnings, i, 'noBalls', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Dot Balls" type="number" className="cell-input" style={{ width: '40px' }} value={data.dotBalls || ''} onChange={(e) => updateBowling(activeInnings, i, 'dotBalls', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Overs" type="number" step="0.1" className="cell-input" style={{ width: '45px' }} value={data.overs ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'overs', parseFloat(e.target.value) || 0)} /></td>
+                      <td><input title="Maidens" type="number" className="cell-input" style={{ width: '35px' }} value={data.maidens ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'maidens', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Runs" type="number" className="cell-input" style={{ width: '45px' }} value={data.runsConceded ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'runsConceded', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Wickets" type="number" className="cell-input" style={{ width: '35px' }} value={data.wickets ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'wickets', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Wides" type="number" className="cell-input" style={{ width: '35px' }} value={data.wides ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'wides', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="No Balls" type="number" className="cell-input" style={{ width: '35px' }} value={data.noBalls ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'noBalls', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="Dot Balls" type="number" className="cell-input" style={{ width: '40px' }} value={data.dotBalls ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'dotBalls', parseInt(e.target.value) || 0)} /></td>
                       <td className="sr-cell">
                         {(() => {
                           const oversVal = Number(data.overs || 0);
@@ -693,10 +712,19 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
 
         <div className="modal-footer">
           <button onClick={onClose} className="btn-cancel text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-400">Discard Changes</button>
-          <button onClick={handleSave} className="btn-save">
-              <Award size={18} /> Finalize Scorecard
-          </button>
+          
+          {hasChanged ? (
+            <button onClick={handleSave} className="btn-save" disabled={isSaving}>
+                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Award size={18} />}
+                {isSaving ? 'Saving...' : 'Save & Close'}
+            </button>
+          ) : (
+            <button onClick={onClose} className="btn-close">
+                Close
+            </button>
+          )}
         </div>
+
       </div>
     </div>
   );

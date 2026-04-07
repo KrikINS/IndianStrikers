@@ -136,6 +136,9 @@ export const updateBowlingCareerStats = (current: BowlingStats, perf: Performer)
   updated.maidens = syncMatchValue(current.maidens, matchMaidens);
   updated.runs = syncMatchValue(current.runs, matchRuns);
   updated.wickets = syncMatchValue(current.wickets, matchWkts);
+  updated.dotBalls = syncMatchValue(current.dotBalls || 0, perf.dotBalls || 0);
+  updated.wides = syncMatchValue(current.wides || 0, perf.wides || 0);
+  updated.noBalls = syncMatchValue(current.noBalls || 0, perf.noBalls || 0);
 
   // Milestones
   if (matchWkts >= 5) updated.fiveWickets = syncMatchValue(current.fiveWickets, 1);

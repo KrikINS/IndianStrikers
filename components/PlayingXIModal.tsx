@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Player, OpponentTeam } from '../types';
-import { X, Users, Check, Save, Plus } from 'lucide-react';
+import { X, Users, Check, Save, Plus, Loader2 } from 'lucide-react';
 
 interface PlayingXIModalProps {
     matchId: string;
@@ -27,7 +27,15 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     onQuickAddPlayer
 }) => {
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>(initialSelection);
+    const [isSaving, setIsSaving] = useState(false);
     const [quickAddName, setQuickAddName] = useState('');
+
+    const hasChanged = useMemo(() => {
+        if (selectedPlayers.length !== initialSelection.length) return true;
+        const sortedA = [...selectedPlayers].sort();
+        const sortedB = [...initialSelection].sort();
+        return sortedA.some((val, index) => val !== sortedB[index]);
+    }, [selectedPlayers, initialSelection]);
     const isViewOnly = teamType === 'view';
     const opponent = opponentTeams.find(t => t.id === opponentId);
 
@@ -55,11 +63,13 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
         setQuickAddName('');
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (selectedPlayers.length === 0) return;
+        setIsSaving(true);
         if (teamType === 'home' || teamType === 'opponent') {
-            onSave(matchId, teamType, selectedPlayers);
+            await onSave(matchId, teamType, selectedPlayers);
         }
+        setIsSaving(false);
         onClose();
     };
 
@@ -172,15 +182,15 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                     {!isViewOnly && (
                         <button 
                             onClick={handleSave}
-                            disabled={selectedPlayers.length === 0}
-                            title={selectedPlayers.length === 11 ? "Save Squad" : `Need ${11 - selectedPlayers.length} more players`}
+                            disabled={selectedPlayers.length === 0 || !hasChanged || isSaving}
+                            title={selectedPlayers.length === 11 ? "Save Squad" : (hasChanged ? `Need ${11 - selectedPlayers.length} more players` : "No changes made")}
                             className={`flex items-center gap-2 px-8 py-3 rounded-xl font-black uppercase transition-all
-                                ${selectedPlayers.length > 0 
+                                ${selectedPlayers.length > 0 && hasChanged && !isSaving
                                     ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40' 
                                     : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
                         >
-                            <Save size={18} />
-                            {selectedPlayers.length === 11 ? 'Save Squad' : `Select ${11 - selectedPlayers.length} More`}
+                            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                            {isSaving ? 'Saving...' : (selectedPlayers.length === 11 ? 'Save & Close' : `Select ${11 - selectedPlayers.length} More`)}
                         </button>
                     )}
                 </div>

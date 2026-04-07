@@ -1,6 +1,6 @@
 import React from 'react';
 import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Check } from 'lucide-react';
-import { ScheduledMatch, OpponentTeam, Ground } from '../types';
+import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {
     match: ScheduledMatch;
@@ -13,6 +13,7 @@ interface MatchCenterTileProps {
     onViewScorecard: (matchId: string) => void;
     onUpdateManualScore: (matchId: string, mode?: 'summary' | 'full') => void;
     onDeleteMatch: (matchId: string) => void;
+    userRole: UserRole;
     isAdmin: boolean;
     grounds: Ground[];
 }
@@ -28,9 +29,11 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     onViewScorecard,
     onUpdateManualScore,
     onDeleteMatch,
+    userRole,
     isAdmin,
     grounds
 }) => {
+    const isScorerOrAdmin = userRole === 'admin' || userRole === 'scorer';
     const isLive = match.status === 'live';
     const isUpcoming = match.status === 'upcoming';
     const isCompleted = match.status === 'completed';
@@ -76,8 +79,8 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     {isUpcoming && <span className="text-blue-600">Upcoming</span>}
                     {isCompleted && <span className="status-tag-completed">Completed</span>}
                 </div>
-                <div className="text-slate-400">
-                    {(match.stage || 'League').toUpperCase()} • {(match.tournament || 'No Tournament').toUpperCase()}
+                <div className="tournament-strip">
+                    {(match.tournament || 'No Tournament').toUpperCase()} - {(match.stage || 'League').toUpperCase()} MATCH
                 </div>
             </div>
 
@@ -88,7 +91,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     <div className="logo-wrapper">
                         {homeTeamLogo
                             ? <img src={homeTeamLogo} className="team-logo-md" alt={homeTeamName} />
-                            : <div className="team-logo-md flex items-center justify-center bg-slate-100 text-slate-400 font-black text-xs rounded-xl">INS</div>
+                            : <img src="/INS-LOGO.png" className="team-logo-md" alt="INS" />
                         }
                         <button
                             onClick={() => onSelectPlayingXI(match.id, 'home')}
@@ -119,7 +122,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     <div className="logo-wrapper">
                         {opponent?.logoUrl
                             ? <img src={opponent.logoUrl} className="team-logo-md object-contain" alt={opponentName} />
-                            : <div className="team-logo-md flex items-center justify-center bg-slate-100 text-slate-400 font-black text-xs rounded-xl">{String(opponentName).slice(0, 3).toUpperCase()}</div>
+                            : <div className="team-logo-md flex items-center justify-center bg-transparent border border-slate-200 text-slate-400 font-black text-xs rounded-xl">{String(opponentName).slice(0, 3).toUpperCase()}</div>
                         }
                         <button
                             onClick={() => onSelectPlayingXI(match.id, 'opponent')}
@@ -149,7 +152,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
             {/* ACTION FOOTER */}
             <div className="px-4 pb-4 mt-auto">
                 {/* Info + Admin Controls */}
-                <div className="flex items-center justify-between mb-3 text-[9px] font-bold text-slate-400 uppercase tracking-tight px-1">
+                <div className="flex items-center justify-between mb-3 text-[9px] match-meta-info uppercase tracking-tight px-1">
                     <div className="flex gap-3">
                         <span className="flex items-center gap-1"><Calendar size={10} /> {dateFormatted}</span>
                         <span className="flex items-center gap-1">
@@ -169,18 +172,30 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 <div className="card-footer-grid">
                     {isLive ? (
                         <button onClick={() => onStartScoring(match.id)} className="btn-primary-full bg-red-600 text-white border-red-500 hover:bg-red-700 flex items-center justify-center gap-2">
-                            <Radio size={12} /> CONTINUE LIVE SCORING
+                            <Radio size={12} /> {isScorerOrAdmin ? 'CONTINUE LIVE SCORING' : 'VIEW LIVE SCORING'}
                         </button>
                     ) : isToday && !isCompleted ? (
                         <>
-                            <button onClick={() => onStartScoring(match.id)} className="btn-action-dark bg-blue-600 text-white border-blue-500 hover:bg-blue-700">START LIVE</button>
-                            <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">SUMMARY</button>
+                            {isScorerOrAdmin ? (
+                                <>
+                                    <button onClick={() => onStartScoring(match.id)} className="btn-action-dark bg-blue-600 text-white border-blue-500 hover:bg-blue-700">START LIVE</button>
+                                    <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">SUMMARY</button>
+                                </>
+                            ) : (
+                                <button onClick={() => onViewScorecard(match.id)} className="btn-primary-bold">VIEW MATCH INFO</button>
+                            )}
                         </>
                     ) : (isPast || isCompleted) ? (
                         <>
-                            <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">MATCH SUMMARY</button>
-                            <button onClick={() => onUpdateManualScore(match.id, 'full')} className="btn-action-dark">UPDATE SCORECARD</button>
-                            <button onClick={() => onViewScorecard(match.id)} className="btn-primary-bold">VIEW FULL SCORECARD</button>
+                            {isScorerOrAdmin ? (
+                                <>
+                                    <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">MATCH SUMMARY</button>
+                                    <button onClick={() => onUpdateManualScore(match.id, 'full')} className="btn-action-dark">UPDATE SCORECARD</button>
+                                    <button onClick={() => onViewScorecard(match.id)} className="btn-primary-bold">VIEW FULL SCORECARD</button>
+                                </>
+                            ) : (
+                                <button onClick={() => onViewScorecard(match.id)} className="btn-primary-full">VIEW FULL SCORECARD</button>
+                            )}
                         </>
                     ) : (
                         <p className="col-span-2 text-center text-slate-400 text-[9px] font-black uppercase tracking-widest py-2 bg-slate-50 rounded-lg">

@@ -152,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
                   alt="Team Logo"
                 />
               ) : (
-                <Shield size={20} />
+                <img src="/INS-LOGO.png" alt="INS" className="w-6 h-6 object-contain" />
               )}
 
               {/* Admin Upload Overlay */}

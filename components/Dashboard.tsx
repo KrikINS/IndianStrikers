@@ -236,7 +236,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
                   {teamLogo ? (
                     <img src={teamLogo} className="w-full h-full object-contain" alt="Team Logo" />
                   ) : (
-                    <Shield className="text-white" />
+                    <img src="/INS-LOGO.png" className="w-full h-full object-contain" alt="INS" />
                   )}
                 </div>
 

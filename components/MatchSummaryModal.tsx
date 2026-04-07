@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Trophy, Target, Calendar, Users } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Trophy, Target, Calendar, Users, Loader2 } from 'lucide-react';
 import { ScheduledMatch } from '../types';
 
 interface MatchSummaryModalProps {
@@ -20,6 +20,19 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
     homeScore: match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 },
     awayScore: match.finalScoreAway || { runs: 0, wickets: 0, overs: 0 },
   });
+
+  const [initialSummary] = useState(summary);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const hasChanged = useMemo(() => {
+    return JSON.stringify(summary) !== JSON.stringify(initialSummary);
+  }, [summary, initialSummary]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    await onSave(summary);
+    // Modal will close via parent
+  };
 
   // Generate over options from 20 down to 5
   const overOptions = Array.from({ length: 16 }, (_, i) => 20 - i);
@@ -314,7 +327,16 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
 
         <div className="modal-footer">
           <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
-          <button type="button" className="btn-save" onClick={() => onSave(summary)}>Update Summary</button>
+          <button 
+            type="button" 
+            className="btn-save" 
+            onClick={handleSave} 
+            disabled={!hasChanged || isSaving}
+            style={(!hasChanged || isSaving) ? { background: '#334155', color: '#94a3b8', cursor: 'not-allowed', boxShadow: 'none' } : {}}
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
+            {isSaving ? 'Saving...' : 'Save & Close'}
+          </button>
         </div>
       </div>
     </div>

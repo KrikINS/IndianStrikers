@@ -368,7 +368,7 @@ export const saveStrategies = async (strategies: FieldingStrategy[]) => {
 export const getTeamLogo = async (): Promise<string> => {
   const res = await fetch(`${API_URL}/settings/team_logo`);
   const data = await await res.json().catch(() => ({}));
-  return data.value || '';
+  return data.value || '/INS-LOGO.png';
 };
 
 export const saveTeamLogo = async (url: string) => {

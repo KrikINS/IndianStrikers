@@ -23,6 +23,12 @@ import { getPlayers, addPlayer, updatePlayer, deletePlayer, getOpponents, addOpp
 import { Menu } from 'lucide-react';
 import KirikINSLogo from './components/KirikINSLogo';
 
+declare global {
+  interface Window {
+    refreshAppData: () => Promise<void>;
+  }
+}
+
 const AppContent: React.FC<{
   players: Player[],
   opponents: OpponentTeam[],
@@ -37,8 +43,9 @@ const AppContent: React.FC<{
   teamLogo: string,
   onUpdateLogo: (url: string) => void,
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string },
-  linkedPlayer?: Player
-}> = ({ players, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer }) => {
+  linkedPlayer?: Player,
+  onRefresh: () => Promise<void>
+}> = ({ players, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer, onRefresh }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -103,7 +110,7 @@ const AppContent: React.FC<{
               }
             />
             <Route path="/memories" element={<Memories userRole={userRole} currentUser={currentUser} />} />
-            <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={userRole} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} />} />
+            <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={userRole} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
             <Route path="/scorer" element={(userRole === 'admin' || userRole === 'scorer') ? <ScorerDashboard /> : <Navigate to="/home" />} />
             {/* Control Panel Routes - Admin only */}
             <Route path="/control-panel" element={userRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Navigate to="/home" />}>
@@ -146,31 +153,33 @@ const App: React.FC = () => {
     resetZombieMatches();
   }, [resetZombieMatches]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        console.log("Fetching data from backend...");
-        const [p, o, l] = await Promise.all([
-          getPlayers(),
-          getOpponents(),
-          getTeamLogo(),
-          useMasterData.getState().syncMasterData()
-        ]);
-        console.log("Data received:", { players: p.length, opponents: o.length });
+  const loadData = async () => {
+    try {
+      console.log("Fetching data from backend...");
+      const [p, o, l] = await Promise.all([
+        getPlayers(),
+        getOpponents(),
+        getTeamLogo(),
+        useMasterData.getState().syncMasterData()
+      ]);
+      console.log("Data received:", { players: p.length, opponents: o.length });
 
-        if (p.length === 0) {
-          console.warn("Received empty data. Backend might be connected but empty, or request failed silently.");
-          // Optional: alert check
-        }
-
-        setPlayers(p);
-        setOpponents(o);
-        setTeamLogo(l);
-      } catch (e: any) {
-        console.error('Failed to load data:', e);
-        alert(`Backend Error: ${e.message}. \n\nIf "fetch failed", the Backend cannot reach Supabase. Check your internet or Supabase Project status.`);
+      if (p.length === 0) {
+        console.warn("Received empty data. Backend might be connected but empty, or request failed silently.");
       }
-    };
+
+      setPlayers(p);
+      setOpponents(o);
+      setTeamLogo(l);
+    } catch (e: any) {
+      console.error('Failed to load data:', e);
+      alert(`Backend Error: ${e.message}. \n\nIf "fetch failed", the Backend cannot reach Supabase. Check your internet or Supabase Project status.`);
+    }
+  };
+
+  useEffect(() => {
+    // Expose loadData as refreshData
+    window.refreshAppData = loadData;
     loadData();
 
     // Check if splash has been seen this session
@@ -313,6 +322,7 @@ const App: React.FC = () => {
         onUpdateLogo={handleUpdateLogo}
         currentUser={currentUser}
         linkedPlayer={currentUser?.id ? players.find(p => String(p.linkedUserId) === String(currentUser?.id)) : undefined}
+        onRefresh={loadData}
       />
     </HashRouter>
   );

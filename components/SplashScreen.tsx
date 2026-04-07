@@ -132,7 +132,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
             {teamLogo && !imgError ? (
               <img src={teamLogo} className="w-24 h-24 object-contain" alt="Team Logo" />
             ) : (
-              <Shield size={64} className="text-blue-500" />
+              <img src="/INS-LOGO.png" className="w-24 h-24 object-contain" alt="INS" />
             )}
           </div>
           <h2 className="text-3xl md:text-5xl text-slate-300 font-cursive tracking-wide min-h-[60px]">

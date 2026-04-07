@@ -19,7 +19,8 @@ const defaultBattingStats: BattingStats = {
 };
 
 const defaultBowlingStats: BowlingStats = {
-  matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0, wickets: 0, average: 0, economy: 0, strikeRate: 0, bestBowling: '0/0', fourWickets: 0, fiveWickets: 0
+  matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0, wickets: 0, average: 0, economy: 0, strikeRate: 0, bestBowling: '0/0', fourWickets: 0, fiveWickets: 0,
+  dotBalls: 0, wides: 0, noBalls: 0
 };
 
 // Simple Password Modal Component
@@ -339,6 +340,41 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
     }
   };
 
+  const handleExportCSV = () => {
+    if (players.length === 0) return;
+    
+    // Define headers
+    const headers = [
+      'Name', 'Role', 'Batting Style', 'Bowling Style', 'Jersey', 'Matches', 
+      'Batting_Runs', 'Batting_Innings', 'Batting_NotOuts', 'Batting_SR', 'Batting_AVE', 'Batting_Highest', 'Batting_4s', 'Batting_6s',
+      'Bowling_Runs', 'Bowling_Innings', 'Bowling_Wickets', 'Bowling_ECON', 'Bowling_SR', 'Bowling_Best', 'Bowling_Maidens', 'Bowling_Dots'
+    ];
+
+    // Map players to rows
+    const rows = players.map(p => {
+      const b = p.battingStats || defaultBattingStats;
+      const w = p.bowlingStats || defaultBowlingStats;
+      return [
+        p.name, p.role, p.battingStyle, p.bowlingStyle, p.jerseyNumber || '', p.matchesPlayed,
+        b.runs, b.innings, b.notOuts, b.strikeRate, b.average, b.highestScore, b.fours, b.sixes,
+        w.runs, w.innings, w.wickets, w.economy, w.strikeRate, w.bestBowling, w.maidens, w.dotBalls
+      ].map(val => `"${val}"`).join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `INS_Squad_Stats_Backup_${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const renderPlayerCard = (player: Player) => (
     <div
       key={player.id}
@@ -442,14 +478,25 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
           </p>
         </div>
         
-        {canManagePlayers && (
-          <button
-            onClick={handleOpenAdd}
-            className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
-          >
-            <Plus size={16} /> Recruit Player
-          </button>
-        )}
+        <div className="flex gap-2">
+          {canEdit && (
+            <button
+              onClick={handleExportCSV}
+              className="px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:bg-slate-50 flex items-center gap-2"
+            >
+              <Upload size={16} className="rotate-180" /> Export Stats
+            </button>
+          )}
+          
+          {canManagePlayers && (
+            <button
+              onClick={handleOpenAdd}
+              className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+            >
+              <Plus size={16} /> Recruit Player
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Standardized Glassmorphism Controls Section */}

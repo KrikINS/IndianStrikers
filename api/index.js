@@ -34,7 +34,7 @@ app.use((req, _res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -43,7 +43,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET });
 const upload = multer({ storage: multer.memoryStorage() });
 
-function signToken(payload) { return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' }); }
+function signToken(payload) { return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' }); }
 function authGuard(roles = []) {
   return (req, res, next) => {
     const token = (req.headers.authorization || '').replace('Bearer ', '');
@@ -207,7 +207,8 @@ const mapMatchToDB = (m) => {
     'resultNote': 'result_note',
     'resultType': 'result_type',
     'finalScoreHome': 'final_score_home',
-    'finalScoreAway': 'final_score_away'
+    'finalScoreAway': 'final_score_away',
+    'isCareerSynced': 'is_career_synced'
   };
 
   const dbReady = {};
@@ -219,7 +220,7 @@ const mapMatchToDB = (m) => {
     'is_locked', 'toss_winner_id', 'toss_choice', 'toss_details', 
     'max_overs', 'result_summary', 'result_note', 'result_type', 
     'final_score_home', 'final_score_away', 'is_live_scored', 
-    'is_home_batting_first', 'tournament_id', 'performers', 'scorecard'
+    'is_home_batting_first', 'tournament_id', 'performers', 'scorecard', 'is_career_synced'
   ];
 
   // 1. First, map camelCase to snake_case
@@ -294,38 +295,127 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
       .update({
         ...dbMatch,
         status: 'completed',
+        is_career_synced: true,
         updated_at: new Date()
       })
       .eq('id', id);
 
     if (matchError) throw matchError;
 
-    // 2. Bulk Update Players (if provided)
-    if (updatedPlayers && Array.isArray(updatedPlayers)) {
-      console.log(`[Finalize] Updating career stats for ${updatedPlayers.length} players...`);
+    // 2. Summation Logic (Source of Truth: player_match_stats)
+    const performers = matchData.performers || [];
+    if (performers.length > 0) {
+      console.log(`[Finalize] Cleaning Ledger and Syncing ${performers.length} performers...`);
       
-      // We perform updates in a loop. For higher performance, we could use a single UPSERT if we have PKs.
-      // But since we have extra fields, individual updates are safer if we don't have the full object here.
-      // However, the frontend is sending the full updated player objects.
-      for (const p of updatedPlayers) {
-        const { id: pid, ...stats } = p;
+      // Clear old stats for this match before re-summing (ensures removed players are purged)
+      const { error: clearError } = await supabase
+        .from('player_match_stats')
+        .delete()
+        .eq('match_id', id);
+
+      if (clearError) console.error(`[Finalize] ❌ Ledger clear error for match ${id}:`, clearError);
+
+      for (const perf of performers) {
+        if (!perf.playerId) continue;
         
-        // Ensure critical counters are numbers
-        const cleanStats = {
-          matches_played: Number(stats.matchesPlayed || 0),
-          runs_scored: Number(stats.runsScored || 0),
-          wickets_taken: Number(stats.wicketsTaken || 0),
-          batting_stats: stats.battingStats,
-          bowling_stats: stats.bowlingStats,
-          updated_at: new Date()
-        };
+        const playerId = Number(perf.playerId);
+        const matchId = id; // UUID string
 
-        const { error: pError } = await supabase
-          .from('players')
-          .update(cleanStats)
-          .eq('id', pid);
+        // A. Upsert into player_match_stats (The Ledger)
+        const { error: ledgerError } = await supabase
+          .from('player_match_stats')
+          .upsert([{
+            match_id: matchId,
+            player_id: playerId,
+            runs: Number(perf.runs || 0),
+            balls: Number(perf.balls || 0),
+            fours: Number(perf.fours || 0),
+            sixes: Number(perf.sixes || 0),
+            status: perf.outHow || (perf.isNotOut ? 'Not Out' : 'Out'),
+            fielder_name: perf.fielderName || null,
+            bowler_name: perf.bowlerName || null,
+            overs_bowled: Number(perf.bowlingOvers || 0),
+            runs_conceded: Number(perf.bowlingRuns || 0),
+            wickets: Number(perf.wickets || 0),
+            maidens: Number(perf.maidens || 0),
+            dot_balls: Number(perf.dotBalls || 0)
+          }], { onConflict: 'match_id, player_id' });
 
-        if (pError) console.error(`[Finalize] Failed to update player ${pid}:`, pError);
+        if (ledgerError) console.error(`[Finalize] Ledger sync error for player ${playerId}:`, ledgerError);
+
+        // B. RECALCULATE Career Totals for this player (Summation Logic)
+        const { data: allHistory, error: historyError } = await supabase
+          .from('player_match_stats')
+          .select('*')
+          .eq('player_id', playerId);
+
+        if (!historyError && allHistory) {
+          const totalMatches = allHistory.length;
+          let totalBatRuns = 0, totalBallsFace = 0, totalFours = 0, totalSixes = 0, totalInnings = 0, totalNotOuts = 0, highestScoreVal = 0;
+          let totalBowlRuns = 0, totalWickets = 0, totalMaidens = 0, totalDots = 0, totalBowlInnings = 0, totalBallsBowl = 0;
+
+          allHistory.forEach(h => {
+            // Batting
+            totalBatRuns += (h.runs || 0);
+            totalBallsFace += (h.balls || 0);
+            totalFours += (h.fours || 0);
+            totalSixes += (h.sixes || 0);
+            if (h.status !== 'Did Not Bat') {
+              totalInnings++;
+              if (h.status === 'Not Out') totalNotOuts++;
+            }
+            if (h.runs > highestScoreVal) highestScoreVal = h.runs;
+
+            // Bowling
+            if (h.overs_bowled > 0) {
+              totalBowlInnings++;
+              totalBowlRuns += (h.runs_conceded || 0);
+              totalWickets += (h.wickets || 0);
+              totalMaidens += (h.maidens || 0);
+              totalDots += (h.dot_balls || 0);
+              
+              const fullOvers = Math.floor(h.overs_bowled);
+              const extraBalls = Math.round((h.overs_bowled % 1) * 10);
+              totalBallsBowl += (fullOvers * 6) + extraBalls;
+            }
+          });
+
+          // Calculations
+          const totalOvers = Number(Math.floor(totalBallsBowl / 6) + (totalBallsBowl % 6) / 10).toFixed(1);
+          const batAvg = (totalInnings - totalNotOuts) > 0 ? (totalBatRuns / (totalInnings - totalNotOuts)) : totalBatRuns;
+          const batSR = totalBallsFace > 0 ? (totalBatRuns / totalBallsFace) * 100 : 0;
+          const bowlEcon = totalBallsBowl > 0 ? (totalBowlRuns / (totalBallsBowl / 6)) : 0;
+          const bowlSR = totalWickets > 0 ? (totalBallsBowl / totalWickets) : 0;
+          const bowlAvg = totalWickets > 0 ? (totalBowlRuns / totalWickets) : 0;
+
+          const updatedPlayerStats = {
+            matches_played: totalMatches,
+            runs_scored: totalBatRuns,
+            wickets_taken: totalWickets,
+            average: parseFloat(batAvg.toFixed(2)),
+            batting_stats: {
+              matches: totalMatches, innings: totalInnings, notOuts: totalNotOuts,
+              runs: totalBatRuns, balls: totalBallsFace, fours: totalFours, sixes: totalSixes,
+              average: parseFloat(batAvg.toFixed(2)), strikeRate: parseFloat(batSR.toFixed(2)),
+              highestScore: String(highestScoreVal), hundreds: 0, fifties: 0, ducks: 0,
+            },
+            bowling_stats: {
+              matches: totalMatches, innings: totalBowlInnings, overs: parseFloat(totalOvers),
+              maidens: totalMaidens, runs: totalBowlRuns, wickets: totalWickets,
+              average: parseFloat(bowlAvg.toFixed(2)), economy: parseFloat(bowlEcon.toFixed(2)),
+              strikeRate: parseFloat(bowlSR.toFixed(2)), bestBowling: '0/0',
+              dotBalls: totalDots, wides: 0, noBalls: 0,
+            },
+            updated_at: new Date()
+          };
+
+          const { error: pUpdateError } = await supabase
+            .from('players')
+            .update(updatedPlayerStats)
+            .eq('id', playerId);
+
+          if (pUpdateError) console.error(`[Finalize] Sync error for player ${playerId}:`, pUpdateError);
+        }
       }
     }
 

@@ -100,7 +100,12 @@ export const useMatchCenter = create<MatchStore>()(
         try {
           await api.finalizeMatch(id, matchData, updatedPlayers);
           set((state) => ({
-            matches: state.matches.map(m => m.id === id ? { ...m, ...matchData, status: 'completed' as MatchStatus } : m)
+            matches: state.matches.map(m => m.id === id ? { 
+              ...m, 
+              ...matchData, 
+              status: 'completed' as MatchStatus,
+              isCareerSynced: matchData.isCareerSynced ?? m.isCareerSynced
+            } : m)
           }));
         } catch (e) {
           console.error("Failed to finalize match:", e);

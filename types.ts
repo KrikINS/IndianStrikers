@@ -48,6 +48,8 @@ export interface Performer {
   sixes?: number;
   maidens?: number;
   dotBalls?: number;
+  wides?: number;
+  noBalls?: number;
   outHow?: string;
 }
 
@@ -126,6 +128,9 @@ export interface BowlingStats {
   bestBowling: string;
   fourWickets: number;
   fiveWickets: number;
+  dotBalls: number;
+  wides: number;
+  noBalls: number;
 }
 
 export interface Player {
@@ -200,6 +205,7 @@ export interface ScheduledMatch {
   performers?: Performer[];
   toss_winner_id?: string;
   toss_choice?: 'Bat' | 'Field';
+  isCareerSynced?: boolean;
 }
 
 export interface FieldPosition {

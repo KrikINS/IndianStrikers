@@ -176,7 +176,7 @@ export default function ScorerDashboard() {
             {/* 1. Header & Innings Control - STYLED COMPONENTS APPLIED */}
             <PremiumHeader $isFirstInnings={isFirstInnings}>
                 <DecorLayer>
-                    <Shield size={180} className="text-white" />
+                    <img src="/INS-LOGO.png" className="w-[180px] h-[180px] object-contain opacity-20" alt="Team Logo" />
                 </DecorLayer>
                 
                 <div className="relative z-10 flex flex-col items-center">

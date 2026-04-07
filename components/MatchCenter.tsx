@@ -9,7 +9,7 @@ import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import FullScorecardModal from './FullScorecardModal';
 import ManualScoreModal from './ManualScoreModal';
-import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check } from 'lucide-react';
+import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
 import { useMasterData } from './masterDataStore';
@@ -22,9 +22,10 @@ interface MatchCenterProps {
     teamLogo?: string;
     onUpdatePlayer: (p: Player) => void;
     onUpdateOpponent: (t: OpponentTeam) => void;
+    onRefresh?: () => Promise<void>;
 }
 
-const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole, teamLogo, onUpdatePlayer, onUpdateOpponent }) => {
+const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole, teamLogo, onUpdatePlayer, onUpdateOpponent, onRefresh }) => {
     const navigate = useNavigate();
     const { 
         matches, 
@@ -43,7 +44,41 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         syncWithCloud().catch(err => console.error("Auto-sync error:", err));
     }, [syncWithCloud]);
 
-    const handleSummaryUpdate = (summary: any) => {
+    const handleManualScoreSubmit = async (data: any, options: { skipCareerSync?: boolean } = {}) => {
+        if (!manualScoreConfig) return;
+
+        const match = matches.find(m => m.id === manualScoreConfig.matchId);
+        if (!match) return;
+
+        try {
+            console.log(`[Sync] Finalizing match ${match.id} on cloud...`);
+            const finalData = { ...data, isCareerSynced: true };
+
+            // Pass the performers array if they exist (Full Scorecard) or empty array (Summary Update)
+            const performersToSync = options.skipCareerSync ? [] : (data.performers || []);
+            await finalizeMatch(match.id, finalData, performersToSync);
+
+            if (onRefresh) {
+                console.log('[Sync] Triggering global UI refresh...');
+                await onRefresh();
+            }
+            
+            console.log(`[Sync] ✅ Match finalized and career stats summed via Ledger.`);
+            
+            // Show custom success toast
+            setManualScoreConfig(null);
+            setShowSyncSuccess(true);
+            setTimeout(() => setShowSyncSuccess(false), 3000);
+            
+        } catch (err: any) {
+            console.error('[Sync] ❌ Finalize failed:', err);
+            alert('⚠️ Sync failed: ' + (err.message || 'Check console.'));
+        }
+
+        setManualScoreConfig(null);
+    };
+
+    const handleSummaryUpdate = async (summary: any) => {
         if (!manualScoreConfig) return;
         const match = matches.find(m => m.id === manualScoreConfig.matchId);
         if (!match) return;
@@ -63,7 +98,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
         const tossWinnerName = summary.tossWinner === HOME_TEAM_ID ? 'Indian Strikers' : oppName;
 
-        handleManualScoreSubmit({
+        await handleManualScoreSubmit({
             finalScoreHome: summary.homeScore,
             finalScoreAway: summary.awayScore,
             resultNote: autoResult,
@@ -74,7 +109,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             toss: { winner: tossWinnerName, choice: summary.tossChoice },
             toss_winner_id: summary.tossWinner,
             maxOvers: summary.maxOvers,
-        });
+        }, { skipCareerSync: true });
     };
 
     const handleQuickAddOpponentPlayer = (name: string) => {
@@ -96,6 +131,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         showPlayers: boolean;
     } | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showSyncSuccess, setShowSyncSuccess] = useState(false);
     const [xiModalConfig, setXiModalConfig] = useState<{
         isOpen: boolean;
         matchId: string;
@@ -182,6 +218,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         }
 
         await setPlayingXI(matchId, teamType, selection);
+        setShowSyncSuccess(true);
+        setTimeout(() => setShowSyncSuccess(false), 3000);
     };
 
     const handleStartScoring = (matchId: string) => {
@@ -235,67 +273,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         }
     };
 
-    const handleManualScoreSubmit = async (data: any) => {
-        if (!manualScoreConfig) return;
-        
-        const match = matches.find(m => m.id === manualScoreConfig.matchId);
-        if (!match) return;
-
-        const performers: Performer[] = data.performers || [];
-        const updatedPlayersArray: any[] = [];
-
-        if (performers.length > 0) {
-            console.log(`[Sync] Calculating career stat updates for ${performers.length} players...`);
-            
-            for (const perf of performers) {
-                const player = players.find(p => p.id === perf.playerId);
-                if (!player) continue;
-
-                // Reset and calculate new stats safely
-                const currentBatting: BattingStats = player.battingStats || {
-                    matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0,
-                    average: 0, strikeRate: 0, highestScore: '0',
-                    hundreds: 0, fifties: 0, ducks: 0, fours: 0, sixes: 0
-                };
-                const currentBowling: BowlingStats = player.bowlingStats || {
-                    matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0,
-                    wickets: 0, average: 0, economy: 0, strikeRate: 0,
-                    bestBowling: '0/0', fourWickets: 0, fiveWickets: 0
-                };
-
-                const updatedBatting = updateBattingCareerStats(currentBatting, perf);
-                const updatedBowling = updateBowlingCareerStats(currentBowling, perf);
-
-                const updatedPlayer = {
-                    ...player,
-                    matchesPlayed: updatedBatting.matches,
-                    runsScored: updatedBatting.runs,
-                    wicketsTaken: updatedBowling.wickets,
-                    battingStats: updatedBatting,
-                    bowlingStats: updatedBowling
-                };
-
-                updatedPlayersArray.push(updatedPlayer);
-            }
-        }
-
-        try {
-            console.log(`[Sync] Finalizing match ${match.id} on cloud...`);
-            await finalizeMatch(match.id, data, updatedPlayersArray);
-            
-            // Local state update (for the players list in parent if needed)
-            updatedPlayersArray.forEach(up => onUpdatePlayer(up));
-            
-            console.log(`[Sync] ✅ Match finalized and career stats synced.`);
-            alert(`✅ Match Finalized! Career stats updated for ${updatedPlayersArray.length} players.`);
-        } catch (err: any) {
-            console.error('[Sync] ❌ Finalize failed:', err);
-            alert('⚠️ Sync failed: ' + (err.message || 'Check console.'));
-        }
-
-        setManualScoreConfig(null);
-    };
-
     const [activeTab, setActiveTab] = useState<'list' | 'cards'>('list');
     const [searchQuery, setSearchQuery] = useState('');
     const [formatFilter, setFormatFilter] = useState<'All' | 'T20' | 'One Day'>('All');
@@ -338,6 +315,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     return (
         <>
         <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
           .schedule-container { padding: 0; background: transparent; border-radius: 0; overflow: hidden; }
           .table-controls { display: flex; gap: 12px; padding: 16px 20px; align-items: center; background: transparent; border-bottom: 1px solid #1f2937; }
           .search-bar { flex: 1; background: #1f2937; border: 1px solid #374151; color: white; padding: 9px 14px 9px 38px; border-radius: 8px; font-size: 13px; outline: none; transition: border 0.2s; }
@@ -355,7 +333,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
           .tournament-cell { font-size: 12px; font-weight: 600; color: #d1d5db; }
           .vs-cell { font-size: 10px; font-weight: 900; color: #374151; background: #1f2937; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
           .team-cell { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; white-space: nowrap; }
-          .team-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: contain; background: #1f2937; }
+          .team-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: contain; background: transparent; border: 1px solid rgba(255,255,255,0.1); }
+          .team-avatar-fallback { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid rgba(255,255,255,0.1); font-size: 10px; font-weight: 900; }
           .team-avatar-fallback { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 900; }
           .badge-type { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 900; display: inline-flex; align-items: center; gap: 4px; }
           .badge-t20 { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
@@ -429,12 +408,19 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
           .team-logo-md {
             width: 102px;
             height: 102px;
-            border-radius: 18px;
-            border: 3px solid #f1f5f9;
-            background: #f8fafc;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.4);
+            background: transparent !important;
             object-fit: contain;
             display: block;
-            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+            /* 3D Effect */
+            transform: perspective(1000px) rotateX(4deg) rotateY(-8deg);
+            filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15));
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          }
+          .team-logo-md:hover {
+            transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1.12) translateY(-4px);
+            filter: drop-shadow(0 25px 35px rgba(0,0,0,0.25));
           }
           .xi-overlay-btn {
             position: absolute;
@@ -458,13 +444,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
 
           /* ─── TEAM TEXT ─── */
           .team-name-display {
+            font-family: 'Outfit', sans-serif;
             color: #111827;
-            font-weight: 900;
+            font-weight: 950;
             font-size: 18px;
             text-transform: uppercase;
             text-align: center;
-            letter-spacing: 0.03em;
-            line-height: 1.1;
+            letter-spacing: -0.01em;
+            line-height: 1;
             max-width: 140px;
             min-height: 2.2em;
             display: -webkit-box;
@@ -472,6 +459,27 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             -webkit-box-orient: vertical;
             overflow: hidden;
             white-space: normal;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: default;
+          }
+          .team-name-display:hover {
+            color: #2563eb;
+            transform: scale(1.05);
+            text-shadow: 0 4px 12px rgba(37,99,235,0.15);
+          }
+
+          .tournament-strip {
+             color: #000000 !important;
+             opacity: 1 !important;
+             font-weight: 900;
+             letter-spacing: 0.02em;
+          }
+
+          .match-meta-info {
+             color: #000000 !important;
+             opacity: 1 !important;
+             font-weight: 800;
+             padding-top: 6px;
           }
           .team-score-display {
             color: #1f2937;
@@ -586,6 +594,30 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
           .btn-primary-full:hover {
             background: #10b981;
             color: white;
+          }
+
+          @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+
+          .success-toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: #10b981;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            z-index: 10000;
+            animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            font-weight: 700;
+            font-size: 0.9rem;
+            border-left: 4px solid #059669;
           }
         `}</style>
 
@@ -723,10 +755,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                                         <td className="tournament-cell uppercase">{(m.tournament || "No Tournament").toUpperCase()}</td>
                                                         <td>
                                                             <div className="team-cell">
-                                                                <img src="/IS-LOGO.png" alt="INS" className="team-avatar" />
+                                                                <img src="/INS-LOGO.png" alt="INS" className="team-avatar" />
                                                                 <span>INDIAN STRIKERS</span>
                                                                 <span className="vs-cell">VS</span>
-                                                                {opp?.logoUrl ? <img src={opp.logoUrl} alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback bg-slate-800 text-slate-500">?</div>}
+                                                                {opp?.logoUrl ? <img src={opp.logoUrl} alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback text-slate-500">?</div>}
                                                                 <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
                                                             </div>
                                                         </td>
@@ -776,7 +808,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                             key={match.id}
                                             match={match}
                                             homeTeamName="Indian Strikers"
-                                            homeTeamLogo={teamLogo || '/IS-LOGO.png'}
+                                            homeTeamLogo={teamLogo || '/INS-LOGO.png'}
                                             opponent={opponents.find((t: OpponentTeam) => t.id === match.opponentId)}
                                             onSelectPlayingXI={handleSelectPlayingXI}
                                             onEditMatch={(m: ScheduledMatch) => setEditingMatch(m)}
@@ -786,6 +818,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                                 setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' });
                                             }}
                                             onDeleteMatch={deleteMatch}
+                                            userRole={userRole}
                                             isAdmin={userRole === 'admin'}
                                             grounds={grounds}
                                         />
@@ -838,7 +871,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                         return (xi.length === 0 || xi.some(pid => String(pid) === String(p.id)));
                     })}
                     opponentName={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.name || 'Opponent'}
-                    homeTeamLogo={teamLogo || '/IS-LOGO.png'}
+                    homeTeamLogo={teamLogo || '/INS-LOGO.png'}
                     opponentLogo={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.logoUrl}
                     onClose={() => setManualScoreConfig(null)}
                     onSave={handleManualScoreSubmit}
@@ -873,7 +906,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                 <div className="flex justify-between items-center mb-12">
                                     <div className="flex items-center gap-6">
                                         <div className="w-24 h-24 bg-slate-900 border-2 border-slate-700 rounded-3xl flex items-center justify-center p-2">
-                                            {teamLogo ? <img src={teamLogo} className="w-full h-full object-contain" alt="Team Logo" /> : <Shield size={48} />}
+                                            {teamLogo ? <img src={teamLogo} className="w-full h-full object-contain" alt="Team Logo" /> : <img src="/INS-LOGO.png" alt="INS" className="w-full h-full object-contain" />}
                                         </div>
                                         <div>
                                             <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white">Indian Strikers</h1>
@@ -918,6 +951,16 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                     <div className="bg-slate-950 p-8 rounded-3xl border border-emerald-500/30 text-center">
                         <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                         <p className="text-white font-black uppercase tracking-widest italic">Generating Graphic...</p>
+                    </div>
+                </div>
+            )}
+
+            {showSyncSuccess && (
+                <div className="success-toast">
+                    <CheckCircle2 size={24} className="text-white" />
+                    <div>
+                        <p className="text-white font-black uppercase tracking-widest text-[10px]">Success</p>
+                        <p className="text-emerald-50 text-[13px]">Match details updated and saved successfully</p>
                     </div>
                 </div>
             )}
