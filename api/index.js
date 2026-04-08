@@ -688,7 +688,7 @@ app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) =>
     const { data: allMatchStats } = await supabase.from('player_match_stats').select('*').eq('player_id', playerId);
     const { data: legacyBaseline } = await supabase.from('player_legacy_stats').select('*').eq('player_id', playerId).single();
     
-    const l = legacyBaseline || { runs: 0, balls: 0, wickets: 0, matches: 0, innings: 0, not_outs: 0, highest_score: 0, overs_bowled: 0, runs_conceded: 0, maidens: 0, hundreds: 0, fifties: 0, ducks: 0, four_wickets: 0, five_wickets: 0, best_bowling: '0/0' };
+    const l = legacyBaseline || { runs: 0, balls: 0, wickets: 0, matches: 0, innings: 0, not_outs: 0, highest_score: 0, bowling_innings: 0, overs_bowled: 0, runs_conceded: 0, maidens: 0, hundreds: 0, fifties: 0, ducks: 0, four_wickets: 0, five_wickets: 0, wides: 0, no_balls: 0, best_bowling: '0/0' };
     const m = allMatchStats || [];
 
     const totalRuns = m.reduce((s, row) => s + (Number(row.runs) || 0), 0) + (Number(l.runs) || 0);
@@ -708,6 +708,9 @@ app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) =>
     const totalMaidens = m.reduce((s, row) => s + (Number(row.maidens) || 0), 0) + (Number(l.maidens) || 0);
     const total4W = m.reduce((s, row) => s + (Number(row.four_wickets) || 0), 0) + (Number(l.four_wickets) || 0);
     const total5W = m.reduce((s, row) => s + (Number(row.five_wickets) || 0), 0) + (Number(l.five_wickets) || 0);
+    const totalBowlInnings = m.filter(row => (Number(row.overs_bowled) > 0)).length + (Number(l.bowling_innings) || 0);
+    const totalWides = m.reduce((s, row) => s + (Number(row.wides) || 0), 0) + (Number(l.wides) || 0);
+    const totalNoBalls = m.reduce((s, row) => s + (Number(row.no_balls) || 0), 0) + (Number(l.no_balls) || 0);
 
     // BBI Comparison
     const allBBI = m.map(row => row.best_bowling).filter(Boolean);
@@ -743,10 +746,11 @@ app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) =>
             hundreds: total100s, fifties: total50s, ducks: totalDucks
         },
         bowling_stats: {
-            matches: totalMatches, overs: parseFloat(totalBowlOvers.toFixed(1)), runs: totalBowlRuns, 
+            matches: totalMatches, innings: totalBowlInnings, overs: parseFloat(totalBowlOvers.toFixed(1)), runs: totalBowlRuns, 
             wickets: totalWickets, maidens: totalMaidens, average: parseFloat(bowlAvg.toFixed(2)),
             economy: parseFloat(bowlEco.toFixed(2)), strikeRate: parseFloat(bowlSR.toFixed(2)),
-            bestBowling: bestBBI, fourWickets: total4W, fiveWickets: total5W
+            bestBowling: bestBBI, fourWickets: total4W, fiveWickets: total5W,
+            wides: totalWides, noBalls: totalNoBalls
         },
         updated_at: new Date()
     }).eq('id', playerId);

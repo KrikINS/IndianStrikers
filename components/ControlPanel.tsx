@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Player } from '../types';
-import { 
+import {
   Plus, MapPin, Trophy, Settings,
   Users, Layout
 } from 'lucide-react';
@@ -16,7 +16,7 @@ interface ControlPanelProps {
 const ControlPanel: React.FC<ControlPanelProps> = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  
+
   // Derive active tab from the last segment of the URL
   const activeTab = (pathname.split('/').pop() || 'grounds') as ControlTab;
 

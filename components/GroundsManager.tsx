@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Ground } from '../types';
 import { useMasterData } from './masterDataStore';
@@ -39,118 +38,122 @@ const GroundsManager: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '40px' }} className="animate-fade-in">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 style={{ color: 'white' }} className="text-3xl font-black uppercase tracking-tighter flex items-center gap-3">
-            <MapPin className="text-blue-500" size={32} /> Grounds Master List
-          </h1>
-          <p style={{ color: '#aaa' }} className="text-sm font-medium uppercase tracking-widest mt-1">Manage match venues and locations here.</p>
+    <div className="animate-fade-in space-y-4">
+      <div className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-white/10 shadow-inner">
+            <MapPin size={20} className="text-blue-400" />
+          </div>
+          <div>
+            <h2 className="text-[13px] font-black text-white uppercase tracking-wider leading-none">Grounds Master List</h2>
+            <p className="text-[11px] text-white/40 mt-1 font-medium">Configure match venues and stadium details.</p>
+          </div>
         </div>
         <button 
           onClick={handleOpenAdd} 
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-blue-900/20 transition-all active:scale-95"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-lg text-[11px] flex items-center gap-2 shadow-lg shadow-blue-900/20 transition-all active:scale-95 uppercase tracking-widest"
           title="Add New Ground"
         >
-          <Plus size={16} /> ADD GROUND
+          <Plus size={14} /> ADD GROUND
         </button>
       </div>
 
-      <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
-        <table className="w-full text-left">
-          <thead className="bg-black/40 text-slate-500 text-[10px] uppercase font-black tracking-widest border-b border-slate-800">
-            <tr>
-              <th className="px-6 py-4">Ground Details</th>
-              <th className="px-6 py-4">City / Location</th>
-              <th className="px-6 py-4">Capacity</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/50">
-            {grounds.map(g => (
-              <tr key={g.id} className="hover:bg-blue-500/5 transition-colors group">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 group-hover:text-blue-300 transition-colors">
-                      <MapPin size={20} />
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-900/95 border-b border-white/10">
+                <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Ground Details</th>
+                <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">City / Location</th>
+                <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Capacity</th>
+                <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {grounds.map(g => (
+                <tr key={g.id} className="hover:bg-slate-50 transition-colors group">
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-blue-600 group-hover:bg-white transition-colors border border-slate-100">
+                        <MapPin size={14} />
+                      </div>
+                      <span className="text-[12px] font-bold text-slate-900 leading-tight">{g.name}</span>
                     </div>
-                    <span className="font-bold text-slate-200">{g.name}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-slate-400 font-medium">{g.location}</td>
-                <td className="px-6 py-4 text-slate-400 font-medium">{g.capacity || 'N/A'}</td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => handleOpenEdit(g)} className="p-2 text-slate-600 hover:text-white transition-colors" title="Edit Ground"><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(g.id)} className="p-2 text-slate-600 hover:text-red-500 transition-colors" title="Delete Ground"><Trash2 size={16} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {grounds.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-slate-600 font-bold uppercase tracking-widest">
-                  No grounds configured yet
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  </td>
+                  <td className="px-4 py-2 text-slate-600 font-medium text-[12px]">{g.location}</td>
+                  <td className="px-4 py-2 text-slate-500 font-medium text-[12px] font-mono">{g.capacity?.toLocaleString() || 'N/A'}</td>
+                  <td className="px-4 py-2 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button onClick={() => handleOpenEdit(g)} className="p-1.5 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all" title="Edit Ground"><Edit2 size={14} /></button>
+                      <button onClick={() => handleDelete(g.id)} className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete Ground"><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {grounds.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-12 text-center text-slate-300 text-[12px] font-bold uppercase tracking-widest">
+                    No grounds configured yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-in">
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-black/20">
-              <h3 className="font-black uppercase tracking-widest text-white flex items-center gap-2">
-                {editingItem ? <Edit2 size={18} className="text-blue-500" /> : <Plus size={18} className="text-blue-500" />}
+          <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-in">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/20">
+              <h3 className="text-[14px] font-black uppercase tracking-widest text-white flex items-center gap-2">
+                {editingItem ? <Edit2 size={16} className="text-blue-500" /> : <Plus size={16} className="text-blue-500" />}
                 {editingItem ? 'Edit' : 'Add New'} Ground
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)} 
-                className="text-slate-500 hover:text-white transition-colors"
+                className="text-white/40 hover:text-white transition-colors"
                 title="Close Modal"
-                aria-label="Close Modal"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Ground Name</label>
+                <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Ground Name</label>
                 <input 
                   required 
                   value={form.name} 
                   placeholder="e.g. Lords Cricket Ground"
                   onChange={e => setForm({...form, name: e.target.value})} 
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-600" 
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20" 
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">City</label>
+                  <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">City</label>
                   <input 
                     required 
                     value={form.location} 
                     placeholder="e.g. London"
                     onChange={e => setForm({...form, location: e.target.value})} 
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-600" 
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20" 
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Capacity</label>
+                  <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Capacity</label>
                   <input 
                     type="number" 
                     value={form.capacity} 
                     placeholder="e.g. 30000"
                     onChange={e => setForm({...form, capacity: Number(e.target.value)})} 
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-600" 
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-mono" 
                   />
                 </div>
               </div>
               <button 
                 type="submit" 
-                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-xl shadow-blue-900/40 transition-all active:scale-[0.98] uppercase tracking-widest"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-xl shadow-blue-900/40 transition-all active:scale-[0.98] uppercase tracking-widest text-[12px]"
               >
                 {editingItem ? 'SAVE UPDATES' : 'CONFIRM & CREATE'}
               </button>

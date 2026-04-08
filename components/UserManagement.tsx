@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppUser, UserRole, MembershipRequest, Player } from '../types';
 import { 
@@ -6,7 +5,7 @@ import {
   getMembershipRequests, updateMembershipRequestStatus, deleteMembershipRequest,
   getPlayers 
 } from '../services/storageService';
-import { Plus, Trash2, Edit2, Shield, X, Users, UserPlus, Mail, Phone, Info } from 'lucide-react';
+import { Plus, Trash2, Edit2, Shield, X, Users, UserPlus, Mail, Phone, Info, Layout } from 'lucide-react';
 
 const UserManagement: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'users' | 'requests'>('users');
@@ -93,23 +92,27 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900/40 p-6 rounded-2xl border border-slate-800/50">
+    <div className="animate-fade-in space-y-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 bg-white/5 rounded-xl border border-white/10 gap-4">
         <div className="flex items-center gap-4">
-           <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
+           <div className="flex bg-black/40 p-1 rounded-xl border border-white/10">
              <button 
                onClick={() => setActiveSubTab('users')}
-               className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${activeSubTab === 'users' ? 'bg-blue-600 text-white shadow-lg' : 'text-white hover:bg-blue-600/40 hover:text-white'}`}
+               title="View User Management"
+               aria-label="View User Management"
+               className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 ${activeSubTab === 'users' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
              >
-               Manage Users
+               <Users size={14} /> Manage Users
              </button>
              <button 
                onClick={() => setActiveSubTab('requests')}
-               className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all relative ${activeSubTab === 'requests' ? 'bg-blue-600 text-white shadow-lg' : 'text-white hover:bg-blue-600/40 hover:text-white'}`}
+               title="View Membership Requests"
+               aria-label="View Membership Requests"
+               className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 relative ${activeSubTab === 'requests' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
              >
-               Requests
+               <UserPlus size={14} /> Requests
                {requests.filter(r => r.status === 'Pending').length > 0 && (
-                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse border border-slate-900"></span>
                )}
              </button>
            </div>
@@ -117,153 +120,160 @@ const UserManagement: React.FC = () => {
         {activeSubTab === 'users' && (
           <button 
             onClick={handleOpenAdd} 
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-blue-900/20 transition-all active:scale-95"
+            title="Create New User"
+            aria-label="Create New User"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-lg text-[11px] flex items-center gap-2 shadow-lg shadow-blue-900/20 transition-all active:scale-95 uppercase tracking-widest"
           >
-            <Plus size={16} /> CREATE NEW USER
+            <Plus size={14} /> CREATE NEW USER
           </button>
         )}
       </div>
 
-      <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
-        {loading ? (
-          <div className="p-20 text-center text-slate-500 font-bold animate-pulse uppercase tracking-widest">
-            Syncing App Access...
-          </div>
-        ) : (
-          <table className="w-full text-left">
-            <thead className="bg-black/40 text-slate-500 text-[10px] uppercase font-black tracking-widest border-b border-slate-800">
-              {activeSubTab === 'users' ? (
-                <tr>
-                  <th className="px-6 py-4">User</th>
-                  <th className="px-6 py-4">Credentials</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl">
+        <div className="overflow-x-auto custom-scrollbar">
+          {loading ? (
+            <div className="p-20 text-center text-slate-300 font-bold animate-pulse uppercase tracking-widest text-[12px]">
+              Syncing App Access...
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-900/95 border-b border-white/10">
+                  {activeSubTab === 'users' ? (
+                    <>
+                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">User</th>
+                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Credentials</th>
+                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Role</th>
+                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest text-right">Actions</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Applicant</th>
+                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Contact</th>
+                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Status</th>
+                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest text-right">Actions</th>
+                    </>
+                  )}
                 </tr>
-              ) : (
-                <tr>
-                  <th className="px-6 py-4">Applicant</th>
-                  <th className="px-6 py-4">Contact</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
-                </tr>
-              )}
-            </thead>
-            <tbody className="divide-y divide-slate-800/50">
-              {activeSubTab === 'users' ? users.map(u => (
-                <tr key={u.id} className="hover:bg-blue-500/5 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-black text-white border border-slate-700 overflow-hidden">
-                        {u.avatarUrl ? <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" /> : u.name[0]}
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {activeSubTab === 'users' ? users.map(u => (
+                  <tr key={u.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-900 text-[10px] border border-slate-200 overflow-hidden shadow-inner">
+                          {u.avatarUrl ? <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" /> : u.name[0]}
+                        </div>
+                        <div>
+                          <p className="text-[12px] font-bold text-slate-900 leading-tight">{u.name}</p>
+                          <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{String(u.id).substring(0, 8)}...</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-slate-200">{u.name}</p>
-                        <p className="text-[10px] text-slate-500 font-mono">{u.id}</p>
+                    </td>
+                    <td className="px-4 py-2 text-indigo-600 font-mono text-[11px]">{u.username}</td>
+                    <td className="px-4 py-2">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border
+                      ${u.role === 'admin' ? 'bg-red-50 text-red-600 border-red-100' : 
+                        u.role === 'scorer' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex justify-end gap-1">
+                         <button onClick={() => handleOpenEdit(u)} className="p-1.5 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all" title="Edit User"><Edit2 size={14} /></button>
+                         <button onClick={() => handleDelete(u.id)} className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete User"><Trash2 size={14} /></button>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-400 font-mono text-xs">{u.username}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest
-                    ${u.role === 'admin' ? 'bg-red-500/10 text-red-500' : 
-                      u.role === 'scorer' ? 'bg-purple-500/10 text-purple-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                       <button onClick={() => handleOpenEdit(u)} className="p-2 text-slate-600 hover:text-white transition-colors" title="Edit User"><Edit2 size={16} /></button>
-                       <button onClick={() => handleDelete(u.id)} className="p-2 text-slate-600 hover:text-red-500 transition-colors" title="Delete User"><Trash2 size={16} /></button>
-                    </div>
-                  </td>
-                </tr>
-              )) : requests.map(r => (
-                <tr key={r.id} className="hover:bg-blue-500/5 transition-colors">
-                  <td className="px-6 py-4">
-                    <p className="font-bold text-slate-200">{r.name}</p>
-                    <p className="text-[10px] text-slate-500">{new Date(r.date).toLocaleDateString()}</p>
-                  </td>
-                  <td className="px-6 py-4 space-y-1">
-                    <div className="flex items-center gap-2 text-[10px] text-slate-400"><Mail size={10} /> {r.email}</div>
-                    <div className="flex items-center gap-2 text-[10px] text-slate-400"><Phone size={10} /> {r.contactNumber}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest
-                      ${r.status === 'Pending' ? 'bg-orange-500/20 text-orange-500' : 
-                        r.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/20 text-red-500'}`}>
-                      {r.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                        {r.status === 'Pending' && (
-                           <button 
-                             onClick={() => handleApproveRequest(r)} 
-                             className="px-3 py-1.5 bg-emerald-600/20 text-emerald-500 text-[10px] font-black uppercase rounded-lg hover:bg-emerald-600 hover:text-white transition-all"
-                             title="Approve Membership Request"
-                             aria-label={`Approve ${r.name}`}
-                           >
-                             APPROVE
-                           </button>
-                        )}
-                        <button onClick={() => deleteMembershipRequest(r.id).then(() => loadData())} className="p-2 text-slate-600 hover:text-red-500 transition-colors" title="Delete Request" aria-label={`Delete request from ${r.name}`}><Trash2 size={16} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {((activeSubTab === 'users' && users.length === 0) || (activeSubTab === 'requests' && requests.length === 0)) && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-600 font-bold uppercase tracking-widest">
-                    No records found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+                    </td>
+                  </tr>
+                )) : requests.map(r => (
+                  <tr key={r.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="px-4 py-2">
+                      <p className="text-[12px] font-bold text-slate-900 leading-tight">{r.name}</p>
+                      <p className="text-[10px] text-slate-400 font-medium uppercase">{new Date(r.date).toLocaleDateString()}</p>
+                    </td>
+                    <td className="px-4 py-2 space-y-1">
+                      <div className="flex items-center gap-2 text-[11px] text-slate-600"><Mail size={12} className="text-slate-300" /> {r.email}</div>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-600"><Phone size={12} className="text-slate-300" /> {r.contactNumber}</div>
+                    </td>
+                    <td className="px-4 py-2">
+                       <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border
+                        ${r.status === 'Pending' ? 'bg-orange-50 text-orange-600 border-orange-100' : 
+                          r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex justify-end gap-2">
+                          {r.status === 'Pending' && (
+                             <button 
+                               onClick={() => handleApproveRequest(r)} 
+                               className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-bold uppercase rounded hover:bg-emerald-700 transition-all shadow-md active:scale-95"
+                               title="Approve Membership Request"
+                             >
+                               APPROVE
+                             </button>
+                          )}
+                          <button onClick={() => deleteMembershipRequest(r.id).then(() => loadData())} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete Request"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {((activeSubTab === 'users' && users.length === 0) || (activeSubTab === 'requests' && requests.length === 0)) && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-12 text-center text-slate-300 text-[12px] font-bold uppercase tracking-widest">
+                      No records found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-in">
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-black/20">
-              <h3 className="font-black uppercase tracking-widest text-white flex items-center gap-2">
+          <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-in">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/20">
+              <h3 className="text-[14px] font-black uppercase tracking-widest text-white flex items-center gap-2">
                 {editingItem ? <Shield size={18} className="text-blue-500" /> : <Plus size={18} className="text-blue-500" />}
                 {editingItem ? 'Edit Auth Access' : 'Create Access'}
               </h3>
               <button 
                 onClick={() => setIsModalOpen(false)} 
-                className="text-slate-500 hover:text-white transition-colors"
-                title="Close Modal"
+                title="Close"
                 aria-label="Close Modal"
+                className="text-white/40 hover:text-white transition-colors"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Full Name</label>
-                  <input required value={form.name} placeholder="John Doe" onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-600" />
+                  <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Full Name</label>
+                  <input required value={form.name} placeholder="John Doe" onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Login UID</label>
-                  <input required value={form.username} placeholder="jdoe123" onChange={e => setForm({...form, username: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-600 font-mono" />
+                  <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Login UID</label>
+                  <input required value={form.username} placeholder="jdoe123" onChange={e => setForm({...form, username: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-mono" />
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Password</label>
-                <input required={!editingItem} type="password" value={form.password} placeholder={editingItem ? 'Leave blank to keep same' : '••••••••'} onChange={e => setForm({...form, password: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-600 font-mono" />
+                <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Password</label>
+                <input required={!editingItem} type="password" value={form.password} placeholder={editingItem ? 'Leave blank to keep same' : '••••••••'} onChange={e => setForm({...form, password: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-mono" />
               </div>
               <div>
-                <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Assigned Role</span>
+                <span className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Assigned Role</span>
                 <div className="grid grid-cols-4 gap-2">
                    {['admin', 'scorer', 'member', 'guest'].map(role => (
                      <button 
                        key={role} type="button" 
+                       title={`Set role to ${role}`}
+                       aria-label={`Set role to ${role}`}
                        onClick={() => setForm({...form, role: role as UserRole})}
                        className={`p-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all border
-                         ${form.role === role ? 'bg-blue-600 text-white border-blue-500 shadow-lg' : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700'}`}
+                         ${form.role === role ? 'bg-blue-600 text-white border-blue-500 shadow-lg' : 'bg-black/40 text-white/40 border-white/10 hover:bg-white/5'}`}
                      >
                        {role}
                      </button>
@@ -272,7 +282,7 @@ const UserManagement: React.FC = () => {
               </div>
               <button 
                 type="submit" 
-                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-xl shadow-blue-900/40 transition-all active:scale-[0.98] uppercase tracking-widest"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-xl shadow-blue-900/40 transition-all active:scale-[0.98] uppercase tracking-widest text-[12px]"
               >
                 {editingItem ? 'SYNC UPDATES' : 'GENERATE ACCESS'}
               </button>

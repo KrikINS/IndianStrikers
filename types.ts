@@ -278,6 +278,7 @@ export interface PlayerLegacyStats {
   runs_conceded: number;
   wickets: number;
   maidens: number;
+  bowling_innings?: number;
   four_wickets: number;
   five_wickets: number;
   best_bowling: string;
