@@ -48,7 +48,7 @@ export interface Performer {
   sixes?: number;
   maidens?: number;
   wides?: number;
-  noBalls?: number;
+  no_balls?: number;
   outHow?: string;
 }
 
@@ -72,12 +72,12 @@ export interface InningsBowlingEntry {
   runsConceded: number;
   wickets: number;
   wides?: number;
-  noBalls?: number;
+  no_balls?: number;
 }
 
 export interface InningsExtras {
   wide: number;
-  noBall: number;
+  no_ball: number;
   legByes: number;
   byes: number;
 }
@@ -127,7 +127,7 @@ export interface BowlingStats {
   fourWickets: number;
   fiveWickets: number;
   wides: number;
-  noBalls: number;
+  no_balls: number;
 }
 
 export interface Player {

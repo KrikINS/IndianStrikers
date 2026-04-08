@@ -35,21 +35,21 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
   const initialInnings: InningsData = {
     batting: [],
     bowling: [],
-    extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 },
+    extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 },
     totalRuns: 0, totalWickets: 0, totalOvers: 0,
   };
 
   // 2. Scorecard State
   const [scorecard, setScorecard] = useState<FullScorecardData>(() => {
     const base = match.scorecard || {
-      innings1: { ...initialInnings, extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 } },
-      innings2: { ...initialInnings, extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 } },
+      innings1: { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } },
+      innings2: { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } },
     };
 
     if (!base.innings1.batting.length) base.innings1.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '' }));
-    if (!base.innings1.bowling.length) base.innings1.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, noBalls: 0, dotBalls: 0 }));
+    if (!base.innings1.bowling.length) base.innings1.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0 }));
     if (!base.innings2.batting.length) base.innings2.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '' }));
-    if (!base.innings2.bowling.length) base.innings2.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, noBalls: 0, dotBalls: 0 }));
+    if (!base.innings2.bowling.length) base.innings2.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0 }));
 
     return base;
   });
@@ -125,7 +125,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
 
   const calculateInningsTotal = (inn: InningsData) => {
     const batSum = inn.batting.reduce((acc: number, b) => acc + (b.runs || 0), 0);
-    const bowlExtras = inn.bowling.reduce((acc: number, b) => acc + (b.wides || 0) + (b.noBalls || 0), 0);
+    const bowlExtras = inn.bowling.reduce((acc: number, b: any) => acc + (b.wides || 0) + (b.no_balls || 0), 0);
     return batSum + bowlExtras + (inn.extras.legByes || 0) + (inn.extras.byes || 0);
   };
 
@@ -149,7 +149,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
         fours: b.fours,
         sixes: b.sixes,
         isNotOut: b.outHow === 'Not Out',
-        wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, noBalls: 0
+        wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0
       });
     });
 
@@ -158,14 +158,16 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
     homeBowlingInnings.bowling.filter(b => b.playerId && homeSquad.some(p => String(p.id) === String(b.playerId))).forEach(b => {
       const existing = performerMap.get(b.playerId) || {
         playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false,
-        wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, noBalls: 0
+        wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0
       };
       performerMap.set(b.playerId, {
         ...existing,
         wickets: b.wickets,
         bowlingRuns: b.runsConceded,
         bowlingOvers: b.overs,
-        maidens: b.maidens
+        maidens: b.maidens,
+        wides: b.wides || 0,
+        no_balls: b.no_balls || 0
       });
     });
 
@@ -208,7 +210,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
   };
 
   const autoWides = inningsData.bowling.reduce((acc: number, b) => acc + (b.wides || 0), 0);
-  const autoNBs = inningsData.bowling.reduce((acc: number, b) => acc + (b.noBalls || 0), 0);
+  const autoNBs = inningsData.bowling.reduce((acc: number, b: any) => acc + (b.no_balls || 0), 0);
 
   const homeInnings = isHomeBattingFirst ? scorecard.innings1 : scorecard.innings2;
   const awayInnings = isHomeBattingFirst ? scorecard.innings2 : scorecard.innings1;
@@ -694,7 +696,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                       <td><input title="Runs" type="number" className="cell-input" style={{ width: '45px' }} value={data.runsConceded ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'runsConceded', parseInt(e.target.value) || 0)} /></td>
                       <td><input title="Wickets" type="number" className="cell-input" style={{ width: '35px' }} value={data.wickets ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'wickets', parseInt(e.target.value) || 0)} /></td>
                       <td><input title="Wides" type="number" className="cell-input" style={{ width: '35px' }} value={data.wides ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'wides', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="No Balls" type="number" className="cell-input" style={{ width: '35px' }} value={data.noBalls ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'noBalls', parseInt(e.target.value) || 0)} /></td>
+                      <td><input title="No Balls" type="number" className="cell-input" style={{ width: '35px' }} value={data.no_balls ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'no_balls', parseInt(e.target.value) || 0)} /></td>
                       <td className="sr-cell">
                         {(() => {
                           const oversVal = Number(data.overs || 0);

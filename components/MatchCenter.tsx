@@ -859,12 +859,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             {manualScoreConfig && manualScoreConfig.showPlayers && (
                 <FullScorecardModal 
                     match={matches.find(m => m.id === manualScoreConfig.matchId)!}
-                    homeSquad={players.filter(p => {
-                        const m = matches.find(match => match.id === manualScoreConfig.matchId);
-                        const xi = m?.homeTeamXI || [];
-                        const isAvailable = p.isActive !== false && p.isAvailable !== false;
-                        return isAvailable && (xi.length === 0 || xi.some(pid => String(pid) === String(p.id)));
-                    })}
+                    homeSquad={players}
                     opponentSquad={(opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.players || []).filter(p => {
                         const m = matches.find(match => match.id === manualScoreConfig.matchId);
                         const xi = m?.opponentTeamXI || [];

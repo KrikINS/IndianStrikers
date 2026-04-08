@@ -314,173 +314,57 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
       for (let perf of performers) {
         if (!perf.playerId) continue;
         
-        // Fetch the LATEST career data per iteration to avoid overwriting 
-        // if the same player appears twice (e.g. as both batter and bowler)
-        let { data: actualPlayer, error: pGetErr } = await supabase
+        let { data: actualPlayer } = await supabase
           .from('players')
-          .select('id, name, matches_played, runs_scored, wickets_taken, batting_stats, bowling_stats')
+          .select('id, name')
           .eq('id', perf.playerId)
           .single();
 
-        // Fallback for ID mismatch
         if (!actualPlayer && perf.playerName) {
           const { data: ps } = await supabase.from('players').select('*');
           actualPlayer = ps?.find(p => p.name.trim().toLowerCase() === perf.playerName.trim().toLowerCase());
         }
 
         if (!actualPlayer) {
-          console.warn(`[Sync] ⚠️ Player not found in DB: ID=${perf.playerId}, Name=${perf.playerName}`);
+          console.warn(`[Sync] ⚠️ Player not found: ${perf.playerName}`);
           continue;
         }
 
         const playerId = actualPlayer.id;
 
-        // 1. UPDATE THE LEDGER (Current Match Record)
-        // This ensures the ledger is always the source of truth for this specific match.
         const { error: upsertErr } = await supabase
           .from('player_match_stats')
           .upsert([{
             match_id: String(id),
-            player_id: playerId, // Use the resolved DB ID
-            player_name: perf.playerName,
+            player_id: playerId,
             runs: Number(perf.runs || 0),
             balls: Number(perf.balls || 0),
             fours: Number(perf.fours || 0),
             sixes: Number(perf.sixes || 0),
             status: perf.outHow || (perf.isNotOut ? 'Not Out' : 'Out'),
-            is_not_out: !!perf.isNotOut,
             wickets: Number(perf.wickets || 0),
             runs_conceded: Number(perf.bowlingRuns || 0),
             overs_bowled: Number(perf.bowlingOvers || 0),
             maidens: Number(perf.maidens || 0),
+            hundreds: Number(perf.runs) >= 100 ? 1 : 0,
+            fifties: (Number(perf.runs) >= 50 && Number(perf.runs) < 100) ? 1 : 0,
+            ducks: (Number(perf.runs || 0) === 0 && (perf.outHow && !['not out', 'did not bat', 'dnb', 'retired hurt', 'absent'].includes(perf.outHow.toLowerCase()))) ? 1 : 0,
+            four_wickets: Number(perf.wickets) === 4 ? 1 : 0,
+            five_wickets: Number(perf.wickets) >= 5 ? 1 : 0,
+            wides: Number(perf.wides || 0),
+            no_balls: Number(perf.no_balls || 0),
             updated_at: new Date().toISOString()
           }], { onConflict: 'match_id, player_id' });
 
         if (upsertErr) {
-          console.error(`[Sync] ❌ Ledger upsert error for ${perf.playerName}:`, upsertErr.message);
+          console.error(`[Sync] ❌ Ledger upsert error:`, upsertErr.message);
           continue;
         }
 
-        // 2. CALCULATE FULL CAREER SUMMATION
-        // Step A: Fetch Legacy Baseline
-        const { data: legacy, error: legErr } = await supabase
-          .from('player_legacy_stats')
-          .select('*')
-          .eq('player_id', playerId)
-          .single();
-
-        // Step B: Fetch App Match Ledger
-        const { data: allStats, error: sumErr } = await supabase
-          .from('player_match_stats')
-          .select('runs, balls, fours, sixes, hundreds, fifties, ducks, wickets, runs_conceded, overs_bowled, maidens, four_wickets, five_wickets, best_bowling, is_not_out, status')
-          .eq('player_id', playerId);
-
-        if (sumErr || !allStats) {
-          console.error(`[Sync] ❌ Failed to fetch ledger sum for ${perf.playerName}:`, sumErr?.message);
-          continue;
-        }
-
-        const legacyStats = legacy || { 
-          runs: 0, balls: 0, fours: 0, sixes: 0, hundreds: 0, fifties: 0, ducks: 0, 
-          matches: 0, innings: 0, not_outs: 0, highest_score: 0, 
-          overs_bowled: 0, runs_conceded: 0, wickets: 0, maidens: 0, 
-          four_wickets: 0, five_wickets: 0, best_bowling: '0/0' 
-        };
-
-        // Step C: Combine (Legacy + Ledger)
-        const totalBatRuns = allStats.reduce((sum, s) => sum + (Number(s.runs) || 0), 0) + (Number(legacyStats.runs) || 0);
-        const totalBatBalls = allStats.reduce((sum, s) => sum + (Number(s.balls) || 0), 0) + (Number(legacyStats.balls) || 0);
-        const totalBat4s = allStats.reduce((sum, s) => sum + (Number(s.fours) || 0), 0) + (Number(legacyStats.fours) || 0);
-        const totalBat6s = allStats.reduce((sum, s) => sum + (Number(s.sixes) || 0), 0) + (Number(legacyStats.sixes) || 0);
-        const total100s = allStats.reduce((sum, s) => sum + (Number(s.hundreds) || 0), 0) + (Number(legacyStats.hundreds) || 0);
-        const total50s = allStats.reduce((sum, s) => sum + (Number(s.fifties) || 0), 0) + (Number(legacyStats.fifties) || 0);
-        const totalDucks = allStats.reduce((sum, s) => sum + (Number(s.ducks) || 0), 0) + (Number(legacyStats.ducks) || 0);
-        const totalNotOuts = allStats.filter(s => s.is_not_out).length + (Number(legacyStats.not_outs) || 0);
-        
-        const totalMatches = allStats.reduce((sum, s) => {
-          if (s.status?.startsWith('HISTORICAL:')) {
-            return sum + (parseInt(s.status.split(':')[1]) || 1);
-          }
-          return sum + 1;
-        }, 0) + (Number(legacyStats.matches) || 0);
-        
-        const totalInnings = allStats.filter(s => (Number(s.runs) > 0 || Number(s.balls) > 0)).length + (Number(legacyStats.innings) || 0);
-        const batAvg = (totalInnings - totalNotOuts) > 0 ? (totalBatRuns / (totalInnings - totalNotOuts)) : totalBatRuns;
-        const batSR = totalBatBalls > 0 ? (totalBatRuns / totalBatBalls) * 100 : 0;
-
-        const totalWickets = allStats.reduce((sum, s) => sum + (Number(s.wickets) || 0), 0) + (Number(legacyStats.wickets) || 0);
-        const totalBowlRuns = allStats.reduce((sum, s) => sum + (Number(s.runs_conceded) || 0), 0) + (Number(legacyStats.runs_conceded) || 0);
-        const totalBowlOvers = allStats.reduce((sum, s) => sum + (Number(s.overs_bowled) || 0), 0) + (Number(legacyStats.overs_bowled) || 0);
-        const totalMaidens = allStats.reduce((sum, s) => sum + (Number(s.maidens) || 0), 0) + (Number(legacyStats.maidens) || 0);
-        const total4W = allStats.reduce((sum, s) => sum + (Number(s.four_wickets) || 0), 0) + (Number(legacyStats.four_wickets) || 0);
-        const total5W = allStats.reduce((sum, s) => sum + (Number(s.five_wickets) || 0), 0) + (Number(legacyStats.five_wickets) || 0);
-        
-        // BBI Comparison Logic
-        const allBBI = allStats.map(s => s.best_bowling).filter(b => b && b !== '0/0');
-        if (legacyStats.best_bowling && legacyStats.best_bowling !== '0/0') allBBI.push(legacyStats.best_bowling);
-        
-        let bestBBI = '0/0';
-        if (allBBI.length > 0) {
-            allBBI.sort((a,b) => {
-                const [wA, rA] = a.split('/').map(Number);
-                const [wB, rB] = b.split('/').map(Number);
-                if (wB !== wA) return wB - wA; // More wickets first
-                return rA - rB; // Then fewer runs
-            });
-            bestBBI = allBBI[0];
-        }
-
-        const bowlAvg = totalWickets > 0 ? totalBowlRuns / totalWickets : 0;
-        const bowlEco = totalBowlOvers > 0 ? totalBowlRuns / totalBowlOvers : 0;
-        const bowlSR = totalWickets > 0 ? (totalBowlOvers * 6) / totalWickets : 0;
-        
-        const maxAppScore = Math.max(...allStats.filter(s => !s.status?.startsWith('HISTORICAL:')).map(s => Number(s.runs) || 0), 0);
-        const maxScore = Math.max(maxAppScore, Number(legacyStats.highest_score) || 0);
-        
-        // 3. OVERWRITE PLAYER PROFILE WITH FRESH SUMS
-        const { error: upErr } = await supabase
-          .from('players')
-          .update({
-            runs_scored: totalBatRuns,
-            wickets_taken: totalWickets,
-            matches_played: totalMatches,
-            batting_stats: {
-              matches: totalMatches,
-              innings: totalInnings,
-              runs: totalBatRuns,
-              balls: totalBatBalls,
-              fours: totalBat4s,
-              sixes: totalBat6s,
-              notOuts: totalNotOuts,
-              highestScore: String(maxScore),
-              average: parseFloat(batAvg.toFixed(2)),
-              strikeRate: parseFloat(batSR.toFixed(2)),
-              hundreds: total100s,
-              fifties: total50s,
-              ducks: totalDucks
-            },
-            bowling_stats: {
-              matches: totalMatches,
-              innings: allStats.filter(s => (Number(s.overs_bowled) > 0)).length + (Number(legacyStats.wickets) > 0 || Number(legacyStats.runs_conceded) > 0 ? (Number(legacyStats.matches) || 1) : 0),
-              overs: parseFloat(totalBowlOvers.toFixed(1)),
-              runs: totalBowlRuns,
-              wickets: totalWickets,
-              maidens: totalMaidens,
-              average: parseFloat(bowlAvg.toFixed(2)),
-              economy: parseFloat(bowlEco.toFixed(2)),
-              strikeRate: parseFloat(bowlSR.toFixed(2)),
-              bestBowling: bestBBI,
-              fourWickets: total4W,
-              fiveWickets: total5W
-            },
-            updated_at: new Date()
-          })
-          .eq('id', playerId);
-
-        if (upErr) {
-          console.error(`[Sync] ❌ Profile update failed for ${perf.playerName}:`, upErr.message);
-        } else {
-          console.log(`[Sync] ✅ Dual-Ledger Summation Success: ${perf.playerName} => ${totalBatRuns} Runs total.`);
+        try {
+            await recalculateCareerStats(playerId);
+        } catch (syncErr) {
+            console.error(`[Sync] ❌ Career update failed for ${perf.playerName}:`, syncErr.message);
         }
       }
 
@@ -664,38 +548,31 @@ app.get('/api/memories', async (_req, res) => {
   res.json(data);
 });
 
-// LEGACY STATS MANAGEMENT
-app.get('/api/legacy-stats', authGuard(['admin']), async (req, res) => {
-  const { data, error } = await supabase.from('player_legacy_stats').select('*');
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
-});
 
-app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) => {
-  const { playerId } = req.params;
-  const stats = req.body;
-
-  try {
-    // 1. Update the legacy table
-    const { error: legacyErr } = await supabase
-      .from('player_legacy_stats')
-      .upsert({ ...stats, player_id: playerId, updated_at: new Date() }, { onConflict: 'player_id' });
-
-    if (legacyErr) throw legacyErr;
-
-    // 2. Trigger Full Career Recalculation (Shared logic)
-    // Fetch all match stats + new legacy baseline
+/**
+ * SHARED CAREER SYNC ENGINE
+ * Re-sums a player's full career by aggregating:
+ * (All records in player_match_stats) + (Baseline in player_legacy_stats)
+ */
+async function recalculateCareerStats(playerId) {
+    console.log(`[SyncEngine] Recalculating career for Player ID: ${playerId}...`);
+    
     const { data: allMatchStats } = await supabase.from('player_match_stats').select('*').eq('player_id', playerId);
     const { data: legacyBaseline } = await supabase.from('player_legacy_stats').select('*').eq('player_id', playerId).single();
     
-    const l = legacyBaseline || { runs: 0, balls: 0, wickets: 0, matches: 0, innings: 0, not_outs: 0, highest_score: 0, bowling_innings: 0, overs_bowled: 0, runs_conceded: 0, maidens: 0, hundreds: 0, fifties: 0, ducks: 0, four_wickets: 0, five_wickets: 0, wides: 0, no_balls: 0, best_bowling: '0/0' };
+    const l = legacyBaseline || { 
+        runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0, matches: 0, innings: 0, 
+        not_outs: 0, highest_score: 0, bowling_innings: 0, overs_bowled: 0, 
+        runs_conceded: 0, maidens: 0, hundreds: 0, fifties: 0, ducks: 0, 
+        four_wickets: 0, five_wickets: 0, wides: 0, no_balls: 0, best_bowling: '0/0' 
+    };
     const m = allMatchStats || [];
 
     const totalRuns = m.reduce((s, row) => s + (Number(row.runs) || 0), 0) + (Number(l.runs) || 0);
     const totalWickets = m.reduce((s, row) => s + (Number(row.wickets) || 0), 0) + (Number(l.wickets) || 0);
     const totalMatches = m.reduce((s, row) => s + (row.status?.startsWith('HISTORICAL:') ? (parseInt(row.status.split(':')[1]) || 1) : 1), 0) + (Number(l.matches) || 0);
     const totalInnings = m.filter(row => (Number(row.runs) > 0 || Number(row.balls) > 0)).length + (Number(l.innings) || 0);
-    const totalNO = m.filter(row => row.is_not_out).length + (Number(l.not_outs) || 0);
+    const totalNO = m.filter(row => row.is_not_out || row.status === 'Not Out' || row.status === 'not out').length + (Number(l.not_outs) || 0);
     const totalBalls = m.reduce((s, row) => s + (Number(row.balls) || 0), 0) + (Number(l.balls) || 0);
     const totalFours = m.reduce((s, row) => s + (Number(row.fours) || 0), 0) + (Number(l.fours) || 0);
     const totalSixes = m.reduce((s, row) => s + (Number(row.sixes) || 0), 0) + (Number(l.sixes) || 0);
@@ -712,8 +589,8 @@ app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) =>
     const totalWides = m.reduce((s, row) => s + (Number(row.wides) || 0), 0) + (Number(l.wides) || 0);
     const totalNoBalls = m.reduce((s, row) => s + (Number(row.no_balls) || 0), 0) + (Number(l.no_balls) || 0);
 
-    // BBI Comparison
-    const allBBI = m.map(row => row.best_bowling).filter(Boolean);
+    // BBI Comparison logic (Derived from raw data)
+    const allBBI = m.map(row => (Number(row.wickets) > 0 || Number(row.runs_conceded) > 0) ? `${row.wickets}/${row.runs_conceded}` : null).filter(Boolean);
     if (l.best_bowling && l.best_bowling !== '0/0') allBBI.push(l.best_bowling);
     let bestBBI = '0/0';
     if (allBBI.length > 0) {
@@ -735,7 +612,7 @@ app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) =>
     const maxScore = Math.max(...m.map(row => Number(row.runs) || 0), Number(l.highest_score) || 0);
 
     // Update the players table profile
-    await supabase.from('players').update({
+    const { error: upErr } = await supabase.from('players').update({
         runs_scored: totalRuns,
         wickets_taken: totalWickets,
         matches_played: totalMatches,
@@ -754,6 +631,32 @@ app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) =>
         },
         updated_at: new Date()
     }).eq('id', playerId);
+
+    if (upErr) throw upErr;
+    console.log(`[SyncEngine] ✅ Career recalculated for ${playerId}`);
+}
+
+// LEGACY STATS MANAGEMENT
+app.get('/api/legacy-stats', authGuard(['admin']), async (req, res) => {
+  const { data, error } = await supabase.from('player_legacy_stats').select('*');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) => {
+  const { playerId } = req.params;
+  const stats = req.body;
+
+  try {
+    // 1. Update the legacy table
+    const { error: legacyErr } = await supabase
+      .from('player_legacy_stats')
+      .upsert({ ...stats, player_id: playerId, updated_at: new Date() }, { onConflict: 'player_id' });
+
+    if (legacyErr) throw legacyErr;
+
+    // 2. Trigger Full Career Recalculation (Shared logic)
+    await recalculateCareerStats(playerId);
 
     res.json({ ok: true });
   } catch (e) {

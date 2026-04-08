@@ -50,7 +50,7 @@ async function recalculate() {
         const total100s = allStats.reduce((sum, s) => sum + (Number(s.hundreds) || 0), 0) + (Number(legacyStats.hundreds) || 0);
         const total50s = allStats.reduce((sum, s) => sum + (Number(s.fifties) || 0), 0) + (Number(legacyStats.fifties) || 0);
         const totalDucks = allStats.reduce((sum, s) => sum + (Number(s.ducks) || 0), 0) + (Number(legacyStats.ducks) || 0);
-        const totalNotOuts = allStats.filter(s => s.is_not_out).length + (Number(legacyStats.not_outs) || 0);
+        const totalNotOuts = allStats.filter(s => s.is_not_out || s.status === 'Not Out' || s.status === 'not out').length + (Number(legacyStats.not_outs) || 0);
         
         const totalMatches = allStats.reduce((sum, s) => {
             if (s.status?.startsWith('HISTORICAL:')) {

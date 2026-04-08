@@ -151,6 +151,7 @@ const LegacyEditor: React.FC<LegacyEditorProps> = ({ players: initialPlayers, on
                 <th className="px-1 py-2 text-[12px] font-bold text-indigo-400 uppercase bg-indigo-500/10 text-center">Inn</th>
                 <th className="px-1 py-2 text-[12px] font-bold text-indigo-400 uppercase bg-indigo-500/10 text-center">NO</th>
                 <th className="px-1 py-2 text-[12px] font-bold text-emerald-400 uppercase bg-emerald-500/10 border-l border-white/5 text-center">Runs</th>
+                <th className="px-1 py-2 text-[12px] font-bold text-emerald-400 uppercase bg-emerald-500/10 text-center">Balls</th>
                 <th className="px-1 py-2 text-[12px] font-bold text-emerald-400 uppercase bg-emerald-500/10 text-center">HS</th>
                 <th className="px-1 py-2 text-[12px] font-bold text-emerald-400 uppercase bg-emerald-500/10 text-center">100s</th>
                 <th className="px-1 py-2 text-[12px] font-bold text-emerald-400 uppercase bg-emerald-500/10 text-center">50s</th>
@@ -175,7 +176,8 @@ const LegacyEditor: React.FC<LegacyEditorProps> = ({ players: initialPlayers, on
                 const row = legacyStats[player.id] || {
                    player_id: player.id, runs: 0, balls: 0, fours: 0, sixes: 0, hundreds: 0, fifties: 0, ducks: 0,
                    matches: 0, innings: 0, not_outs: 0, highest_score: 0, bowling_innings: 0, overs_bowled: 0, runs_conceded: 0,
-                   wickets: 0, maidens: 0, four_wickets: 0, five_wickets: 0, best_bowling: '0/0'
+                   wickets: 0, maidens: 0, four_wickets: 0, five_wickets: 0, best_bowling: '0/0',
+                   wides: 0, no_balls: 0
                 };
 
                 return (
@@ -229,6 +231,15 @@ const LegacyEditor: React.FC<LegacyEditorProps> = ({ players: initialPlayers, on
                         aria-label="Runs"
                         onChange={e => handleInputChange(player.id, 'runs', parseInt(e.target.value) || 0)} 
                         className="w-16 bg-white border border-emerald-200 rounded px-1 py-1 text-slate-900 text-[12px] focus:ring-1 focus:ring-emerald-500 outline-none font-bold shadow-sm text-center" 
+                      />
+                    </td>
+                    <td className="px-1 py-1 bg-emerald-50/30 text-center">
+                      <input 
+                        type="number" 
+                        value={row.balls} 
+                        aria-label="Balls Faced"
+                        onChange={e => handleInputChange(player.id, 'balls', parseInt(e.target.value) || 0)} 
+                        className="w-14 bg-white border border-emerald-200 rounded px-1 py-1 text-slate-900 text-[12px] focus:ring-1 focus:ring-emerald-500 outline-none shadow-sm text-center" 
                       />
                     </td>
                     <td className="px-1 py-1 bg-emerald-50/30 text-center">
