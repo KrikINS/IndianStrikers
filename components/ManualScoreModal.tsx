@@ -58,10 +58,10 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
   });
 
   // ─── Bowling rows state: separate from scorecard for WD/NB/DOTS columns ────
-  // bowlingRows[inn][idx] = { playerId, overs, maidens, runs, wickets, wd, nb, dots }
+  // bowlingRows[inn][idx] = { playerId, overs, maidens, runs, wickets, wd, nb }
   const [bowlingRows, setBowlingRows] = useState<Record<1 | 2, any[]>>({
-    1: Array(6).fill(null).map(() => ({ playerId: '', overs: '', maidens: '', runs: '', wickets: '', wd: '', nb: '', dots: '' })),
-    2: Array(6).fill(null).map(() => ({ playerId: '', overs: '', maidens: '', runs: '', wickets: '', wd: '', nb: '', dots: '' })),
+    1: Array(6).fill(null).map(() => ({ playerId: '', overs: '', maidens: '', runs: '', wickets: '', wd: '', nb: '' })),
+    2: Array(6).fill(null).map(() => ({ playerId: '', overs: '', maidens: '', runs: '', wickets: '', wd: '', nb: '' })),
   });
 
   const updateBowlingRow = (inn: 1 | 2, idx: number, field: string, value: any) => {
@@ -146,7 +146,6 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
         wickets: parseInt(r.wickets) || 0,
         wides: parseInt(r.wd) || 0,
         noBalls: parseInt(r.nb) || 0,
-        dotBalls: parseInt(r.dots) || 0,
       }));
 
     const finalScorecard = {
@@ -457,7 +456,6 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                         <th>O</th><th>M</th><th>R</th><th>W</th>
                         <th style={{ color: '#ca8a04' }}>WD</th>
                         <th style={{ color: '#f97316' }}>NB</th>
-                        <th>DOTS</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -478,7 +476,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                               <span style={{ color: '#374151', fontSize: '11px' }}>No squad</span>
                             )}
                           </td>
-                          {['overs', 'maidens', 'runs', 'wickets', 'wd', 'nb', 'dots'].map(field => (
+                          {['overs', 'maidens', 'runs', 'wickets', 'wd', 'nb'].map(field => (
                             <td key={field} style={{ textAlign: 'center' }}>
                               <input
                                 type="number" min="0" title={field}

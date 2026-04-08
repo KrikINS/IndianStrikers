@@ -47,7 +47,6 @@ export interface Performer {
   fours?: number;
   sixes?: number;
   maidens?: number;
-  dotBalls?: number;
   wides?: number;
   noBalls?: number;
   outHow?: string;
@@ -74,7 +73,6 @@ export interface InningsBowlingEntry {
   wickets: number;
   wides?: number;
   noBalls?: number;
-  dotBalls?: number;
 }
 
 export interface InningsExtras {
@@ -128,7 +126,6 @@ export interface BowlingStats {
   bestBowling: string;
   fourWickets: number;
   fiveWickets: number;
-  dotBalls: number;
   wides: number;
   noBalls: number;
 }
@@ -262,4 +259,28 @@ export interface Tournament {
   year: number;
   status: 'active' | 'completed' | 'upcoming';
   logoUrl?: string;
+}
+
+export interface PlayerLegacyStats {
+  player_id: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  hundreds: number;
+  fifties: number;
+  ducks: number;
+  matches: number;
+  innings: number;
+  not_outs: number;
+  highest_score: number;
+  overs_bowled: number;
+  runs_conceded: number;
+  wickets: number;
+  maidens: number;
+  four_wickets: number;
+  five_wickets: number;
+  best_bowling: string;
+  wides?: number;
+  no_balls?: number;
 }

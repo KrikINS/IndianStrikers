@@ -149,7 +149,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
         fours: b.fours,
         sixes: b.sixes,
         isNotOut: b.outHow === 'Not Out',
-        wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, dotBalls: 0
+        wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, noBalls: 0
       });
     });
 
@@ -158,15 +158,14 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
     homeBowlingInnings.bowling.filter(b => b.playerId && homeSquad.some(p => String(p.id) === String(b.playerId))).forEach(b => {
       const existing = performerMap.get(b.playerId) || {
         playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false,
-        wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, dotBalls: 0
+        wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, noBalls: 0
       };
       performerMap.set(b.playerId, {
         ...existing,
         wickets: b.wickets,
         bowlingRuns: b.runsConceded,
         bowlingOvers: b.overs,
-        maidens: b.maidens,
-        dotBalls: b.dotBalls || 0
+        maidens: b.maidens
       });
     });
 
@@ -669,7 +668,6 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                   <th style={{ width: '35px' }}>W</th>
                   <th style={{ width: '35px' }}>WD</th>
                   <th style={{ width: '35px' }}>NB</th>
-                  <th style={{ width: '40px' }}>DOTS</th>
                   <th style={{ width: '50px' }}>ECON</th>
                 </tr>
               </thead>
@@ -697,7 +695,6 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                       <td><input title="Wickets" type="number" className="cell-input" style={{ width: '35px' }} value={data.wickets ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'wickets', parseInt(e.target.value) || 0)} /></td>
                       <td><input title="Wides" type="number" className="cell-input" style={{ width: '35px' }} value={data.wides ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'wides', parseInt(e.target.value) || 0)} /></td>
                       <td><input title="No Balls" type="number" className="cell-input" style={{ width: '35px' }} value={data.noBalls ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'noBalls', parseInt(e.target.value) || 0)} /></td>
-                      <td><input title="Dot Balls" type="number" className="cell-input" style={{ width: '40px' }} value={data.dotBalls ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'dotBalls', parseInt(e.target.value) || 0)} /></td>
                       <td className="sr-cell">
                         {(() => {
                           const oversVal = Number(data.overs || 0);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useParams, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Player } from '../types';
 import { 
   Plus, MapPin, Trophy, Settings,
@@ -14,15 +14,11 @@ interface ControlPanelProps {
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = () => {
-  const { tab } = useParams<{ tab: string }>();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<ControlTab>((tab as ControlTab) || 'grounds');
-
-  useEffect(() => {
-    if (tab && tab !== activeTab) {
-      setActiveTab(tab as ControlTab);
-    }
-  }, [tab]);
+  
+  // Derive active tab from the last segment of the URL
+  const activeTab = (pathname.split('/').pop() || 'grounds') as ControlTab;
 
   const renderTabButton = (id: ControlTab, label: string, Icon: any) => (
     <button

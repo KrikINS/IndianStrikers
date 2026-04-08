@@ -20,7 +20,7 @@ const defaultBattingStats: BattingStats = {
 
 const defaultBowlingStats: BowlingStats = {
   matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0, wickets: 0, average: 0, economy: 0, strikeRate: 0, bestBowling: '0/0', fourWickets: 0, fiveWickets: 0,
-  dotBalls: 0, wides: 0, noBalls: 0
+  wides: 0, noBalls: 0
 };
 
 // Simple Password Modal Component
@@ -346,8 +346,9 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
     const headers = [
       'Player Name', 'Primary Role', 'Batting Style', 'Bowling Style', 'Jersey #', 'Matches Played', 
       'Batting Runs', 'Innings', 'Not Outs', 'Strike Rate', 'Average', 'Highest Score', '4s', '6s',
-      'Runs Conceded', 'Bowling Innings', 'Wickets Taken', 'Economy', 'Bowling SR', 'Best Bowling', 'Maidens', 'Dot Balls'
+      'Runs Conceded', 'Bowling Innings', 'Wickets Taken', 'Economy', 'Bowling SR', 'Best Bowling', 'Maidens'
     ];
+
 
     const rows = players.map(p => {
       const b = p.battingStats || defaultBattingStats;
@@ -355,7 +356,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
       return [
         p.name, p.role, p.battingStyle, p.bowlingStyle, p.jerseyNumber || '-', p.matchesPlayed,
         b.runs, b.innings, b.notOuts, b.strikeRate, b.average, b.highestScore, b.fours, b.sixes,
-        w.runs, w.innings, w.wickets, w.economy, w.strikeRate, w.bestBowling, w.maidens, w.dotBalls
+        w.runs, w.innings, w.wickets, w.economy, w.strikeRate, w.bestBowling, w.maidens
       ];
     });
 

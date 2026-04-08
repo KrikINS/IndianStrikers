@@ -1,4 +1,4 @@
-import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch } from '../types';
+import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001/api';
 
@@ -591,6 +591,21 @@ export const deleteTournament = async (id: string) => {
   const res = await fetch(`${API_URL}/tournaments/${id}`, {
     method: 'DELETE',
     headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
+// LEGACY STATS
+export const getLegacyStats = async (): Promise<PlayerLegacyStats[]> => {
+  const res = await fetch(`${API_URL}/legacy-stats`, { headers: getHeaders() });
+  return handleResponse(res);
+};
+
+export const updateLegacyStats = async (playerId: string, stats: Partial<PlayerLegacyStats>) => {
+  const res = await fetch(`${API_URL}/legacy-stats/${playerId}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(stats)
   });
   return handleResponse(res);
 };

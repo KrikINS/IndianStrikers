@@ -32,7 +32,12 @@ async function rebuild() {
                 runs_conceded: Number(perf.bowlingRuns || 0),
                 wickets: Number(perf.wickets || 0),
                 maidens: Number(perf.maidens || 0),
-                dot_balls: Number(perf.dotBalls || 0),
+                hundreds: Number(perf.runs) >= 100 ? 1 : 0,
+                fifties: Number(perf.runs) >= 50 && Number(perf.runs) < 100 ? 1 : 0,
+                ducks: Number(perf.runs) === 0 && perf.outHow && perf.outHow !== 'Not Out' && perf.outHow !== 'Did Not Bat' ? 1 : 0,
+                four_wickets: Number(perf.wickets) === 4 ? 1 : 0,
+                five_wickets: Number(perf.wickets) >= 5 ? 1 : 0,
+                best_bowling: `${perf.wickets || 0}/${perf.bowlingRuns || 0}`,
                 status: perf.outHow || (perf.isNotOut ? 'Not Out' : 'Out')
             });
         }

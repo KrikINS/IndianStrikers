@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Excel Inspector</title>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <h1>Excel Inspector</h1>
+    <input type="file" id="fileInput" />
+    <pre id="output"></pre>
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const results = {};
+                workbook.SheetNames.forEach(name => {
+                    const sheet = workbook.Sheets[name];
+                    const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                    results[name] = {
+                        headers: rows[0] || [],
+                        rowsCount: rows.length
+                    };
+                });
+                document.getElementById('output').textContent = JSON.stringify(results, null, 2);
+                console.log('INSIGHT_COMPLETE', results);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    </script>
+</body>
+</html>
