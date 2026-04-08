@@ -71,7 +71,7 @@ async function main() {
         const bowlStats = {
            matches: m, innings: bInns, overs: 0, maidens: maid, runs: bRuns, 
            wickets: wick, average: 0, economy: eco, strikeRate: 0, 
-           bestBowling: best, fourWickets: 0, fiveWickets: 0, wides: 0, noBalls: 0
+           bestBowling: best, fourWickets: 0, fiveWickets: 0, wides: 0, no_balls: 0
         };
 
         await s.from('players').update({

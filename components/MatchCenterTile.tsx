@@ -10,7 +10,7 @@ interface MatchCenterTileProps {
     onSelectPlayingXI: (matchId: string, mode: 'home' | 'opponent' | 'lock' | 'view') => void;
     onEditMatch: (match: ScheduledMatch) => void;
     onStartScoring: (matchId: string) => void;
-    onViewScorecard: (matchId: string) => void;
+    onViewScorecard: (match: ScheduledMatch) => void;
     onUpdateManualScore: (matchId: string, mode?: 'summary' | 'full') => void;
     onDeleteMatch: (matchId: string) => void;
     userRole: UserRole;
@@ -182,7 +182,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                     <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">SUMMARY</button>
                                 </>
                             ) : (
-                                <button onClick={() => onViewScorecard(match.id)} className="btn-primary-bold">VIEW MATCH INFO</button>
+                                <button onClick={() => onViewScorecard(match)} className="btn-primary-bold">VIEW MATCH INFO</button>
                             )}
                         </>
                     ) : (isPast || isCompleted) ? (
@@ -191,10 +191,10 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                 <>
                                     <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">MATCH SUMMARY</button>
                                     <button onClick={() => onUpdateManualScore(match.id, 'full')} className="btn-action-dark">UPDATE SCORECARD</button>
-                                    <button onClick={() => onViewScorecard(match.id)} className="btn-primary-bold">VIEW FULL SCORECARD</button>
+                                    <button onClick={() => onViewScorecard(match)} className="btn-primary-bold">VIEW FULL SCORECARD</button>
                                 </>
                             ) : (
-                                <button onClick={() => onViewScorecard(match.id)} className="btn-primary-full">VIEW FULL SCORECARD</button>
+                                <button onClick={() => onViewScorecard(match)} className="btn-primary-full">VIEW FULL SCORECARD</button>
                             )}
                         </>
                     ) : (

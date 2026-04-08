@@ -13,16 +13,24 @@ interface EditMatchModalProps {
 const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, isOpen, onClose, onSave }) => {
     const { grounds, tournaments } = useMasterData();
     const [formData, setFormData] = useState<ScheduledMatch>(match);
+    const [localDate, setLocalDate] = useState(match.date? match.date.slice(0, 16) : '');
 
     useEffect(() => {
         setFormData(match);
+        setLocalDate(match.date ? match.date.slice(0, 16) : '');
     }, [match]);
 
     if (!isOpen) return null;
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData);
+        // Final sync of date before saving
+        const d = new Date(localDate);
+        const finalData = { ...formData };
+        if (!isNaN(d.getTime())) {
+            finalData.date = d.toISOString();
+        }
+        onSave(finalData);
     };
 
     const statusOptions: MatchStatus[] = ['upcoming', 'live', 'completed'];
@@ -80,15 +88,31 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, isOpen, onClose,
                     </div>
 
                     {/* Date/Time */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 group">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Match Date & Time</label>
-                        <input 
-                            type="datetime-local"
-                            value={formData.date.slice(0, 16)}
-                            onChange={(e) => setFormData({...formData, date: new Date(e.target.value).toISOString()})}
-                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
-                            title="Match Date and Time"
-                        />
+                        <div className="relative flex items-center">
+                            <input 
+                                type="datetime-local"
+                                value={localDate}
+                                onChange={(e) => setLocalDate(e.target.value)}
+                                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-16 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
+                                title="Match Date and Time"
+                            />
+                            <button 
+                                type="button"
+                                onClick={(e) => {
+                                    const d = new Date(localDate);
+                                    if (!isNaN(d.getTime())) {
+                                        setFormData({...formData, date: d.toISOString()});
+                                        (e.currentTarget.previousElementSibling as HTMLInputElement)?.blur();
+                                    }
+                                }}
+                                className="absolute right-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-[10px] uppercase tracking-tighter rounded-lg shadow-lg transition-all active:scale-90"
+                            >
+                                Set OK
+                            </button>
+                        </div>
+                        <p className="text-[9px] text-slate-600 pl-1 italic">Click 'Set OK' after selecting time to confirm</p>
                     </div>
 
                     {/* Ground & Tournament */}

@@ -48,7 +48,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
   const initialInnings: InningsData = {
     batting: [],
     bowling: [],
-    extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 },
+    extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 },
     totalRuns: 0, totalWickets: 0, totalOvers: 0,
   };
 
@@ -145,12 +145,12 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
         runsConceded: parseInt(r.runs) || 0,
         wickets: parseInt(r.wickets) || 0,
         wides: parseInt(r.wd) || 0,
-        noBalls: parseInt(r.nb) || 0,
+        no_balls: parseInt(r.nb) || 0,
       }));
 
     const finalScorecard = {
-      innings1: { ...scorecard.innings1, bowling: buildBowling(1), extras: { ...scorecard.innings1.extras, wide: autoWides(1), noBall: autoNoBalls(1) } },
-      innings2: { ...scorecard.innings2, bowling: buildBowling(2), extras: { ...scorecard.innings2.extras, wide: autoWides(2), noBall: autoNoBalls(2) } },
+      innings1: { ...scorecard.innings1, bowling: buildBowling(1), extras: { ...scorecard.innings1.extras, wide: autoWides(1), no_ball: autoNoBalls(1) } },
+      innings2: { ...scorecard.innings2, bowling: buildBowling(2), extras: { ...scorecard.innings2.extras, wide: autoWides(2), no_ball: autoNoBalls(2) } },
     };
 
     // Performer map for career sync

@@ -1,5 +1,9 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Graduate&display=swap');
+@import "tailwindcss";
+
+.graduate {
+  font-family: 'Graduate', serif;
+}
 
 /* Additional custom styles */
 body {

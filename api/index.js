@@ -627,7 +627,7 @@ async function recalculateCareerStats(playerId) {
             wickets: totalWickets, maidens: totalMaidens, average: parseFloat(bowlAvg.toFixed(2)),
             economy: parseFloat(bowlEco.toFixed(2)), strikeRate: parseFloat(bowlSR.toFixed(2)),
             bestBowling: bestBBI, fourWickets: total4W, fiveWickets: total5W,
-            wides: totalWides, noBalls: totalNoBalls
+            wides: totalWides, no_balls: totalNoBalls
         },
         updated_at: new Date()
     }).eq('id', playerId);

@@ -70,7 +70,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
         ...prev,
         [key]: {
           ...prev[key],
-          bowling: [...prev[key].bowling, { playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, noBalls: 0, dotBalls: 0 }]
+          bowling: [...prev[key].bowling, { playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0 }]
         }
       };
     });

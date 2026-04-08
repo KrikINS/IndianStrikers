@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Player, OpponentTeam, UserRole, ScheduledMatch } from '../types';
 import { useMatchCenter } from './matchCenterStore';
 import MatchCenterTile from './MatchCenterTile';
+import ScorecardViewModal from './ScorecardViewModal';
 import { PlayingXIModal } from './PlayingXIModal';
 import EditMatchModal from './EditMatchModal';
 import AddMatchModal from './AddMatchModal';
@@ -103,7 +104,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             finalScoreAway: summary.awayScore,
             resultNote: autoResult,
             resultSummary: autoResult,
-            scorecard: match.scorecard || { innings1: { batting: [], bowling: [], extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0 }, innings2: { batting: [], bowling: [], extras: { wide: 0, noBall: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0 } },
+            scorecard: match.scorecard || { innings1: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0 }, innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0 } },
             performers: match.performers || [],
             isLiveScored: false,
             toss: { winner: tossWinnerName, choice: summary.tossChoice },
@@ -132,6 +133,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     } | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showSyncSuccess, setShowSyncSuccess] = useState(false);
+    const [viewScorecardMatch, setViewScorecardMatch] = useState<ScheduledMatch | null>(null);
     const [xiModalConfig, setXiModalConfig] = useState<{
         isOpen: boolean;
         matchId: string;
@@ -813,7 +815,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                             onSelectPlayingXI={handleSelectPlayingXI}
                                             onEditMatch={(m: ScheduledMatch) => setEditingMatch(m)}
                                             onStartScoring={handleStartScoring}
-                                            onViewScorecard={(id: string) => navigate(`/scorecard/${id}`)}
+                                            onViewScorecard={(m: ScheduledMatch) => setViewScorecardMatch(m)}
                                             onUpdateManualScore={(id: string, mode?: 'summary' | 'full') => {
                                                 setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' });
                                             }}
@@ -895,6 +897,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                     />
                     
                     {/* Hidden Graphic for Capture during viewing/locking */}
+                    {viewScorecardMatch && (
+                        <ScorecardViewModal 
+                             match={viewScorecardMatch}
+                             isOpen={!!viewScorecardMatch}
+                             onClose={() => setViewScorecardMatch(null)}
+                        />
+                    )}
+
                     {xiModalConfig.teamType === 'view' && (
                         <div className="fixed -left-[2000px] top-0">
                              <div id="team-sheet-graphic" className="w-[800px] bg-slate-950 p-12 text-white border-4 border-emerald-500 shadow-2xl">

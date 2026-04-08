@@ -34,7 +34,9 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
 
             const newMatch: Omit<ScheduledMatch, 'id'> = {
                 opponentId: formData.opponentId,
-                date: new Date(formData.date).toISOString(),
+                date: (formData.date && !isNaN(new Date(formData.date).getTime())) 
+                    ? new Date(formData.date).toISOString() 
+                    : new Date().toISOString(),
                 groundId: formData.groundId,
                 tournament: selectedTournament,
                 stage: formData.stage,
@@ -98,15 +100,27 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                         {/* Date & Time */}
                         <div className="space-y-2">
                             <label htmlFor="match-date" className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Date & Time</label>
-                            <input 
-                                id="match-date"
-                                required 
-                                type="datetime-local" 
-                                value={formData.date}
-                                onChange={(e) => setFormData({...formData, date: e.target.value})}
-                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
-                                title="Match Date and Time"
-                            />
+                            <div className="relative flex items-center">
+                                <input 
+                                    id="match-date"
+                                    required 
+                                    type="datetime-local" 
+                                    value={formData.date}
+                                    onChange={(e) => setFormData({...formData, date: e.target.value})}
+                                    className="flex-1 bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-16 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
+                                    title="Match Date and Time"
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={(e) => {
+                                        const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
+                                        if (input) input.blur();
+                                    }}
+                                    className="absolute right-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-[10px] uppercase tracking-tighter rounded-lg shadow-lg transition-all active:scale-90"
+                                >
+                                    Set OK
+                                </button>
+                            </div>
                         </div>
                         {/* Stage */}
                         <div className="space-y-2">
