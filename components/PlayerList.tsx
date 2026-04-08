@@ -20,7 +20,7 @@ const defaultBattingStats: BattingStats = {
 
 const defaultBowlingStats: BowlingStats = {
   matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0, wickets: 0, average: 0, economy: 0, strikeRate: 0, bestBowling: '0/0', fourWickets: 0, fiveWickets: 0,
-  wides: 0, noBalls: 0
+  wides: 0, no_balls: 0
 };
 
 // Simple Password Modal Component
@@ -948,15 +948,15 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
             </button>
 
             {/* Hero Section */}
-            <div className="relative h-32 md:h-36 bg-slate-900 shrink-0">
+            <div className="relative h-44 md:h-52 bg-slate-900 shrink-0 border-b border-white/5">
               <div className="absolute inset-0 opacity-20 bg-dot-white-grid"></div>
               {/* Jersey Number Watermark (Top Right) */}
               {(viewingPlayer.jerseyNumber !== undefined && viewingPlayer.jerseyNumber !== null) && (
                 <div 
-                  className="absolute -top-4 -right-2 text-[8rem] md:text-[10rem] font-black select-none z-0 pointer-events-none text-[#A3E635]/10 leading-none"
+                  className="absolute -top-12 -right-12 text-[14rem] md:text-[20rem] font-black select-none z-0 pointer-events-none text-[#A3E635]/10 leading-none"
                   style={{ 
                     transform: 'rotate(-15deg)', 
-                    fontFamily: '"Graduate", "Rockwell", "Courier Bold", serif',
+                    fontFamily: '"Graduate", serif',
                     letterSpacing: '-0.05em'
                   }}
                 >
@@ -964,14 +964,14 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                 </div>
               )}
               {/* Profile Picture Box */}
-              <div className="absolute top-5 left-6 md:left-8 z-10 w-24 h-24 md:w-32 md:h-32 rounded-2xl border-4 border-white shadow-xl overflow-hidden bg-slate-200">
+              <div className="absolute top-8 left-6 md:left-8 z-10 w-28 h-28 md:w-36 md:h-36 rounded-2xl border-4 border-white shadow-2xl overflow-hidden bg-slate-200">
                 <img
                   src={viewingPlayer.avatarUrl}
                   alt={viewingPlayer.name}
                   className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                 />
               </div>
-              <div className="absolute top-10 md:top-12 left-32 md:left-44 text-white pr-4">
+              <div className="absolute top-14 md:top-16 left-36 md:left-48 text-white pr-4">
                 <h2 className="text-2xl md:text-3xl font-black truncate">{viewingPlayer.name}</h2>
                 <div className="flex flex-wrap items-center gap-2 md:gap-3 text-blue-200 mt-1 text-xs md:text-sm">
                   <span className="font-medium">{viewingPlayer.role}</span>
