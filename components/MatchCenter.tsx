@@ -318,37 +318,37 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         <>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
-          .schedule-container { padding: 0; background: transparent; border-radius: 0; overflow: hidden; }
-          .table-controls { display: flex; gap: 12px; padding: 16px 20px; align-items: center; background: transparent; border-bottom: 1px solid #1f2937; }
-          .search-bar { flex: 1; background: #1f2937; border: 1px solid #374151; color: white; padding: 9px 14px 9px 38px; border-radius: 8px; font-size: 13px; outline: none; transition: border 0.2s; }
+          .schedule-container { padding: 0; background: #ffffff; border-radius: 0; overflow: hidden; }
+          .table-controls { display: flex; gap: 12px; padding: 16px 20px; align-items: center; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+          .search-bar { flex: 1; background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 9px 14px 9px 38px; border-radius: 8px; font-size: 13px; outline: none; transition: border 0.2s; }
           .search-bar:focus { border-color: #3b82f6; }
-          .search-bar::placeholder { color: #4b5563; }
-          .schedule-table { width: 100%; border-collapse: collapse; color: #f3f4f6; font-size: 13px; }
-          .schedule-table th { text-align: left; padding: 11px 14px; color: #6b7280; font-weight: 700; border-bottom: 2px solid #1f2937; text-transform: uppercase; font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
-          .schedule-table td { padding: 10px 14px; border-bottom: 1px solid #1a2030; vertical-align: middle; }
-          .schedule-table tbody tr { transition: background 0.15s; }
-          .schedule-table tbody tr:hover { background: rgba(59,130,246,0.06); cursor: pointer; }
+          .search-bar::placeholder { color: #94a3b8; }
+          .schedule-table { width: 100%; border-collapse: collapse; color: #111827; font-size: 13px; }
+          .schedule-table thead { background: #1e293b; }
+          .schedule-table th { text-align: left; padding: 11px 14px; color: #94a3b8; font-weight: 700; border-bottom: 2px solid #1f2937; text-transform: uppercase; font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
+          .schedule-table td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+          .schedule-table tbody tr { background: #ffffff; transition: background 0.15s; }
+          .schedule-table tbody tr:hover { background: #f1f5f9; cursor: pointer; }
           .date-stack { display: flex; flex-direction: column; gap: 2px; }
-          .date-main { font-weight: 700; color: #f9fafb; font-size: 12px; }
-          .time-sub { font-size: 11px; color: #4b5563; }
-          .id-cell { color: #3b82f6; font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; }
-          .tournament-cell { font-size: 12px; font-weight: 600; color: #d1d5db; }
-          .vs-cell { font-size: 10px; font-weight: 900; color: #374151; background: #1f2937; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
-          .team-cell { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; white-space: nowrap; }
-          .team-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: contain; background: transparent; border: 1px solid rgba(255,255,255,0.1); }
-          .team-avatar-fallback { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid rgba(255,255,255,0.1); font-size: 10px; font-weight: 900; }
-          .team-avatar-fallback { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 900; }
+          .date-main { font-weight: 700; color: #111827; font-size: 12px; }
+          .time-sub { font-size: 11px; color: #64748b; }
+          .id-cell { color: #2563eb; font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; }
+          .tournament-cell { font-size: 12px; font-weight: 700; color: #334155; }
+          .vs-cell { font-size: 10px; font-weight: 900; color: #ffffff; background: #2563eb; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+          .team-cell { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; white-space: nowrap; color: #111827; }
+          .team-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: contain; background: #f1f5f9; border: 1px solid #e2e8f0; }
+          .team-avatar-fallback { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 10px; font-weight: 900; }
           .badge-type { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 900; display: inline-flex; align-items: center; gap: 4px; }
-          .badge-t20 { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
-          .badge-odi { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
-          .badge-status-live { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
-          .badge-status-done { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.25); }
-          .badge-status-up { background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.2); }
-          .table-footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: transparent; border-top: 1px solid #1f2937; font-size: 11px; color: #4b5563; }
-          .filter-select { background: #1f2937; border: 1px solid #374151; color: #d1d5db; padding: 9px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; outline: none; cursor: pointer; }
+          .badge-t20 { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+          .badge-odi { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+          .badge-status-live { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+          .badge-status-done { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+          .badge-status-up { background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
+          .table-footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; }
+          .filter-select { background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 9px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; outline: none; cursor: pointer; }
           .filter-select:focus { border-color: #3b82f6; }
           .search-wrap { position: relative; flex: 1; }
-          .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #4b5563; pointer-events: none; }
+          .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
           
           /* ─── TABS ─── */
           .tab-inactive {
@@ -378,7 +378,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
 
           /* Status tag */
           .status-tag-completed {
-            color: #6b7280;
+            color: #059669;
             font-weight: 800;
             font-size: 10px;
             text-transform: uppercase;
@@ -833,6 +833,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             </div>
 
             {/* Modals & Overlays */}
+            {viewScorecardMatch && (
+                <ScorecardViewModal 
+                        match={viewScorecardMatch}
+                        isOpen={!!viewScorecardMatch}
+                        onClose={() => setViewScorecardMatch(null)}
+                />
+            )}
             {editingMatch && (
                 <EditMatchModal 
                     match={editingMatch}
@@ -897,13 +904,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                     />
                     
                     {/* Hidden Graphic for Capture during viewing/locking */}
-                    {viewScorecardMatch && (
-                        <ScorecardViewModal 
-                             match={viewScorecardMatch}
-                             isOpen={!!viewScorecardMatch}
-                             onClose={() => setViewScorecardMatch(null)}
-                        />
-                    )}
 
                     {xiModalConfig.teamType === 'view' && (
                         <div className="fixed -left-[2000px] top-0">

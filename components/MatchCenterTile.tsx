@@ -152,11 +152,11 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
             {/* ACTION FOOTER */}
             <div className="px-4 pb-4 mt-auto">
                 {/* Info + Admin Controls */}
-                <div className="flex items-center justify-between mb-3 text-[9px] match-meta-info uppercase tracking-tight px-1">
+                <div className="flex items-center justify-between mb-3 text-[13.5px] match-meta-info uppercase tracking-tight px-1">
                     <div className="flex gap-3">
-                        <span className="flex items-center gap-1"><Calendar size={10} /> {dateFormatted}</span>
+                        <span className="flex items-center gap-1"><Calendar size={15} /> {dateFormatted}</span>
                         <span className="flex items-center gap-1">
-                            <MapPin size={10} /> 
+                            <MapPin size={15} /> 
                             {grounds.find(g => g.id === match.groundId)?.name || 'TBD'}
                         </span>
                     </div>
@@ -198,8 +198,8 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             )}
                         </>
                     ) : (
-                        <p className="col-span-2 text-center text-slate-400 text-[9px] font-black uppercase tracking-widest py-2 bg-slate-50 rounded-lg">
-                            Scoring opens {new Date(match.date).toLocaleDateString()}
+                        <p className="col-span-2 text-center text-black text-[9px] font-black uppercase tracking-widest py-2 bg-slate-50 rounded-lg">
+                            Scoring opens {new Date(match.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
                         </p>
                     )}
                 </div>
