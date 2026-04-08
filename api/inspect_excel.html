@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Excel Inspector</title>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <h1>Excel Inspector</h1>
-    <input type="file" id="fileInput" />
+    <label for="fileInput" style="display: block; margin-bottom: 8px; font-weight: bold;">Upload Excel File:</label>
+    <input type="file" id="fileInput" title="Choose Excel file" />
     <pre id="output"></pre>
     <script>
         document.getElementById('fileInput').addEventListener('change', function(e) {
