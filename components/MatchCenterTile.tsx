@@ -62,25 +62,44 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     return (
         <div className={`match-card-compact border transition-all duration-300 ${isLive ? 'border-red-400/40' : 'border-slate-100'}`}>
 
-            {/* TOP INFO STRIP */}
-            <div className={`px-4 py-2 border-b flex items-center justify-between text-[10px] font-bold uppercase tracking-tight
-                ${isLive ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}
-            >
-                <div className="flex items-center gap-2">
-                    {isLive && (
-                        <div className="flex items-center gap-1.5 text-red-500">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                            </span>
-                            <span>LIVE</span>
-                        </div>
-                    )}
-                    {isUpcoming && <span className="text-blue-600">Upcoming</span>}
-                    {isCompleted && <span className="status-tag-completed">Completed</span>}
+            {/* HEADER HERO SECTION (Mirroring Player Profile Style) */}
+            <div className={`relative h-14 overflow-hidden border-b border-white/5 flex items-center px-4 ${isLive ? 'bg-red-950/20' : 'bg-slate-900'}`}>
+                {/* Jersey-style Watermark */}
+                <div 
+                    className="absolute -top-4 -right-2 text-5xl font-black italic select-none z-0 pointer-events-none text-white/5 leading-none"
+                    style={{ 
+                        transform: 'rotate(-10deg)', 
+                        fontFamily: '"Graduate", serif',
+                    }}
+                >
+                    {match.tournament?.substring(0, 3) || 'INS'}
                 </div>
-                <div className="tournament-strip">
-                    {(match.tournament || 'No Tournament').toUpperCase()} - {(match.stage || 'League').toUpperCase()} MATCH
+
+                <div className="relative z-10 flex items-center justify-between w-full">
+                    <div className="flex items-center gap-3">
+                        {isLive ? (
+                            <div className="flex items-center gap-2 bg-red-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-red-500/20">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                </span>
+                                LIVE NOW
+                            </div>
+                        ) : isUpcoming ? (
+                            <div className="bg-blue-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-blue-500/10">UPCOMING</div>
+                        ) : (
+                            <div className="bg-emerald-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-emerald-500/10 uppercase tracking-wider">Completed</div>
+                        )}
+                    </div>
+
+                    <div className="text-right">
+                        <div className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">
+                            {match.tournament || 'Exhibition Match'}
+                        </div>
+                        <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest -mt-0.5">
+                            {match.stage || 'Official'}
+                        </div>
+                    </div>
                 </div>
             </div>
 

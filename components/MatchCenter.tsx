@@ -838,6 +838,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                         match={viewScorecardMatch}
                         isOpen={!!viewScorecardMatch}
                         onClose={() => setViewScorecardMatch(null)}
+                        players={players}
+                        allOpponents={opponents}
+                        grounds={grounds}
                 />
             )}
             {editingMatch && (

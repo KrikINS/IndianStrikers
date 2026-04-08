@@ -2,8 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
-import { getAppUsers } from '../services/storageService';
-import { Plus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight } from 'lucide-react';
+import { getAppUsers, getPlayerDetailedStats, PlayerDetailedStats, TournamentStat } from '../services/storageService';
 import styles from './PlayerList.module.css';
 
 interface PlayerListProps {
@@ -80,6 +80,9 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
   const [activeStatTab, setActiveStatTab] = useState<'batting' | 'bowling'>('batting');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEditTab, setActiveEditTab] = useState<'general' | 'batting' | 'bowling'>('general');
+  const [detailedStats, setDetailedStats] = useState<PlayerDetailedStats | null>(null);
+  const [isStatsExpanded, setIsStatsExpanded] = useState(false);
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
 
   const [users, setUsers] = useState<AppUser[]>([]); // New State for user linking
   const [searchParams, setSearchParams] = useSearchParams();
@@ -99,6 +102,28 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
       }
     }
   }, [searchParams, players, setSearchParams]);
+
+  // Fetch detailed stats when viewing a player
+  useEffect(() => {
+    if (viewingPlayer?.id) {
+      const fetchDetailed = async () => {
+        setIsStatsLoading(true);
+        try {
+          const stats = await getPlayerDetailedStats(viewingPlayer.id);
+          setDetailedStats(stats);
+        } catch (e) {
+          console.error("Failed to fetch detailed stats", e);
+          setDetailedStats(null);
+        } finally {
+          setIsStatsLoading(false);
+        }
+      };
+      fetchDetailed();
+      setIsStatsExpanded(false); // Reset expansion on new player
+    } else {
+      setDetailedStats(null);
+    }
+  }, [viewingPlayer]);
 
   const fetchUsers = async () => {
     if (userRole === 'admin') {
@@ -404,9 +429,17 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
     >
       {/* Header / Background */}
       <div className={`h-[60px] md:h-[72px] ${player.isAvailable ? 'bg-slate-900' : 'bg-slate-100'} relative overflow-hidden`}>
-        {/* Jersey Number Watermark (Top Right) */}
+        {/* Jersey Number Watermark (Unified Style) */}
+        {/* Jersey Number Watermark (Proportioned to Header) */}
         {(player.jerseyNumber !== undefined && player.jerseyNumber !== null) && (
-          <div className={`absolute top-0 right-2 text-[3.4rem] font-black italic select-none z-0 pointer-events-none ${styles.jerseyWatermark} text-white/40`}>
+          <div 
+            className="absolute -top-1 right-2 text-5xl font-black select-none z-0 pointer-events-none text-[#A3E635]/30 leading-none"
+            style={{ 
+              transform: 'rotate(-15deg) scale(1.6)', 
+              fontFamily: '"Graduate", serif',
+              transformOrigin: 'center right'
+            }}
+          >
             {player.jerseyNumber}
           </div>
         )}
@@ -950,14 +983,14 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
             {/* Hero Section */}
             <div className="relative h-44 md:h-52 bg-slate-900 shrink-0 border-b border-white/5">
               <div className="absolute inset-0 opacity-20 bg-dot-white-grid"></div>
-              {/* Jersey Number Watermark (Top Right) */}
+              {/* Jersey Number Watermark (Unified Style) */}
               {(viewingPlayer.jerseyNumber !== undefined && viewingPlayer.jerseyNumber !== null) && (
                 <div 
-                  className="absolute -top-12 -right-12 text-[14rem] md:text-[20rem] font-black select-none z-0 pointer-events-none text-[#A3E635]/10 leading-none"
+                  className="absolute top-0 right-4 text-[6rem] md:text-[9rem] font-black select-none z-0 pointer-events-none text-[#A3E635]/30 leading-none"
                   style={{ 
-                    transform: 'rotate(-15deg)', 
+                    transform: 'rotate(-15deg) scale(1.2)', 
                     fontFamily: '"Graduate", serif',
-                    letterSpacing: '-0.05em'
+                    transformOrigin: 'top right'
                   }}
                 >
                   {viewingPlayer.jerseyNumber}
@@ -1037,9 +1070,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className="overflow-x-auto">
                     {activeStatTab === 'batting' ? (
-                      <table className="w-full text-xs md:text-sm text-left">
-                        <thead className="bg-[#00703c] text-white font-bold text-xs uppercase">
+                      <table className="w-full text-[11px] md:text-xs text-left">
+                        <thead className="bg-[#00703c] text-white font-bold uppercase border-b border-emerald-800">
                           <tr>
+                            <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#00703c] z-10">Details</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Inns</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">NO</th>
@@ -1048,15 +1082,25 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Ave</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">SR</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">HS</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">100's</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">50's</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">0's</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">4's</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">6's</th>
+                            <th className="p-2 md:p-3 text-center whitespace-nowrap">100s</th>
+                            <th className="p-2 md:p-3 text-center whitespace-nowrap">50s</th>
+                            <th className="p-2 md:p-3 text-center whitespace-nowrap">0s</th>
+                            <th className="p-2 md:p-3 text-center whitespace-nowrap">4s</th>
+                            <th className="p-2 md:p-3 text-center whitespace-nowrap">6s</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr className="border-b border-slate-100 hover:bg-slate-50 text-slate-700 font-medium">
+                          {/* Career Total Row */}
+                          <tr 
+                            className="border-b border-slate-100 hover:bg-slate-50 text-slate-700 font-bold cursor-pointer group"
+                            onClick={() => setIsStatsExpanded(!isStatsExpanded)}
+                          >
+                            <td className="p-2 md:p-3 flex items-center gap-2 whitespace-nowrap sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">
+                              <div className={`p-1 rounded-md transition-colors ${isStatsExpanded ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                {isStatsExpanded ? <Minus size={14} /> : <Plus size={14} />}
+                              </div>
+                              Career Totals
+                            </td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.matches || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.innings || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.notOuts || '0'}</td>
@@ -1071,12 +1115,62 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.fours || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.sixes || '0'}</td>
                           </tr>
+
+                          {/* Expanded Rows */}
+                          {isStatsExpanded && (
+                            <>
+                              {/* Legacy Baseline */}
+                              {detailedStats?.legacy && (
+                                <tr className="bg-slate-50/80 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
+                                  <td className="p-2 md:p-3 font-bold text-slate-600 italic pl-8 sticky left-0 bg-slate-50/80 z-10">Legacy Baseline</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.innings}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.not_outs}</td>
+                                  <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.runs}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.balls}</td>
+                                  <td className="p-2 md:p-3 text-center">-</td>
+                                  <td className="p-2 md:p-3 text-center">-</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.highest_score}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.hundreds}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.fifties}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.ducks}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.fours}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.sixes}</td>
+                                </tr>
+                              )}
+
+                              {/* Tournament Rows */}
+                              {detailedStats?.tournaments.map((t, idx) => (
+                                <tr key={t.tournamentId || idx} className="bg-slate-50/50 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
+                                  <td className="p-2 md:p-3 font-bold text-slate-600 pl-8 sticky left-0 bg-slate-50/50 z-10">{t.tournamentName}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.matches}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.innings}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.notOuts}</td>
+                                  <td className="p-2 md:p-3 text-center font-bold text-slate-600">{t.batting.runs}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.balls}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.average}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.strikeRate}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.highestScore}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.hundreds}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.fifties}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.ducks}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.fours}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.batting.sixes}</td>
+                                </tr>
+                              ))}
+                              
+                              {(!detailedStats?.tournaments.length && !detailedStats?.legacy) && (
+                                <tr><td colSpan={14} className="p-4 text-center text-slate-400 italic">No detailed records found</td></tr>
+                              )}
+                            </>
+                          )}
                         </tbody>
                       </table>
                     ) : (
-                      <table className="w-full text-xs md:text-sm text-left">
-                        <thead className="bg-[#00703c] text-white font-bold text-xs uppercase">
+                      <table className="w-full text-[11px] md:text-xs text-left">
+                        <thead className="bg-[#00703c] text-white font-bold uppercase border-b border-emerald-800">
                           <tr>
+                            <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#00703c] z-10">Details</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Inns</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Overs</th>
@@ -1092,7 +1186,17 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                           </tr>
                         </thead>
                         <tbody>
-                          <tr className="border-b border-slate-100 hover:bg-slate-50 text-slate-700 font-medium">
+                          {/* Career Total Row */}
+                          <tr 
+                            className="border-b border-slate-100 hover:bg-slate-50 text-slate-700 font-bold cursor-pointer group"
+                            onClick={() => setIsStatsExpanded(!isStatsExpanded)}
+                          >
+                            <td className="p-2 md:p-3 flex items-center gap-2 whitespace-nowrap sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">
+                              <div className={`p-1 rounded-md transition-colors ${isStatsExpanded ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                {isStatsExpanded ? <Minus size={14} /> : <Plus size={14} />}
+                              </div>
+                              Career Totals
+                            </td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.matches || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.innings || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.overs || '0.0'}</td>
@@ -1106,6 +1210,49 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.fourWickets || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.fiveWickets || '0'}</td>
                           </tr>
+
+                          {/* Expanded Rows */}
+                          {isStatsExpanded && (
+                            <>
+                              {/* Legacy Baseline */}
+                              {detailedStats?.legacy && (
+                                <tr className="bg-slate-50/80 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
+                                  <td className="p-2 md:p-3 font-bold text-slate-600 italic pl-8 sticky left-0 bg-slate-50/80 z-10">Legacy Baseline</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.bowling_innings || detailedStats.legacy.innings}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.overs_bowled}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.maidens}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.runs_conceded}</td>
+                                  <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.wickets}</td>
+                                  <td className="p-2 md:p-3 text-center">-</td>
+                                  <td className="p-2 md:p-3 text-center">-</td>
+                                  <td className="p-2 md:p-3 text-center">-</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.best_bowling}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.four_wickets}</td>
+                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.five_wickets}</td>
+                                </tr>
+                              )}
+
+                              {/* Tournament Rows */}
+                              {detailedStats?.tournaments.map((t, idx) => (
+                                <tr key={t.tournamentId || idx} className="bg-slate-50/50 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
+                                  <td className="p-2 md:p-3 font-bold text-slate-600 pl-8 sticky left-0 bg-slate-50/50 z-10">{t.tournamentName}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.matches}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.innings}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.overs}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.maidens}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.runs}</td>
+                                  <td className="p-2 md:p-3 text-center font-bold text-slate-600">{t.bowling.wickets}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.average}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.economy}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.strikeRate}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.fourWickets}</td>
+                                  <td className="p-2 md:p-3 text-center">{t.bowling.fiveWickets}</td>
+                                </tr>
+                              ))}
+                            </>
+                          )}
                         </tbody>
                       </table>
                     )}

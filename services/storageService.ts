@@ -601,6 +601,23 @@ export const getLegacyStats = async (): Promise<PlayerLegacyStats[]> => {
   return handleResponse(res);
 };
 
+export interface TournamentStat {
+  tournamentId: string;
+  tournamentName: string;
+  batting: BattingStats;
+  bowling: BowlingStats;
+}
+
+export interface PlayerDetailedStats {
+  legacy: PlayerLegacyStats | null;
+  tournaments: TournamentStat[];
+}
+
+export const getPlayerDetailedStats = async (playerId: string): Promise<PlayerDetailedStats> => {
+  const res = await fetch(`${API_URL}/players/${playerId}/stats`);
+  return handleResponse(res);
+};
+
 export const updateLegacyStats = async (playerId: string, stats: Partial<PlayerLegacyStats>) => {
   const res = await fetch(`${API_URL}/legacy-stats/${playerId}`, {
     method: 'PUT',

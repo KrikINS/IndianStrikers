@@ -643,6 +643,109 @@ app.get('/api/legacy-stats', authGuard(['admin']), async (req, res) => {
   res.json(data);
 });
 
+// PLAYER DETAILED STATS
+app.get('/api/players/:id/stats', async (req, res) => {
+    const { id: playerId } = req.params;
+    
+    try {
+        // 1. Fetch Legacy Baseline
+        const { data: legacy } = await supabase
+            .from('player_legacy_stats')
+            .select('*')
+            .eq('player_id', playerId)
+            .single();
+
+        // 2. Fetch Tournament/Match Data
+        const { data: matchStats, error: matchError } = await supabase
+            .from('player_match_stats')
+            .select(`
+                *,
+                matches:match_id (
+                    tournament_id,
+                    tournaments:tournament_id (
+                        name
+                    )
+                )
+            `)
+            .eq('player_id', playerId);
+
+        if (matchError) throw matchError;
+
+        // 3. Group by Tournament
+        const tournamentGroups = {};
+        
+        matchStats.forEach(row => {
+            const tournament = row.matches?.tournaments;
+            const tId = row.matches?.tournament_id || 'unknown';
+            const tName = tournament?.name || (tId === 'unknown' ? 'Other Matches' : 'Default Tournament');
+
+            if (!tournamentGroups[tId]) {
+                tournamentGroups[tId] = {
+                    tournamentId: tId,
+                    tournamentName: tName,
+                    batting: { matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, highestScore: '0', hundreds: 0, fifties: 0, ducks: 0, fours: 0, sixes: 0, average: 0, strikeRate: 0 },
+                    bowling: { matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0, wickets: 0, fourWickets: 0, fiveWickets: 0, bestBowling: '0/0', average: 0, economy: 0, strikeRate: 0, wides: 0, no_balls: 0 }
+                };
+            }
+
+            const group = tournamentGroups[tId];
+            
+            // Batting Aggregation
+            group.batting.matches++;
+            if (row.runs > 0 || row.balls > 0) group.batting.innings++;
+            if (row.status === 'Not Out') group.batting.notOuts++;
+            group.batting.runs += (Number(row.runs) || 0);
+            group.batting.balls += (Number(row.balls) || 0);
+            group.batting.fours += (Number(row.fours) || 0);
+            group.batting.sixes += (Number(row.sixes) || 0);
+            group.batting.hundreds += (Number(row.hundreds) || 0);
+            group.batting.fifties += (Number(row.fifties) || 0);
+            group.batting.ducks += (Number(row.ducks) || 0);
+            const currentHS = parseInt(group.batting.highestScore) || 0;
+            if (Number(row.runs) > currentHS) group.batting.highestScore = String(row.runs);
+
+            // Bowling Aggregation
+            if (Number(row.overs_bowled) > 0) {
+                group.bowling.innings++;
+                group.bowling.matches++; 
+                group.bowling.overs += (Number(row.overs_bowled) || 0);
+                group.bowling.maidens += (Number(row.maidens) || 0);
+                group.bowling.runs += (Number(row.runs_conceded) || 0);
+                group.bowling.wickets += (Number(row.wickets) || 0);
+                group.bowling.fourWickets += (Number(row.four_wickets) || 0);
+                group.bowling.fiveWickets += (Number(row.five_wickets) || 0);
+                group.bowling.wides += (Number(row.wides) || 0);
+                group.bowling.no_balls += (Number(row.no_balls) || 0);
+                
+                const currentBBI = group.bowling.bestBowling;
+                const [curW, curR] = currentBBI.split('/').map(Number);
+                if (row.wickets > curW || (row.wickets === curW && row.runs_conceded < curR)) {
+                    group.bowling.bestBowling = `${row.wickets}/${row.runs_conceded}`;
+                }
+            }
+        });
+
+        Object.values(tournamentGroups).forEach(group => {
+            const batInns = group.batting.innings - group.batting.notOuts;
+            group.batting.average = batInns > 0 ? parseFloat((group.batting.runs / batInns).toFixed(2)) : group.batting.runs;
+            group.batting.strikeRate = group.batting.balls > 0 ? parseFloat(((group.batting.runs / group.batting.balls) * 100).toFixed(2)) : 0;
+            group.bowling.average = group.bowling.wickets > 0 ? parseFloat((group.bowling.runs / group.bowling.wickets).toFixed(2)) : 0;
+            group.bowling.economy = group.bowling.overs > 0 ? parseFloat((group.bowling.runs / group.bowling.overs).toFixed(2)) : 0;
+            group.bowling.strikeRate = group.bowling.wickets > 0 ? parseFloat(((group.bowling.overs * 6) / group.bowling.wickets).toFixed(2)) : 0;
+            group.bowling.overs = parseFloat(group.bowling.overs.toFixed(1));
+        });
+
+        res.json({
+            legacy: legacy || null,
+            tournaments: Object.values(tournamentGroups)
+        });
+
+    } catch (e) {
+        console.error(`[GET /api/players/${playerId}/stats] Error:`, e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) => {
   const { playerId } = req.params;
   const stats = req.body;
