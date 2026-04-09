@@ -44,7 +44,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
         setOpponents(opp);
 
         const upcoming = allMatches
-          .filter(m => m.status === 'upcoming')
+          .filter(m => m.status === 'upcoming' && !m.is_test)
           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
 
         if (upcoming) {

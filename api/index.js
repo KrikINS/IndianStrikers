@@ -198,6 +198,7 @@ const mapMatchToDB = (m) => {
     'isLocked': 'is_locked',
     'isHomeBattingFirst': 'is_home_batting_first',
     'matchFormat': 'match_format',
+    'is_test': 'is_test',
     'tournamentId': 'tournament_id',
     'tossWinnerId': 'toss_winner_id',
     'tossChoice': 'toss_choice',
@@ -220,7 +221,7 @@ const mapMatchToDB = (m) => {
     'is_locked', 'toss_winner_id', 'toss_choice', 'toss_details', 
     'max_overs', 'result_summary', 'result_note', 'result_type', 
     'final_score_home', 'final_score_away', 'is_live_scored', 
-    'is_home_batting_first', 'tournament_id', 'performers', 'scorecard', 'is_career_synced'
+    'is_home_batting_first', 'tournament_id', 'performers', 'scorecard', 'is_career_synced', 'is_test'
   ];
 
   // 1. First, map camelCase to snake_case
@@ -288,22 +289,27 @@ app.put('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => 
 // FINALIZE MATCH (Update results and player stats)
 app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req, res) => {
   const { id } = req.params;
-  const { matchData, updatedPlayers } = req.body;
+  const { matchData, updatedPlayers, is_test } = req.body;
+  console.log(`[POST /api/finalize-match] Match ID: ${id}, is_test: ${is_test}`);
 
   try {
-    // 1. Upsert Match Record to handle potential conflicts or new records
-    const dbMatch = mapMatchToDB(matchData);
+    // 1. Update match status/data
     const { error: matchError } = await supabase
       .from('matches')
       .upsert([{
-        ...dbMatch,
         id: id,
         status: 'completed',
-        is_career_synced: true,
+        is_hero_synced: !is_test,
+        is_career_synced: !is_test,
         updated_at: new Date()
       }], { onConflict: 'id' });
 
     if (matchError) throw matchError;
+
+    if (is_test) {
+      console.log(`[Sync] Match ${id} is a TEST match. Skipping career stats update.`);
+      return res.json({ ok: true, message: "Match finalized (Sandbox Mode)" });
+    }
 
     // 2. Summation Logic (Source of Truth: player_match_stats)
     let performers = (updatedPlayers && updatedPlayers.length > 0) ? updatedPlayers : (matchData.performers || []);
@@ -559,7 +565,16 @@ app.get('/api/memories', async (_req, res) => {
 async function recalculateCareerStats(playerId) {
     console.log(`[SyncEngine] Recalculating career for Player ID: ${playerId}...`);
     
-    const { data: allMatchStats } = await supabase.from('player_match_stats').select('*').eq('player_id', playerId);
+    const { data: allMatchStats } = await supabase
+        .from('player_match_stats')
+        .select(`
+            *,
+            matches!inner (
+                is_test
+            )
+        `)
+        .eq('player_id', playerId)
+        .eq('matches.is_test', false);
     const { data: legacyBaseline } = await supabase.from('player_legacy_stats').select('*').eq('player_id', playerId).single();
     
     const l = legacyBaseline || { 
@@ -570,10 +585,23 @@ async function recalculateCareerStats(playerId) {
     };
     const m = allMatchStats || [];
 
+    // Helper to add overs (base-6) correctly
+    const toBalls = (ov) => {
+        const floatOv = parseFloat(ov) || 0;
+        const completeOvers = Math.floor(floatOv);
+        const extraBalls = Math.round((floatOv % 1) * 10);
+        return (completeOvers * 6) + extraBalls;
+    };
+    const fromBalls = (balls) => {
+        const ov = Math.floor(balls / 6);
+        const rem = balls % 6;
+        return parseFloat(`${ov}.${rem}`);
+    };
+
     const totalRuns = m.reduce((s, row) => s + (Number(row.runs) || 0), 0) + (Number(l.runs) || 0);
     const totalWickets = m.reduce((s, row) => s + (Number(row.wickets) || 0), 0) + (Number(l.wickets) || 0);
     const totalMatches = m.reduce((s, row) => s + (row.status?.startsWith('HISTORICAL:') ? (parseInt(row.status.split(':')[1]) || 1) : 1), 0) + (Number(l.matches) || 0);
-    const totalInnings = m.filter(row => (Number(row.runs) > 0 || Number(row.balls) > 0)).length + (Number(l.innings) || 0);
+    const totalInnings = m.filter(row => (Number(row.runs) > 0 || Number(row.balls) > 0 || (row.status && !['not out', 'did not bat', 'dnb', 'absent'].includes(row.status.toLowerCase())))).length + (Number(l.innings) || 0);
     const totalNO = m.filter(row => row.is_not_out || row.status === 'Not Out' || row.status === 'not out').length + (Number(l.not_outs) || 0);
     const totalBalls = m.reduce((s, row) => s + (Number(row.balls) || 0), 0) + (Number(l.balls) || 0);
     const totalFours = m.reduce((s, row) => s + (Number(row.fours) || 0), 0) + (Number(l.fours) || 0);
@@ -583,7 +611,13 @@ async function recalculateCareerStats(playerId) {
     const totalDucks = m.reduce((s, row) => s + (Number(row.ducks) || 0), 0) + (Number(l.ducks) || 0);
 
     const totalBowlRuns = m.reduce((s, row) => s + (Number(row.runs_conceded) || 0), 0) + (Number(l.runs_conceded) || 0);
-    const totalBowlOvers = m.reduce((s, row) => s + (Number(row.overs_bowled) || 0), 0) + (Number(l.overs_bowled) || 0);
+    
+    // Proper Over Summation (Delta + Legacy)
+    const matchBallsBowled = m.reduce((s, row) => s + toBalls(row.overs_bowled), 0);
+    const legacyBallsBowled = toBalls(l.overs_bowled);
+    const totalBallsBowled = matchBallsBowled + legacyBallsBowled;
+    const totalBowlOvers = fromBalls(totalBallsBowled);
+
     const totalMaidens = m.reduce((s, row) => s + (Number(row.maidens) || 0), 0) + (Number(l.maidens) || 0);
     const total4W = m.reduce((s, row) => s + (Number(row.four_wickets) || 0), 0) + (Number(l.four_wickets) || 0);
     const total5W = m.reduce((s, row) => s + (Number(row.five_wickets) || 0), 0) + (Number(l.five_wickets) || 0);
@@ -608,8 +642,8 @@ async function recalculateCareerStats(playerId) {
     const batAvg = (totalInnings - totalNO) > 0 ? (totalRuns / (totalInnings - totalNO)) : totalRuns;
     const batSR = totalBalls > 0 ? (totalRuns / totalBalls) * 100 : 0;
     const bowlAvg = totalWickets > 0 ? totalBowlRuns / totalWickets : 0;
-    const bowlEco = totalBowlOvers > 0 ? totalBowlRuns / totalBowlOvers : 0;
-    const bowlSR = totalWickets > 0 ? (totalBowlOvers * 6) / totalWickets : 0;
+    const bowlEco = totalBallsBowled > 0 ? (totalBowlRuns * 6) / totalBallsBowled : 0;
+    const bowlSR = totalWickets > 0 ? totalBallsBowled / totalWickets : 0;
     
     const maxScore = Math.max(...m.map(row => Number(row.runs) || 0), Number(l.highest_score) || 0);
 
@@ -710,7 +744,10 @@ app.get('/api/players/:id/stats', async (req, res) => {
             if (Number(row.overs_bowled) > 0) {
                 group.bowling.innings++;
                 group.bowling.matches++; 
-                group.bowling.overs += (Number(row.overs_bowled) || 0);
+                const currentBalls = (Math.floor(group.bowling.overs) * 6) + Math.round((group.bowling.overs % 1) * 10);
+                const newBallsToAdd = (Math.floor(Number(row.overs_bowled)) * 6) + Math.round((Number(row.overs_bowled) % 1) * 10);
+                const updatedTotalBalls = currentBalls + newBallsToAdd;
+                group.bowling.overs = Math.floor(updatedTotalBalls / 6) + ((updatedTotalBalls % 6) / 10);
                 group.bowling.maidens += (Number(row.maidens) || 0);
                 group.bowling.runs += (Number(row.runs_conceded) || 0);
                 group.bowling.wickets += (Number(row.wickets) || 0);
@@ -836,9 +873,10 @@ app.get('/api/tournament-performers', async (req, res) => {
         .from('player_match_stats')
         .select(`
           *,
-          matches:match_id!inner ( id, date, status, tournament_id, ground_id, opponent_id ),
+          matches:match_id!inner ( id, date, status, tournament_id, ground_id, opponent_id, is_test ),
           players:player_id!inner ( id, name, role, avatar_url )
-        `);
+        `)
+        .eq('matches.is_test', false);
 
       if (tId) {
         query = query.eq('matches.tournament_id', tId);

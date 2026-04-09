@@ -232,7 +232,8 @@ export const getMatches = async (): Promise<ScheduledMatch[]> => {
     resultNote: m.resultNote || m.result_note,
     resultType: m.resultType || m.result_type,
     finalScoreHome: m.finalScoreHome || m.final_score_home,
-    finalScoreAway: m.finalScoreAway || m.final_score_away
+    finalScoreAway: m.finalScoreAway || m.final_score_away,
+    is_test: m.is_test ?? false
   }));
 };
 

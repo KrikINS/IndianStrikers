@@ -18,6 +18,8 @@ interface MatchStore {
   syncWithCloud: () => Promise<void>;
   getSortedMatches: () => ScheduledMatch[];
   resetZombieMatches: () => void;
+  purgeTestData: () => Promise<void>;
+  createSandboxMatch: () => Promise<void>;
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
 }
@@ -172,9 +174,66 @@ export const useMatchCenter = create<MatchStore>()(
           }
         });
       },
+
+      purgeTestData: async () => {
+        try {
+          const testMatches = get().matches.filter(m => m.is_test);
+          if (testMatches.length === 0) return;
+
+          console.log(`[Admin] Purging ${testMatches.length} test matches...`);
+          
+          for (const m of testMatches) {
+            // Delete stats first (ledger entries)
+            const { error: statsErr } = await api.supabase
+              .from('player_match_stats')
+              .delete()
+              .eq('match_id', m.id);
+            
+            if (statsErr) console.warn(`Failed to delete stats for match ${m.id}:`, statsErr.message);
+
+            // Delete match
+            await api.deleteMatch(m.id);
+          }
+
+          set((state) => ({
+            matches: state.matches.filter(m => !m.is_test)
+          }));
+        } catch (e) {
+          console.error("Purge failed:", e);
+          throw e;
+        }
+      },
+
+      createSandboxMatch: async () => {
+        const testMatch: Omit<ScheduledMatch, 'id'> = {
+          title: 'SYSTEM LOGIC TEST',
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+          venue: 'Sandbox Virtual Ground',
+          opponentName: 'Sandbox XI',
+          matchFormat: 'T20',
+          status: 'upcoming',
+          is_test: true,
+          homeTeamXI: [],
+          opponentTeamXI: [],
+          isLiveScored: true,
+          isLocked: false,
+          isHomeBattingFirst: true,
+          tournament: 'Practice'
+        };
+        await get().addMatch(testMatch);
+      }
     }),
     {
-      name: 'ins-match-center-storage', // Key for localStorage
+      name: 'ins-match-center-storage',
     }
   )
 );
+
+/**
+ * Standalone helper to bridge ScorerDashboard and MatchCenterStore
+ */
+export const updateMatchInStore = (id: string, updates: Partial<ScheduledMatch>) => {
+  const store = useMatchCenter.getState();
+  store.updateMatch(id, updates);
+};

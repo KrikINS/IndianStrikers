@@ -24,11 +24,17 @@ async function recalculate() {
             .eq('player_id', playerId)
             .single();
 
-        // B: Fetch App Match Ledger
+        // B: Fetch App Match Ledger (Exclude Sandbox/Test matches)
         const { data: allStats, error: sumErr } = await supabase
             .from('player_match_stats')
-            .select('*')
-            .eq('player_id', playerId);
+            .select(`
+                *,
+                matches!inner (
+                    is_test
+                )
+            `)
+            .eq('player_id', playerId)
+            .eq('matches.is_test', false);
 
         if (sumErr) {
             console.warn(`Failed to fetch ledger for ${player.name}:`, sumErr.message);

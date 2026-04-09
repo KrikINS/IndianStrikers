@@ -43,7 +43,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         updateMatchStatus,
         finalizeMatch,
         syncWithCloud,
-        getSortedMatches
+        getSortedMatches,
+        purgeTestData,
+        createSandboxMatch
     } = useMatchCenter();
     const { grounds, tournaments, syncMasterData } = useMasterData();
 
@@ -729,6 +731,41 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                             >
                                 <Plus size={16} /> <span className="hidden sm:inline">Schedule Match</span><span className="sm:hidden">Match</span>
                             </button>
+
+                            {/* RESTRICTED ADMIN PANEL */}
+                            <div className="flex items-center gap-3 border-l border-slate-700 pl-4 ml-2">
+                                <div className="hidden lg:flex flex-col items-end mr-2">
+                                    <span className="text-[9px] font-black text-blue-500 uppercase tracking-tighter">Restricted</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Admin Panel</span>
+                                </div>
+                                
+                                <button
+                                    onClick={async () => {
+                                        if (window.confirm("Initialize a New System Logic Test? This will create a local sandbox environment.")) {
+                                            await createSandboxMatch();
+                                            await syncWithCloud();
+                                        }
+                                    }}
+                                    className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg border border-slate-700 hover:border-sky-500 hover:bg-slate-800 flex items-center gap-2 group"
+                                >
+                                    <Activity size={14} className="text-sky-400 group-hover:scale-110 transition-transform" />
+                                    <span>Launch Test Sandbox</span>
+                                </button>
+
+                                <button
+                                    onClick={async () => {
+                                        if (window.confirm("FINAL CONFIRMATION: This will permanently delete ALL 'is_test' matches and their associated ledger entries. This action cannot be undone. Proceed?")) {
+                                            await purgeTestData();
+                                            await syncWithCloud();
+                                            alert("Administrative purge complete. Test data removed.");
+                                        }
+                                    }}
+                                    className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-red-600 transition-all shadow-md group border border-slate-700"
+                                    title="Purge All Test Data"
+                                >
+                                    <AlertCircle size={18} className="text-red-400 group-hover:text-white" />
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

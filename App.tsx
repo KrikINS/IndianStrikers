@@ -127,7 +127,7 @@ const AppContent: React.FC<{
             />
             <Route path="/memories" element={<Memories userRole={userRole} currentUser={currentUser} />} />
             <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={userRole} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
-            <Route path="/scorer" element={(userRole === 'admin' || userRole === 'scorer') ? <ScorerDashboard /> : <Unauthorized />} />
+            <Route path="/scorer" element={(userRole === 'admin' || userRole === 'scorer') ? <ScorerDashboard players={players} /> : <Unauthorized />} />
             {/* Control Panel Routes - Admin only */}
             <Route path="/control-panel" element={userRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Unauthorized />}>
               <Route index element={<Navigate to="grounds" replace />} />
