@@ -11,11 +11,12 @@ import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import FullScorecardModal from './FullScorecardModal';
 import ManualScoreModal from './ManualScoreModal';
-import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin } from 'lucide-react';
+import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
 import { useMasterData } from './masterDataStore';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
+import PointsTable from './PointsTable';
 
 // Constants for Carousel
 const CARD_WIDTH = 340;
@@ -891,6 +892,15 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                             Clear all filters
                                         </button>
                                     )}
+                                </div>
+
+                                {/* STANDINGS / POINTS TABLE SECTION */}
+                                <div className="px-6 pb-20">
+                                    <PointsTable 
+                                        tournaments={tournaments} 
+                                        userRole={userRole} 
+                                        opponents={opponents} 
+                                    />
                                 </div>
                             </div>
                         )}

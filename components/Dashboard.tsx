@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Player, TournamentTableEntry, OpponentTeam, UserRole } from '../types';
-import { getOpponents, getTournamentTable, saveTournamentTableEntry, deleteTournamentTableEntry } from '../services/storageService';
-import { Trophy, Medal, Star, Flame, Crown, Plus, Trash2, Zap, Award, Target, Hash, Calendar, History as HistoryIcon, X, Share2, Loader2, Download, Shield, Activity } from 'lucide-react';
+import { Player, OpponentTeam, UserRole } from '../types';
+import { getOpponents } from '../services/storageService';
+import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, History as HistoryIcon, X, Share2, Loader2, Download, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { useMasterData } from './masterDataStore';
@@ -18,10 +18,6 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
   const { legacy, tournaments } = useMasterData();
   const [tournamentName, setTournamentName] = useState(tournaments.length > 0 ? tournaments[0].name : '');
   const [groupNumber, setGroupNumber] = useState('A');
-  const [tableData, setTableData] = useState<TournamentTableEntry[]>([]);
-  const [savedTableData, setSavedTableData] = useState<TournamentTableEntry[]>([]);
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [selectedHero, setSelectedHero] = useState<{ player: Player, statsType: 'batting' | 'bowling', statsValue: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -32,29 +28,12 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
 
 
 
-  // Load opponents and table data
+  // Load opponents
   useEffect(() => {
     const load = async () => {
       try {
-        const [opp, tbl] = await Promise.all([
-          getOpponents(), 
-          getTournamentTable(tournamentName)
-        ]);
+        const opp = await getOpponents();
         setOpponents(opp);
-
-        // Fix missing names in fetched table data
-        const hydratedTable = tbl.map(row => {
-          if (!row.teamName || row.teamName.trim() === '') {
-            if (row.teamId === 'home') return { ...row, teamName: 'Indian Strikers' };
-            const found = opp.find(o => o.id === row.teamId);
-            if (found) return { ...row, teamName: found.name };
-          }
-          return row;
-        });
-
-        setTableData(hydratedTable);
-        setSavedTableData(hydratedTable);
-        setIsDirty(false);
       } catch (e) { console.error("Failed to load dashboard data", e); }
     };
     load();
@@ -96,92 +75,6 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
 
   const canEdit = userRole === 'admin' || userRole === 'scorer';
 
-  // -- Table Logic --
-  const handleAddRow = () => {
-    const newEntry: TournamentTableEntry = {
-      id: crypto.randomUUID(),
-      teamId: '',
-      teamName: '',
-      tournamentName: tournamentName,
-      matches: 0,
-      won: 0,
-      lost: 0,
-      nr: 0,
-      points: 0,
-      nrr: '0.000'
-    };
-    const updated = [...tableData, newEntry];
-    setTableData(updated);
-    setIsDirty(true);
-  };
-
-  const handleDeleteRow = async (id: string) => {
-    if (window.confirm('Are you sure you want to remove this row?')) {
-      // Optimistically remove from UI immediately so it feels responsive
-      const updated = tableData.filter(t => t.id !== id);
-      setTableData(updated);
-      setIsDirty(true);
-
-      try {
-        await deleteTournamentTableEntry(id);
-      } catch (e) {
-        console.warn("Backend delete failed (row might be local-only):", e);
-        // We do not revert state here because if it failed, it likely didn't exist in DB anyway
-      }
-    }
-  };
-
-  const handleTableChange = (id: string, field: keyof TournamentTableEntry, value: any) => {
-    const updated = tableData.map(row => {
-      if (row.id === id) {
-        return { ...row, [field]: value };
-      }
-      return row;
-    });
-    setTableData(updated);
-    setIsDirty(true);
-  };
-
-  const handleSaveTable = async () => {
-    if (!isDirty || isSaving) return;
-    setIsSaving(true);
-    try {
-      const validRows = tableData.filter(entry => entry.teamId);
-      if (validRows.length === 0 && tableData.length > 0) {
-        alert("No valid teams selected to save.");
-        return;
-      }
-      await Promise.all(validRows.map(entry => {
-        const entryToSave = { ...entry, tournamentName: entry.tournamentName || tournamentName };
-        return saveTournamentTableEntry(entryToSave);
-      }));
-      setSavedTableData(tableData);
-      setIsDirty(false);
-    } catch (e: any) {
-      console.error(e);
-      alert(`Failed to save table: ${e.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleTeamSelect = (id: string, teamId: string) => {
-    if (teamId === 'home') {
-      handleTableChange(id, 'teamName', 'Indian Strikers');
-      handleTableChange(id, 'teamId', 'home');
-    } else {
-      const opp = opponents.find(o => o.id === teamId);
-      if (opp) {
-        handleTableChange(id, 'teamName', opp.name);
-        handleTableChange(id, 'teamId', opp.id);
-      }
-    }
-  };
-
-  const calculateWinPercentage = (won: number, matches: number) => {
-    if (!matches) return '0.00%';
-    return `${((won / matches) * 100).toFixed(2)}%`;
-  };
 
   const handleGenerateHeroPoster = async () => {
     if (!heroPosterRef.current || !selectedHero) return;
@@ -286,229 +179,58 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
         </div>
       )}
 
-      {/* 2. Team Legacy & Match Heroes */}
-      <div className="grid lg:grid-cols-12 gap-4 md:gap-8">
-        {/* Team Achievements */}
-        <div className="lg:col-span-5 xl:col-span-4 bg-slate-900 rounded-2xl md:rounded-3xl shadow-xl p-6 md:p-8 text-white relative overflow-hidden flex flex-col justify-center min-h-[250px] border border-slate-800 ring-1 ring-white/10">
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-black/90 backdrop-blur-xl"></div>
-          <div className="absolute top-0 right-0 p-8 opacity-10"><Trophy size={180} /></div>
+      {/* 2. Team Legacy */}
+      <div className="w-full bg-slate-900 rounded-2xl md:rounded-3xl shadow-xl p-6 md:p-8 text-white relative overflow-hidden flex flex-col justify-center min-h-[200px] border border-slate-800 ring-1 ring-white/10">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-black/90 backdrop-blur-xl"></div>
+        <div className="absolute top-0 right-0 p-8 opacity-10"><Trophy size={180} /></div>
 
-          <h3 className="text-xl md:text-2xl font-black mb-6 md:mb-8 relative z-10 flex items-center gap-3 text-white">
-            <Award className="text-yellow-400" /> Team Legacy
-          </h3>
+        <h3 className="text-xl md:text-2xl font-black mb-6 relative z-10 flex items-center gap-3 text-white">
+          <Award className="text-yellow-400" /> Team Legacy
+        </h3>
 
-          <div className="flex md:grid md:grid-cols-3 gap-3 md:gap-4 relative z-10 overflow-x-auto pb-2 md:pb-0 snap-x no-scrollbar md:custom-scrollbar">
-            <div className="min-w-[110px] md:min-w-0 bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors snap-center">
-              <div className="text-yellow-400 mb-2 flex justify-center"><Trophy size={24} className="md:w-7 md:h-7" /></div>
-              <div className="text-2xl md:text-3xl font-black mb-1">{legacy.winnersTrophies}</div>
-              <div className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-300">Winners</div>
-            </div>
-            <div className="min-w-[110px] md:min-w-0 bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors snap-center">
-              <div className="text-slate-300 mb-2 flex justify-center"><Medal size={24} className="md:w-7 md:h-7" /></div>
-              <div className="text-2xl md:text-3xl font-black mb-1">{legacy.runnersUp}</div>
-              <div className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-300">Runners-Up</div>
-            </div>
-            <div className="min-w-[110px] md:min-w-0 bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/20 transition-colors snap-center">
-              <div className="text-orange-400 mb-2 flex justify-center"><Star size={24} className="md:w-7 md:h-7" /></div>
-              <div className="text-2xl md:text-3xl font-black mb-1">{legacy.runnersUp + 17 /* Demo offset for Semi-Finals */}</div>
-              <div className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-300">Semi Finalist</div>
-            </div>
+        <div className="grid grid-cols-3 gap-3 md:gap-6 relative z-10">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-5 text-center border border-white/10 hover:bg-white/20 transition-all hover:-translate-y-1">
+            <div className="text-yellow-400 mb-2 flex justify-center"><Trophy size={28} /></div>
+            <div className="text-2xl md:text-4xl font-black mb-1">{legacy.winnersTrophies}</div>
+            <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-slate-300">Winners</div>
           </div>
-        </div>
-
-        {/* Latest Match Performers Carousel */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-center space-y-3 md:space-y-4 overflow-hidden">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 px-1">
-            <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
-              <Zap className="text-yellow-500 fill-yellow-500" size={20} /> Featured Performers
-            </h3>
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-5 text-center border border-white/10 hover:bg-white/20 transition-all hover:-translate-y-1">
+            <div className="text-slate-300 mb-2 flex justify-center"><Medal size={28} /></div>
+            <div className="text-2xl md:text-4xl font-black mb-1">{legacy.runnersUp}</div>
+            <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-slate-300">Runners-Up</div>
           </div>
-
-          {latestMatchHeroes.length === 0 ? (
-            <div className="bg-slate-100 rounded-2xl p-8 text-center text-slate-400 font-medium border border-slate-200 h-full flex items-center justify-center">
-              No performers to show.
-            </div>
-          ) : (
-            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x w-full">
-              {latestMatchHeroes.map((player) => (
-                <div
-                  key={player.id}
-                  onClick={() => setSelectedHero({
-                    player,
-                    statsType: player.role === 'Bowler' ? 'bowling' : 'batting',
-                    statsValue: player.role === 'Bowler' ? '3/24' : '45(28)' // Using demo values preserved from original
-                  })}
-                  className="min-w-[160px] md:min-w-[200px] bg-white rounded-2xl p-4 border border-slate-100 shadow-sm snap-center hover:shadow-md transition-all hover:scale-105 cursor-pointer relative group"
-                  title="Click to generate poster"
-                >
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-100 p-1.5 rounded-full text-blue-600">
-                    <Share2 size={14} />
-                  </div>
-                  <div className="flex flex-col items-center text-center">
-                    <div className="relative mb-3">
-                      <img src={player.avatarUrl} className="w-14 h-14 md:w-16 md:h-16 rounded-2xl object-cover shadow-md" alt={player.name} />
-                      <div className="absolute -bottom-2 bg-slate-900 text-white text-[9px] md:text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-white">
-                        {player.role === 'Bowler' ? '2+ Wkts' : '40+ Runs'}
-                      </div>
-                    </div>
-                    <h4 className="font-bold text-slate-800 text-sm md:text-base">{player.name}</h4>
-                    <p className="text-xs text-slate-500 mb-3">{player.role}</p>
-
-                    <div className="flex gap-2 w-full">
-                      {player.role === 'Bowler' ? (
-                        <div className="flex-1 bg-red-50 rounded-lg p-2">
-                          <p className="text-[9px] md:text-[10px] uppercase font-bold text-red-400">Figures</p>
-                          <p className="font-bold text-red-700 text-xs md:text-sm">3/24</p>
-                        </div>
-                      ) : (
-                        <div className="flex-1 bg-blue-50 rounded-lg p-2">
-                          <p className="text-[9px] md:text-[10px] uppercase font-bold text-blue-400">Score</p>
-                          <p className="font-bold text-blue-700 text-xs md:text-sm">45(28)</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-5 text-center border border-white/10 hover:bg-white/20 transition-all hover:-translate-y-1">
+            <div className="text-orange-400 mb-2 flex justify-center"><Star size={28} /></div>
+            <div className="text-2xl md:text-4xl font-black mb-1">{legacy.runnersUp + 17}</div>
+            <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-slate-300">Semi-Finals</div>
+          </div>
         </div>
       </div>
 
-      {/* 3. Tournament Group Table (Moved Up) */}
-      <div className="bg-slate-900 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 w-full">
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 md:p-6 border-b border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-          <div>
-            <h3 className="text-white font-black text-lg md:text-xl flex items-center gap-2">
-              <Hash className="text-blue-500" /> Points Table
-            </h3>
-            <div className="flex flex-wrap items-center gap-3 mt-4">
-              <div className="flex-1 min-w-[150px]">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tournament</label>
-                {tournaments && tournaments.length > 0 ? (
-                  <select
-                    value={tournamentName}
-                    onChange={(e) => setTournamentName(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-white text-sm font-bold px-3 py-1.5 rounded-lg w-full focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
-                    aria-label="Tournament Name"
-                  >
-                    <option value="" className="text-slate-500">Select Tournament...</option>
-                    {tournaments.map((t) => (
-                      <option key={t.id} value={t.name} className="bg-slate-900">
-                        {t.name} ({t.year})
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    value={tournamentName}
-                    onChange={(e) => setTournamentName(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-white text-sm font-bold px-3 py-1.5 rounded-lg w-full focus:ring-1 focus:ring-blue-500 outline-none"
-                    placeholder="Enter Tournament Name"
-                    aria-label="Tournament Name"
-                  />
-                )}
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Group</label>
-                <input
-                  value={groupNumber}
-                  onChange={(e) => setGroupNumber(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 text-white text-sm font-bold px-3 py-1.5 rounded-lg w-20 text-center focus:ring-1 focus:ring-blue-500 outline-none"
-                  aria-label="Group Number"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        {canEdit && (
-          <div className="flex gap-2 w-full md:w-auto">
-            <button
-              onClick={handleSaveTable}
-              disabled={!isDirty || isSaving}
-              className={`px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 text-xs md:text-sm transition-all flex-1 md:flex-none shadow-lg ${
-                isDirty && !isSaving
-                  ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30 text-white cursor-pointer'
-                  : 'bg-slate-700 text-slate-500 cursor-not-allowed shadow-none'
-              }`}
-              aria-label="Save Table"
-            >
-              {isSaving ? (
-                <><Loader2 size={14} className="animate-spin" /> Saving...</>
-              ) : (
-                <>Save{isDirty && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block ml-0.5" />}</>
-              )}
-            </button>
-            <button
-              onClick={handleAddRow}
-              className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 text-xs md:text-sm transition-colors flex-1 md:flex-none shadow-lg shadow-sky-900/20"
-            >
-              <Plus size={16} /> Add
-            </button>
-          </div>
-        )}
+      {/* 3. Weekly Performers (Infinite Loop Carousel) */}
+      <div className="w-full flex flex-col justify-center space-y-4 overflow-hidden bg-slate-900 md:p-10 rounded-[2.5rem] border border-slate-800 shadow-2xl relative">
+        {/* Background Accents */}
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-sky-400/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2"></div>
 
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-xs md:text-sm min-w-[600px]">
-            <thead className="bg-[#1e3a8a] text-white font-bold uppercase text-[10px] md:text-xs">
-              <tr>
-                <th className="p-2 md:p-4 text-left">#</th>
-                <th className="p-2 md:p-4 text-left min-w-[120px]">Team</th>
-                <th className="p-2 md:p-4 text-center">Mat</th>
-                <th className="p-2 md:p-4 text-center">Won</th>
-                <th className="p-2 md:p-4 text-center">Lost</th>
-                <th className="p-2 md:p-4 text-center hidden sm:table-cell">N/R</th>
-                <th className="p-2 md:p-4 text-center text-yellow-300">Pts</th>
-                <th className="p-2 md:p-4 text-center text-slate-300 font-mono text-[10px] md:text-xs">Win %</th>
-                <th className="p-2 md:p-4 text-center hidden sm:table-cell">Net RR</th>
-                <th className="p-2 md:p-4 w-8"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {tableData.length === 0 ? (
-                <tr><td colSpan={10} className="p-8 text-center text-slate-500 italic">No teams added to the group table yet.</td></tr>
-              ) : (
-                tableData.map((row, idx) => (
-                  <tr key={row.id || idx} className="bg-slate-900 hover:bg-slate-800 transition-colors group">
-                    <td className="p-2 md:p-4 text-slate-400 font-mono">{idx + 1}</td>
-                    <td className="p-2 md:p-4">
-                      {canEdit ? (
-                      <select
-                        value={row.teamId}
-                        onChange={(e) => handleTeamSelect(row.id, e.target.value)}
-                        className="bg-transparent text-white font-bold w-full outline-none cursor-pointer text-xs md:text-sm"
-                        aria-label="Select team for table row"
-                      >
-                        <option value="" className="bg-slate-900 text-slate-500">Select...</option>
-                        {(!tableData.some(t => t.teamId === 'home' && t.id !== row.id)) && (
-                          <option value="home" className="bg-slate-900 text-white font-bold">Indian Strikers</option>
-                        )}
-                        {opponents
-                          .filter(opp => !tableData.some(t => t.teamId === opp.id && t.id !== row.id))
-                          .map(opp => (
-                            <option key={opp.id} value={opp.id} className="bg-slate-900 text-white">{opp.name}</option>
-                          ))
-                        }
-                      </select>
-                    ) : (
-                      <span className="text-white font-bold text-xs md:text-sm">{row.teamName || '—'}</span>
-                    )}
-                    </td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.matches} onChange={(e) => handleTableChange(row.id, 'matches', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-white outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Matches played" /></td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.won} onChange={(e) => handleTableChange(row.id, 'won', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-sky-400 font-bold outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Matches won" /></td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.lost} onChange={(e) => handleTableChange(row.id, 'lost', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-red-400 font-bold outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Matches lost" /></td>
-                    <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="number" value={row.nr} onChange={(e) => handleTableChange(row.id, 'nr', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-slate-400 outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="No result matches" /></td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.points} onChange={(e) => handleTableChange(row.id, 'points', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-yellow-400 font-black text-sm md:text-lg outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Points" /></td>
-                    <td className="p-2 md:p-4 text-center text-slate-300 font-mono text-[10px] md:text-xs">{calculateWinPercentage(row.won, row.matches)}</td>
-                    <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="text" value={row.nrr} onChange={(e) => handleTableChange(row.id, 'nrr', e.target.value)} readOnly={!canEdit} className={`w-16 bg-transparent text-center text-blue-300 font-mono outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Net run rate" /></td>
-                    <td className="p-2 md:p-4 text-center">
-                      {canEdit && <button onClick={() => handleDeleteRow(row.id)} className="text-slate-600 hover:text-red-500 transition-all" title="Delete Team" aria-label="Delete Team"><Trash2 size={16} /></button>}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 px-6">
+          <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-3 uppercase tracking-tighter italic">
+            <Zap className="text-sky-400 fill-sky-400" size={24} /> Weekly Performers
+          </h3>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-400/60 bg-sky-400/10 px-4 py-1.5 rounded-full border border-sky-400/20">Elite Performance Cycle</span>
+        </div>
+
+        <div className="relative z-10">
+          {latestMatchHeroes.length === 0 ? (
+            <div className="bg-slate-800/50 rounded-3xl p-12 text-center text-slate-500 font-bold border border-white/5 mx-6">
+              Recruiting top talent. No performers this week.
+            </div>
+          ) : (
+            <WeeklyPerformerCarousel 
+              performers={latestMatchHeroes} 
+              onSelectHero={(data) => setSelectedHero(data)} 
+            />
+          )}
         </div>
       </div>
 
@@ -517,9 +239,9 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
         <div className="absolute top-0 right-0 p-4 opacity-5"><Target size={120} /></div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6 relative z-10 gap-3">
-          <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
-            <Crown size={20} className="text-yellow-500 fill-yellow-500" />
-            {statsMode === 'career' ? 'All-Time Leaders' : 'Season Leaders'}
+          <h3 className="text-xl md:text-2xl font-black text-slate-900 flex items-center gap-2 uppercase tracking-tight">
+            <Crown size={28} className="text-yellow-500 fill-yellow-500" />
+            Leaderboard
           </h3>
 
           {/* Toggle Switch */}
@@ -604,6 +326,170 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
             </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// --- Carousel Component for Weekly Performers ---
+const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: Player[], onSelectHero: (data: any) => void }) => {
+  const [index, setIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const CARD_WIDTH = 300;
+  const CARD_GAP = 32;
+  const TOTAL_WIDTH = CARD_WIDTH + CARD_GAP;
+
+  // Auto-Play
+  useEffect(() => {
+    if (isPaused || performers.length <= 1) return;
+    const interval = setInterval(() => {
+      setIndex(prev => prev + 1);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isPaused, performers.length]);
+
+  const getPlayerIndex = (virtualIndex: number) => {
+    const len = performers.length;
+    if (len === 0) return 0;
+    return ((virtualIndex % len) + len) % len;
+  };
+
+  const handleDragEnd = (_: any, info: any) => {
+    const swipeThreshold = 50;
+    const velocityThreshold = 500;
+    if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+      setIndex(prev => prev + 1);
+    } else if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+      setIndex(prev => prev - 1);
+    }
+    setIsPaused(true);
+    setTimeout(() => setIsPaused(false), 3000);
+  };
+
+  return (
+    <div 
+      className="relative w-full h-[480px] flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div className="relative w-full h-full flex items-center justify-center">
+        <motion.div
+          className="flex items-center absolute"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragStart={() => setIsPaused(true)}
+          onDragEnd={handleDragEnd}
+          animate={{ x: -index * TOTAL_WIDTH }}
+          transition={{ type: "spring", stiffness: 150, damping: 20, mass: 1 }}
+        >
+          {/* Virtual Window of 11 cards */}
+          {Array.from({ length: 11 }).map((_, i) => {
+            const virtualPos = index + (i - 5);
+            const playerIdx = getPlayerIndex(virtualPos);
+            const player = performers[playerIdx];
+            if (!player) return null;
+
+            const isActive = virtualPos === index;
+            const distance = Math.abs(virtualPos - index);
+
+            return (
+              <motion.div
+                key={virtualPos}
+                style={{
+                  width: CARD_WIDTH,
+                  position: 'absolute',
+                  left: virtualPos * TOTAL_WIDTH - (CARD_WIDTH / 2),
+                  x: 0
+                }}
+                animate={{
+                  scale: isActive ? 1.05 : Math.max(0.85, 1 - distance * 0.1),
+                  opacity: isActive ? 1 : Math.max(0.4, 1 - distance * 0.3),
+                  filter: isActive ? "blur(0px)" : `blur(${Math.min(3, distance * 1.5)}px)`,
+                  zIndex: 10 - distance,
+                  rotateY: isActive ? 0 : (virtualPos < index ? 15 : -15),
+                  y: isActive ? -15 : 0
+                }}
+                transition={{ type: "spring", stiffness: 200, damping: 25 }}
+                className={isActive ? 'pointer-events-auto' : 'pointer-events-none'}
+              >
+                <div 
+                  onClick={() => isActive && onSelectHero({
+                    player,
+                    statsType: player.role === 'Bowler' ? 'bowling' : 'batting',
+                    statsValue: player.role === 'Bowler' ? '3/24' : '48 (26)'
+                  })}
+                  title={`View ${player.name}'s Hero Poster`}
+                  aria-label={`View performance poster for ${player.name}`}
+                  className="bg-slate-950 rounded-[3rem] p-8 border border-white/10 shadow-2xl relative overflow-hidden group transition-all"
+                >
+                  {/* Jersey Watermark - Tilted Background */}
+                  <div className="absolute inset-0 opacity-[0.04] pointer-events-none rotate-[20deg] scale-150 select-none">
+                    <div className="grid grid-cols-4 gap-6 p-4">
+                      {Array.from({length: 12}).map((_, i) => (
+                        <div key={i} className="text-white font-black text-6xl italic">7</div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Gradient Accents */}
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-blue-600/20 to-transparent"></div>
+                  
+                  <div className="relative z-10 flex flex-col items-center">
+                    <div className="relative mb-8">
+                      <div className="absolute inset-0 bg-sky-400 blur-[40px] opacity-10 group-hover:opacity-30 transition-opacity"></div>
+                      <img 
+                        src={player.avatarUrl} 
+                        className="w-36 h-44 rounded-[2.5rem] object-cover border-2 border-white/20 shadow-2xl relative z-10 transition-transform group-hover:scale-105" 
+                        alt={player.name} 
+                      />
+                      <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-sky-400 text-slate-950 text-[10px] font-black px-6 py-1.5 rounded-full border-[3px] border-slate-950 uppercase tracking-tighter z-20 shadow-xl whitespace-nowrap">
+                        {player.role === 'Bowler' ? 'Force Multiplier' : 'Strike Engine'}
+                      </div>
+                    </div>
+
+                    <h4 className="font-black text-white text-2xl uppercase tracking-tighter italic text-center mb-1 leading-none">{player.name}</h4>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">{player.role}</p>
+
+                    <div className="grid grid-cols-2 gap-4 w-full">
+                      <div className="bg-white/5 rounded-3xl p-4 border border-white/5 backdrop-blur-md">
+                        <p className="text-[9px] uppercase font-bold text-slate-500 mb-1 tracking-widest">Impact</p>
+                        <p className="font-black text-sky-400 text-xl leading-none">
+                          {player.role === 'Bowler' ? '3/24' : '48(26)'}
+                        </p>
+                      </div>
+                      <div className="bg-white/5 rounded-3xl p-4 border border-white/5 backdrop-blur-md">
+                        <p className="text-[9px] uppercase font-bold text-slate-500 mb-1 tracking-widest">SR/ECON</p>
+                        <p className="font-black text-white text-xl leading-none">
+                          {player.role === 'Bowler' ? '6.00' : '184.6'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </div>
+
+      <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 hidden md:flex justify-between pointer-events-none">
+        <button 
+          onClick={() => setIndex(prev => prev - 1)}
+          title="Previous Performer"
+          aria-label="View previous weekly performer"
+          className="w-12 h-12 rounded-full bg-slate-900/80 border border-white/10 text-white flex items-center justify-center hover:bg-sky-500 transition-all pointer-events-auto active:scale-90"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <button 
+          onClick={() => setIndex(prev => prev + 1)}
+          title="Next Performer"
+          aria-label="View next weekly performer"
+          className="w-12 h-12 rounded-full bg-slate-900/80 border border-white/10 text-white flex items-center justify-center hover:bg-sky-500 transition-all pointer-events-auto active:scale-90"
+        >
+          <ChevronRight size={24} />
+        </button>
+      </div>
     </div>
   );
 };
