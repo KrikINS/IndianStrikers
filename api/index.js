@@ -829,9 +829,9 @@ app.get('/api/tournament-performers', async (req, res) => {
     const latestTournament = tournaments[0];
     const previousTournament = tournaments[1];
 
-    // Helper to fetch and filter
-    const getPerformersForTournament = async (tId, manualOnly = false) => {
-      let query = supabase
+    // Helper to fetch and filter Top 10 Standout Performances
+    const getPerformersForTournament = async (tId) => {
+      const { data, error } = await supabase
         .from('player_match_stats')
         .select(`
           *,
@@ -841,25 +841,32 @@ app.get('/api/tournament-performers', async (req, res) => {
         .eq('matches.tournament_id', tId)
         .eq('matches.status', 'completed');
 
-      if (manualOnly) query = query.eq('is_hero', true);
-
-      const { data, error } = await query;
       if (error || !data) return [];
 
       return data.filter(row => {
-        const runs = Number(row.runs || 0);
-        const balls = Number(row.balls || 0);
-        const wkts = Number(row.wickets || 0);
-        const overs = Number(row.overs_bowled || 0);
-        const runsConceded = Number(row.runs_conceded || 0);
         const isHero = !!row.is_hero;
-        const econ = overs > 0 ? (runsConceded / overs) : 99;
-
+        const runs = Number(row.runs || 0);
+        const wkts = Number(row.wickets || 0);
+        const balls = Number(row.balls || 0);
+        
         if (isHero) return true;
         if (balls === 0 && wkts === 0) return false; // Exclude DNB
 
-        return (runs >= 40) || (wkts >= 2) || (runs >= 30 && wkts >= 1) || (econ <= 7 && (wkts >= 1 || overs >= 2));
-      }).map(row => ({
+        // Broaden catch for Top 10: Any meaningful contribution
+        return (runs >= 20) || (wkts >= 1);
+      })
+      .sort((a,b) => {
+        // Priority 1: Manual Star Picks
+        if (a.is_hero && !b.is_hero) return -1;
+        if (!a.is_hero && b.is_hero) return 1;
+
+        // Priority 2: Simple Performance Score (Runs + Wickets * 20)
+        const scoreA = Number(a.runs) + (Number(a.wickets) * 20);
+        const scoreB = Number(b.runs) + (Number(b.wickets) * 20);
+        return scoreB - scoreA;
+      })
+      .slice(0, 10)
+      .map(row => ({
         id: row.id,
         playerId: row.player_id,
         name: row.players.name,
@@ -878,16 +885,16 @@ app.get('/api/tournament-performers', async (req, res) => {
     let performers = await getPerformersForTournament(latestTournament.id);
     let isSeasonOpener = false;
 
-    // Fallback logic
+    // Fallback logic: If current tournament is empty, show Top 10 from previous
     if (performers.length === 0) {
       if (previousTournament) {
-        performers = await getPerformersForTournament(previousTournament.id, true);
+        performers = await getPerformersForTournament(previousTournament.id);
       }
       isSeasonOpener = true;
     }
 
     res.json({
-      tournamentName: latestTournament.name,
+      tournamentName: (isSeasonOpener && previousTournament) ? previousTournament.name : latestTournament.name,
       performers,
       isSeasonOpener
     });
