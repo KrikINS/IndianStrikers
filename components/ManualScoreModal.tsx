@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Save, Award, Zap, Target, ChevronDown } from 'lucide-react';
+import { X, Save, Award, Zap, Target, ChevronDown, Star } from 'lucide-react';
 import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types';
 
 interface ManualScoreModalProps {
@@ -140,7 +140,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
       if (existing) {
         newBatting = newBatting.map(b => b.playerId === pId ? { ...b, [field]: value } : b);
       } else {
-        newBatting.push({ playerId: pId, name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', [field]: value });
+        newBatting.push({ playerId: pId, name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', isManualHero: false, [field]: value });
       }
       return { ...prev, [key]: { ...prev[key], batting: newBatting } };
     });
@@ -172,7 +172,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
         return squad.map(p => {
              const entry = scorecard[innKey].batting.find(b => b.playerId === p.id);
              if (entry) return entry;
-             return { playerId: p.id, name: p.name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat' };
+             return { playerId: p.id, name: p.name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', isManualHero: false };
         });
     };
 
@@ -201,17 +201,17 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     const homeBowling = finalScorecard[homeTeamBowlingInnings === 1 ? 'innings1' : 'innings2'];
 
     homeBatting.batting.forEach(b => {
-      performerMap.set(b.playerId, { playerId: b.playerId, playerName: b.name, runs: b.runs, balls: b.balls, fours: b.fours, sixes: b.sixes, isNotOut: b.outHow === 'Not Out', wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0 });
+      performerMap.set(b.playerId, { playerId: b.playerId, playerName: b.name, runs: b.runs, balls: b.balls, fours: b.fours, sixes: b.sixes, isNotOut: b.outHow === 'Not Out', is_manual_hero: b.isManualHero, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0 });
     });
     homeBowling.bowling.forEach(b => {
-      const ex = performerMap.get(b.playerId) || { playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false };
+      const ex = performerMap.get(b.playerId) || { playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, is_manual_hero: false };
       performerMap.set(b.playerId, { ...ex, wickets: b.wickets, bowlingRuns: b.runsConceded, bowlingOvers: b.overs, maidens: b.maidens });
     });
 
     (match.homeTeamXI || []).forEach(pid => {
       if (!performerMap.has(pid)) {
         const p = players.find(pl => pl.id === pid);
-        performerMap.set(pid, { playerId: pid, playerName: p?.name || '', runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0 });
+        performerMap.set(pid, { playerId: pid, playerName: p?.name || '', runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, is_manual_hero: false, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0 });
       }
     });
 
@@ -257,6 +257,9 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
         .ps:focus { border-color:#38bdf8; outline:none; }
         .th { font-size:9px; font-weight:900; color:#475569; text-transform:uppercase; letter-spacing:.08em; padding:8px 4px 6px; white-space:nowrap; }
         .td { padding:4px; border-bottom:1px solid rgba(255,255,255,0.04); }
+        .hero-star { transition: all 0.2s; cursor: pointer; }
+        .hero-star:hover { transform: scale(1.2); }
+        .hero-star.active { color: #fbbf24; fill: #fbbf24; filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5)); }
 
         /* ── Modal body ── */
         .compact-modal-body { padding: 12px !important; max-height: 85vh; overflow-y: auto; }
@@ -468,7 +471,19 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                                   const entry = getBattingEntry(activeInnings, p.id);
                                   return (
                                       <tr key={p.id}>
-                                          <td style={{ paddingLeft: '8px' }}>{p.name}</td>
+                                          <td style={{ paddingLeft: '8px' }}>
+                                            <div className="flex items-center gap-2">
+                                              <button
+                                                type="button"
+                                                onClick={() => updateBatting(activeInnings, p.id, p.name, 'isManualHero', !entry.isManualHero)}
+                                                className={`hero-star ${entry.isManualHero ? 'active' : 'text-slate-600'}`}
+                                                title="Mark as Match Hero"
+                                              >
+                                                <Star size={14} fill={entry.isManualHero ? "currentColor" : "none"} />
+                                              </button>
+                                              <span>{p.name}</span>
+                                            </div>
+                                          </td>
                                           <td><input type="number" min="0" title="Runs" className="compact-input" value={entry.runs} onChange={e => updateBatting(activeInnings, p.id, p.name, 'runs', e.target.valueAsNumber || 0)} /></td>
                                           <td><input type="number" min="0" title="Balls" className="compact-input" value={entry.balls} onChange={e => updateBatting(activeInnings, p.id, p.name, 'balls', e.target.valueAsNumber || 0)} /></td>
                                           <td><input type="number" min="0" title="Fours" className="compact-input" value={entry.fours} onChange={e => updateBatting(activeInnings, p.id, p.name, 'fours', e.target.valueAsNumber || 0)} /></td>

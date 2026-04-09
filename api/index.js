@@ -353,7 +353,7 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
             five_wickets: Number(perf.wickets) >= 5 ? 1 : 0,
             wides: Number(perf.wides || 0),
             no_balls: Number(perf.no_balls || 0),
-            is_hero: perf.isHero || false,
+            is_manual_hero: perf.is_manual_hero || false,
             updated_at: new Date().toISOString()
           }], { onConflict: 'match_id, player_id' });
 
@@ -829,45 +829,47 @@ app.get('/api/tournament-performers', async (req, res) => {
     const latestTournament = tournaments[0];
     const previousTournament = tournaments[1];
 
-    // Helper to fetch and filter Top 10 Standout Performances
-    const getPerformersForTournament = async (tId) => {
-      // Use explicit relationship syntax to avoid naming conflicts
-      const { data, error } = await supabase
+    // Helper to fetch and filter Top 7 Standout Performances
+    const getPerformersForTournament = async (tId, fallbackToMatch = false) => {
+      let query = supabase
         .from('player_match_stats')
         .select(`
           *,
           matches:match_id!inner ( id, date, status, tournament_id ),
           players:player_id!inner ( id, name, role, avatar_url )
-        `)
-        .eq('matches.tournament_id', tId)
-        .eq('matches.status', 'completed');
+        `);
 
-      if (error) {
-        console.error(`[SQL Error] Fetching performers for ${tId}:`, error.message);
-        return [];
+      if (tId) {
+        query = query.eq('matches.tournament_id', tId);
       }
+      
+      query = query.eq('matches.status', 'completed');
+
+      const { data, error } = await query;
+      if (error) return [];
 
       const results = (data || []).filter(row => {
-        const isHero = !!row.is_hero;
+        const isHero = !!row.is_manual_hero;
         const runs = Number(row.runs || 0);
         const wkts = Number(row.wickets || 0);
-        const balls = Number(row.balls || 0);
+        const overs = Number(row.overs_bowled || 0);
+        const runsC = Number(row.runs_conceded || 0);
+        const econ = (overs > 0) ? (runsC / overs) : 99;
         
         if (isHero) return true;
-        // Include any contribution for now to ensure it's not empty
-        return (runs > 0) || (wkts > 0) || (balls > 0);
+        
+        // Priority 2 thresholds
+        return (runs >= 40) || (wkts >= 2) || (overs >= 2 && econ <= 7.0);
       })
       .sort((a,b) => {
-        // Priority 1: Manual Star Picks (Hero)
-        if (a.is_hero && !b.is_hero) return -1;
-        if (!a.is_hero && b.is_hero) return 1;
+        if (a.is_manual_hero && !b.is_manual_hero) return -1;
+        if (!a.is_manual_hero && b.is_manual_hero) return 1;
 
-        // Priority 2: Simple Performance Score
-        const scoreA = (Number(a.runs || 0)) + (Number(a.wickets || 0) * 25);
-        const scoreB = (Number(b.runs || 0)) + (Number(b.wickets || 0) * 25);
+        const scoreA = (Number(a.runs || 0)) + (Number(a.wickets || 0) * 30);
+        const scoreB = (Number(b.runs || 0)) + (Number(b.wickets || 0) * 30);
         return scoreB - scoreA;
       })
-      .slice(0, 10)
+      .slice(0, 7)
       .map(row => ({
         id: row.id,
         playerId: row.player_id,
@@ -879,27 +881,34 @@ app.get('/api/tournament-performers', async (req, res) => {
         wickets: Number(row.wickets || 0),
         bowlingRuns: Number(row.runs_conceded || 0),
         bowlingOvers: Number(row.overs_bowled || 0),
-        isHero: !!row.is_hero,
+        isHero: !!row.is_manual_hero,
         matchDate: row.matches.date
       }));
 
-      console.log(`[Performers Engine] Found ${results.length} performers for T-ID: ${tId}`);
       return results;
     };
 
     let performers = await getPerformersForTournament(latestTournament.id);
     let isSeasonOpener = false;
 
-    // Fallback logic: If current tournament is empty, show Top 10 from previous
+    // Fallback logic: If tournament is empty, find most recent completed match regardless of tournament
     if (performers.length === 0) {
-      if (previousTournament) {
-        performers = await getPerformersForTournament(previousTournament.id);
+      const { data: recentMatch } = await supabase
+        .from('matches')
+        .select('id, tournament_id')
+        .eq('status', 'completed')
+        .order('date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (recentMatch) {
+         performers = await getPerformersForTournament(recentMatch.tournament_id);
       }
       isSeasonOpener = true;
     }
 
     res.json({
-      tournamentName: (isSeasonOpener && previousTournament) ? previousTournament.name : latestTournament.name,
+      tournamentName: latestTournament.name,
       performers,
       isSeasonOpener
     });
