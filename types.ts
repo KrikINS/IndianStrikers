@@ -50,6 +50,7 @@ export interface Performer {
   wides?: number;
   no_balls?: number;
   outHow?: string;
+  is_hero?: boolean;
 }
 
 export interface InningsBattingEntry {
@@ -62,6 +63,7 @@ export interface InningsBattingEntry {
   outHow: string;
   bowlerId?: string;
   fielderId?: string;
+  is_hero?: boolean;
 }
 
 export interface InningsBowlingEntry {
@@ -73,6 +75,7 @@ export interface InningsBowlingEntry {
   wickets: number;
   wides?: number;
   no_balls?: number;
+  is_hero?: boolean;
 }
 
 export interface InningsExtras {

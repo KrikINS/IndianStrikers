@@ -65,8 +65,8 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
 
   // ─── Bowling rows state: separate from scorecard for WD/NB/DOTS columns ────
   const [bowlingRows, setBowlingRows] = useState<Record<1 | 2, any[]>>({
-    1: Array(2).fill(null).map(() => ({ playerId: '', overs: '', maidens: '', runs: '', wickets: '', wd: '', nb: '' })),
-    2: Array(2).fill(null).map(() => ({ playerId: '', overs: '', maidens: '', runs: '', wickets: '', wd: '', nb: '' })),
+    1: Array(2).fill(null).map(() => ({ playerId: '', overs: '', maidens: '', runs: '', wickets: '', wd: '', nb: '', is_hero: false })),
+    2: Array(2).fill(null).map(() => ({ playerId: '', overs: '', maidens: '', runs: '', wickets: '', wd: '', nb: '', is_hero: false })),
   });
 
   const updateBowlingRow = (inn: 1 | 2, idx: number, field: string, value: any) => {
@@ -79,7 +79,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
   const addBowlingRow = (inn: 1 | 2) => {
     setBowlingRows(prev => ({
         ...prev,
-        [inn]: [...prev[inn], { playerId: '', overs: '', maidens: '', runs: '', wickets: '', wd: '', nb: '' }]
+        [inn]: [...prev[inn], { playerId: '', overs: '', maidens: '', runs: '', wickets: '', wd: '', nb: '', is_hero: false }]
     }));
   };
 
