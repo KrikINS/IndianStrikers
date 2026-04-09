@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { X, Download, FileText, Image as ImageIcon, Share2, Target, Zap, Trophy, MapPin, Calendar, ExternalLink } from 'lucide-react';
+import React, { useRef, useState, useMemo } from 'react';
+import { X, Download, FileText, Image as ImageIcon, Share2, Target, Zap, Trophy, MapPin, Calendar, ExternalLink, ChevronRight, Activity, Award } from 'lucide-react';
 import { ScheduledMatch, FullScorecardData, InningsData, Player, OpponentTeam, Ground } from '../types';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -13,15 +13,14 @@ interface ScorecardViewModalProps {
     grounds?: Ground[];
 }
 
-const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({ 
-    match, 
-    isOpen, 
+const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
+    match,
+    isOpen,
     onClose,
     players = [],
     allOpponents = [],
     grounds = []
 }) => {
-    const [activeInnings, setActiveInnings] = useState<1 | 2>(1);
     const inn1Ref = useRef<HTMLDivElement>(null);
     const inn2Ref = useRef<HTMLDivElement>(null);
     const [isExporting, setIsExporting] = useState(false);
@@ -29,7 +28,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
     if (!isOpen || !match.scorecard) return null;
 
     const scorecard = match.scorecard;
-    const isHomeBattingFirst = match.isHomeBattingFirst ?? true; 
+    const isHomeBattingFirst = match.isHomeBattingFirst ?? true;
 
     const opponent = allOpponents.find(o => o.id === match.opponentId);
     const opponentName = opponent?.name || match.opponentName || 'Opponent';
@@ -42,41 +41,100 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
     // Helper to resolve player name from ID if name is missing
     const resolvePlayerName = (name: string | undefined, id: string | undefined, teamType: 'home' | 'opponent') => {
-        if (name && !name.includes('_') && !name.match(/^[a-z0-9-]{10,}$/i)) return name; // Already a decent name
-        if (!id) return name || '-';
+        if (!id && !name) return '-';
+
+        const searchId = id || name;
 
         if (teamType === 'home') {
-            const p = players.find(p => p.id === id);
-            return p?.name || name || 'Unknown Player';
+            const p = players.find(p => p.id === searchId || p.player_id === searchId || p.name === searchId);
+            if (p) return p.name;
         } else {
-            const oppPlayer = opponent?.players?.find(p => p.id === id);
-            return oppPlayer?.name || name || id || 'Opponent Player';
+            // Check opponent roster
+            const oppPlayer = opponent?.players?.find(p => p.id === searchId || p.name === searchId);
+            if (oppPlayer) return oppPlayer.name;
         }
+
+        // Clean up display if still not found
+        if (name && !name.includes('-') && isNaN(Number(name))) return name;
+        return teamType === 'home' ? "Indian Strikers Player" : (opponentName + " Player");
     };
 
-    const getInningsTitle = (inn: 1 | 2) => {
-        const team = inn === 1 ? innings1BattingTeam : innings2BattingTeam;
-        const data = inn === 1 ? scorecard.innings1 : scorecard.innings2;
-        return `${team.toUpperCase()}: ${data.totalRuns}/${data.totalWickets} (${data.totalOvers || 0} ov)`;
+    // New helper to render broadcast-style status
+    const renderStatus = (b: any, isBattingHome: boolean) => {
+        if (b.outHow === 'Not Out') return <span className="text-emerald-600 font-bold">Not Out</span>;
+        if (b.outHow === 'Did Not Bat') return <span className="text-slate-400">DNB</span>;
+        if (b.outHow === 'Retired Hurt') return <span className="text-slate-500">Retired Hurt</span>;
+
+        const fielder = b.fielderId ? resolvePlayerName(undefined, b.fielderId, isBattingHome ? 'opponent' : 'home') : null;
+        const bowler = b.bowlerId ? resolvePlayerName(undefined, b.bowlerId, isBattingHome ? 'opponent' : 'home') : null;
+
+        if (b.outHow === 'Caught' || b.outHow === 'c') {
+            return <span>c {fielder} b {bowler}</span>;
+        }
+        if (b.outHow === 'Bowled' || b.outHow === 'b') {
+            return <span>b {bowler}</span>;
+        }
+        if (b.outHow === 'LBW' || b.outHow === 'lbw') {
+            return <span>lbw b {bowler}</span>;
+        }
+        if (b.outHow === 'Run Out' || b.outHow === 'run out') {
+            return <span>run out ({fielder || 'sub'})</span>;
+        }
+        if (b.outHow === 'Stumped' || b.outHow === 'st') {
+            return <span>st {fielder} b {bowler}</span>;
+        }
+        if (b.outHow === 'Hit Wicket') {
+            return <span>hit wicket b {bowler}</span>;
+        }
+
+        return <span>{b.outHow} {bowler ? `b ${bowler}` : ''}</span>;
+    };
+
+    const calculateTotalOvers = (bowlingData: any[]) => {
+        if (!bowlingData || bowlingData.length === 0) return "0.0";
+        let totalBalls = 0;
+        bowlingData.forEach(b => {
+            const overs = Number(b.overs || 0);
+            const wholeOvers = Math.floor(overs);
+            const extraBalls = Math.round((overs % 1) * 10);
+            totalBalls += (wholeOvers * 6) + extraBalls;
+        });
+        return `${Math.floor(totalBalls / 6)}.${totalBalls % 6}`;
+    };
+
+    const calculateTotalExtras = (data: InningsData) => {
+        const ext = data.extras || {};
+        const sum = (Number((ext as any).wide || (ext as any).wides || 0)) +
+            (Number((ext as any).no_ball || (ext as any).noBall || 0)) +
+            (Number(ext.legByes || 0)) +
+            (Number(ext.byes || 0));
+
+        if (sum > 0) return sum;
+
+        // Fallback: Sum from bowling attack
+        let bowlExtras = 0;
+        data.bowling?.forEach(b => {
+            bowlExtras += (Number((b as any).wides || (b as any).wide || 0)) +
+                (Number((b as any).no_balls || (b as any).noBall || 0));
+        });
+        return bowlExtras || 0;
     };
 
     const downloadAsImage = async () => {
         setIsExporting(true);
         try {
-            const refs = [inn1Ref, inn2Ref];
-            for (let i = 0; i < 2; i++) {
-                const ref = refs[i];
-                if (ref.current) {
-                    const canvas = await html2canvas(ref.current, {
-                        scale: 2,
-                        backgroundColor: '#ffffff',
-                        useCORS: true,
-                    });
-                    const link = document.createElement('a');
-                    link.download = `Scorecard_Innings_${i + 1}_${match.opponentName || 'Match'}.png`;
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                }
+            // Capture the first innings by default or adjust to capture the whole scrollable container
+            const ref = inn1Ref; 
+            if (ref.current) {
+                const canvas = await html2canvas(ref.current, {
+                    scale: 3,
+                    backgroundColor: '#ffffff', // Capture on white
+                    useCORS: true,
+                });
+                const link = document.createElement('a');
+                link.download = `Full_Scorecard_${match.opponentName || 'Match'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
             }
         } catch (err) {
             console.error('Failed to export images:', err);
@@ -85,289 +143,231 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
         }
     };
 
-    const downloadAsPDF = async () => {
-        setIsExporting(true);
-        try {
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const refs = [inn1Ref, inn2Ref];
-
-            for (let i = 0; i < 2; i++) {
-                const ref = refs[i];
-                if (ref.current) {
-                    const canvas = await html2canvas(ref.current, {
-                        scale: 2,
-                        backgroundColor: '#ffffff',
-                        useCORS: true,
-                    });
-                    const imgData = canvas.toDataURL('image/png');
-                    const imgProps = pdf.getImageProperties(imgData);
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-                    if (i > 0) pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                }
-            }
-            pdf.save(`Full_Scorecard_${match.opponentName || 'Match'}.pdf`);
-        } catch (err) {
-            console.error('Failed to export PDF:', err);
-        } finally {
-            setIsExporting(false);
-        }
-    };
-
-    const renderInnings = (inn: 1 | 2, ref: React.RefObject<HTMLDivElement>) => {
+    const renderInningsContent = (inn: 1 | 2, ref: React.RefObject<HTMLDivElement | null>) => {
         const data = inn === 1 ? scorecard.innings1 : scorecard.innings2;
         const battingTeam = inn === 1 ? innings1BattingTeam : innings2BattingTeam;
         const bowlingTeam = inn === 1 ? innings2BattingTeam : innings1BattingTeam;
+        const isBattingHome = inn === 1 ? isHomeBattingFirst : !isHomeBattingFirst;
+
+        const extrasCount = (data as any).extras_total || calculateTotalExtras(data);
+        const autoOvers = calculateTotalOvers(data.bowling);
+        const displayOvers = (data as any).total_overs || (data.totalOvers && Number(data.totalOvers) !== 0 ? data.totalOvers : autoOvers);
 
         return (
-            <div ref={ref} className="bg-white p-4 md:p-8 rounded-2xl md:rounded-3xl border border-slate-200 shadow-2xl space-y-6 md:space-y-8 min-w-0">
-                {/* Header Info */}
-                <div className="flex justify-between items-start border-b border-slate-100 pb-6 shrink-0">
+            <div ref={ref} className="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4">
+                {/* Team Sub-Header */}
+                <div className="flex justify-between items-end border-b border-slate-100 pb-4">
                     <div>
-                        <h2 className="text-3xl font-black text-black graduate tracking-tighter uppercase italic">{battingTeam}</h2>
-                        <div className="flex items-center gap-4 mt-2">
-                             <div className="flex items-center gap-1.5 text-black text-[10px] font-black uppercase tracking-widest">
-                                <Trophy size={14} className="text-blue-700" /> {match.tournament}
-                             </div>
-                             <div className="flex items-center gap-1.5 text-black text-[10px] font-black uppercase tracking-widest">
-                                <MapPin size={14} className="text-blue-700" /> {groundDisplay}
-                             </div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-1.5 h-6 bg-emerald-600 rounded-full"></div>
+                            <h3 className="text-xl font-black text-slate-900 italic tracking-tight">{battingTeam.toUpperCase()} INNINGS</h3>
+                        </div>
+                        <div className="flex items-center gap-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                            <span className="flex items-center gap-1"><Award size={12} className="text-emerald-600" /> {match.matchFormat || 'T20'} LEAGUE</span>
+                            <span className="flex items-center gap-1"><MapPin size={12} className="text-emerald-600" /> {groundDisplay}</span>
                         </div>
                     </div>
                     <div className="text-right">
-                        <div className="text-4xl font-black text-blue-700 graduate">{data.totalRuns}/{data.totalWickets}</div>
-                        <div className="text-xs font-black text-black uppercase tracking-widest mt-1">{data.totalOvers || 0} OVERS</div>
+                        <div className="text-3xl font-black text-slate-900 graduate">{data.totalRuns}/{data.totalWickets}</div>
+                        <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{displayOvers} OVERS</div>
                     </div>
                 </div>
 
-                {/* Batting Table */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-xs font-black text-blue-500 uppercase tracking-[0.2em] border-l-4 border-blue-500 pl-3">
-                        <Target size={16} /> Batting Performance
-                    </div>
-                    <div className="overflow-x-auto rounded-xl border border-slate-100">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-[#1e293b]">
-                                <tr className="text-slate-300 text-[10px] font-black uppercase tracking-widest">
-                                    <th className="py-3 px-4">Batter</th>
-                                    <th className="py-3 px-2">Status</th>
-                                    <th className="py-3 px-2 text-right">R</th>
-                                    <th className="py-3 px-2 text-right">B</th>
-                                    <th className="py-3 px-2 text-right">4s</th>
-                                    <th className="py-3 px-2 text-right">6s</th>
-                                    <th className="py-3 px-4 text-right">SR</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white">
-                                {data.batting.map((b, i) => (
-                                    <tr key={i} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${b.outHow === 'Did Not Bat' ? 'opacity-40' : ''}`}>
-                                        <td className="py-3 px-4 font-bold text-black border-b border-dotted border-slate-300">
-                                            {resolvePlayerName(b.name, b.playerId, inn === 1 ? (isHomeBattingFirst ? 'home' : 'opponent') : (isHomeBattingFirst ? 'opponent' : 'home'))}
-                                        </td>
-                                        <td className="py-3 px-2 text-xs font-medium text-black italic">
-                                            {b.outHow === 'Not Out' ? <span className="text-emerald-700 italic font-black">Not Out</span> : b.outHow}
-                                            {b.bowlerId && <span className="text-[10px] font-black block opacity-80 ml-2 text-blue-700">b {resolvePlayerName(undefined, b.bowlerId, inn === 1 ? (isHomeBattingFirst ? 'opponent' : 'home') : (isHomeBattingFirst ? 'home' : 'opponent'))}</span>}
-                                            {b.fielderId && <span className="text-[10px] font-black block opacity-80 ml-2 text-emerald-700">c {resolvePlayerName(undefined, b.fielderId, inn === 1 ? (isHomeBattingFirst ? 'opponent' : 'home') : (isHomeBattingFirst ? 'home' : 'opponent'))}</span>}
-                                        </td>
-                                        <td className="py-3 px-2 text-right font-black text-black">{b.runs || 0}</td>
-                                        <td className="py-3 px-2 text-right font-black text-black">{b.balls || 0}</td>
-                                        <td className="py-3 px-2 text-right font-black text-black">{b.fours || 0}</td>
-                                        <td className="py-3 px-2 text-right font-black text-black">{b.sixes || 0}</td>
-                                        <td className="py-3 px-4 text-right font-mono font-black text-[10px] text-blue-700">{(b.balls || 0) > 0 ? (((b.runs || 0) / b.balls) * 100).toFixed(1) : '-'}</td>
-                                    </tr>
-                                ))}
-                                <tr className="bg-blue-50/50 font-black text-black border-t-2 border-slate-100">
-                                    <td colSpan={2} className="py-4 px-2 uppercase tracking-widest text-[10px]">
-                                        Extras (wd {(data.extras as any)?.wide || (data.extras as any)?.wides || 0}, 
-                                        nb {(data.extras as any)?.no_ball || (data.extras as any)?.noBall || 0}, 
-                                        lb {data.extras?.legByes || 0}, 
-                                        b {data.extras?.byes || 0})
-                                    </td>
-                                    <td colSpan={5} className="py-4 px-2 text-right text-xl font-black italic graduate text-blue-700">
-                                        {(Number((data.extras as any)?.wide || (data.extras as any)?.wides || 0)) + 
-                                         (Number((data.extras as any)?.no_ball || (data.extras as any)?.noBall || 0)) + 
-                                         (Number(data.extras?.legByes || 0)) + 
-                                         (Number(data.extras?.byes || 0))}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* Bowling Table */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-xs font-black text-blue-500 uppercase tracking-[0.2em] border-l-4 border-emerald-500 pl-3">
-                        <Zap size={16} className="text-emerald-500" /> Bowling Attack
-                    </div>
-                    <div className="overflow-x-auto rounded-xl border border-slate-100">
-                        <table className="w-full text-left text-sm">
-                                    <thead className="bg-[#1e293b]">
-                                        <tr className="text-slate-300 text-[10px] font-black uppercase tracking-widest">
-                                            <th className="py-3 px-4">Bowler</th>
-                                            <th className="py-3 px-2 text-right">O</th>
-                                            <th className="py-3 px-2 text-right">M</th>
-                                            <th className="py-3 px-2 text-right">R</th>
-                                            <th className="py-3 px-2 text-right">W</th>
-                                            <th className="py-3 px-2 text-right">WD</th>
-                                            <th className="py-3 px-2 text-right">NB</th>
-                                            <th className="py-3 px-4 text-right">Econ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white">
-                                        {data.bowling?.filter(b => b.playerId || b.name).map((b, i) => (
-                                            <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                                <td className="py-3 px-4 font-bold text-black">{resolvePlayerName(b.name, b.playerId, inn === 1 ? (isHomeBattingFirst ? 'opponent' : 'home') : (isHomeBattingFirst ? 'home' : 'opponent'))}</td>
-                                                <td className="py-3 px-2 text-right font-black text-black">{b.overs || 0}</td>
-                                                <td className="py-3 px-2 text-right font-black text-black">{b.maidens || 0}</td>
-                                                <td className="py-3 px-2 text-right font-black text-black">{(b as any).runsConceded || (b as any).runs || 0}</td>
-                                                <td className="py-3 px-2 text-right font-black text-emerald-700">{b.wickets || 0}</td>
-                                                <td className="py-3 px-2 text-right font-black text-slate-500">{(b as any).wides || (b as any).wide || 0}</td>
-                                                <td className="py-3 px-2 text-right font-black text-slate-500">{(b as any).no_balls || (b as any).noBall || 0}</td>
-                                                <td className="py-3 px-4 text-right font-mono font-black text-[10px] text-blue-700">
-                                            {(() => {
-                                                const oversVal = Number(b.overs || 0);
-                                                const oversPart = Math.floor(oversVal);
-                                                const ballsPart = Math.round((oversVal % 1) * 10);
-                                                const totalBalls = (oversPart * 6) + ballsPart;
-                                                const runs = (b as any).runsConceded || (b as any).runs || 0;
-                                                return totalBalls > 0 ? ((runs * 6) / totalBalls).toFixed(2) : '-';
-                                            })()}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* FOW Timeline */}
-                {data.fallOfWickets && (
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                        <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 flex items-center gap-2">
-                             Fall of Wickets
+                <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4">
+                    {/* Batting Card */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between px-2">
+                             <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Batting Performance</span>
+                             <span className="text-[10px] text-emerald-600 font-bold italic">Max Overs: {(match as any).overs || '20'}</span>
                         </div>
-                        <p className="text-xs text-slate-700 leading-relaxed italic">
-                            {data.fallOfWickets}
-                        </p>
+                        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                            <table className="w-full text-left text-xs">
+                                <thead>
+                                    <tr className="bg-slate-950 text-white text-[9px] font-black uppercase tracking-widest">
+                                        <th className="py-2 px-3">Batter</th>
+                                        <th className="py-2 px-3">Status</th>
+                                        <th className="py-2 px-2 text-center w-10">R</th>
+                                        <th className="py-2 px-2 text-center w-10">B</th>
+                                        <th className="py-2 px-2 text-center w-8">4s</th>
+                                        <th className="py-2 px-2 text-center w-8">6s</th>
+                                        <th className="py-2 px-3 text-right">SR</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.batting.map((b, i) => {
+                                        const isDNB = b.outHow === 'Did Not Bat' || (!b.runs && !b.balls && !b.outHow);
+                                        return (
+                                            <tr key={i} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${isDNB ? 'opacity-30' : ''}`}>
+                                                <td className="py-[6px] px-3 font-bold text-slate-900 whitespace-nowrap">
+                                                    {resolvePlayerName(b.name, b.playerId, isBattingHome ? 'home' : 'opponent')}
+                                                </td>
+                                                <td className="py-[6px] px-3 text-[10px] font-medium text-slate-600 italic">
+                                                    {renderStatus(b, isBattingHome)}
+                                                </td>
+                                                <td className="py-[6px] px-2 text-center font-black text-slate-900">{b.runs || 0}</td>
+                                                <td className="py-[6px] px-2 text-center text-slate-500 font-bold">{b.balls || 0}</td>
+                                                <td className="py-[6px] px-2 text-center text-slate-500">{b.fours || 0}</td>
+                                                <td className="py-[6px] px-2 text-center text-slate-500">{b.sixes || 0}</td>
+                                                <td className="py-[6px] px-3 text-right font-black text-[10px] text-emerald-600">{(b.balls || 0) > 0 ? (((b.runs || 0) / b.balls) * 100).toFixed(1) : '-'}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                    <tr className="bg-slate-50 font-black text-slate-900 border-t border-slate-200">
+                                        <td colSpan={2} className="py-2 px-3 uppercase tracking-widest text-[9px] text-slate-500">
+                                            EXTRAS (Wd {Number((data.extras as any)?.wide || (data.extras as any)?.wides || 0)}, Nb {Number((data.extras as any)?.no_ball || (data.extras as any)?.noBall || 0)}, Lb {data.extras?.legByes || 0}, B {data.extras?.byes || 0})
+                                        </td>
+                                        <td colSpan={5} className="py-2 px-3 text-right text-lg font-black italic graduate text-emerald-600">
+                                            {extrasCount}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                )}
+
+                    {/* Bowling Card */}
+                    <div className="space-y-4">
+                        <div className="flex items-center px-2">
+                             <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Bowling Attack</span>
+                        </div>
+                        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                            <table className="w-full text-left text-xs">
+                                <thead>
+                                    <tr className="bg-slate-950 text-white text-[9px] font-black uppercase tracking-widest">
+                                        <th className="py-2 px-3">Bowler</th>
+                                        <th className="py-2 px-2 text-center">O</th>
+                                        <th className="py-2 px-2 text-center">R</th>
+                                        <th className="py-2 px-2 text-center">W</th>
+                                        <th className="py-2 px-3 text-right">Econ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.bowling?.filter(b => b.playerId || b.name).map((b, i) => (
+                                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                            <td className="py-[6px] px-3 font-bold text-slate-900">
+                                                {resolvePlayerName(b.name, b.playerId, isBattingHome ? 'opponent' : 'home')}
+                                            </td>
+                                            <td className="py-[6px] px-2 text-center font-black text-slate-900 italic">{b.overs || 0}</td>
+                                            <td className="py-[6px] px-2 text-center text-slate-600 font-bold">{(b as any).runsConceded || (b as any).runs || 0}</td>
+                                            <td className="py-[6px] px-2 text-center font-black text-emerald-600">{b.wickets || 0}</td>
+                                            <td className="py-[6px] px-3 text-right font-black text-[10px] text-blue-600">
+                                                {(() => {
+                                                    const oversVal = Number(b.overs || 0);
+                                                    const oversPart = Math.floor(oversVal);
+                                                    const ballsPart = Math.round((oversVal % 1) * 10);
+                                                    const totalBalls = (oversPart * 6) + ballsPart;
+                                                    const runs = (b as any).runsConceded || (b as any).runs || 0;
+                                                    return totalBalls > 0 ? ((runs * 6) / totalBalls).toFixed(2) : '-';
+                                                })()}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* FOW & Stats mini section */}
+                        {data.fallOfWickets && (
+                            <div className="p-3 bg-slate-100 rounded-xl border border-slate-100">
+                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Fall of Wickets</span>
+                                <p className="text-[10px] text-slate-600 italic leading-tight">{data.fallOfWickets}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         );
-    };
+    }
 
     return (
-        <div className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-md p-2 md:p-8 overflow-y-auto custom-scrollbar">
-            <div className="w-full max-w-6xl mx-auto my-4 md:my-8 flex flex-col gap-4 md:gap-6">
-                
-                {/* Fixed Control Bar (Match Hero Style) */}
-                <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-950 p-6 rounded-3xl border border-white/10 shadow-2xl overflow-hidden shrink-0">
-                    {/* Hero Background Decor */}
-                    <div className="absolute inset-0 opacity-10 bg-dot-white-grid pointer-events-none"></div>
-                    <div 
-                        className="absolute -bottom-4 -right-8 text-[12rem] font-black italic select-none z-0 pointer-events-none text-white/5 leading-none"
-                        style={{ 
-                            transform: 'rotate(-5deg)', 
-                            fontFamily: '"Graduate", serif',
-                        }}
-                    >
-                        {match.matchFormat || 'T20'}
-                    </div>
-
-                    <div className="relative z-10">
-                        <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                             <Share2 className="text-blue-500" /> 
-                             Scorecard Overview
-                        </h2>
-                        <div className="flex items-center gap-3 mt-1.5">
-                            <span className="text-blue-400 text-[10px] font-black uppercase tracking-widest bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
-                                {match.matchFormat || 'T20'}
-                            </span>
-                            <span className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">
-                                {match.tournament} • {new Date(match.date).toLocaleDateString()}
-                            </span>
+        <div className="fixed inset-0 z-[150] bg-slate-950 flex flex-col overflow-hidden">
+            {/* Frozen Header - Premium Aesthetic */}
+            <div className="sticky top-0 z-[160] bg-slate-950/80 backdrop-blur-xl border-b border-white/10 p-4 shrink-0">
+                <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                    {/* Left: Home Team */}
+                    <div className="flex items-center gap-3 flex-1 justify-end">
+                        <div className="text-right hidden sm:block">
+                            <h2 className="text-sm font-black text-white graduate tracking-tight">INDIAN STRIKERS</h2>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">Home Team</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                            <Zap className="text-emerald-500" fill="currentColor" size={24} />
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 md:gap-6">
-                        <div className="flex items-center gap-4 bg-white/5 px-5 py-2.5 rounded-2xl border border-white/5 backdrop-blur-md">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">Export as</span>
-                            
-                            <button 
-                                onClick={downloadAsImage}
-                                disabled={isExporting}
-                                className="text-slate-400 hover:text-blue-500 transition-all p-1 active:scale-90 disabled:opacity-30"
-                                title="Download as PNG Images"
-                                aria-label="Export scorecard as images"
-                            >
-                                <ImageIcon size={22} strokeWidth={2.5} />
-                            </button>
-
-                            <div className="w-px h-4 bg-white/10" />
-
-                            <button 
-                                onClick={downloadAsPDF}
-                                disabled={isExporting}
-                                className="text-slate-400 hover:text-emerald-500 transition-all p-1 active:scale-90 disabled:opacity-30"
-                                title="Download as PDF"
-                                aria-label="Save scorecard as PDF"
-                            >
-                                <FileText size={22} strokeWidth={2.5} />
-                            </button>
+                    {/* Center: Score & Badge */}
+                    <div className="flex flex-col items-center gap-1 min-w-[140px]">
+                        <div className="bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-[0.3em] px-3 py-1 rounded-full border border-emerald-500/20 mb-1 animate-pulse">
+                            LEAGUE MATCH
                         </div>
+                        <div className="flex items-center gap-4">
+                            <span className="text-3xl font-black text-white italic graduate">{scorecard.innings1.totalRuns}-{scorecard.innings1.totalWickets}</span>
+                            <span className="text-slate-700 font-black italic">VS</span>
+                            <span className="text-3xl font-black text-white italic graduate">{scorecard.innings2.totalRuns}-{scorecard.innings2.totalWickets}</span>
+                        </div>
+                        <div className="text-white font-black text-[12.5px] uppercase tracking-widest mt-1 italic flex items-center gap-2">
+                            <ExternalLink size={16} className="text-emerald-500" />
+                            {new Date(match.date).getFullYear()} {match.tournament}
+                        </div>
+                        {match.result && (
+                            <div className="mt-2 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded flex items-center gap-2">
+                                <Trophy size={14} className="text-white fill-white/20" />
+                                {match.result}
+                            </div>
+                        )}
+                    </div>
 
-                        <button 
+                    {/* Right: Away Team */}
+                    <div className="flex items-center gap-3 flex-1">
+                        <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                            <Activity className="text-blue-500" size={24} />
+                        </div>
+                        <div className="hidden sm:block">
+                            <h2 className="text-sm font-black text-white graduate tracking-tight">{opponentName.toUpperCase()}</h2>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">Opponent</p>
+                        </div>
+                    </div>
+
+                    {/* Exit & Export */}
+                    <div className="flex items-center gap-2 pl-4 border-l border-white/10">
+                        <button
+                            onClick={downloadAsImage}
+                            disabled={isExporting}
+                            className="p-2 text-slate-400 hover:text-emerald-500 transition-all hover:bg-white/5 rounded-lg active:scale-95"
+                            title="Export Current View"
+                        >
+                            <ImageIcon size={20} />
+                        </button>
+                        {/* Close Button */}
+                        <button
                             onClick={onClose}
-                            className="p-2.5 bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all active:scale-90"
-                            title="Close Scorecard"
-                            aria-label="Close scorecard view"
+                            aria-label="Close scorecard"
+                            className="p-2 text-slate-400 hover:text-white transition-all hover:bg-white/5 rounded-lg active:scale-95"
                         >
                             <X size={24} />
                         </button>
                     </div>
                 </div>
+            </div>
 
-                {/* Scorecard Display Tabs (Desktop) / Scroll (Mobile) */}
-                <div className="hidden md:flex items-center gap-2 bg-slate-900 p-2 rounded-2xl border border-slate-800 self-start">
-                    <button 
-                        onClick={() => setActiveInnings(1)}
-                        className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeInnings === 1 ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-800'}`}
-                        title="View 1st Innings"
-                        aria-label="Switch to 1st innings"
-                    >
-                        1st Innings
-                    </button>
-                    <button 
-                        onClick={() => setActiveInnings(2)}
-                        className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeInnings === 2 ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-800'}`}
-                        title="View 2nd Innings"
-                        aria-label="Switch to 2nd innings"
-                    >
-                        2nd Innings
-                    </button>
-                    <button 
-                         onClick={() => {
-                             inn1Ref.current?.scrollIntoView({ behavior: 'smooth' });
-                             setActiveInnings(1);
-                         }}
-                         className="px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-slate-800 transition-all flex items-center gap-2"
-                    >
-                        Full View <ExternalLink size={14} />
-                    </button>
+            {/* Content Body - Pure Data Flow */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-white">
+                <div className="max-w-7xl mx-auto space-y-6 pb-10">
+                    {renderInningsContent(1, inn1Ref)}
+                    {renderInningsContent(2, inn2Ref)}
                 </div>
+            </div>
 
-                {/* Content Area */}
-                <div className="grid grid-cols-1 gap-12 pb-20">
-                    {/* Innings 1 Rendering (Hidden on mobile if not active, or just scroll?) */}
-                    {/* To support export, we need both to be in DOM or we render them specially */}
-                    <div className={activeInnings === 2 ? 'hidden md:block' : 'block'}>
-                         {renderInnings(1, inn1Ref as React.RefObject<HTMLDivElement>)}
-                    </div>
-                    <div className={activeInnings === 1 ? 'hidden md:block' : 'block'}>
-                         {renderInnings(2, inn2Ref as React.RefObject<HTMLDivElement>)}
-                    </div>
+
+            {/* Bottom Floating Stats Bar */}
+            <div className="bg-slate-900/90 backdrop-blur-md border-t border-white/10 p-3 shrink-0 flex justify-center gap-8">
+                <div className="flex gap-4 items-center">
+                    <Calendar size={14} className="text-emerald-500" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{new Date(match.date).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
+                </div>
+                <div className="flex gap-4 items-center border-l border-white/10 pl-8">
+                    <Trophy size={14} className="text-emerald-500" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{(match as any).result || 'MATCH COMPLETED'}</span>
                 </div>
             </div>
         </div>
