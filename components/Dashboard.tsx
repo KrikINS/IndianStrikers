@@ -131,12 +131,27 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
   return (
     <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto overflow-hidden px-4 md:px-0">
       {/* Standardized Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-2">
-            <Activity className="text-emerald-600" size={28} /> Dashboard
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-6 mb-2">
+        <div className="flex flex-col">
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-900 flex items-center gap-3">
+            <Activity className="text-blue-600 animate-pulse" size={32} /> 
+            <span>Dashboard</span>
           </h1>
-          <p className="text-slate-500 font-medium text-sm mt-0.5 italic">One Team, One Dream • Performance Overview</p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="h-0.5 w-8 bg-blue-600/20 rounded-full"></div>
+            <p className="text-slate-400 font-bold text-[9px] md:text-[10px] uppercase tracking-[0.3em] italic">Performance Overview</p>
+          </div>
+        </div>
+        
+        <div className="relative">
+          {/* Subtle Outer Glow */}
+          <div className="absolute -inset-0.5 bg-sky-500/20 rounded-full blur-md"></div>
+          
+          <div className="relative bg-[#0f172a]/80 backdrop-blur-xl border border-sky-400/30 px-6 py-2 rounded-full shadow-2xl">
+            <p className="text-[10px] md:text-xs font-black italic uppercase tracking-[0.15rem] animate-motto-spotlight leading-none flex items-center">
+              ONE TEAM <span className="mx-2 text-sky-400/40 text-[8px]">•</span> ONE DREAM
+            </p>
+          </div>
         </div>
       </div>
 

@@ -57,3 +57,26 @@
   border-color: rgba(65, 105, 225, 0.5);
   box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
 }
+
+@keyframes motto-spotlight {
+  0% { background-position: 100% center; }
+  100% { background-position: 0% center; }
+}
+
+.animate-motto-spotlight {
+  background: linear-gradient(
+    90deg, 
+    #1e3a8a 0%,    /* Navy */
+    #38bdf8 20%,   /* Sky Blue Start */
+    #f0f9ff 50%,   /* Bright Spotlight Core */
+    #38bdf8 80%,   /* Sky Blue End */
+    #1e3a8a 100%   /* Navy */
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: motto-spotlight 10s ease-in-out infinite alternate;
+  display: inline-block;
+  will-change: background-position;
+}
