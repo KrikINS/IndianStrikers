@@ -626,7 +626,7 @@ export const updateLegacyStats = async (playerId: string, stats: Partial<PlayerL
   });
   return handleResponse(res);
 };
-export const getWeeklyPerformers = async (): Promise<any[]> => {
-  const res = await fetch(`${API_URL}/weekly-performers`);
+export const getTournamentPerformers = async (): Promise<any> => {
+  const res = await fetch(`${API_URL}/tournament-performers`);
   return handleResponse(res);
 };

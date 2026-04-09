@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Player, OpponentTeam, UserRole } from '../types';
-import { getOpponents, getWeeklyPerformers } from '../services/storageService';
+import { getOpponents, getTournamentPerformers } from '../services/storageService';
 import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, History as HistoryIcon, X, Share2, Loader2, Download, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -57,15 +57,19 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
     .sort((a, b) => b.displayWickets - a.displayWickets)
     .slice(0, 5);
 
-  // -- Latest Match Performers Logic --
-  const [weeklyPerformers, setWeeklyPerformers] = useState<any[]>([]);
+  // -- Tournament Performers Logic --
+  const [performerData, setPerformerData] = useState<{ tournamentName: string, performers: any[], isSeasonOpener: boolean }>({
+    tournamentName: '',
+    performers: [],
+    isSeasonOpener: false
+  });
 
   useEffect(() => {
     const loadPerformers = async () => {
       try {
-        const data = await getWeeklyPerformers();
-        setWeeklyPerformers(data);
-      } catch (e) { console.error("Failed to load weekly performers", e); }
+        const data = await getTournamentPerformers();
+        setPerformerData(data);
+      } catch (e) { console.error("Failed to load tournament performers", e); }
     };
     loadPerformers();
   }, []);
@@ -224,19 +228,21 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
 
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 px-6">
           <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-3 uppercase tracking-tighter italic">
-            <Zap className="text-sky-400 fill-sky-400" size={24} /> Weekly Performers
+            <Zap className="text-sky-400 fill-sky-400" size={24} /> Tournament Performers
           </h3>
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-400/60 bg-sky-400/10 px-4 py-1.5 rounded-full border border-sky-400/20">Elite Performance Cycle</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-400/60 bg-sky-400/10 px-4 py-1.5 rounded-full border border-sky-400/20">
+            {performerData.tournamentName || "Alpha Season"} Highlights
+          </span>
         </div>
 
         <div className="relative z-10">
-          {weeklyPerformers.length === 0 ? (
+          {performerData.performers.length === 0 ? (
             <div className="bg-slate-800/50 rounded-3xl p-12 text-center text-slate-500 font-bold border border-white/5 mx-6">
-              Recruiting top talent. No performers this week.
+              {performerData.isSeasonOpener ? "Season Opener! Watch this space for upcoming stars." : "Recruiting top talent. No performers this week."}
             </div>
           ) : (
             <WeeklyPerformerCarousel 
-              performers={weeklyPerformers} 
+              performers={performerData.performers} 
               onSelectHero={(data) => setSelectedHero(data)} 
             />
           )}
@@ -424,18 +430,18 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: Pla
                 <div 
                   onClick={() => isActive && onSelectHero({
                     player,
-                    statsType: player.role === 'Bowler' ? 'bowling' : 'batting',
-                    statsValue: player.role === 'Bowler' ? '3/24' : '48 (26)'
+                    statsType: player.wickets > 0 ? 'bowling' : 'batting',
+                    statsValue: player.wickets > 0 ? `${player.wickets}/${player.bowlingRuns}` : `${player.runs} (${player.balls})`
                   })}
                   title={`View ${player.name}'s Hero Poster`}
                   aria-label={`View performance poster for ${player.name}`}
                   className="bg-slate-950 rounded-[3rem] p-8 border border-white/10 shadow-2xl relative overflow-hidden group transition-all"
                 >
                   {/* Jersey Watermark - Tilted Background */}
-                  <div className="absolute inset-0 opacity-[0.04] pointer-events-none rotate-[20deg] scale-150 select-none">
+                  <div className="absolute inset-0 opacity-[0.08] pointer-events-none rotate-[-15deg] scale-150 select-none">
                     <div className="grid grid-cols-4 gap-6 p-4">
                       {Array.from({length: 12}).map((_, i) => (
-                        <div key={i} className="text-white font-black text-6xl italic">7</div>
+                        <div key={i} className="text-sky-400 font-black text-6xl italic">7</div>
                       ))}
                     </div>
                   </div>
@@ -452,7 +458,7 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: Pla
                         alt={player.name} 
                       />
                       <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-sky-400 text-slate-950 text-[10px] font-black px-6 py-1.5 rounded-full border-[3px] border-slate-950 uppercase tracking-tighter z-20 shadow-xl whitespace-nowrap">
-                        {player.role === 'Bowler' ? 'Force Multiplier' : 'Strike Engine'}
+                        {player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer'}
                       </div>
                     </div>
 
@@ -462,14 +468,14 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: Pla
                     <div className="grid grid-cols-2 gap-4 w-full">
                       <div className="bg-white/5 rounded-3xl p-4 border border-white/5 backdrop-blur-md">
                         <p className="text-[9px] uppercase font-bold text-slate-500 mb-1 tracking-widest">Impact</p>
-                        <p className="font-black text-sky-400 text-xl leading-none">
-                          {player.role === 'Bowler' ? '3/24' : '48(26)'}
+                        <p className="font-black text-white text-xl leading-none">
+                          {player.wickets > 0 ? `${player.wickets}/${player.bowlingRuns}` : `${player.runs}(${player.balls})`}
                         </p>
                       </div>
                       <div className="bg-white/5 rounded-3xl p-4 border border-white/5 backdrop-blur-md">
-                        <p className="text-[9px] uppercase font-bold text-slate-500 mb-1 tracking-widest">SR/ECON</p>
-                        <p className="font-black text-white text-xl leading-none">
-                          {player.role === 'Bowler' ? '6.00' : '184.6'}
+                        <p className="text-[9px] uppercase font-bold text-slate-500 mb-1 tracking-widest">{player.wickets > 0 ? 'ECN' : 'SR'}</p>
+                        <p className="font-black text-sky-400 text-xl leading-none">
+                          {player.wickets > 0 ? (player.bowlingRuns / player.bowlingOvers).toFixed(2) : ((player.runs / (player.balls || 1)) * 100).toFixed(1)}
                         </p>
                       </div>
                     </div>

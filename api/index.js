@@ -815,74 +815,84 @@ app.post('/api/upload', authGuard(['admin', 'member']), upload.single('file'), a
   }
 });
 
-// WEEKLY PERFORMERS ENGINE (Hybrid Selection)
-app.get('/api/weekly-performers', async (req, res) => {
+// TOURNAMENT PERFORMERS ENGINE (Hybrid Selection)
+app.get('/api/tournament-performers', async (req, res) => {
   try {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    // 1. Fetch match stats joined with matches and players
-    const { data, error } = await supabase
-      .from('player_match_stats')
-      .select(`
-        *,
-        matches!inner ( date, status ),
-        players!inner ( id, name, role, avatar_url )
-      `)
-      .gte('matches.date', sevenDaysAgo.toISOString())
-      .eq('matches.status', 'completed');
+    // 1. Get tournaments sorted by creation/date to find latest
+    const { data: tournaments, error: tErr } = await supabase
+      .from('tournaments')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (tErr || !tournaments || tournaments.length === 0) return res.json({ performers: [], isSeasonOpener: true });
 
-    // 2. Apply Selection Logic
-    const performers = (data || []).filter(row => {
-      const runs = Number(row.runs || 0);
-      const balls = Number(row.balls || 0);
-      const wkts = Number(row.wickets || 0);
-      const overs = Number(row.overs_bowled || 0);
-      const runsConceded = Number(row.runs_conceded || 0);
-      const isHero = !!row.is_hero;
-      
-      // Calculate economy
-      const econ = overs > 0 ? (runsConceded / overs) : 99;
+    const latestTournament = tournaments[0];
+    const previousTournament = tournaments[1];
 
-      // Rule 1: Manual Hero Pick
-      if (isHero) return true;
+    // Helper to fetch and filter
+    const getPerformersForTournament = async (tId, manualOnly = false) => {
+      let query = supabase
+        .from('player_match_stats')
+        .select(`
+          *,
+          matches!inner ( date, status, tournament_id ),
+          players!inner ( id, name, role, avatar_url )
+        `)
+        .eq('matches.tournament_id', tId)
+        .eq('matches.status', 'completed');
 
-      // Exclude DNB if not a manual hero
-      if (balls === 0 && wkts === 0) return false;
+      if (manualOnly) query = query.eq('is_hero', true);
 
-      // Rule 2: High Scorer (Runs >= 40)
-      if (runs >= 40) return true;
+      const { data, error } = await query;
+      if (error || !data) return [];
 
-      // Rule 3: Wicket Taker (Wkts >= 2)
-      if (wkts >= 2) return true;
+      return data.filter(row => {
+        const runs = Number(row.runs || 0);
+        const balls = Number(row.balls || 0);
+        const wkts = Number(row.wickets || 0);
+        const overs = Number(row.overs_bowled || 0);
+        const runsConceded = Number(row.runs_conceded || 0);
+        const isHero = !!row.is_hero;
+        const econ = overs > 0 ? (runsConceded / overs) : 99;
 
-      // Rule 4: All-Rounder (30+ Runs AND 1+ Wicket)
-      if (runs >= 30 && wkts >= 1) return true;
+        if (isHero) return true;
+        if (balls === 0 && wkts === 0) return false; // Exclude DNB
 
-      // Rule 5: Economical Bowler (Econ <= 7.0 AND at least 1 wicket or 2 overs)
-      if (econ <= 7 && (wkts >= 1 || overs >= 2)) return true;
+        return (runs >= 40) || (wkts >= 2) || (runs >= 30 && wkts >= 1) || (econ <= 7 && (wkts >= 1 || overs >= 2));
+      }).map(row => ({
+        id: row.id,
+        playerId: row.player_id,
+        name: row.players.name,
+        role: row.players.role,
+        avatarUrl: row.players.avatar_url,
+        runs: row.runs,
+        balls: row.balls,
+        wickets: row.wickets,
+        bowlingRuns: row.runs_conceded,
+        bowlingOvers: row.overs_bowled,
+        isHero: row.is_hero,
+        matchDate: row.matches.date
+      }));
+    };
 
-      return false;
-    }).map(row => ({
-      id: row.id,
-      playerId: row.player_id,
-      name: row.players.name,
-      role: row.players.role,
-      avatarUrl: row.players.avatar_url,
-      runs: row.runs,
-      balls: row.balls,
-      wickets: row.wickets,
-      bowlingRuns: row.runs_conceded,
-      bowlingOvers: row.overs_bowled,
-      isHero: row.is_hero,
-      matchDate: row.matches.date
-    }));
+    let performers = await getPerformersForTournament(latestTournament.id);
+    let isSeasonOpener = false;
 
-    res.json(performers);
+    // Fallback logic
+    if (performers.length === 0) {
+      if (previousTournament) {
+        performers = await getPerformersForTournament(previousTournament.id, true);
+      }
+      isSeasonOpener = true;
+    }
+
+    res.json({
+      tournamentName: latestTournament.name,
+      performers,
+      isSeasonOpener
+    });
   } catch (e) {
-    console.error('[GET /api/weekly-performers] Error:', e);
+    console.error('[GET /api/tournament-performers] Error:', e);
     res.status(500).json({ error: e.message });
   }
 });
