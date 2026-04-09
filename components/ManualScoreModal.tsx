@@ -140,7 +140,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
       if (existing) {
         newBatting = newBatting.map(b => b.playerId === pId ? { ...b, [field]: value } : b);
       } else {
-        newBatting.push({ playerId: pId, name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', isManualHero: false, [field]: value });
+        newBatting.push({ playerId: pId, name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false, [field]: value });
       }
       return { ...prev, [key]: { ...prev[key], batting: newBatting } };
     });
@@ -172,7 +172,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
         return squad.map(p => {
              const entry = scorecard[innKey].batting.find(b => b.playerId === p.id);
              if (entry) return entry;
-             return { playerId: p.id, name: p.name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', isManualHero: false };
+             return { playerId: p.id, name: p.name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', is_hero: false };
         });
     };
 
@@ -201,11 +201,11 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     const homeBowling = finalScorecard[homeTeamBowlingInnings === 1 ? 'innings1' : 'innings2'];
 
     homeBatting.batting.forEach(b => {
-      performerMap.set(b.playerId, { playerId: b.playerId, playerName: b.name, runs: b.runs, balls: b.balls, fours: b.fours, sixes: b.sixes, isNotOut: b.outHow === 'Not Out', is_manual_hero: b.isManualHero, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0 });
+      performerMap.set(b.playerId, { playerId: b.playerId, playerName: b.name, runs: b.runs, balls: b.balls, fours: b.fours, sixes: b.sixes, isNotOut: b.outHow === 'Not Out', is_hero: b.is_hero, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0 });
     });
     homeBowling.bowling.forEach(b => {
-      const ex = performerMap.get(b.playerId) || { playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, is_manual_hero: false };
-      performerMap.set(b.playerId, { ...ex, wickets: b.wickets, bowlingRuns: b.runsConceded, bowlingOvers: b.overs, maidens: b.maidens });
+      const ex = performerMap.get(b.playerId) || { playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, is_hero: false };
+      performerMap.set(b.playerId, { ...ex, wickets: b.wickets, bowlingRuns: b.runsConceded, bowlingOvers: b.overs, maidens: b.maidens, is_hero: ex.is_hero || b.is_hero });
     });
 
     (match.homeTeamXI || []).forEach(pid => {
@@ -259,7 +259,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
         .td { padding:4px; border-bottom:1px solid rgba(255,255,255,0.04); }
         .hero-star { transition: all 0.2s; cursor: pointer; }
         .hero-star:hover { transform: scale(1.2); }
-        .hero-star.active { color: #fbbf24; fill: #fbbf24; filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5)); }
+        .hero-star.active { color: #0ea5e9; fill: #0ea5e9; filter: drop-shadow(0 0 5px rgba(14, 165, 233, 0.4)); }
 
         /* ── Modal body ── */
         .compact-modal-body { padding: 12px !important; max-height: 85vh; overflow-y: auto; }
@@ -475,11 +475,11 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                                             <div className="flex items-center gap-2">
                                               <button
                                                 type="button"
-                                                onClick={() => updateBatting(activeInnings, p.id, p.name, 'isManualHero', !entry.isManualHero)}
-                                                className={`hero-star ${entry.isManualHero ? 'active' : 'text-slate-600'}`}
+                                                onClick={() => updateBatting(activeInnings, p.id, p.name, 'is_hero', !entry.is_hero)}
+                                                className={`hero-star ${entry.is_hero ? 'active' : 'text-slate-600'}`}
                                                 title="Mark as Match Hero"
                                               >
-                                                <Star size={14} fill={entry.isManualHero ? "currentColor" : "none"} />
+                                                <Star size={14} fill={entry.is_hero ? "currentColor" : "none"} />
                                               </button>
                                               <span>{p.name}</span>
                                             </div>
@@ -542,19 +542,29 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                         {bowlingRows[activeInnings].map((row, idx) => (
                           <tr key={idx}>
                             <td style={{ paddingLeft: '8px', width: '130px' }}>
-                              {bowlingSquad.length > 0 ? (
-                                <select
-                                  title={`Bowler ${idx + 1}`}
-                                  className="player-select-dropdown"
-                                  value={row.playerId}
-                                  onChange={e => updateBowlingRow(activeInnings, idx, 'playerId', e.target.value)}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => updateBowlingRow(activeInnings, idx, 'is_hero', !row.is_hero)}
+                                  className={`hero-star ${row.is_hero ? 'active' : 'text-slate-600'}`}
+                                  title="Mark as Match Hero"
                                 >
-                                  <option value="">— Select —</option>
-                                  {bowlingSquad.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
-                              ) : (
-                                <span style={{ color: '#374151', fontSize: '11px' }}>No squad</span>
-                              )}
+                                  <Star size={13} fill={row.is_hero ? "currentColor" : "none"} />
+                                </button>
+                                {bowlingSquad.length > 0 ? (
+                                  <select
+                                    title={`Bowler ${idx + 1}`}
+                                    className="player-select-dropdown"
+                                    value={row.playerId}
+                                    onChange={e => updateBowlingRow(activeInnings, idx, 'playerId', e.target.value)}
+                                  >
+                                    <option value="">— Select —</option>
+                                    {bowlingSquad.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                  </select>
+                                ) : (
+                                  <span style={{ color: '#374151', fontSize: '11px' }}>No squad</span>
+                                )}
+                              </div>
                             </td>
                             {['overs', 'maidens', 'runs', 'wickets', 'wd', 'nb'].map(field => (
                               <td key={field} style={{ textAlign: 'center' }}>

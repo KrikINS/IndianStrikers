@@ -353,7 +353,7 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
             five_wickets: Number(perf.wickets) >= 5 ? 1 : 0,
             wides: Number(perf.wides || 0),
             no_balls: Number(perf.no_balls || 0),
-            is_manual_hero: perf.is_manual_hero || false,
+            is_hero: perf.is_hero || false,
             updated_at: new Date().toISOString()
           }], { onConflict: 'match_id, player_id' });
 
@@ -830,7 +830,7 @@ app.get('/api/tournament-performers', async (req, res) => {
     const previousTournament = tournaments[1];
 
     // Helper to fetch and filter Top 7 Standout Performances
-    const getPerformersForTournament = async (tId, fallbackToMatch = false) => {
+    const getPerformersForTournament = async (tId) => {
       let query = supabase
         .from('player_match_stats')
         .select(`
@@ -849,7 +849,7 @@ app.get('/api/tournament-performers', async (req, res) => {
       if (error) return [];
 
       const results = (data || []).filter(row => {
-        const isHero = !!row.is_manual_hero;
+        const isHero = !!row.is_hero;
         const runs = Number(row.runs || 0);
         const wkts = Number(row.wickets || 0);
         const overs = Number(row.overs_bowled || 0);
@@ -858,15 +858,17 @@ app.get('/api/tournament-performers', async (req, res) => {
         
         if (isHero) return true;
         
-        // Priority 2 thresholds
-        return (runs >= 40) || (wkts >= 2) || (overs >= 2 && econ <= 7.0);
+        // Auto-Criteria: 40+ runs OR 2+ wickets OR <=7.0 econ (min 2 ov) OR All-rounder (30+ / 1+)
+        return (runs >= 40) || (wkts >= 2) || (overs >= 2 && econ <= 7.0) || (runs >= 30 && wkts >= 1);
       })
       .sort((a,b) => {
-        if (a.is_manual_hero && !b.is_manual_hero) return -1;
-        if (!a.is_manual_hero && b.is_manual_hero) return 1;
+        // Priority 1: Manual Hero Picks
+        if (a.is_hero && !b.is_hero) return -1;
+        if (!a.is_hero && b.is_hero) return 1;
 
-        const scoreA = (Number(a.runs || 0)) + (Number(a.wickets || 0) * 30);
-        const scoreB = (Number(b.runs || 0)) + (Number(b.wickets || 0) * 30);
+        // Priority 2: Simple Performance Score
+        const scoreA = (Number(a.runs || 0)) + (Number(a.wickets || 0) * 35);
+        const scoreB = (Number(b.runs || 0)) + (Number(b.wickets || 0) * 35);
         return scoreB - scoreA;
       })
       .slice(0, 7)
@@ -881,7 +883,7 @@ app.get('/api/tournament-performers', async (req, res) => {
         wickets: Number(row.wickets || 0),
         bowlingRuns: Number(row.runs_conceded || 0),
         bowlingOvers: Number(row.overs_bowled || 0),
-        isHero: !!row.is_manual_hero,
+        isHero: !!row.is_hero,
         matchDate: row.matches.date
       }));
 
@@ -891,7 +893,7 @@ app.get('/api/tournament-performers', async (req, res) => {
     let performers = await getPerformersForTournament(latestTournament.id);
     let isSeasonOpener = false;
 
-    // Fallback logic: If tournament is empty, find most recent completed match regardless of tournament
+    // Fallback: If no performers found in current tournament, pull from most recent match
     if (performers.length === 0) {
       const { data: recentMatch } = await supabase
         .from('matches')
