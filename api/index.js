@@ -353,6 +353,7 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
             five_wickets: Number(perf.wickets) >= 5 ? 1 : 0,
             wides: Number(perf.wides || 0),
             no_balls: Number(perf.no_balls || 0),
+            is_hero: perf.isHero || false,
             updated_at: new Date().toISOString()
           }], { onConflict: 'match_id, player_id' });
 
@@ -811,6 +812,78 @@ app.post('/api/upload', authGuard(['admin', 'member']), upload.single('file'), a
   } catch (e) {
     console.error('[Upload Error]', e);
     res.status(500).json({ error: 'Upload failed: ' + e.message });
+  }
+});
+
+// WEEKLY PERFORMERS ENGINE (Hybrid Selection)
+app.get('/api/weekly-performers', async (req, res) => {
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    // 1. Fetch match stats joined with matches and players
+    const { data, error } = await supabase
+      .from('player_match_stats')
+      .select(`
+        *,
+        matches!inner ( date, status ),
+        players!inner ( id, name, role, avatar_url )
+      `)
+      .gte('matches.date', sevenDaysAgo.toISOString())
+      .eq('matches.status', 'completed');
+
+    if (error) throw error;
+
+    // 2. Apply Selection Logic
+    const performers = (data || []).filter(row => {
+      const runs = Number(row.runs || 0);
+      const balls = Number(row.balls || 0);
+      const wkts = Number(row.wickets || 0);
+      const overs = Number(row.overs_bowled || 0);
+      const runsConceded = Number(row.runs_conceded || 0);
+      const isHero = !!row.is_hero;
+      
+      // Calculate economy
+      const econ = overs > 0 ? (runsConceded / overs) : 99;
+
+      // Rule 1: Manual Hero Pick
+      if (isHero) return true;
+
+      // Exclude DNB if not a manual hero
+      if (balls === 0 && wkts === 0) return false;
+
+      // Rule 2: High Scorer (Runs >= 40)
+      if (runs >= 40) return true;
+
+      // Rule 3: Wicket Taker (Wkts >= 2)
+      if (wkts >= 2) return true;
+
+      // Rule 4: All-Rounder (30+ Runs AND 1+ Wicket)
+      if (runs >= 30 && wkts >= 1) return true;
+
+      // Rule 5: Economical Bowler (Econ <= 7.0 AND at least 1 wicket or 2 overs)
+      if (econ <= 7 && (wkts >= 1 || overs >= 2)) return true;
+
+      return false;
+    }).map(row => ({
+      id: row.id,
+      playerId: row.player_id,
+      name: row.players.name,
+      role: row.players.role,
+      avatarUrl: row.players.avatar_url,
+      runs: row.runs,
+      balls: row.balls,
+      wickets: row.wickets,
+      bowlingRuns: row.runs_conceded,
+      bowlingOvers: row.overs_bowled,
+      isHero: row.is_hero,
+      matchDate: row.matches.date
+    }));
+
+    res.json(performers);
+  } catch (e) {
+    console.error('[GET /api/weekly-performers] Error:', e);
+    res.status(500).json({ error: e.message });
   }
 });
 

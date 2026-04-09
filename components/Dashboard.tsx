@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Player, OpponentTeam, UserRole } from '../types';
-import { getOpponents } from '../services/storageService';
+import { getOpponents, getWeeklyPerformers } from '../services/storageService';
 import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, History as HistoryIcon, X, Share2, Loader2, Download, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -58,8 +58,17 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
     .slice(0, 5);
 
   // -- Latest Match Performers Logic --
-  // Use current top players as demo performers since we're removing specific match tracking
-  const latestMatchHeroes = processedPlayers.slice(0, 6);
+  const [weeklyPerformers, setWeeklyPerformers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadPerformers = async () => {
+      try {
+        const data = await getWeeklyPerformers();
+        setWeeklyPerformers(data);
+      } catch (e) { console.error("Failed to load weekly performers", e); }
+    };
+    loadPerformers();
+  }, []);
 
   const statsRef = useRef<HTMLDivElement>(null);
 
@@ -221,13 +230,13 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
         </div>
 
         <div className="relative z-10">
-          {latestMatchHeroes.length === 0 ? (
+          {weeklyPerformers.length === 0 ? (
             <div className="bg-slate-800/50 rounded-3xl p-12 text-center text-slate-500 font-bold border border-white/5 mx-6">
               Recruiting top talent. No performers this week.
             </div>
           ) : (
             <WeeklyPerformerCarousel 
-              performers={latestMatchHeroes} 
+              performers={weeklyPerformers} 
               onSelectHero={(data) => setSelectedHero(data)} 
             />
           )}
