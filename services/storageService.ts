@@ -627,6 +627,6 @@ export const updateLegacyStats = async (playerId: string, stats: Partial<PlayerL
   return handleResponse(res);
 };
 export const getWeeklyPerformers = async (): Promise<any[]> => {
-  const res = await fetch(${API_URL}/weekly-performers);
+  const res = await fetch(`${API_URL}/weekly-performers`);
   return handleResponse(res);
 };
