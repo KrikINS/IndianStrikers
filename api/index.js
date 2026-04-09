@@ -831,38 +831,40 @@ app.get('/api/tournament-performers', async (req, res) => {
 
     // Helper to fetch and filter Top 10 Standout Performances
     const getPerformersForTournament = async (tId) => {
+      // Use explicit relationship syntax to avoid naming conflicts
       const { data, error } = await supabase
         .from('player_match_stats')
         .select(`
           *,
-          matches!inner ( date, status, tournament_id ),
-          players!inner ( id, name, role, avatar_url )
+          matches:match_id!inner ( id, date, status, tournament_id ),
+          players:player_id!inner ( id, name, role, avatar_url )
         `)
         .eq('matches.tournament_id', tId)
         .eq('matches.status', 'completed');
 
-      if (error || !data) return [];
+      if (error) {
+        console.error(`[SQL Error] Fetching performers for ${tId}:`, error.message);
+        return [];
+      }
 
-      return data.filter(row => {
+      const results = (data || []).filter(row => {
         const isHero = !!row.is_hero;
         const runs = Number(row.runs || 0);
         const wkts = Number(row.wickets || 0);
         const balls = Number(row.balls || 0);
         
         if (isHero) return true;
-        if (balls === 0 && wkts === 0) return false; // Exclude DNB
-
-        // Broaden catch for Top 10: Any meaningful contribution
-        return (runs >= 20) || (wkts >= 1);
+        // Include any contribution for now to ensure it's not empty
+        return (runs > 0) || (wkts > 0) || (balls > 0);
       })
       .sort((a,b) => {
-        // Priority 1: Manual Star Picks
+        // Priority 1: Manual Star Picks (Hero)
         if (a.is_hero && !b.is_hero) return -1;
         if (!a.is_hero && b.is_hero) return 1;
 
-        // Priority 2: Simple Performance Score (Runs + Wickets * 20)
-        const scoreA = Number(a.runs) + (Number(a.wickets) * 20);
-        const scoreB = Number(b.runs) + (Number(b.wickets) * 20);
+        // Priority 2: Simple Performance Score
+        const scoreA = (Number(a.runs || 0)) + (Number(a.wickets || 0) * 25);
+        const scoreB = (Number(b.runs || 0)) + (Number(b.wickets || 0) * 25);
         return scoreB - scoreA;
       })
       .slice(0, 10)
@@ -872,14 +874,17 @@ app.get('/api/tournament-performers', async (req, res) => {
         name: row.players.name,
         role: row.players.role,
         avatarUrl: row.players.avatar_url,
-        runs: row.runs,
-        balls: row.balls,
-        wickets: row.wickets,
-        bowlingRuns: row.runs_conceded,
-        bowlingOvers: row.overs_bowled,
-        isHero: row.is_hero,
+        runs: Number(row.runs || 0),
+        balls: Number(row.balls || 0),
+        wickets: Number(row.wickets || 0),
+        bowlingRuns: Number(row.runs_conceded || 0),
+        bowlingOvers: Number(row.overs_bowled || 0),
+        isHero: !!row.is_hero,
         matchDate: row.matches.date
       }));
+
+      console.log(`[Performers Engine] Found ${results.length} performers for T-ID: ${tId}`);
+      return results;
     };
 
     let performers = await getPerformersForTournament(latestTournament.id);
