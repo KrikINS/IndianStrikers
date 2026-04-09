@@ -1099,7 +1099,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                             {/* ROSTER GRID with Refined Player Cards & Background */}
                             <div className="relative z-10 flex-1 bg-slate-900/50 rounded-[45px] p-12 border border-white/5 backdrop-blur-xl grid grid-cols-2 gap-x-20 gap-y-12 overflow-hidden">
                                 {/* Ground Background Overlay */}
-                                <div className="absolute inset-0 z-0 opacity-10 pointer-events-none mix-blend-overlay">
+                                <div className="absolute inset-0 z-0 opacity-20 pointer-events-none mix-blend-overlay">
                                     <img 
                                         src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=2070" 
                                         className="w-full h-full object-cover scale-110"
@@ -1212,129 +1212,125 @@ const MatchCardCarousel = ({
 }: any) => {
     const [index, setIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
-    const x = useMotionValue(0);
     const containerRef = useRef<HTMLDivElement>(null);
+    const CARD_WIDTH = 340;
+    const CARD_GAP = 32;
+    const TOTAL_WIDTH = CARD_WIDTH + CARD_GAP;
 
     // Auto-Play Logic
     useEffect(() => {
         if (isPaused || matches.length <= 1) return;
-
         const interval = setInterval(() => {
-            setIndex((prev) => prev + 1);
-        }, 5000); // 5 seconds per slide
-
+            setIndex(prev => prev + 1);
+        }, 5000);
         return () => clearInterval(interval);
     }, [isPaused, matches.length]);
 
-    // Infinite Loop "Wrap Around" Logic
-    // If index goes too far from the center, we wrap it back seamlessly
-    useEffect(() => {
-        const len = matches.length;
-        if (len === 0) return;
-        
-        // If we've drifted more than 2 full lengths from center, snap back silently
-        if (Math.abs(index) > len * 2) {
-            setIndex(getWrappedIndex(index));
-        }
-    }, [index, matches.length]);
-
-    // Handle user interaction for pausing auto-play
-    const handleDragStart = () => setIsPaused(true);
-    
-    const handleDragEnd = (_: any, info: any) => {
-        const swipeThreshold = 50;
-        if (info.offset.x < -swipeThreshold) {
-            setIndex((prev) => prev + 1);
-        } else if (info.offset.x > swipeThreshold) {
-            setIndex((prev) => prev - 1);
-        }
-        // Resume auto-play after a delay
-        setTimeout(() => setIsPaused(false), 2000);
-    };
-
-    // Calculate actual index for wrapping
-    const getWrappedIndex = (i: number) => {
+    // Calculate wrapping for data
+    const getMatchIndex = (virtualIndex: number) => {
         const len = matches.length;
         if (len === 0) return 0;
-        return ((i % len) + len) % len;
+        return ((virtualIndex % len) + len) % len;
     };
 
-    // Card dimensions
-    const width = 360;
-    const gap = 32;
-    // The visual offset takes into account the virtual index
-    const offset = index * (width + gap);
+    const handleDragEnd = (_: any, info: any) => {
+        const swipeThreshold = 50;
+        const velocityThreshold = 500;
+        
+        if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+            setIndex(prev => prev + 1);
+        } else if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+            setIndex(prev => prev - 1);
+        }
+        
+        // Brief pause after interaction
+        setIsPaused(true);
+        setTimeout(() => setIsPaused(false), 3000);
+    };
 
     return (
         <div 
-            className="relative w-full h-[600px] flex items-center justify-center pt-8"
+            className="relative w-full h-[600px] flex items-center justify-center overflow-hidden"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            <motion.div
-                ref={containerRef}
-                drag="x"
-                dragConstraints={{ left: -10000, right: 10000 }} // Allow large range for virtual loop
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                animate={{ x: -offset }}
-                transition={{ type: "spring", stiffness: 200, damping: 25 }}
-                style={{ x }}
-                className="flex items-center absolute cursor-grab active:cursor-grabbing"
-            >
-                {/* 
-                    Truly Infinite Virtual Rendering: 
-                    We render a sliding window of items.
-                */}
-                {Array.from({ length: 21 }).map((_, i) => {
-                    const virtualPosition = index + (i - 10);
-                    const matchIndex = getWrappedIndex(virtualPosition);
-                    const match = matches[matchIndex];
-                    if (!match) return null;
-                    
-                    const isActive = virtualPosition === index;
+            {/* The "Camera" view - we center this viewport */}
+            <div className="relative w-full h-full flex items-center justify-center">
+                <motion.div
+                    className="flex items-center absolute"
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }} // Elastic drag
+                    onDragStart={() => setIsPaused(true)}
+                    onDragEnd={handleDragEnd}
+                    animate={{ x: -index * TOTAL_WIDTH }}
+                    transition={{ 
+                        type: "spring", 
+                        stiffness: 150, 
+                        damping: 20,
+                        mass: 1
+                    }}
+                >
+                    {/* 
+                        Render a window of 15 virtual cards.
+                        We always render cards at relative positions to the CURRENT index.
+                        By using the 'index' in the key and the position, we avoid jumps.
+                    */}
+                    {Array.from({ length: 15 }).map((_, i) => {
+                        const virtualPos = index + (i - 7);
+                        const matchIdx = getMatchIndex(virtualPos);
+                        const match = matches[matchIdx];
+                        if (!match) return null;
 
-                    return (
-                        <motion.div
-                            key={`${virtualPosition}-${match.id}`}
-                            initial={false}
-                            animate={{
-                                scale: isActive ? 1.1 : 0.85,
-                                opacity: isActive ? 1 : 0.4,
-                                filter: isActive ? "blur(0px)" : "blur(2px)",
-                                zIndex: isActive ? 10 : 1,
-                                rotateY: isActive ? 0 : (virtualPosition < index ? 20 : -20)
-                            }}
-                            whileHover={isActive ? { scale: 1.15, y: -10 } : {}}
-                            whileTap={isActive ? { scale: 1.1 } : {}}
-                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                            style={{
-                                width: width,
-                                marginRight: gap,
-                                flexShrink: 0
-                            }}
-                            className={`perspective-1000 transition-all duration-500 ${isActive ? 'pointer-events-auto' : 'pointer-events-none'}`}
-                        >
-                            <MatchCenterTile
-                                match={match}
-                                homeTeamName="Indian Strikers"
-                                homeTeamLogo={teamLogo || '/INS%20LOGO.PNG'}
-                                opponent={opponents.find((t: any) => t.id === match.opponentId)}
-                                onSelectPlayingXI={onSelectPlayingXI}
-                                onEditMatch={onEditMatch}
-                                onStartScoring={onStartScoring}
-                                onViewScorecard={onViewScorecard}
-                                onUpdateManualScore={onUpdateManualScore}
-                                onDeleteMatch={onDeleteMatch}
-                                userRole={userRole}
-                                isAdmin={userRole === 'admin'}
-                                grounds={grounds}
-                                isCarouselActive={isActive}
-                            />
-                        </motion.div>
-                    );
-                })}
-            </motion.div>
+                        const isActive = virtualPos === index;
+                        // Calculate distance from center for scaling/opacity
+                        const distance = Math.abs(virtualPos - index);
+
+                        return (
+                            <motion.div
+                                key={virtualPos}
+                                style={{
+                                    width: CARD_WIDTH,
+                                    position: 'absolute',
+                                    left: virtualPos * TOTAL_WIDTH - (CARD_WIDTH / 2),
+                                    x: 0 // Avoid conflict with parent X
+                                }}
+                                initial={false}
+                                animate={{
+                                    scale: isActive ? 1.1 : Math.max(0.8, 1 - distance * 0.15),
+                                    opacity: isActive ? 1 : Math.max(0.3, 1 - distance * 0.4),
+                                    filter: isActive ? "blur(0px)" : `blur(${Math.min(4, distance * 2)}px)`,
+                                    zIndex: 10 - distance,
+                                    rotateY: isActive ? 0 : (virtualPos < index ? 25 : -25),
+                                    y: isActive ? -20 : 0
+                                }}
+                                transition={{ 
+                                    type: "spring", 
+                                    stiffness: 250, 
+                                    damping: 25 
+                                }}
+                                className={`perspective-1000 ${isActive ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                            >
+                                <MatchCenterTile
+                                    match={match}
+                                    homeTeamName="Indian Strikers"
+                                    homeTeamLogo={teamLogo || '/INS%20LOGO.PNG'}
+                                    opponent={opponents.find((t: any) => t.id === match.opponentId)}
+                                    onSelectPlayingXI={onSelectPlayingXI}
+                                    onEditMatch={onEditMatch}
+                                    onStartScoring={onStartScoring}
+                                    onViewScorecard={onViewScorecard}
+                                    onUpdateManualScore={onUpdateManualScore}
+                                    onDeleteMatch={onDeleteMatch}
+                                    userRole={userRole}
+                                    isAdmin={userRole === 'admin'}
+                                    grounds={grounds}
+                                    isCarouselActive={isActive}
+                                />
+                            </motion.div>
+                        );
+                    })}
+                </motion.div>
+            </div>
 
             {/* Navigation Arrows for accessibility */}
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none flex justify-between px-4">
@@ -1358,12 +1354,15 @@ const MatchCardCarousel = ({
             
             {/* Pagination Dots */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                {matches.map((_: any, i: number) => (
-                    <div 
-                        key={i}
-                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${getWrappedIndex(index) === i ? 'bg-blue-500 w-6' : 'bg-slate-700'}`}
-                    />
-                ))}
+                {matches.map((_: any, i: number) => {
+                    const activeIdx = ((index % matches.length) + matches.length) % matches.length;
+                    return (
+                        <div 
+                            key={i}
+                            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeIdx === i ? 'bg-blue-500 w-6' : 'bg-slate-700'}`}
+                        />
+                    );
+                })}
             </div>
         </div>
     );
