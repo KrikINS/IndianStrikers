@@ -168,7 +168,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                 opponentId: match.opponentId
             });
             // Give time for state to update and hidden div to render
-            setTimeout(() => captureGraphic(matchId), 500);
+            setTimeout(() => {
+                captureGraphic(matchId);
+            }, 1000);
             return;
         }
 
@@ -265,10 +267,21 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     };
 
     const captureGraphic = async (matchId: string) => {
-        const element = document.getElementById('team-sheet-graphic');
-        if (!element) return;
-        
         setIsGenerating(true);
+        // Robustness: wait specifically for the element to appear if needed
+        let element = document.getElementById('team-sheet-graphic');
+        
+        if (!element) {
+            await new Promise(r => setTimeout(r, 500));
+            element = document.getElementById('team-sheet-graphic');
+        }
+
+        if (!element) {
+            console.error("Team sheet element not found for match:", matchId);
+            setIsGenerating(false);
+            return;
+        }
+        
         try {
             const canvas = await html2canvas(element, {
                 backgroundColor: '#020617', // Slate 950
@@ -924,8 +937,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                         onClose={() => setXiModalConfig({ ...xiModalConfig, isOpen: false })}
                         onSave={handleSaveXI}
                         onShare={(id) => handleSelectPlayingXI(id, 'view')}
-                        onQuickAddPlayer={handleQuickAddOpponentPlayer}
                     />
+                </div>
+            )}
                     
             {/* Hidden Graphic for Capture (Independent of Modal Open State) */}
             {xiModalConfig.matchId && matches.find(m => m.id === xiModalConfig.matchId) && (
@@ -990,8 +1004,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                             </div>
                         </div>
                      </div>
-                </div>
-            )}
                 </div>
             )}
             

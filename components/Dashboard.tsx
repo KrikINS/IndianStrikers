@@ -596,6 +596,14 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
 
 
 
+      {isGenerating && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center">
+            <div className="bg-slate-950 p-8 rounded-3xl border border-blue-500/30 text-center">
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-white font-black uppercase tracking-widest italic">Crafting Hero Poster...</p>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
