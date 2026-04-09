@@ -533,12 +533,14 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
         </div>
         
         <div className="flex gap-2">
+          {userRole === 'admin' && (
             <button
               onClick={handleExportExcel}
               className="px-4 py-2.5 bg-white text-blue-700 border border-blue-100 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:bg-blue-50 flex items-center gap-2"
             >
               <Activity size={16} className="text-blue-500" /> Export Excel
             </button>
+          )}
           
           {canManagePlayers && (
             <button

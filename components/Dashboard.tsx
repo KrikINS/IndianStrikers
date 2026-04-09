@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Player, OpponentTeam, UserRole } from '../types';
-import { getOpponents, getTournamentPerformers } from '../services/storageService';
-import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, History as HistoryIcon, X, Share2, Loader2, Download, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Player, OpponentTeam, UserRole, ScheduledMatch } from '../types';
+import { getOpponents, getTournamentPerformers, getMatches } from '../services/storageService';
+import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, History as HistoryIcon, X, Share2, Loader2, Download, Activity, ChevronLeft, ChevronRight, Bell, MapPin, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
@@ -15,29 +15,44 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', teamLogo }) => {
-  const { legacy, tournaments } = useMasterData();
+  const { legacy, tournaments, grounds } = useMasterData();
   const [tournamentName, setTournamentName] = useState(tournaments.length > 0 ? tournaments[0].name : '');
   const [groupNumber, setGroupNumber] = useState('A');
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [selectedHero, setSelectedHero] = useState<{ player: Player, statsType: 'batting' | 'bowling', statsValue: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const heroPosterRef = useRef<HTMLDivElement>(null);
+  const [nextMatch, setNextMatch] = useState<ScheduledMatch | null>(null);
 
   // Stats Mode State (Default: Career)
   const [statsMode, setStatsMode] = useState<'career' | 'season'>('career');
 
 
 
-  // Load opponents
+  // Load opponents and next match
   useEffect(() => {
     const load = async () => {
       try {
-        const opp = await getOpponents();
+        const [opp, allMatches] = await Promise.all([getOpponents(), getMatches()]);
         setOpponents(opp);
+
+        const upcoming = allMatches
+          .filter(m => m.status === 'upcoming')
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+        if (upcoming) {
+          const opponent = opp.find(o => o.id === upcoming.opponentId);
+          setNextMatch({
+            ...upcoming,
+            opponentName: upcoming.opponentName || (opponent ? opponent.name : (upcoming.opponentId || 'Opponent').replace(/-/g, ' '))
+          });
+        } else {
+          setNextMatch(null);
+        }
       } catch (e) { console.error("Failed to load dashboard data", e); }
     };
     load();
-  }, [tournamentName]);
+  }, [tournaments]); // Re-run when tournaments change (since we use it to calculate tournamentName)
 
   // -- Top Performers Logic --
   const processedPlayers = players.map(p => {
@@ -192,36 +207,106 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
         </div>
       )}
 
-      {/* 2. Team Legacy */}
-      <div className="w-full bg-slate-900 rounded-2xl md:rounded-3xl shadow-xl p-6 md:p-8 text-white relative overflow-hidden flex flex-col justify-center min-h-[200px] border border-slate-800 ring-1 ring-white/10">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-black/90 backdrop-blur-xl"></div>
-        <div className="absolute top-0 right-0 p-8 opacity-10"><Trophy size={180} /></div>
+      {/* 2. Top Section: 3-Column Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
+        {/* Left Column (25%): Team Logo */}
+        <div className="md:col-span-1 flex items-center justify-center relative overflow-hidden group">
+          <img
+            src="/INS%20LOGO.PNG"
+            className="max-h-48 md:max-h-72 w-auto object-contain transition-all duration-500 group-hover:scale-110 drop-shadow-[0_0_20px_rgba(30,58,138,0.6)]"
+            alt="Indian Strikers Logo"
+          />
+        </div>
 
-        <h3 className="text-xl md:text-2xl font-black mb-6 relative z-10 flex items-center gap-3 text-white">
-          <Award className="text-yellow-400" /> Team Legacy
-        </h3>
+        {/* Center Column (50%): Team Legacy */}
+        <div className="md:col-span-2 bg-slate-900 rounded-3xl shadow-xl px-6 py-3 md:px-8 md:py-4 text-white relative overflow-hidden flex flex-col justify-center border border-slate-800 ring-1 ring-white/10">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-black/90 backdrop-blur-xl"></div>
+          <div className="absolute top-0 right-0 p-8 opacity-10"><Trophy size={155} /></div>
 
-        <div className="grid grid-cols-3 gap-3 md:gap-6 relative z-10">
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-5 text-center border border-white/10 hover:bg-white/20 transition-all hover:-translate-y-1">
-            <div className="text-yellow-400 mb-2 flex justify-center"><Trophy size={28} /></div>
-            <div className="text-2xl md:text-4xl font-black mb-1">{legacy.winnersTrophies}</div>
-            <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-slate-300">Winners</div>
+          <h3 className="text-base md:text-lg font-black mb-6 relative z-10 flex items-center gap-3 text-white uppercase tracking-wider">
+            <Award className="text-yellow-400" size={20} /> Team Legacy
+          </h3>
+
+          <div className="grid grid-cols-3 gap-3 md:gap-4 relative z-10">
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/10 transition-all">
+              <div className="text-yellow-400 mb-1 flex justify-center"><Trophy size={30} /></div>
+              <div className="text-xl md:text-2xl font-black mb-0.5">{legacy.winnersTrophies}</div>
+              <div className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Winners</div>
+            </div>
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/10 transition-all">
+              <div className="text-slate-300 mb-1 flex justify-center"><Medal size={30} /></div>
+              <div className="text-xl md:text-2xl font-black mb-0.5">{legacy.runnersUp}</div>
+              <div className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Finalists</div>
+            </div>
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-3 md:p-4 text-center border border-white/10 hover:bg-white/10 transition-all">
+              <div className="text-orange-400 mb-1 flex justify-center"><Star size={30} /></div>
+              <div className="text-xl md:text-2xl font-black mb-0.5">{legacy.runnersUp + 17}</div>
+              <div className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Semis</div>
+            </div>
           </div>
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-5 text-center border border-white/10 hover:bg-white/20 transition-all hover:-translate-y-1">
-            <div className="text-slate-300 mb-2 flex justify-center"><Medal size={28} /></div>
-            <div className="text-2xl md:text-4xl font-black mb-1">{legacy.runnersUp}</div>
-            <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-slate-300">Runners-Up</div>
+        </div>
+
+        {/* Right Column (25%): Match Alert */}
+        <div className="md:col-span-1 bg-slate-900 rounded-3xl px-6 py-3 border border-slate-800 relative overflow-hidden flex flex-col justify-between shadow-xl">
+          <div className="absolute inset-0 bg-gradient-to-bl from-emerald-600/5 via-transparent to-transparent"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-emerald-500/20 p-2 rounded-lg border border-emerald-500/20">
+                <Bell size={16} className="text-emerald-400 animate-bounce" />
+              </div>
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] relative">
+                <span className="animate-match-alert-shimmer">MATCH ALERT</span>
+              </h3>
+            </div>
+
+            {nextMatch ? (
+              <div className="space-y-4">
+                <div className="flex items-baseline gap-2 border-l-4 border-emerald-500 pl-3 py-1">
+                  <span className="text-[11px] font-black text-emerald-400 whitespace-nowrap">VS</span>
+                  <p className="text-base font-black text-white italic pr-2 leading-tight uppercase tracking-tight">
+                    {nextMatch.opponentName}
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-1 border-t border-white/5 mt-2">
+                  <div className="flex items-center gap-2.5 text-slate-300">
+                    <Calendar size={13} className="text-sky-400" />
+                    <span className="text-[11px] font-bold tracking-tight">
+                      {new Date(nextMatch.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-slate-300">
+                    <Clock size={13} className="text-sky-400" />
+                    <span className="text-[11px] font-bold tracking-tight">
+                      {new Date(nextMatch.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} • {nextMatch.matchFormat || 'T20'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-slate-300">
+                    <MapPin size={13} className="text-sky-400" />
+                    <span className="text-[11px] font-bold tracking-tight whitespace-normal">
+                      {grounds.find(g => g.id === nextMatch.groundId)?.name || nextMatch.groundId || 'TBA'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col justify-center py-4">
+                <p className="text-[11px] font-bold text-slate-500 italic">No matches scheduled at the moment. Check back later!</p>
+              </div>
+            )}
           </div>
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 md:p-5 text-center border border-white/10 hover:bg-white/20 transition-all hover:-translate-y-1">
-            <div className="text-orange-400 mb-2 flex justify-center"><Star size={28} /></div>
-            <div className="text-2xl md:text-4xl font-black mb-1">{legacy.runnersUp + 17}</div>
-            <div className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-slate-300">Semi-Finals</div>
+
+          <div className="relative z-10 pt-4 mt-auto border-t border-white/5 flex justify-between items-center">
+            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest animate-pulse">Live Updates</span>
+            <Link to="/matches" className="text-[9px] font-black text-white hover:text-sky-400 transition-colors flex items-center gap-1">
+              SCHEDULE <ChevronRight size={10} />
+            </Link>
           </div>
         </div>
       </div>
 
       {/* 3. Weekly Performers (Infinite Loop Carousel) */}
-      <div className="w-full flex flex-col justify-center space-y-4 overflow-hidden bg-slate-900 md:p-10 rounded-[2.5rem] border border-slate-800 shadow-2xl relative">
+      <div className="w-full flex flex-col justify-center space-y-4 overflow-hidden bg-slate-900 md:px-10 md:pt-5 md:pb-1 rounded-[2.5rem] border border-slate-800 shadow-2xl relative">
         {/* Background Accents */}
         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-sky-400/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2"></div>
@@ -241,9 +326,9 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
               {performerData.isSeasonOpener ? "Season Opener! Watch this space for upcoming stars." : "Recruiting top talent. No performers this week."}
             </div>
           ) : (
-            <WeeklyPerformerCarousel 
-              performers={performerData.performers} 
-              onSelectHero={(data) => setSelectedHero(data)} 
+            <WeeklyPerformerCarousel
+              performers={performerData.performers}
+              onSelectHero={(data) => setSelectedHero(data)}
             />
           )}
         </div>
@@ -335,10 +420,10 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
 
       {isGenerating && (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center">
-            <div className="bg-slate-950 p-8 rounded-3xl border border-blue-500/30 text-center">
-                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-white font-black uppercase tracking-widest italic">Crafting Hero Poster...</p>
-            </div>
+          <div className="bg-slate-950 p-8 rounded-3xl border border-blue-500/30 text-center">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white font-black uppercase tracking-widest italic">Crafting Hero Poster...</p>
+          </div>
         </div>
       )}
     </div>
@@ -382,7 +467,7 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: any
   };
 
   return (
-    <div 
+    <div
       className="relative w-full h-[480px] flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -427,7 +512,7 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: any
                 transition={{ type: "spring", stiffness: 200, damping: 25 }}
                 className={isActive ? 'pointer-events-auto' : 'pointer-events-none'}
               >
-                <div 
+                <div
                   onClick={() => isActive && onSelectHero({
                     player,
                     statsType: player.wickets > 0 ? 'bowling' : 'batting',
@@ -440,7 +525,7 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: any
                   {/* Jersey Watermark - Tilted Background */}
                   <div className="absolute inset-0 opacity-[0.08] pointer-events-none rotate-[-15deg] scale-150 select-none">
                     <div className="grid grid-cols-4 gap-6 p-4">
-                      {Array.from({length: 12}).map((_, i) => (
+                      {Array.from({ length: 12 }).map((_, i) => (
                         <div key={i} className="text-sky-400 font-black text-6xl italic">7</div>
                       ))}
                     </div>
@@ -448,14 +533,14 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: any
 
                   {/* Gradient Accents */}
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-blue-600/20 to-transparent"></div>
-                  
+
                   <div className="relative z-10 flex flex-col items-center">
                     <div className="relative mb-8">
                       <div className="absolute inset-0 bg-sky-400 blur-[40px] opacity-10 group-hover:opacity-30 transition-opacity"></div>
-                      <img 
-                        src={player.avatarUrl} 
-                        className="w-36 h-44 rounded-[2.5rem] object-cover border-2 border-white/20 shadow-2xl relative z-10 transition-transform group-hover:scale-105" 
-                        alt={player.name} 
+                      <img
+                        src={player.avatarUrl}
+                        className="w-36 h-44 rounded-[2.5rem] object-cover border-2 border-white/20 shadow-2xl relative z-10 transition-transform group-hover:scale-105"
+                        alt={player.name}
                       />
                       <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-sky-400 text-slate-950 text-[10px] font-black px-6 py-1.5 rounded-full border-[3px] border-slate-950 uppercase tracking-tighter z-20 shadow-xl whitespace-nowrap">
                         {player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer'}
@@ -488,7 +573,7 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: any
       </div>
 
       <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 hidden md:flex justify-between pointer-events-none">
-        <button 
+        <button
           onClick={() => setIndex(prev => prev - 1)}
           title="Previous Performer"
           aria-label="View previous weekly performer"
@@ -496,7 +581,7 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: any
         >
           <ChevronLeft size={24} />
         </button>
-        <button 
+        <button
           onClick={() => setIndex(prev => prev + 1)}
           title="Next Performer"
           aria-label="View next weekly performer"

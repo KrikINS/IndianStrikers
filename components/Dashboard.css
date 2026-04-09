@@ -17,6 +17,33 @@
   animation: flash-text 1.5s ease-in-out infinite;
 }
 
+@keyframes alert-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes alert-glow-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
+}
+
+.animate-match-alert-shimmer {
+  background: linear-gradient(
+    90deg, 
+    #10b981 0%, 
+    #34d399 25%, 
+    #ffffff 50%, 
+    #34d399 75%, 
+    #10b981 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: alert-shimmer 3s linear infinite, alert-glow-pulse 2s ease-in-out infinite;
+  display: inline-block;
+}
+
 .next-match-floating-modal {
   background: rgba(15, 23, 42, 0.85);
   -webkit-backdrop-filter: blur(12px);

@@ -476,6 +476,7 @@ app.get('/api/table', async (req, res) => {
   }
   
   const { data, error } = await query.order('points', { ascending: false });
+  console.log(`[/api/table] Rows found: ${data?.length}, Error: ${error?.message}`);
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });

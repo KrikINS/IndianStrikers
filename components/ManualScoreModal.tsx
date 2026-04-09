@@ -155,7 +155,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
 
   const getBattingEntry = (inn: 1 | 2, pId: string) =>
     scorecard[inn === 1 ? 'innings1' : 'innings2'].batting.find(b => b.playerId === pId)
-    || { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out' };
+    || { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false };
 
   // ─── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
@@ -188,6 +188,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
         wickets: parseInt(r.wickets) || 0,
         wides: parseInt(r.wd) || 0,
         no_balls: parseInt(r.nb) || 0,
+        is_hero: !!r.is_hero,
       }));
 
     const finalScorecard = {
