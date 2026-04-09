@@ -137,8 +137,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canEdit = userRole === 'admin';
-  const canManagePlayers = userRole === 'admin' || userRole === 'member';
-  const canEditProfile = userRole === 'admin' || userRole === 'member';
+  const canManagePlayers = userRole === 'admin' || userRole === 'scorer';
+  const canEditProfile = userRole === 'admin' || userRole === 'scorer';
 
   const [formData, setFormData] = useState<Partial<Player>>({
     role: PlayerRole.BATSMAN,

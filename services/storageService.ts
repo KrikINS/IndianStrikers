@@ -628,5 +628,24 @@ export const updateLegacyStats = async (playerId: string, stats: Partial<PlayerL
 };
 export const getTournamentPerformers = async (): Promise<any> => {
   const res = await fetch(`${API_URL}/tournament-performers`);
-  return handleResponse(res);
+  const data = await handleResponse(res);
+  
+  if (!data) return data;
+
+  return {
+    ...data,
+    tournamentName: data.tournament_name || data.tournamentName,
+    performers: (data.performers || []).map((p: any) => ({
+      ...p,
+      avatarUrl: p.avatar_url || p.avatarUrl,
+      opponentId: p.opponent_id || p.opponentId,
+      groundId: p.ground_id || p.groundId,
+      opponentName: p.opponent_name || p.opponentName,
+      groundName: p.ground_name || p.groundName,
+      matchTime: p.match_time || p.matchTime,
+      matchDate: p.match_date || p.matchDate,
+      bowlingRuns: p.bowling_runs || p.bowlingRuns,
+      bowlingOvers: p.bowling_overs || p.bowlingOvers
+    }))
+  };
 };

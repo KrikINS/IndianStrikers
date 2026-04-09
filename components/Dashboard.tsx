@@ -19,13 +19,20 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
   const [tournamentName, setTournamentName] = useState(tournaments.length > 0 ? tournaments[0].name : '');
   const [groupNumber, setGroupNumber] = useState('A');
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
-  const [selectedHero, setSelectedHero] = useState<{ player: Player, statsType: 'batting' | 'bowling', statsValue: string } | null>(null);
+  const [selectedHero, setSelectedHero] = useState<{ 
+    player: Player, 
+    statsType: 'batting' | 'bowling', 
+    statsValue: string,
+    matchDate?: string,
+    matchTime?: string,
+    opponentName?: string,
+    groundName?: string,
+    fullStats?: any
+  } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const heroPosterRef = useRef<HTMLDivElement>(null);
   const [nextMatch, setNextMatch] = useState<ScheduledMatch | null>(null);
 
-  // Stats Mode State (Default: Career)
-  const [statsMode, setStatsMode] = useState<'career' | 'season'>('career');
 
 
 
@@ -54,15 +61,12 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
     load();
   }, [tournaments]); // Re-run when tournaments change (since we use it to calculate tournamentName)
 
-  // -- Top Performers Logic --
-  const processedPlayers = players.map(p => {
-    const isCareer = statsMode === 'career';
-    return {
-      ...p,
-      displayRuns: isCareer ? p.runsScored : Math.round(p.runsScored * 0.34), // Simulation for demo
-      displayWickets: isCareer ? p.wicketsTaken : Math.round(p.wicketsTaken * 0.34) // Simulation for demo
-    };
-  });
+  // -- Top Performers Logic (Career) --
+  const processedPlayers = players.map(p => ({
+    ...p,
+    displayRuns: p.runsScored,
+    displayWickets: p.wicketsTaken
+  }));
 
   const topRunScorers = [...processedPlayers]
     .sort((a, b) => b.displayRuns - a.displayRuns)
@@ -94,7 +98,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
   useEffect(() => {
     if (statsRef.current) {
       const bars = statsRef.current.querySelectorAll('[data-width]');
-      bars.forEach((bar) => {
+      bars.forEach((bar: any) => {
         const width = (bar as HTMLElement).getAttribute('data-width');
         if (width) (bar as HTMLElement).style.width = width;
       });
@@ -110,10 +114,11 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
     try {
       await new Promise(resolve => setTimeout(resolve, 500)); // Ensure render
       const canvas = await html2canvas(heroPosterRef.current, {
-        backgroundColor: null,
-        scale: 2,
+        backgroundColor: '#0c1222',
+        scale: 3, // High density for social media
         useCORS: true,
         logging: false,
+        allowTaint: true,
       });
 
       const link = document.createElement('a');
@@ -148,75 +153,163 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
           <div className="absolute -inset-0.5 bg-sky-500/20 rounded-full blur-md"></div>
           
           <div className="relative bg-[#0f172a]/80 backdrop-blur-xl border border-sky-400/30 px-6 py-2 rounded-full shadow-2xl">
-            <p className="text-[10px] md:text-xs font-black italic uppercase tracking-[0.15rem] animate-motto-spotlight leading-none flex items-center">
+            <p className="text-[10px] md:text-xs font-black italic uppercase tracking-[0.15rem] animate-bounce-shimmer leading-none flex items-center">
               ONE TEAM <span className="mx-2 text-sky-400/40 text-[8px]">•</span> ONE DREAM
             </p>
           </div>
         </div>
       </div>
 
-      {/* Hero Poster Modal */}
-      {selectedHero && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
-            <div className="flex-1 bg-slate-100 p-8 flex items-center justify-center relative overflow-hidden bg-slate-900">
-              {/* Rendering Container - We display this directly but capture ref */}
-              <div ref={heroPosterRef} className="w-[400px] h-[500px] bg-slate-900 relative overflow-hidden flex flex-col shadow-2xl shrink-0">
-                {/* Background FX */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-slate-900 via-blue-900 to-slate-900"></div>
-                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2"></div>
-                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-orange-500/20 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/2"></div>
-
-                {/* Corner Logo */}
-                <div className="absolute top-4 left-4 z-20 w-12 h-12 bg-white/10 backdrop-blur-md rounded-lg p-2 border border-white/20">
-                  {teamLogo ? (
-                    <img src={teamLogo} className="w-full h-full object-contain" alt="Team Logo" />
-                  ) : (
-                    <img src="/INS%20LOGO.PNG" className="w-full h-full object-contain" alt="INS" />
-                  )}
-                </div>
-
-                {/* Player Image */}
-                <div className="absolute top-16 left-1/2 -translate-x-1/2 w-64 h-64 z-10">
-                  <img src={selectedHero.player.avatarUrl} className="w-full h-full object-cover rounded-full border-4 border-white/20 shadow-xl" crossOrigin="anonymous" alt={selectedHero.player.name} />
-                </div>
-
-                {/* Content */}
-                <div className="absolute bottom-0 left-0 right-0 h-[220px] bg-gradient-to-t from-slate-950 via-slate-900/90 to-transparent z-20 flex flex-col justify-end p-6 text-center">
-                  <div className="mb-2">
-                    <span className="bg-yellow-500 text-slate-950 font-black text-xs px-2 py-0.5 rounded uppercase tracking-wider">Match Day Hero</span>
-                  </div>
-                  <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none mb-1">{selectedHero.player.name}</h2>
-                  <p className="text-slate-400 text-sm font-medium mb-4">Match Day</p>
-
-                  <div className="flex items-center justify-center gap-4">
-                    <div className="bg-white/10 backdrop-blur border border-white/10 rounded-xl px-4 py-2 min-w-[120px]">
-                      <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">{selectedHero.statsType === 'bowling' ? 'Figures' : 'Score'}</p>
-                      <p className="text-2xl font-black text-white">{selectedHero.statsValue}</p>
+      {/* Hero Poster Modal */}      {selectedHero && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md">
+          <div className="bg-slate-900 rounded-[2.5rem] shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col md:flex-row border border-white/10">
+            {/* Visualizer Area */}
+            <div className="flex-[1.5] bg-slate-950 p-4 md:p-8 flex items-center justify-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-slate-950"></div>
+              
+              {/* Rendering Container - 1080x1920 optimized (360x640 preview) */}
+              <div 
+                ref={heroPosterRef} 
+                className="w-[360px] h-[640px] bg-[#0c1222] relative overflow-hidden flex flex-col shadow-[0_0_100px_rgba(0,0,0,0.5)] shrink-0"
+                style={{ fontFamily: "'Outfit', sans-serif" }}
+              >
+                {/* 1. BRANDING LAYER (TOP) */}
+                <div className="absolute top-0 left-0 right-0 z-50">
+                  {/* Header Content: Logo + Title */}
+                  <div className="absolute top-4 left-2 flex items-center gap-1.5">
+                    <img src="/INS%20LOGO.PNG" className="w-[110px] h-[110px] object-contain drop-shadow-2xl" alt="Logo" />
+                    <div className="flex flex-col -mt-1">
+                      <h1 className="text-[20px] font-[1000] italic text-white uppercase leading-none tracking-tighter drop-shadow-md">
+                        MATCH DAY
+                      </h1>
+                      <h2 className="text-[26px] font-[1000] italic text-sky-400 uppercase leading-none tracking-tight -mt-0.5 drop-shadow-lg">
+                        HERO
+                      </h2>
                     </div>
                   </div>
+                  
+                  {/* Motto - Page Separator Style (Right Aligned) */}
+                  <div className="absolute top-2 right-0 bg-white/5 backdrop-blur-3xl border-l border-b border-white/10 pl-4 pr-3 py-1 rounded-bl-2xl shadow-2xl">
+                    <span className="text-[7px] font-black italic text-white tracking-[0.25em] uppercase">One Team, One Dream</span>
+                  </div>
+                </div>
+
+                {/* 2. BACKGROUND WATERMARK */}
+                <div 
+                  className="absolute left-1/2 -translate-x-1/2 text-[260px] font-black text-sky-400 opacity-[0.05] select-none z-0 tracking-tighter italic"
+                  style={{ top: '30%' }}
+                >
+                   {selectedHero.player.jerseyNumber || 99}
+                </div>
+
+                {/* 3. CONTENT STACK: PLAYER IMAGE -> NAME -> DETAILS -> BOXES */}
+                <div className="absolute inset-x-0 bottom-[30px] flex flex-col items-center z-30 px-8">
+                   
+                   {/* Player Picture - Now sits precisely above the name with a cinematic fade */}
+                   <div className="w-full flex justify-center mb-6">
+                      <img 
+                        src={selectedHero.player.avatarUrl} 
+                        className="max-h-[380px] w-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]" 
+                        style={{ 
+                          maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 95%)',
+                          WebkitMaskImage: 'radial-gradient(ellipse at center, black 40%, transparent 95%)'
+                        }}
+                        crossOrigin="anonymous" 
+                        alt={selectedHero.player.name}
+                      />
+                   </div>
+
+                   {/* Player Name */}
+                   <div className="text-center mb-3 w-full">
+                      <h2 className="text-[26px] font-extrabold text-sky-400 uppercase italic tracking-[0.1rem] leading-none mb-1 animate-bounce-shimmer drop-shadow-2xl">
+                        {selectedHero.player.name}
+                      </h2>
+                   </div>
+
+                   {/* Match Details Stack */}
+                   <div className="flex flex-col items-center mb-6 space-y-1">
+                      <div className="flex items-center gap-2 opacity-90">
+                        <Calendar size={11} className="text-sky-400" />
+                        <p className="text-[10px] font-black text-white tracking-[0.15em] uppercase">
+                          {selectedHero.matchDate ? new Date(selectedHero.matchDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : 'Season Match'}
+                        </p>
+                      </div>
+                      <h3 className="text-[14px] font-black text-white italic tracking-widest uppercase mt-1">
+                        VS <span className="text-sky-400">{selectedHero.opponentName || 'OPPONENT'}</span>
+                      </h3>
+                   </div>
+                   
+                   {/* Replicated Hero Card Boxes */}
+                   <div className="grid grid-cols-2 gap-3 w-full">
+                      <div className="bg-sky-400/10 rounded-2xl p-4 border border-sky-400/20 backdrop-blur-3xl flex flex-col items-center justify-center shadow-xl">
+                        <p className="text-[9px] uppercase font-black text-sky-400/70 mb-1 tracking-widest">Impact</p>
+                        <p className="font-black text-sky-400 text-lg leading-none">
+                          {selectedHero.fullStats?.runs ?? 0} ({selectedHero.fullStats?.balls ?? 0})
+                        </p>
+                      </div>
+
+                      <div className="bg-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-3xl flex flex-col items-center justify-center shadow-xl">
+                        <p className="text-[9px] uppercase font-black text-slate-500 mb-1 tracking-widest whitespace-nowrap">
+                          {selectedHero.fullStats?.wickets > 0 ? 'Economy' : 'Strike Rate'}
+                        </p>
+                        <p className="font-black text-white text-lg leading-none">
+                          {selectedHero.fullStats?.wickets > 0 
+                            ? (selectedHero.fullStats?.bowlingRuns / (selectedHero.fullStats?.bowlingOvers || 1)).toFixed(2)
+                            : ((selectedHero.fullStats?.runs / (selectedHero.fullStats?.balls || 1)) * 100).toFixed(1)}
+                        </p>
+                      </div>
+                    </div>
+                </div>
+
+                {/* 4. BRANDING LAYER (BOTTOM) */}
+                <div className="absolute bottom-2 left-0 right-0 flex flex-col items-center gap-0.5 z-50">
+                   <p className="text-[6px] font-black text-white/20 uppercase tracking-[0.4em]">
+                     IMAGE GENERATED BY INDIAN STRIKERS APP
+                   </p>
+                   <p className="text-[7px] font-black text-sky-400/30 uppercase tracking-[0.1em]">
+                     WWW.INDIANSTRIKERS.COM
+                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Controls */}
-            <div className="bg-white p-6 flex flex-col justify-between shrink-0 md:w-80">
+            {/* Content & Action Panel */}
+            <div className="flex-1 bg-white p-8 md:p-12 flex flex-col justify-between md:max-w-md">
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-bold text-lg text-slate-800">Match Hero Poster</h3>
-                  <button onClick={() => setSelectedHero(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors" title="Close" aria-label="Close Modal"><X size={20} /></button>
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex flex-col">
+                    <h3 className="font-black text-2xl text-slate-900 uppercase tracking-tight">HERO POSTER</h3>
+                    <div className="h-1 w-12 bg-blue-600 rounded-full mt-1"></div>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedHero(null)} 
+                    className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-slate-900" 
+                    title="Close Poster Modal"
+                    aria-label="Close"
+                  >
+                    <X size={24} />
+                  </button>
                 </div>
-                <p className="text-sm text-slate-500 mb-6">High-quality poster generated for social media sharing. Click the download button below to save.</p>
+                
+                <div className="space-y-6">
+                  <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 italic">
+                    <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                      "Player photo is now perfectly centered between the header and match information for a balanced social media layout."
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <button
-                onClick={handleGenerateHeroPoster}
-                disabled={isGenerating}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-blue-200 transition-all active:scale-95 disabled:opacity-70"
-              >
-                {isGenerating ? <Loader2 size={20} className="animate-spin" /> : <Download size={20} />}
-                {isGenerating ? 'Generating...' : 'Download Poster'}
-              </button>
+              <div className="mt-12 space-y-4">
+                <button
+                  onClick={handleGenerateHeroPoster}
+                  disabled={isGenerating}
+                  className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 disabled:opacity-70 group"
+                >
+                  {isGenerating ? <Loader2 size={24} className="animate-spin" /> : <Download size={24} />}
+                  {isGenerating ? 'GENERATING...' : 'DOWNLOAD POSTER'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -327,8 +420,8 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-sky-400/5 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2"></div>
 
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 px-6">
-          <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-3 uppercase tracking-tighter italic">
-            <Zap className="text-sky-400 fill-sky-400" size={24} /> Tournament Performers
+          <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-3 uppercase tracking-tighter italic drop-shadow-[0_0_12px_rgba(56,189,248,0.4)]">
+            <Zap className="text-sky-400 fill-sky-400 animate-pulse" size={24} /> PERFORMER SPOTLIGHT
           </h3>
           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-400/60 bg-sky-400/10 px-4 py-1.5 rounded-full border border-sky-400/20">
             {performerData.tournamentName || "Alpha Season"} Highlights
@@ -344,6 +437,8 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
             <WeeklyPerformerCarousel
               performers={performerData.performers}
               onSelectHero={(data) => setSelectedHero(data)}
+              opponents={opponents}
+              grounds={grounds}
             />
           )}
         </div>
@@ -359,21 +454,6 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
             Leaderboard
           </h3>
 
-          {/* Toggle Switch */}
-          <div className="bg-slate-100 p-1 rounded-full flex items-center border border-slate-200 self-end sm:self-auto">
-            <button
-              onClick={() => setStatsMode('career')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${statsMode === 'career' ? 'bg-white shadow-sm text-blue-700' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <HistoryIcon size={12} /> Career
-            </button>
-            <button
-              onClick={() => setStatsMode('season')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${statsMode === 'season' ? 'bg-white shadow-sm text-sky-700' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <Calendar size={12} /> Season
-            </button>
-          </div>
         </div>
 
         <div ref={statsRef} className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 relative z-10">
@@ -446,7 +526,17 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
 };
 
 // --- Carousel Component for Weekly Performers ---
-const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: any[], onSelectHero: (data: any) => void }) => {
+const WeeklyPerformerCarousel = ({ 
+  performers, 
+  onSelectHero,
+  opponents,
+  grounds
+}: { 
+  performers: any[], 
+  onSelectHero: (data: any) => void,
+  opponents: OpponentTeam[],
+  grounds: any[] // Should technically be Ground[] if typed
+}) => {
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -531,14 +621,19 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: any
                   onClick={() => isActive && onSelectHero({
                     player,
                     statsType: player.wickets > 0 ? 'bowling' : 'batting',
-                    statsValue: player.wickets > 0 ? `${player.wickets}/${player.bowlingRuns}` : `${player.runs} (${player.balls})`
+                    statsValue: player.wickets > 0 ? `${player.wickets}/${player.bowlingRuns}` : `${player.runs} (${player.balls})`,
+                    matchDate: player.matchDate,
+                    matchTime: player.matchTime || (player.matchDate ? new Date(player.matchDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined),
+                    opponentName: player.opponentName || opponents.find((o: any) => o.id === player.opponentId)?.name || 'TEAM',
+                    groundName: player.groundName || grounds.find((g: any) => g.id === player.groundId)?.name || 'CRICKET GROUND',
+                    fullStats: player
                   })}
                   title={`View ${player.name}'s Hero Poster`}
                   aria-label={`View performance poster for ${player.name}`}
-                  className="bg-slate-950 rounded-[3rem] p-8 border border-white/10 shadow-2xl relative overflow-hidden group transition-all"
+                  className={`bg-[#0f172a] rounded-[3rem] p-8 border ${isActive ? 'border-sky-500/50 shadow-[0_0_50px_rgba(56,189,248,0.3)]' : 'border-white/10'} relative overflow-hidden group transition-all duration-500`}
                 >
                   {/* Jersey Watermark - Tilted Background */}
-                  <div className="absolute inset-0 opacity-[0.08] pointer-events-none rotate-[-15deg] scale-150 select-none">
+                  <div className="absolute inset-0 opacity-[0.05] pointer-events-none rotate-[-15deg] scale-150 select-none">
                     <div className="grid grid-cols-4 gap-6 p-4">
                       {Array.from({ length: 12 }).map((_, i) => (
                         <div key={i} className="text-sky-400 font-black text-6xl italic">7</div>
@@ -547,35 +642,53 @@ const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: any
                   </div>
 
                   {/* Gradient Accents */}
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-blue-600/20 to-transparent"></div>
+                  <div className={`absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t ${isActive ? 'from-sky-600/20' : 'from-blue-600/10'} to-transparent transition-colors duration-500`}></div>
 
                   <div className="relative z-10 flex flex-col items-center">
-                    <div className="relative mb-8">
-                      <div className="absolute inset-0 bg-sky-400 blur-[40px] opacity-10 group-hover:opacity-30 transition-opacity"></div>
+                    <div className="relative mb-6">
+                      <div className={`absolute inset-0 bg-sky-400 blur-[40px] ${isActive ? 'opacity-20' : 'opacity-10'} transition-opacity`}></div>
                       <img
                         src={player.avatarUrl}
-                        className="w-36 h-44 rounded-[2.5rem] object-cover border-2 border-white/20 shadow-2xl relative z-10 transition-transform group-hover:scale-105"
+                        className="w-32 h-40 rounded-[2rem] object-cover border-2 border-white/20 shadow-2xl relative z-10 transition-transform group-hover:scale-105"
                         alt={player.name}
                       />
-                      <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-sky-400 text-slate-950 text-[10px] font-black px-6 py-1.5 rounded-full border-[3px] border-slate-950 uppercase tracking-tighter z-20 shadow-xl whitespace-nowrap">
+                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-sky-400 text-slate-950 text-[9px] font-black px-5 py-1 rounded-full border-[2px] border-slate-950 uppercase tracking-tighter z-20 shadow-xl whitespace-nowrap">
                         {player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer'}
                       </div>
                     </div>
+                    <h4 className="font-black text-2xl uppercase tracking-[0.2rem] italic text-center mb-1 leading-none animate-bounce-shimmer">
+                      {player.name}
+                    </h4>
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-4">{player.role}</p>
 
-                    <h4 className="font-black text-white text-2xl uppercase tracking-tighter italic text-center mb-1 leading-none">{player.name}</h4>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-8">{player.role}</p>
+                    {/* Impact Stat: Largest Element */}
+                    <div className="mb-6 text-center">
+                      <p className="text-4xl font-black text-sky-400 drop-shadow-[0_0_15px_rgba(56,189,248,0.5)] italic">
+                        {player.wickets > 0 ? player.wickets : player.runs}
+                        <span className="text-sm font-black text-sky-400/50 ml-1 uppercase">
+                          {player.wickets > 0 ? 'Wickets' : 'Runs'}
+                        </span>
+                      </p>
+                    </div>
 
-                    <div className="grid grid-cols-2 gap-4 w-full">
-                      <div className="bg-white/5 rounded-3xl p-4 border border-white/5 backdrop-blur-md">
-                        <p className="text-[9px] uppercase font-bold text-slate-500 mb-1 tracking-widest">Impact</p>
-                        <p className="font-black text-white text-xl leading-none">
-                          {player.wickets > 0 ? `${player.wickets}/${player.bowlingRuns}` : `${player.runs}(${player.balls})`}
+                    <div className="grid grid-cols-2 gap-3 w-full">
+                      {/* Box 1: Impact Detail */}
+                      <div className="bg-sky-400/10 rounded-2xl p-3 border border-sky-400/20 backdrop-blur-md flex flex-col items-center justify-center">
+                        <p className="text-[8px] uppercase font-black text-sky-400/70 mb-1 tracking-widest">Impact</p>
+                        <p className="font-black text-sky-400 text-lg leading-none">
+                          {player.runs} ({player.balls || 0})
                         </p>
                       </div>
-                      <div className="bg-white/5 rounded-3xl p-4 border border-white/5 backdrop-blur-md">
-                        <p className="text-[9px] uppercase font-bold text-slate-500 mb-1 tracking-widest">{player.wickets > 0 ? 'ECN' : 'SR'}</p>
-                        <p className="font-black text-sky-400 text-xl leading-none">
-                          {player.wickets > 0 ? (player.bowlingRuns / player.bowlingOvers).toFixed(2) : ((player.runs / (player.balls || 1)) * 100).toFixed(1)}
+
+                      {/* Box 2: Efficiency (SR or Economy) */}
+                      <div className="bg-white/5 rounded-2xl p-3 border border-white/5 backdrop-blur-md flex flex-col items-center justify-center">
+                        <p className="text-[8px] uppercase font-black text-slate-500 mb-1 tracking-widest whitespace-nowrap">
+                          {player.wickets > 0 ? 'Economy' : 'Strike Rate'}
+                        </p>
+                        <p className="font-black text-white text-lg leading-none">
+                          {player.wickets > 0 
+                            ? (player.bowlingRuns / (player.bowlingOvers || 1)).toFixed(2)
+                            : ((player.runs / (player.balls || 1)) * 100).toFixed(1)}
                         </p>
                       </div>
                     </div>

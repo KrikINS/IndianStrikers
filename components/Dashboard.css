@@ -58,25 +58,26 @@
   box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
 }
 
-@keyframes motto-spotlight {
-  0% { background-position: 100% center; }
-  100% { background-position: 0% center; }
+@keyframes bounce-shimmer {
+  0% { background-position: 100% center; transform: scale(1); }
+  50% { background-position: 50% center; transform: scale(1.02); }
+  100% { background-position: 0% center; transform: scale(1); }
 }
 
-.animate-motto-spotlight {
+.animate-bounce-shimmer {
   background: linear-gradient(
     90deg, 
     #1e3a8a 0%,    /* Navy */
-    #38bdf8 20%,   /* Sky Blue Start */
-    #f0f9ff 50%,   /* Bright Spotlight Core */
-    #38bdf8 80%,   /* Sky Blue End */
+    #38bdf8 20.5%, /* Sky Blue Start */
+    #ffffff 50%,   /* Bright Spotlight Core */
+    #38bdf8 79.5%, /* Sky Blue End */
     #1e3a8a 100%   /* Navy */
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: motto-spotlight 10s ease-in-out infinite alternate;
+  animation: bounce-shimmer 8s ease-in-out infinite;
   display: inline-block;
-  will-change: background-position;
+  will-change: background-position, transform;
 }

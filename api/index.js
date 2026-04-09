@@ -836,7 +836,7 @@ app.get('/api/tournament-performers', async (req, res) => {
         .from('player_match_stats')
         .select(`
           *,
-          matches:match_id!inner ( id, date, status, tournament_id ),
+          matches:match_id!inner ( id, date, status, tournament_id, ground_id, opponent_id ),
           players:player_id!inner ( id, name, role, avatar_url )
         `);
 
@@ -885,7 +885,10 @@ app.get('/api/tournament-performers', async (req, res) => {
         bowlingRuns: Number(row.runs_conceded || 0),
         bowlingOvers: Number(row.overs_bowled || 0),
         isHero: !!row.is_hero,
-        matchDate: row.matches.date
+        matchDate: row.matches.date,
+        matchId: row.matches.id,
+        opponentId: row.matches.opponent_id,
+        groundId: row.matches.ground_id
       }));
 
       return results;

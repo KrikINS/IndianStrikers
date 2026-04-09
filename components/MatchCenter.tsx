@@ -420,9 +420,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
           .badge-status-up { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
           .table-footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; }
           .filter-select { 
-            background: #0f172a; 
-            border: 1px solid rgba(56, 189, 248, 0.2); 
-            color: #f8fafc; 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            color: #1e293b; 
             padding: 9px 12px; 
             border-radius: 12px; 
             font-size: 11px; 
@@ -433,21 +433,21 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             text-transform: uppercase;
             letter-spacing: 0.05em;
             appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2338bdf8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%233b82f6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 10px center;
             background-size: 14px;
             padding-right: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
           }
           .filter-select:hover { 
-            border-color: #38bdf8; 
-            background: #1e293b; 
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.1);
+            border-color: #3b82f6; 
+            background: #f8fafc; 
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
           }
           .filter-select:focus { 
-            border-color: #38bdf8; 
-            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+            border-color: #3b82f6; 
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
           }
           .search-wrap { position: relative; flex: 1; }
 
@@ -766,13 +766,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                     placeholder="Search opponent or tournament..."
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
-                                    className="w-full bg-slate-900 border border-slate-700 text-white pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:border-blue-500 transition-all"
+                                    className="w-full bg-white border border-slate-200 text-slate-900 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:border-blue-500 transition-all shadow-sm"
                                 />
                             </div>
                             <select
                                 value={tournamentFilter}
                                 onChange={e => setTournamentFilter(e.target.value)}
-                                className="filter-select border-blue-500/30 text-blue-400 bg-slate-900"
+                                className="filter-select border-blue-200 text-blue-600"
                                 title="Filter by tournament"
                             >
                                 <option value="All">All Tournaments</option>
@@ -784,7 +784,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                             <select
                                 value={yearFilter}
                                 onChange={e => setYearFilter(e.target.value)}
-                                className="filter-select border-slate-700 text-slate-400 bg-slate-900"
+                                className="filter-select border-slate-200 text-slate-600"
                                 title="Filter by year"
                             >
                                 <option value="All">All Years</option>
@@ -797,7 +797,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                 value={formatFilter}
                                 onChange={e => setFormatFilter(e.target.value as any)}
                                 title="Filter by match format"
-                                className="filter-select border-slate-700 text-slate-400 bg-slate-900"
+                                className="filter-select border-slate-200 text-slate-600"
                             >
                                 <option value="All">All Formats</option>
                                 <option value="T20">T20</option>
