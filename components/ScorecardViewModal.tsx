@@ -23,6 +23,8 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 }) => {
     const inn1Ref = useRef<HTMLDivElement>(null);
     const inn2Ref = useRef<HTMLDivElement>(null);
+    const fullScorecardRef = useRef<HTMLDivElement>(null);
+    const modalContentRef = useRef<HTMLDivElement>(null);
     const [isExporting, setIsExporting] = useState(false);
 
     if (!isOpen || !match.scorecard) return null;
@@ -43,19 +45,39 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
     const resolvePlayerName = (name: string | undefined, id: string | undefined, teamType: 'home' | 'opponent') => {
         if (!id && !name) return '-';
 
-        const searchId = id || name;
+        // Search ID can be the ID itself or the name if passed in the ID field (common in some legacy imports)
+        const searchId = String(id || name || '').trim();
+        if (!searchId || searchId === 'undefined') return name || '-';
 
         if (teamType === 'home') {
-            const p = players.find(p => p.id === searchId || p.player_id === searchId || p.name === searchId);
+            // HIGH-ROBUSTNESS SEARCH: Check ID, player_id (Supabase), and Name matches
+            const p = players.find(player => {
+                const pid = String(player.id || '');
+                const psid = String((player as any).player_id || '');
+                const pname = String(player.name || '').toLowerCase();
+                const target = searchId.toLowerCase();
+
+                return pid === searchId || psid === searchId || pname === target || pid.includes(searchId);
+            });
+
             if (p) return p.name;
         } else {
             // Check opponent roster
-            const oppPlayer = opponent?.players?.find(p => p.id === searchId || p.name === searchId);
+            const oppPlayer = opponent?.players?.find(player => {
+                const pid = String(player.id || '');
+                const pname = String(player.name || '').toLowerCase();
+                const target = searchId.toLowerCase();
+                return pid === searchId || pname === target;
+            });
             if (oppPlayer) return oppPlayer.name;
         }
 
-        // Clean up display if still not found
+        // FALLBACK: If we have a raw name that isn't a UUID or pure number, use it
         if (name && !name.includes('-') && isNaN(Number(name))) return name;
+        
+        // Final effort: If searchId looks like a name (not a UUID), just return it
+        if (searchId.length > 3 && !searchId.includes('-') && isNaN(Number(searchId))) return searchId;
+
         return teamType === 'home' ? "Indian Strikers Player" : (opponentName + " Player");
     };
 
@@ -123,21 +145,55 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
     const downloadAsImage = async () => {
         setIsExporting(true);
         try {
-            // Capture the first innings by default or adjust to capture the whole scrollable container
-            const ref = inn1Ref; 
+            const ref = modalContentRef; 
             if (ref.current) {
+                // Ensure the entire content is visible for capture
                 const canvas = await html2canvas(ref.current, {
                     scale: 3,
-                    backgroundColor: '#ffffff', // Capture on white
+                    backgroundColor: '#020617',
                     useCORS: true,
+                    logging: false,
+                    scrollY: -window.scrollY, // Avoid offset issues
+                    onclone: (clonedDoc) => {
+                        const clonedTarget = clonedDoc.getElementById('scorecard-capture-target');
+                        if (clonedTarget) {
+                            // TRANSFORM: Remove all scroll restrictions and fixed heights for the capture
+                            clonedTarget.style.height = 'auto';
+                            clonedTarget.style.width = '1200px'; // Set a consistent width for broadcast look
+                            clonedTarget.style.overflow = 'visible';
+                            clonedTarget.style.position = 'relative';
+                            
+                            // Also expand the internal scroll container
+                            const scrollable = clonedTarget.querySelector('.overflow-y-auto');
+                            if (scrollable) {
+                                (scrollable as HTMLElement).style.height = 'auto';
+                                (scrollable as HTMLElement).style.overflow = 'visible';
+                            }
+                        }
+                    }
                 });
-                const link = document.createElement('a');
-                link.download = `Full_Scorecard_${match.opponentName || 'Match'}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+
+                // Generate a robust filename
+                const rawName = match.opponentName || 'Match';
+                const safeName = rawName.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+                const fileName = `Full_Scorecard_${safeName}.png`.replace(/_+/g, '_');
+
+                // Use Blob for more reliable download and 'Save As' behavior
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }
+                }, 'image/png', 1.0);
             }
         } catch (err) {
-            console.error('Failed to export images:', err);
+            console.error('Failed to export image:', err);
         } finally {
             setIsExporting(false);
         }
@@ -280,7 +336,11 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
     }
 
     return (
-        <div className="fixed inset-0 z-[150] bg-slate-950 flex flex-col overflow-hidden">
+        <div 
+            ref={modalContentRef} 
+            id="scorecard-capture-target"
+            className="fixed inset-0 z-[150] bg-slate-950 flex flex-col overflow-hidden"
+        >
             {/* Frozen Header - Premium Aesthetic */}
             <div className="sticky top-0 z-[160] bg-slate-950/80 backdrop-blur-xl border-b border-white/10 p-4 shrink-0">
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -309,10 +369,10 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                             <ExternalLink size={16} className="text-emerald-500" />
                             {new Date(match.date).getFullYear()} {match.tournament}
                         </div>
-                        {match.result && (
+                        {((match as any).resultNote || (match as any).resultSummary) && (
                             <div className="mt-2 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded flex items-center gap-2">
                                 <Trophy size={14} className="text-white fill-white/20" />
-                                {match.result}
+                                {(match as any).resultNote || (match as any).resultSummary}
                             </div>
                         )}
                     </div>
@@ -352,7 +412,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
             {/* Content Body - Pure Data Flow */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-white">
-                <div className="max-w-7xl mx-auto space-y-6 pb-10">
+                <div ref={fullScorecardRef} className="max-w-7xl mx-auto space-y-6 pb-10">
                     {renderInningsContent(1, inn1Ref)}
                     {renderInningsContent(2, inn2Ref)}
                 </div>
@@ -360,14 +420,21 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
 
             {/* Bottom Floating Stats Bar */}
-            <div className="bg-slate-900/90 backdrop-blur-md border-t border-white/10 p-3 shrink-0 flex justify-center gap-8">
-                <div className="flex gap-4 items-center">
-                    <Calendar size={14} className="text-emerald-500" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{new Date(match.date).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
+            <div className="bg-slate-900/90 backdrop-blur-md border-t border-white/10 p-4 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4 px-8">
+                <div className="flex gap-8 items-center">
+                    <div className="flex gap-4 items-center">
+                        <Calendar size={14} className="text-emerald-500" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{new Date(match.date).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
+                    </div>
+                    <div className="flex gap-4 items-center border-l border-white/10 pl-8">
+                        <Trophy size={14} className="text-emerald-500" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{(match as any).resultNote || (match as any).resultSummary || 'MATCH COMPLETED'}</span>
+                    </div>
                 </div>
-                <div className="flex gap-4 items-center border-l border-white/10 pl-8">
-                    <Trophy size={14} className="text-emerald-500" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{(match as any).result || 'MATCH COMPLETED'}</span>
+
+                <div className="flex flex-col items-end gap-1">
+                    <div className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] italic">www.indianstrikers.club</div>
+                    <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Image Generated by INS Team Management App</div>
                 </div>
             </div>
         </div>
