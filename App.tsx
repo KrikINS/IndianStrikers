@@ -34,9 +34,9 @@ const Unauthorized = () => (
     <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-8 border border-red-500/20 shadow-[0_0_50px_-12px_rgba(239,68,68,0.5)]">
       <Shield size={48} className="text-red-500" strokeWidth={1.5} />
     </div>
-    <h1 className="text-4xl font-black text-white mb-4 uppercase italic tracking-tighter">Not Authorized</h1>
+    <h1 className="text-4xl font-black text-black mb-4 uppercase italic tracking-tighter">Not Authorized</h1>
     <p className="text-slate-400 max-w-md mb-10 text-lg leading-relaxed">
-      You are not authorized to access this department. Please contact the administrator to upgrade your access level or return to the main dashboard.
+      You are not authorized to access this Page. Please contact the administrator to upgrade your access level or return to the main dashboard.
     </p>
     <Link to="/home" className="group relative px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition-all shadow-[0_10px_30px_-10px_rgba(37,99,235,0.6)] uppercase tracking-[0.2em] text-xs flex items-center gap-3 active:scale-95">
       <span>Return Home</span>
