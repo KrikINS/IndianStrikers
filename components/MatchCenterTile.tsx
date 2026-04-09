@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Check } from 'lucide-react';
+import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Check, Share2 } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {
@@ -181,6 +181,13 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     </div>
                     {isAdmin && (
                         <div className="flex gap-2">
+                            <button 
+                                onClick={() => onSelectPlayingXI(match.id, 'view')} 
+                                className="hover:text-emerald-500 transition-colors" 
+                                title="Share Squad Graphic"
+                            >
+                                <Share2 size={12} />
+                            </button>
                             <button onClick={() => onEditMatch(match)} className="hover:text-blue-600 transition-colors" title="Edit Match"><Edit2 size={10} /></button>
                             <button onClick={() => window.confirm('Delete?') && onDeleteMatch(match.id)} className="hover:text-red-600 transition-colors" title="Delete Match"><Trash2 size={10} /></button>
                         </div>

@@ -160,6 +160,18 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             return;
         }
 
+        if (mode === 'view') {
+            setXiModalConfig({
+                isOpen: false,
+                matchId,
+                teamType: 'view',
+                opponentId: match.opponentId
+            });
+            // Give time for state to update and hidden div to render
+            setTimeout(() => captureGraphic(matchId), 500);
+            return;
+        }
+
         setXiModalConfig({
             isOpen: true,
             matchId,
@@ -259,10 +271,18 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         setIsGenerating(true);
         try {
             const canvas = await html2canvas(element, {
-                backgroundColor: '#0f172a',
-                scale: 2,
+                backgroundColor: '#020617', // Slate 950
+                scale: 3, // Higher quality
                 useCORS: true,
-                logging: false
+                logging: false,
+                onclone: (doc) => {
+                    const el = doc.getElementById('team-sheet-graphic');
+                    if (el) {
+                        el.style.display = 'block';
+                        el.style.position = 'relative';
+                        el.style.left = '0';
+                    }
+                }
             });
             const link = document.createElement('a');
             link.download = `IndianStrikers_XI_${matchId}.png`;
@@ -903,54 +923,75 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                         }
                         onClose={() => setXiModalConfig({ ...xiModalConfig, isOpen: false })}
                         onSave={handleSaveXI}
+                        onShare={(id) => handleSelectPlayingXI(id, 'view')}
                         onQuickAddPlayer={handleQuickAddOpponentPlayer}
                     />
                     
-                    {/* Hidden Graphic for Capture during viewing/locking */}
-
-                    {xiModalConfig.teamType === 'view' && (
-                        <div className="fixed -left-[2000px] top-0">
-                             <div id="team-sheet-graphic" className="w-[800px] bg-slate-950 p-12 text-white border-4 border-emerald-500 shadow-2xl">
-                                <div className="flex justify-between items-center mb-12">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-24 h-24 bg-slate-900 border-2 border-slate-700 rounded-3xl flex items-center justify-center p-2">
-                                            {teamLogo ? <img src={teamLogo} className="w-full h-full object-contain" alt="Team Logo" /> : <img src="/INS-LOGO.png" alt="INS" className="w-full h-full object-contain" />}
-                                        </div>
-                                        <div>
-                                            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white">Indian Strikers</h1>
-                                            <p className="text-emerald-500 font-bold uppercase tracking-widest text-sm">Match Day Playing XI</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-slate-500 font-bold uppercase text-xs">Versus</p>
-                                        <p className="text-2xl font-black text-slate-300">
-                                            {opponents.find((o: OpponentTeam) => o.id === xiModalConfig.opponentId)?.name || 'Opponent'}
-                                        </p>
+            {/* Hidden Graphic for Capture (Independent of Modal Open State) */}
+            {xiModalConfig.matchId && matches.find(m => m.id === xiModalConfig.matchId) && (
+                <div className="fixed -left-[2000px] top-0 pointer-events-none">
+                     <div id="team-sheet-graphic" className="w-[800px] bg-slate-950 p-12 text-white border-[12px] border-emerald-950 shadow-2xl relative overflow-hidden">
+                        {/* Background Branding */}
+                        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-leather.png')] opacity-30"></div>
+                        
+                        <div className="relative z-10 flex justify-between items-center mb-16 px-4">
+                            <div className="flex items-center gap-8">
+                                <div className="w-28 h-28 bg-white rounded-3xl flex items-center justify-center p-3 shadow-2xl border-4 border-emerald-500">
+                                    {teamLogo ? <img src={teamLogo} className="w-full h-full object-contain" alt="Team Logo" /> : <img src="/INS-LOGO.png" alt="INS" className="w-full h-full object-contain" />}
+                                </div>
+                                <div>
+                                    <h1 className="text-5xl font-black italic uppercase tracking-tighter text-white leading-none mb-2">Indian Strikers</h1>
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-emerald-500 text-slate-950 font-black px-3 py-1 text-xs uppercase tracking-[0.2em] rounded">Match Day XI</div>
+                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Season 2024 • {(matches.find(m => m.id === xiModalConfig.matchId)?.tournament || 'Official').toUpperCase()}</p>
                                     </div>
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-y-6 gap-x-12">
-                                    {players.filter((p: Player) => (matches.find((m: ScheduledMatch) => m.id === xiModalConfig.matchId)?.homeTeamXI || []).includes(p.id!)).map((player: Player, idx: number) => (
-                                        <div key={player.id} className="flex items-center gap-5 border-b border-white/5 pb-4">
-                                            <span className="text-slate-700 font-black text-2xl italic w-8">{idx + 1}</span>
-                                            <div className="w-16 h-16 rounded-full border-2 border-emerald-500/30 overflow-hidden bg-slate-950">
-                                                {player.avatarUrl && <img src={player.avatarUrl} className="w-full h-full object-cover" alt={player.name} />}
-                                            </div>
-                                            <div>
-                                                <p className="font-extrabold text-xl uppercase tracking-tighter">{player.name}</p>
-                                                <p className="text-xs font-bold text-slate-400 uppercase">{player.role}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="mt-12 pt-8 border-t border-white/10 flex justify-between items-center text-slate-500 font-bold text-xs">
-                                    <p>© 2024 INDIAN STRIKERS • OFFICIAL TEAM SHEET</p>
-                                    <p>{new Date().toLocaleDateString(undefined, { dateStyle: 'full' })}</p>
-                                </div>
-                             </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-slate-600 font-black uppercase text-[10px] tracking-widest mb-1 italic">V/S OPPONENT</p>
+                                <p className="text-3xl font-black text-slate-200 uppercase tracking-tighter italic">
+                                    {opponents.find((o: OpponentTeam) => o.id === (matches.find(m => m.id === xiModalConfig.matchId)?.opponentId))?.name || 'Upcoming Match'}
+                                </p>
+                            </div>
                         </div>
-                    )}
+
+                        <div className="relative z-10 grid grid-cols-2 gap-x-12 gap-y-6 bg-slate-900/40 p-10 rounded-[40px] border border-white/5 backdrop-blur-md">
+                            {players.filter((p: Player) => (matches.find((m: ScheduledMatch) => m.id === xiModalConfig.matchId)?.homeTeamXI || []).includes(p.id!)).map((player: Player, idx: number) => (
+                                <div key={player.id} className="flex items-center gap-6 group">
+                                    <div className="relative">
+                                        <div className="w-20 h-20 rounded-2xl border-2 border-emerald-500/50 overflow-hidden bg-slate-950 shadow-xl rotate-3 transform group-hover:rotate-0 transition-all">
+                                            {player.avatarUrl && <img src={player.avatarUrl} className="w-full h-full object-cover" alt={player.name} />}
+                                        </div>
+                                        <span className="absolute -bottom-2 -left-2 bg-emerald-500 text-slate-950 font-black w-8 h-8 rounded-full border-4 border-slate-950 flex items-center justify-center text-sm shadow-lg">
+                                            {idx + 1}
+                                        </span>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-black text-2xl uppercase tracking-tighter text-white leading-tight mb-1">{player.name}</p>
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{player.role}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Branding Footer */}
+                        <div className="relative z-10 mt-16 pt-8 border-t border-white/10 flex justify-between items-center px-4">
+                            <div>
+                                <p className="text-emerald-500 font-black text-sm tracking-widest">WWW.INDIANSTRIKERS.CLUB</p>
+                                <p className="text-slate-600 font-bold text-[10px] uppercase mt-1">Image Generated by INS Team Management App</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-slate-300 font-black text-sm uppercase italic tracking-tighter">#IndianStrikers #KirikINS</p>
+                                <p className="text-slate-600 font-bold text-[10px] uppercase mt-1">Match Date: {new Date(matches.find(m => m.id === xiModalConfig.matchId)?.date || Date.now()).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
+                            </div>
+                        </div>
+                     </div>
+                </div>
+            )}
                 </div>
             )}
             

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Player, OpponentTeam } from '../types';
-import { X, Users, Check, Save, Plus, Loader2 } from 'lucide-react';
+import { X, Users, Check, Save, Plus, Loader2, Share2 } from 'lucide-react';
 
 interface PlayingXIModalProps {
     matchId: string;
@@ -11,6 +11,7 @@ interface PlayingXIModalProps {
     initialSelection?: string[];
     onClose: () => void;
     onSave: (matchId: string, teamType: 'home' | 'opponent', selection: string[]) => void;
+    onShare?: (matchId: string) => void;
     onQuickAddPlayer?: (name: string) => void;
 }
 
@@ -24,6 +25,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     initialSelection = [],
     onClose,
     onSave,
+    onShare,
     onQuickAddPlayer
 }) => {
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>(initialSelection);
@@ -172,13 +174,24 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
 
                 {/* Footer */}
                 <div className="p-6 md:p-8 border-t border-slate-800 bg-slate-900/50 flex justify-between items-center">
-                    <button 
-                        onClick={onClose}
-                        title="Close Modal"
-                        className="px-6 py-3 text-slate-400 font-bold uppercase hover:text-white transition-colors"
-                    >
-                        Back
-                    </button>
+                    <div className="flex gap-4 items-center">
+                        {onShare && (
+                            <button 
+                                onClick={() => onShare(matchId)}
+                                title="Generate Shareable Graphic"
+                                className="p-3 text-slate-400 hover:text-emerald-500 transition-colors bg-slate-800 rounded-xl border border-slate-700 hover:border-emerald-500/50"
+                            >
+                                <Share2 size={20} />
+                            </button>
+                        )}
+                        <button 
+                            onClick={onClose}
+                            title="Close Modal"
+                            className="px-6 py-3 text-slate-400 font-bold uppercase hover:text-white transition-colors"
+                        >
+                            Back
+                        </button>
+                    </div>
                     {!isViewOnly && (
                         <button 
                             onClick={handleSave}
