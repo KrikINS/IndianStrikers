@@ -1,4 +1,4 @@
-import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats } from '../types';
+import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001/api';
 
