@@ -52,7 +52,7 @@ body {
 
 /* FieldingMap styles */
 .fielding-ground-gradient {
-  background: radial-gradient(circle, #10b981 0%, #059669 40%, #047857 100%);
+  background: radial-gradient(circle, #059669 0%, #064e3b 100%);
 }
 
 

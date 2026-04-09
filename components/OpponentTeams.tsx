@@ -135,7 +135,7 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
 
   // Helper to generate a consistent color based on string
   const getAvatarColor = (name: string) => {
-    const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500'];
+    const colors = ['bg-red-500', 'bg-blue-500', 'bg-sky-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500'];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
       hash = name.charCodeAt(i) + ((hash << 5) - hash);

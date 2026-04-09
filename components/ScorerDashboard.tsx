@@ -19,7 +19,7 @@ const PremiumHeader = styled.div<{ $isFirstInnings: boolean }>`
   overflow: hidden;
   padding: 1.5rem;
   background-color: #111417;
-  border-bottom: 2px solid ${props => props.$isFirstInnings ? '#2ECC71' : '#E67E22'};
+  border-bottom: 2px solid ${props => props.$isFirstInnings ? '#38BDF8' : '#E67E22'};
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
 `;
 
@@ -46,7 +46,7 @@ const ScoreDisplay = styled.h1`
 `;
 
 const StatAccent = styled.span`
-  color: #2ECC71; /* Electric Green */
+  color: #38BDF8; /* Sky Blue */
 `;
 
 const OversBadge = styled.div`
@@ -83,19 +83,19 @@ const ScoreButton = styled.button<{ $boundaryType?: 'four' | 'six' }>`
   background-color: #262B32; 
   color: ${props => 
     props.$boundaryType === 'four' ? '#E67E22' : 
-    props.$boundaryType === 'six' ? '#2ECC71' : 
+    props.$boundaryType === 'six' ? '#38BDF8' : 
     '#FFFFFF'};
     
   border-bottom: 4px solid ${props => 
     props.$boundaryType === 'four' ? '#E67E22' : 
-    props.$boundaryType === 'six' ? '#2ECC71' : 
+    props.$boundaryType === 'six' ? '#38BDF8' : 
     '#1A1D21'};
 
   &:active {
     transform: scale(1.05);
     background-color: ${props => 
       props.$boundaryType === 'four' ? '#E67E22' : 
-      props.$boundaryType === 'six' ? '#2ECC71' : 
+      props.$boundaryType === 'six' ? '#38BDF8' : 
       '#FFFFFF'};
     color: ${props => (props.$boundaryType ? '#FFFFFF' : '#1A1D21')};
   }
@@ -167,7 +167,7 @@ export default function ScorerDashboard() {
         if (ball.isWicket) return 'bg-rose-600 text-white shadow-rose-200';
         if (ball.type !== 'legal') return 'bg-amber-500 text-white shadow-amber-200';
         if (ball.runs === 4) return 'bg-orange-500 text-white shadow-orange-200';
-        if (ball.runs === 6) return 'bg-[#2ECC71] text-white shadow-green-200';
+        if (ball.runs === 6) return 'bg-[#38BDF8] text-white shadow-sky-200';
         return 'bg-[#262B32] text-white border border-white/10';
     };
 
@@ -176,13 +176,13 @@ export default function ScorerDashboard() {
             {/* 1. Header & Innings Control - STYLED COMPONENTS APPLIED */}
             <PremiumHeader $isFirstInnings={isFirstInnings}>
                 <DecorLayer>
-                    <img src="/INS-LOGO.png" className="w-[180px] h-[180px] object-contain opacity-20" alt="Team Logo" />
+                    <img src="/INS%20LOGO.PNG" className="w-[180px] h-[180px] object-contain opacity-20" alt="Team Logo" />
                 </DecorLayer>
                 
                 <div className="relative z-10 flex flex-col items-center">
                     <div className="w-full flex justify-between items-center mb-4">
                         <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 flex items-center gap-1.5">
-                            <Zap size={12} className="text-[#2ECC71] fill-[#2ECC71]" />
+                            <Zap size={12} className="text-[#38BDF8] fill-[#38BDF8]" />
                             {isFirstInnings ? "1st Innings" : "2nd Innings"}
                         </span>
                         <div className="flex gap-2">
@@ -223,7 +223,7 @@ export default function ScorerDashboard() {
                         <p className="text-2xl font-black text-white">{target}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-sm font-black text-[#2ECC71]">Need {runsNeeded} of {ballsRemaining}</p>
+                        <p className="text-sm font-black text-[#38BDF8]">Need {runsNeeded} of {ballsRemaining}</p>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter italic">Req RR: {rrr}</p>
                     </div>
                 </TargetBox>
@@ -233,9 +233,9 @@ export default function ScorerDashboard() {
                 {/* 3. Batsmen Tracking (Adapted to Dark theme via Tailwind) */}
                 <div className="grid grid-cols-2 gap-3">
                     {[striker, nonStriker].map((p, idx) => (
-                        <div key={idx} className={`bg-[#262B32] rounded-2xl p-4 transition-all ${idx === 0 ? 'border border-[#2ECC71]/30 ring-2 ring-[#2ECC71]/20' : 'border border-white/5'}`}>
+                        <div key={idx} className={`bg-[#262B32] rounded-2xl p-4 transition-all ${idx === 0 ? 'border border-[#38BDF8]/30 ring-2 ring-[#38BDF8]/20' : 'border border-white/5'}`}>
                             <div className="flex items-center gap-2 mb-2">
-                                <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-[#2ECC71] shadow-[0_0_8px_#2ECC71] animate-pulse' : 'bg-slate-600'}`}></div>
+                                <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-[#38BDF8] shadow-[0_0_8px_#38BDF8] animate-pulse' : 'bg-slate-600'}`}></div>
                                 <span className={`text-xs font-bold truncate ${idx === 0 ? 'text-white' : 'text-slate-400'}`}>{p.name}</span>
                             </div>
                             <div className="flex items-baseline gap-1">
@@ -327,7 +327,7 @@ export default function ScorerDashboard() {
                         {isFirstInnings && (
                             <button 
                                 onClick={startSecondInnings} 
-                                className="flex-1 bg-[#2ECC71] hover:bg-[#27AE60] text-[#1A1D21] h-12 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-[#2ECC71]/20 flex items-center justify-center gap-2 transition-all active:scale-95"
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-12 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all active:scale-95"
                             >
                                 <TrendingUp size={14} /> Finish 1st Inn.
                             </button>

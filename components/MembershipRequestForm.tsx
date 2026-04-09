@@ -33,7 +33,7 @@ const MembershipRequestForm: React.FC<MembershipRequestFormProps> = ({ onClose }
         return (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
                 <div className="bg-white rounded-2xl w-full max-w-md p-8 flex flex-col items-center text-center shadow-2xl">
-                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
+                    <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
                         <CheckCircle size={32} />
                     </div>
                     <h3 className="text-2xl font-bold text-slate-800 mb-2">Request Sent!</h3>

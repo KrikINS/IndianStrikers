@@ -16,6 +16,7 @@ interface MatchCenterTileProps {
     userRole: UserRole;
     isAdmin: boolean;
     grounds: Ground[];
+    isCarouselActive?: boolean;
 }
 
 const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
@@ -31,7 +32,8 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     onDeleteMatch,
     userRole,
     isAdmin,
-    grounds
+    grounds,
+    isCarouselActive
 }) => {
     const isScorerOrAdmin = userRole === 'admin' || userRole === 'scorer';
     const isLive = match.status === 'live';
@@ -60,7 +62,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     const opponentName = opponent ? opponent.name : (match.opponentId || 'Opponent').replace(/-/g, ' ');
 
     return (
-        <div className={`match-card-compact border transition-all duration-300 ${isLive ? 'border-red-400/40' : 'border-slate-100'}`}>
+        <div className={`match-card-compact border transition-all duration-300 ${isLive ? 'border-red-500' : isCarouselActive ? 'border-blue-500/50 shadow-2xl shadow-blue-500/10' : 'border-white/5'} ${isCarouselActive ? 'bg-slate-900' : 'bg-slate-950'}`}>
 
             {/* HEADER HERO SECTION (Mirroring Player Profile Style) */}
             <div className={`relative h-14 overflow-hidden border-b border-white/5 flex items-center px-4 ${isLive ? 'bg-red-950/20' : 'bg-slate-900'}`}>
@@ -78,7 +80,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 <div className="relative z-10 flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
                         {isLive ? (
-                            <div className="flex items-center gap-2 bg-red-500 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-red-500/20">
+                            <div className="flex items-center gap-2 bg-red-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-red-500/20">
                                 <span className="relative flex h-2 w-2">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
@@ -86,14 +88,14 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                 LIVE NOW
                             </div>
                         ) : isUpcoming ? (
-                            <div className="bg-blue-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-blue-500/10">UPCOMING</div>
+                            <div className="bg-blue-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-blue-500/10 uppercase tracking-wider">Upcoming</div>
                         ) : (
-                            <div className="bg-emerald-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-emerald-500/10 uppercase tracking-wider">Completed</div>
+                            <div className="bg-slate-800 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-black/10 uppercase tracking-wider">Completed</div>
                         )}
                     </div>
 
                     <div className="text-right">
-                        <div className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">
+                        <div className="text-[10px] font-black text-white uppercase tracking-tighter">
                             {match.tournament || 'Exhibition Match'}
                         </div>
                         <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest -mt-0.5">
@@ -110,11 +112,11 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     <div className="logo-wrapper">
                         {homeTeamLogo
                             ? <img src={homeTeamLogo} className="team-logo-md" alt={homeTeamName} />
-                            : <img src="/INS-LOGO.png" className="team-logo-md" alt="INS" />
+                            : <img src="/INS%20LOGO.PNG" className="team-logo-md object-contain" alt="INS" />
                         }
                         <button
                             onClick={() => onSelectPlayingXI(match.id, 'home')}
-                            className={`xi-overlay-btn ${match.homeTeamXI?.length ? 'bg-emerald-500 border-white ring-4 ring-emerald-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
+                            className={`xi-overlay-btn ${match.homeTeamXI?.length ? 'bg-sky-500 border-white ring-4 ring-sky-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
                             title="Playing XI"
                         >
                             <Users size={14} className="text-white" />
@@ -145,7 +147,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         }
                         <button
                             onClick={() => onSelectPlayingXI(match.id, 'opponent')}
-                            className={`xi-overlay-btn ${match.opponentTeamXI?.length ? 'bg-emerald-500 border-white ring-4 ring-emerald-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
+                            className={`xi-overlay-btn ${match.opponentTeamXI?.length ? 'bg-sky-500 border-white ring-4 ring-sky-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
                             title="Playing XI"
                         >
                             <Users size={14} className="text-white" />
@@ -163,7 +165,11 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
 
             {/* RESULT RIBBON */}
             {(isCompleted || isLive) && (match.resultSummary || match.resultNote || match.tossDetails) && (
-                <div className="result-ribbon-bold">
+                <div className={`result-ribbon-bold ${
+                    isLive ? 'bg-slate-900/40 text-sky-400' :
+                    (match.resultNote?.toLowerCase().includes('won') || match.resultSummary?.toLowerCase().includes('won')) ? 'bg-slate-900/80 text-white border-y border-sky-500/30' : 
+                    'bg-slate-900/80 text-white border-y border-rose-500/30'
+                }`}>
                     {isLive ? (match.tossDetails || 'Match in Progress') : (match.resultNote || match.resultSummary)}
                 </div>
             )}
@@ -183,7 +189,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         <div className="flex gap-2">
                             <button 
                                 onClick={() => onSelectPlayingXI(match.id, 'view')} 
-                                className="hover:text-emerald-500 transition-colors" 
+                                className="hover:text-blue-500 transition-colors" 
                                 title="Share Squad Graphic"
                             >
                                 <Share2 size={12} />

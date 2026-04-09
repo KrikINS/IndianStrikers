@@ -182,9 +182,26 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
         <div className="modal-header-simple">
           <span className="tournament-tag">{match.tournament || 'Friendly Match'}</span>
           <div className="fixture-title uppercase">
-            <span>INDIAN STRIKERS</span> 
+            <div className="flex flex-col items-center gap-2">
+               <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center p-1.5 border border-white/10">
+                  <img src="/INS%20LOGO.PNG" className="max-h-full max-w-full object-contain" alt="INS" />
+               </div>
+               <span className="text-xs">INDIAN STRIKERS</span> 
+            </div>
+            
             <span className="vs-pill">VS</span> 
-            <span>{opponentName}</span>
+            
+            <div className="flex flex-col items-center gap-2">
+               <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center p-1.5 border border-white/10">
+                  {/* We need the opponent logo here - will pass it from parent */}
+                  {match.opponentLogo ? (
+                    <img src={match.opponentLogo} className="max-h-full max-w-full object-contain" alt={opponentName} />
+                  ) : (
+                    <div className="text-[10px] text-slate-500 font-black">{String(opponentName).slice(0,3)}</div>
+                  )}
+               </div>
+               <span className="text-xs">{opponentName}</span>
+            </div>
           </div>
           <div className="flex items-center justify-center gap-4 mt-4 text-[#475569] font-bold text-xs uppercase letter-spacing-1">
              <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(match.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>

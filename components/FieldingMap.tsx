@@ -445,7 +445,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
               const isBowler = String(player.id) === String(selectedBowlerId);
               const isSelected = String(selectedMarkerId) === String(pos.playerId);
 
-              let bgColor = isInner ? 'bg-emerald-500' : 'bg-blue-600';
+              let bgColor = isInner ? 'bg-sky-500' : 'bg-blue-600';
               if (isWK) bgColor = 'bg-yellow-500';
               if (isBowler) bgColor = 'bg-red-500';
 

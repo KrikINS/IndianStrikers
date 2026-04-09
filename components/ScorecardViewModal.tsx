@@ -83,7 +83,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
     // New helper to render broadcast-style status
     const renderStatus = (b: any, isBattingHome: boolean) => {
-        if (b.outHow === 'Not Out') return <span className="text-emerald-600 font-bold">Not Out</span>;
+        if (b.outHow === 'Not Out') return <span className="text-sky-400 font-bold">Not Out</span>;
         if (b.outHow === 'Did Not Bat') return <span className="text-slate-400">DNB</span>;
         if (b.outHow === 'Retired Hurt') return <span className="text-slate-500">Retired Hurt</span>;
 
@@ -140,6 +140,65 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                 (Number((b as any).no_balls || (b as any).noBall || 0));
         });
         return bowlExtras || 0;
+    };
+
+    const shareScorecard = async () => {
+        if (!navigator.share) {
+            alert("Web Share API not supported on this browser. Use the download icon instead.");
+            return;
+        }
+
+        setIsExporting(true);
+        try {
+            const ref = modalContentRef;
+            if (ref.current) {
+                const canvas = await html2canvas(ref.current, {
+                    scale: 2,
+                    backgroundColor: '#020617',
+                    useCORS: true,
+                    logging: false,
+                    onclone: (clonedDoc) => {
+                        const clonedTarget = clonedDoc.getElementById('scorecard-capture-target');
+                        if (clonedTarget) {
+                            clonedTarget.style.height = 'auto';
+                            clonedTarget.style.width = '1080px'; // Instagram/WhatsApp optimization
+                            clonedTarget.style.overflow = 'visible';
+                            const scrollable = clonedTarget.querySelector('.overflow-y-auto');
+                            if (scrollable) {
+                                (scrollable as HTMLElement).style.height = 'auto';
+                                (scrollable as HTMLElement).style.overflow = 'visible';
+                            }
+                        }
+                    }
+                });
+
+                canvas.toBlob(async (blob) => {
+                    if (blob) {
+                        const file = new File([blob], `Scorecard_${match.opponentName || 'Match'}.png`, { type: 'image/png' });
+                        const shareData = {
+                            files: [file],
+                            title: `Match Scorecard: Indian Strikers vs ${match.opponentName}`,
+                            text: `Detailed scorecard for our match against ${match.opponentName}. #IndianStrikers #Cricket`
+                        };
+
+                        if (navigator.canShare && navigator.canShare(shareData)) {
+                            await navigator.share(shareData);
+                        } else {
+                            // Fallback if files aren't sharable but API exists
+                            await navigator.share({
+                                title: shareData.title,
+                                text: shareData.text,
+                                url: window.location.href
+                            });
+                        }
+                    }
+                }, 'image/png', 0.9);
+            }
+        } catch (err) {
+            console.error('Failed to share scorecard:', err);
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     const downloadAsImage = async () => {
@@ -209,32 +268,45 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
         const autoOvers = calculateTotalOvers(data.bowling);
         const displayOvers = (data as any).total_overs || (data.totalOvers && Number(data.totalOvers) !== 0 ? data.totalOvers : autoOvers);
 
+        // Separate active batters from DNB
+        const activeBatters = data.batting.filter(b => {
+             const hasPlayed = (b.runs || 0) > 0 || (b.balls || 0) > 0 || (b.outHow && b.outHow !== 'Did Not Bat' && b.outHow !== 'Not Out');
+             // Also include current 'Not Out' players even if 0(0)
+             return hasPlayed || b.outHow === 'Not Out';
+        });
+
+        const dnbList = data.batting.filter(b => {
+             const hasNotPlayed = (b.runs || 0) === 0 && (b.balls || 0) === 0 && (b.outHow === 'Did Not Bat' || !b.outHow);
+             // Verify they aren't one of the 'active' ones
+             return hasNotPlayed && !activeBatters.find(ab => ab.playerId === b.playerId);
+        });
+
         return (
-            <div ref={ref} className="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4">
+            <div ref={ref} className="bg-white p-3 md:p-5 rounded-3xl border border-slate-200 shadow-xl space-y-3">
                 {/* Team Sub-Header */}
-                <div className="flex justify-between items-end border-b border-slate-100 pb-4">
+                <div className="flex justify-between items-end border-b border-slate-100 pb-3">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <div className="w-1.5 h-6 bg-emerald-600 rounded-full"></div>
+                            <div className="w-1.5 h-6 bg-blue-900 rounded-full"></div>
                             <h3 className="text-xl font-black text-slate-900 italic tracking-tight">{battingTeam.toUpperCase()} INNINGS</h3>
                         </div>
                         <div className="flex items-center gap-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                            <span className="flex items-center gap-1"><Award size={12} className="text-emerald-600" /> {match.matchFormat || 'T20'} LEAGUE</span>
-                            <span className="flex items-center gap-1"><MapPin size={12} className="text-emerald-600" /> {groundDisplay}</span>
+                            <span className="flex items-center gap-1"><Award size={12} className="text-sky-500" /> {match.matchFormat || 'T20'} LEAGUE</span>
+                            <span className="flex items-center gap-1"><MapPin size={12} className="text-sky-500" /> {groundDisplay}</span>
                         </div>
                     </div>
                     <div className="text-right">
                         <div className="text-3xl font-black text-slate-900 graduate">{data.totalRuns}/{data.totalWickets}</div>
-                        <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{displayOvers} OVERS</div>
+                        <div className="text-[10px] font-black text-sky-500 uppercase tracking-widest">{displayOvers} OVERS</div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-3">
                     {/* Batting Card */}
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <div className="flex items-center justify-between px-2">
                              <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Batting Performance</span>
-                             <span className="text-[10px] text-emerald-600 font-bold italic">Max Overs: {(match as any).overs || '20'}</span>
+                             <span className="text-[10px] text-sky-500 font-bold italic">Max Overs: {(match as any).overs || '20'}</span>
                         </div>
                         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
                             <table className="w-full text-left text-xs">
@@ -250,29 +322,44 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {data.batting.map((b, i) => {
-                                        const isDNB = b.outHow === 'Did Not Bat' || (!b.runs && !b.balls && !b.outHow);
+                                    {activeBatters.map((b, i) => {
                                         return (
-                                            <tr key={i} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${isDNB ? 'opacity-30' : ''}`}>
-                                                <td className="py-[6px] px-3 font-bold text-slate-900 whitespace-nowrap">
+                                            <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                                <td className="py-[5px] px-3 font-bold text-slate-900 whitespace-nowrap">
                                                     {resolvePlayerName(b.name, b.playerId, isBattingHome ? 'home' : 'opponent')}
                                                 </td>
-                                                <td className="py-[6px] px-3 text-[10px] font-medium text-slate-600 italic">
+                                                <td className="py-[5px] px-3 text-[10px] font-medium text-slate-600 italic">
                                                     {renderStatus(b, isBattingHome)}
                                                 </td>
-                                                <td className="py-[6px] px-2 text-center font-black text-slate-900">{b.runs || 0}</td>
-                                                <td className="py-[6px] px-2 text-center text-slate-500 font-bold">{b.balls || 0}</td>
-                                                <td className="py-[6px] px-2 text-center text-slate-500">{b.fours || 0}</td>
-                                                <td className="py-[6px] px-2 text-center text-slate-500">{b.sixes || 0}</td>
-                                                <td className="py-[6px] px-3 text-right font-black text-[10px] text-emerald-600">{(b.balls || 0) > 0 ? (((b.runs || 0) / b.balls) * 100).toFixed(1) : '-'}</td>
+                                                <td className="py-[5px] px-2 text-center font-black text-slate-900">{b.runs || 0}</td>
+                                                <td className="py-[5px] px-2 text-center text-slate-500 font-bold">{b.balls || 0}</td>
+                                                <td className="py-[5px] px-2 text-center text-slate-500">{b.fours || 0}</td>
+                                                <td className="py-[5px] px-2 text-center text-slate-500">{b.sixes || 0}</td>
+                                                <td className="py-[5px] px-3 text-right font-black text-[10px] text-sky-600">{(b.balls || 0) > 0 ? (((b.runs || 0) / b.balls) * 100).toFixed(1) : '-'}</td>
                                             </tr>
                                         );
                                     })}
+                                    
+                                    {/* DNB Single Row */}
+                                    {dnbList.length > 0 && (
+                                        <tr className="border-b border-slate-100 bg-slate-50/30">
+                                            <td colSpan={7} className="py-2 px-3 text-[10px] font-bold text-slate-500 italic">
+                                                <span className="uppercase tracking-widest mr-2 text-slate-400 font-black">Did Not Bat:</span>
+                                                {dnbList.map((p, idx) => (
+                                                    <span key={idx}>
+                                                        {resolvePlayerName(p.name, p.playerId, isBattingHome ? 'home' : 'opponent')}
+                                                        {idx < dnbList.length - 1 ? ', ' : ''}
+                                                    </span>
+                                                ))}
+                                            </td>
+                                        </tr>
+                                    )}
+
                                     <tr className="bg-slate-50 font-black text-slate-900 border-t border-slate-200">
                                         <td colSpan={2} className="py-2 px-3 uppercase tracking-widest text-[9px] text-slate-500">
                                             EXTRAS (Wd {Number((data.extras as any)?.wide || (data.extras as any)?.wides || 0)}, Nb {Number((data.extras as any)?.no_ball || (data.extras as any)?.noBall || 0)}, Lb {data.extras?.legByes || 0}, B {data.extras?.byes || 0})
                                         </td>
-                                        <td colSpan={5} className="py-2 px-3 text-right text-lg font-black italic graduate text-emerald-600">
+                                        <td colSpan={5} className="py-2 px-3 text-right text-lg font-black italic graduate text-sky-600">
                                             {extrasCount}
                                         </td>
                                     </tr>
@@ -282,7 +369,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                     </div>
 
                     {/* Bowling Card */}
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <div className="flex items-center px-2">
                              <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Bowling Attack</span>
                         </div>
@@ -300,13 +387,13 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                 <tbody>
                                     {data.bowling?.filter(b => b.playerId || b.name).map((b, i) => (
                                         <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                            <td className="py-[6px] px-3 font-bold text-slate-900">
+                                            <td className="py-[5px] px-3 font-bold text-slate-900">
                                                 {resolvePlayerName(b.name, b.playerId, isBattingHome ? 'opponent' : 'home')}
                                             </td>
-                                            <td className="py-[6px] px-2 text-center font-black text-slate-900 italic">{b.overs || 0}</td>
-                                            <td className="py-[6px] px-2 text-center text-slate-600 font-bold">{(b as any).runsConceded || (b as any).runs || 0}</td>
-                                            <td className="py-[6px] px-2 text-center font-black text-emerald-600">{b.wickets || 0}</td>
-                                            <td className="py-[6px] px-3 text-right font-black text-[10px] text-blue-600">
+                                            <td className="py-[5px] px-2 text-center font-black text-slate-900 italic">{b.overs || 0}</td>
+                                            <td className="py-[5px] px-2 text-center text-slate-600 font-bold">{(b as any).runsConceded || (b as any).runs || 0}</td>
+                                            <td className="py-[5px] px-2 text-center font-black text-sky-500">{b.wickets || 0}</td>
+                                            <td className="py-[5px] px-3 text-right font-black text-[10px] text-blue-600">
                                                 {(() => {
                                                     const oversVal = Number(b.overs || 0);
                                                     const oversPart = Math.floor(oversVal);
@@ -350,14 +437,14 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                             <h2 className="text-sm font-black text-white graduate tracking-tight">INDIAN STRIKERS</h2>
                             <p className="text-[10px] font-bold text-slate-500 uppercase">Home Team</p>
                         </div>
-                        <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                            <Zap className="text-emerald-500" fill="currentColor" size={24} />
+                        <div className="w-12 h-12 flex items-center justify-center">
+                            <img src="/INS%20LOGO.PNG" className="max-h-full max-w-full object-contain" alt="Indian Strikers" />
                         </div>
                     </div>
 
                     {/* Center: Score & Badge */}
                     <div className="flex flex-col items-center gap-1 min-w-[140px]">
-                        <div className="bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-[0.3em] px-3 py-1 rounded-full border border-emerald-500/20 mb-1 animate-pulse">
+                        <div className="bg-sky-500/10 text-sky-400 text-[8px] font-black uppercase tracking-[0.3em] px-3 py-1 rounded-full border border-sky-500/20 mb-1 animate-pulse">
                             LEAGUE MATCH
                         </div>
                         <div className="flex items-center gap-4">
@@ -366,12 +453,18 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                             <span className="text-3xl font-black text-white italic graduate">{scorecard.innings2.totalRuns}-{scorecard.innings2.totalWickets}</span>
                         </div>
                         <div className="text-white font-black text-[12.5px] uppercase tracking-widest mt-1 italic flex items-center gap-2">
-                            <ExternalLink size={16} className="text-emerald-500" />
+                            <ExternalLink size={16} className="text-sky-500" />
                             {new Date(match.date).getFullYear()} {match.tournament}
                         </div>
                         {((match as any).resultNote || (match as any).resultSummary) && (
-                            <div className="mt-2 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded flex items-center gap-2">
-                                <Trophy size={14} className="text-white fill-white/20" />
+                            <div className={`mt-2 ${
+                                ((match as any).resultNote || (match as any).resultSummary)?.toLowerCase().includes('won') 
+                                    ? 'bg-emerald-900/60 border-emerald-500/30 text-white' 
+                                    : ((match as any).resultNote || (match as any).resultSummary)?.toLowerCase().includes('lost')
+                                        ? 'bg-red-900/60 border-red-500/30 text-white'
+                                        : 'bg-slate-900/30 border-slate-800/20 text-white'
+                            } text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded flex items-center gap-2 border`}>
+                                <Trophy size={14} className="fill-current/20" />
                                 {(match as any).resultNote || (match as any).resultSummary}
                             </div>
                         )}
@@ -379,8 +472,14 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
                     {/* Right: Away Team */}
                     <div className="flex items-center gap-3 flex-1">
-                        <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                            <Activity className="text-blue-500" size={24} />
+                        <div className="w-12 h-12 flex items-center justify-center">
+                            {opponent?.logoUrl ? (
+                                <img src={opponent.logoUrl} className="max-h-full max-w-full object-contain" alt={opponentName} />
+                            ) : (
+                                <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                                    <Activity className="text-blue-500" size={24} />
+                                </div>
+                            )}
                         </div>
                         <div className="hidden sm:block">
                             <h2 className="text-sm font-black text-white graduate tracking-tight">{opponentName.toUpperCase()}</h2>
@@ -391,10 +490,18 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                     {/* Exit & Export */}
                     <div className="flex items-center gap-2 pl-4 border-l border-white/10">
                         <button
+                            onClick={shareScorecard}
+                            disabled={isExporting}
+                            className="p-2 text-slate-400 hover:text-emerald-400 transition-all hover:bg-white/5 rounded-lg active:scale-95"
+                            title="Share on Social Media"
+                        >
+                            <Share2 size={20} />
+                        </button>
+                        <button
                             onClick={downloadAsImage}
                             disabled={isExporting}
-                            className="p-2 text-slate-400 hover:text-emerald-500 transition-all hover:bg-white/5 rounded-lg active:scale-95"
-                            title="Export Current View"
+                            className="p-2 text-slate-400 hover:text-sky-400 transition-all hover:bg-white/5 rounded-lg active:scale-95"
+                            title="Download HD Image"
                         >
                             <ImageIcon size={20} />
                         </button>
@@ -412,7 +519,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
             {/* Content Body - Pure Data Flow */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-white">
-                <div ref={fullScorecardRef} className="max-w-7xl mx-auto space-y-6 pb-10">
+                <div ref={fullScorecardRef} className="max-w-7xl mx-auto space-y-5 pb-10">
                     {renderInningsContent(1, inn1Ref)}
                     {renderInningsContent(2, inn2Ref)}
                 </div>
@@ -423,17 +530,17 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
             <div className="bg-slate-900/90 backdrop-blur-md border-t border-white/10 p-4 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4 px-8">
                 <div className="flex gap-8 items-center">
                     <div className="flex gap-4 items-center">
-                        <Calendar size={14} className="text-emerald-500" />
+                        <Calendar size={14} className="text-sky-500" />
                         <span className="text-[10px] font-black text-white uppercase tracking-widest">{new Date(match.date).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
                     </div>
                     <div className="flex gap-4 items-center border-l border-white/10 pl-8">
-                        <Trophy size={14} className="text-emerald-500" />
+                        <Trophy size={14} className="text-sky-500" />
                         <span className="text-[10px] font-black text-white uppercase tracking-widest">{(match as any).resultNote || (match as any).resultSummary || 'MATCH COMPLETED'}</span>
                     </div>
                 </div>
 
                 <div className="flex flex-col items-end gap-1">
-                    <div className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] italic">www.indianstrikers.club</div>
+                    <div className="text-[10px] font-black text-sky-400 uppercase tracking-[0.2em] italic">www.indianstrikers.club</div>
                     <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Image Generated by INS Team Management App</div>
                 </div>
             </div>
@@ -441,8 +548,8 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
             {/* Loading Overlay */}
             {isExporting && (
                 <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                    <div className="bg-slate-950 p-8 rounded-3xl border border-emerald-500/30 text-center">
-                        <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <div className="bg-slate-950 p-8 rounded-3xl border border-sky-500/30 text-center">
+                        <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                         <p className="text-white font-black uppercase tracking-widest italic">Generating HD Scorecard...</p>
                     </div>
                 </div>

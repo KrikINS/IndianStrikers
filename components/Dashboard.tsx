@@ -213,7 +213,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-800 flex items-center gap-2">
-            <Activity className="text-blue-600" size={28} /> Dashboard
+            <Activity className="text-emerald-600" size={28} /> Dashboard
           </h1>
           <p className="text-slate-500 font-medium text-sm mt-0.5 italic">One Team, One Dream • Performance Overview</p>
         </div>
@@ -236,7 +236,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
                   {teamLogo ? (
                     <img src={teamLogo} className="w-full h-full object-contain" alt="Team Logo" />
                   ) : (
-                    <img src="/INS-LOGO.png" className="w-full h-full object-contain" alt="INS" />
+                    <img src="/INS%20LOGO.PNG" className="w-full h-full object-contain" alt="INS" />
                   )}
                 </div>
 
@@ -361,9 +361,9 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
                           <p className="font-bold text-red-700 text-xs md:text-sm">3/24</p>
                         </div>
                       ) : (
-                        <div className="flex-1 bg-green-50 rounded-lg p-2">
-                          <p className="text-[9px] md:text-[10px] uppercase font-bold text-green-400">Score</p>
-                          <p className="font-bold text-green-700 text-xs md:text-sm">45(28)</p>
+                        <div className="flex-1 bg-blue-50 rounded-lg p-2">
+                          <p className="text-[9px] md:text-[10px] uppercase font-bold text-blue-400">Score</p>
+                          <p className="font-bold text-blue-700 text-xs md:text-sm">45(28)</p>
                         </div>
                       )}
                     </div>
@@ -428,7 +428,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
               disabled={!isDirty || isSaving}
               className={`px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 text-xs md:text-sm transition-all flex-1 md:flex-none shadow-lg ${
                 isDirty && !isSaving
-                  ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/30 text-white cursor-pointer'
+                  ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30 text-white cursor-pointer'
                   : 'bg-slate-700 text-slate-500 cursor-not-allowed shadow-none'
               }`}
               aria-label="Save Table"
@@ -441,7 +441,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
             </button>
             <button
               onClick={handleAddRow}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 text-xs md:text-sm transition-colors flex-1 md:flex-none shadow-lg shadow-green-900/20"
+              className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 text-xs md:text-sm transition-colors flex-1 md:flex-none shadow-lg shadow-sky-900/20"
             >
               <Plus size={16} /> Add
             </button>
@@ -450,7 +450,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
 
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-xs md:text-sm min-w-[600px]">
-            <thead className="bg-[#00703c] text-white font-bold uppercase text-[10px] md:text-xs">
+            <thead className="bg-[#1e3a8a] text-white font-bold uppercase text-[10px] md:text-xs">
               <tr>
                 <th className="p-2 md:p-4 text-left">#</th>
                 <th className="p-2 md:p-4 text-left min-w-[120px]">Team</th>
@@ -495,7 +495,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
                     )}
                     </td>
                     <td className="p-2 md:p-4 text-center"><input type="number" value={row.matches} onChange={(e) => handleTableChange(row.id, 'matches', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-white outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Matches played" /></td>
-                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.won} onChange={(e) => handleTableChange(row.id, 'won', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-green-400 font-bold outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Matches won" /></td>
+                    <td className="p-2 md:p-4 text-center"><input type="number" value={row.won} onChange={(e) => handleTableChange(row.id, 'won', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-sky-400 font-bold outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Matches won" /></td>
                     <td className="p-2 md:p-4 text-center"><input type="number" value={row.lost} onChange={(e) => handleTableChange(row.id, 'lost', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-red-400 font-bold outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Matches lost" /></td>
                     <td className="p-2 md:p-4 text-center hidden sm:table-cell"><input type="number" value={row.nr} onChange={(e) => handleTableChange(row.id, 'nr', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-slate-400 outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="No result matches" /></td>
                     <td className="p-2 md:p-4 text-center"><input type="number" value={row.points} onChange={(e) => handleTableChange(row.id, 'points', Number(e.target.value))} readOnly={!canEdit} className={`w-8 md:w-12 bg-transparent text-center text-yellow-400 font-black text-sm md:text-lg outline-none rounded ${canEdit ? 'focus:bg-slate-800' : 'cursor-default'}`} aria-label="Points" /></td>
@@ -532,7 +532,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
             </button>
             <button
               onClick={() => setStatsMode('season')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${statsMode === 'season' ? 'bg-white shadow-sm text-green-700' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${statsMode === 'season' ? 'bg-white shadow-sm text-sky-700' : 'text-slate-500 hover:text-slate-700'}`}
             >
               <Calendar size={12} /> Season
             </button>

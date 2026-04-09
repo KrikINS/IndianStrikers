@@ -138,10 +138,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
             <div
               onClick={() => userRole === 'admin' && fileInputRef.current?.click()}
               className={`
-                 w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20 
-                 text-white overflow-hidden shrink-0 border border-blue-500/50 relative group
-                 ${userRole === 'admin' ? 'cursor-pointer hover:border-white transition-colors' : ''}
-               `}
+                w-10 h-10 bg-transparent rounded-xl flex items-center justify-center 
+                text-white overflow-hidden shrink-0 border border-white/10 relative group
+                ${userRole === 'admin' ? 'cursor-pointer hover:border-white transition-colors' : ''}
+              `}
               title={userRole === 'admin' ? "Click to change logo" : ""}
             >
               {teamLogo && !imgError ? (
@@ -152,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
                   alt="Team Logo"
                 />
               ) : (
-                <img src="/INS-LOGO.png" alt="INS" className="w-6 h-6 object-contain" />
+                <img src="/INS%20LOGO.PNG" alt="INS" className="w-6 h-6 object-contain" />
               )}
 
               {/* Admin Upload Overlay */}

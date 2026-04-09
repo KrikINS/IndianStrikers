@@ -28,31 +28,37 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     onShare,
     onQuickAddPlayer
 }) => {
-    const [selectedPlayers, setSelectedPlayers] = useState<string[]>(initialSelection);
+    const [selectedPlayers, setSelectedPlayers] = useState<string[]>(initialSelection.map(id => String(id)));
     const [isSaving, setIsSaving] = useState(false);
     const [quickAddName, setQuickAddName] = useState('');
+
+    // Sync state with props if initial selection changes (e.g. data load lag)
+    React.useEffect(() => {
+        if (initialSelection && initialSelection.length > 0) {
+            setSelectedPlayers(initialSelection.map(id => String(id)));
+        }
+    }, [initialSelection]);
 
     const hasChanged = useMemo(() => {
         if (selectedPlayers.length !== initialSelection.length) return true;
         const sortedA = [...selectedPlayers].sort();
         const sortedB = [...initialSelection].sort();
-        return sortedA.some((val, index) => val !== sortedB[index]);
+        return sortedA.some((val, index) => String(val) !== String(sortedB[index]));
     }, [selectedPlayers, initialSelection]);
     const isViewOnly = teamType === 'view';
     const opponent = opponentTeams.find(t => t.id === opponentId);
 
-    const togglePlayer = (id: string, name: string) => {
+    const togglePlayer = (id: string | number, name: string) => {
         if (isViewOnly) return;
         
-        // Use different logic for IDs vs Names if necessary, 
-        // but here we treat both as unique identifiers in the selection array
+        const stringId = String(id);
         setSelectedPlayers(prev => {
-            const isAlreadySelected = prev.includes(id);
+            const isAlreadySelected = prev.includes(stringId);
             if (isAlreadySelected) {
-                return prev.filter(p => p !== id);
+                return prev.filter(p => String(p) !== stringId);
             } else {
                 if (prev.length < 11) {
-                    return [...prev, id];
+                    return [...prev, stringId];
                 }
                 return prev;
             }
@@ -137,7 +143,8 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
 
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2">
                         {displayPlayers.map(player => {
-                            const isSelected = selectedPlayers.includes(player.id || player.name);
+                            const pId = String(player.id || player.name);
+                            const isSelected = selectedPlayers.includes(pId);
                             const playerImage = (player as any).avatarUrl || (player as any).photo || '';
 
                             return (
@@ -179,7 +186,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                             <button 
                                 onClick={() => onShare(matchId)}
                                 title="Generate Shareable Graphic"
-                                className="p-3 text-slate-400 hover:text-emerald-500 transition-colors bg-slate-800 rounded-xl border border-slate-700 hover:border-emerald-500/50"
+                                className="p-3 text-slate-400 hover:text-blue-500 transition-colors bg-slate-800 rounded-xl border border-slate-700 hover:border-blue-500/50"
                             >
                                 <Share2 size={20} />
                             </button>
@@ -199,7 +206,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                             title={selectedPlayers.length === 11 ? "Save Squad" : (hasChanged ? `Need ${11 - selectedPlayers.length} more players` : "No changes made")}
                             className={`flex items-center gap-2 px-8 py-3 rounded-xl font-black uppercase transition-all
                                 ${selectedPlayers.length > 0 && hasChanged && !isSaving
-                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40' 
+                                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/40' 
                                     : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
                         >
                             {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}

@@ -23,21 +23,21 @@ export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamNam
                 <span className="px-3 py-1 bg-blue-600/20 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-500/20">
                     {match.tournament}
                 </span>
-                <span className="px-3 py-1 bg-emerald-600/20 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">
+                <span className="px-3 py-1 bg-sky-600/20 text-sky-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-sky-500/20">
                     {match.stage}
                 </span>
             </div>
             <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Full Scorecard</h2>
             <div className="flex flex-wrap items-center gap-4 text-slate-400 text-sm font-medium">
               <span className="flex items-center gap-1.5"><Calendar size={16} className="text-blue-500" /> {match.date ? new Date(match.date).toDateString() : 'Date TBD'}</span>
-              <span className="flex items-center gap-1.5"><MapPin size={16} className="text-emerald-500" /> {(groundName || (match as any).ground || 'Home Ground').toUpperCase()}</span>
+              <span className="flex items-center gap-1.5"><MapPin size={16} className="text-sky-500" /> {(groundName || (match as any).ground || 'Home Ground').toUpperCase()}</span>
             </div>
           </div>
           
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4 min-w-[200px]">
                 <div className="text-center">
                     <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Match Status</p>
-                    <p className="text-emerald-400 font-bold italic text-sm">{match.resultNote || match.resultSummary || 'Outcome Pending'}</p>
+                    <p className="text-sky-400 font-bold italic text-sm">{match.resultNote || match.resultSummary || 'Outcome Pending'}</p>
                 </div>
           </div>
         </div>
@@ -62,7 +62,7 @@ export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamNam
             {(battingPerformers as Performer[]).length > 0 ? (battingPerformers as Performer[]).map((player: Performer, idx: number) => (
               <tr key={idx}>
                 <td style={{ fontWeight: 'bold' }}>{player.playerName || 'Player Name'}</td>
-                <td style={{ fontSize: '11px', color: player.isNotOut ? '#2ecc71' : '#888' }}>
+                <td style={{ fontSize: '11px', color: player.isNotOut ? '#38bdf8' : '#888' }}>
                     {player.isNotOut ? 'not out' : (player.outHow || 'out')}
                 </td>
                 <td className="font-black text-white">{player.runs}</td>
@@ -80,6 +80,26 @@ export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamNam
             )}
           </tbody>
         </table>
+
+        {/* DNB Logic */}
+        {match.homeTeamXI && match.homeTeamXI.length > 0 && (
+          <div className="mt-2 py-2 px-3 bg-white/5 rounded-lg border border-white/5 flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Did Not Bat:</span>
+            <div className="flex flex-wrap gap-x-2 text-[11px] font-bold text-slate-300">
+              {match.homeTeamXI
+                .filter(name => !battingPerformers.some(p => p.playerName === name))
+                .map((name, i, arr) => (
+                  <span key={name}>
+                    {name}{i < arr.length - 1 ? ',' : ''}
+                  </span>
+                ))
+              }
+              {match.homeTeamXI.filter(name => !battingPerformers.some(p => p.playerName === name)).length === 0 && (
+                <span className="italic opacity-40">None</span>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* BOWLING SECTION */}
@@ -103,7 +123,7 @@ export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamNam
                 <td>{bowler.bowlingOvers}</td>
                 <td>{bowler.maidens || 0}</td>
                 <td>{bowler.bowlingRuns}</td>
-                <td style={{ color: '#2ecc71', fontWeight: 'bold' }}>{bowler.wickets}</td>
+                <td style={{ color: '#38bdf8', fontWeight: 'bold' }}>{bowler.wickets}</td>
                 <td style={{ color: '#3498db', fontWeight: 'bold' }}>
                     {bowler.bowlingOvers > 0 ? (bowler.bowlingRuns / bowler.bowlingOvers).toFixed(2) : '0.00'}
                 </td>

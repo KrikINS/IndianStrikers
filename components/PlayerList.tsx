@@ -361,7 +361,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
     switch (role) {
       case PlayerRole.BATSMAN: return <Sword size={16} className="text-blue-500" />;
       case PlayerRole.BOWLER: return <CircleDot size={16} className="text-red-500" />;
-      default: return <Shield size={16} className="text-green-500" />;
+      default: return <Shield size={16} className="text-sky-500" />;
     }
   };
 
@@ -433,7 +433,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
         {/* Jersey Number Watermark (Proportioned to Header) */}
         {(player.jerseyNumber !== undefined && player.jerseyNumber !== null) && (
           <div 
-            className="absolute -top-1 right-2 text-5xl font-black select-none z-0 pointer-events-none text-[#A3E635]/30 leading-none"
+            className="absolute -top-1 right-2 text-5xl font-black select-none z-0 pointer-events-none text-sky-400/20 leading-none"
             style={{ 
               transform: 'rotate(-15deg) scale(1.6)', 
               fontFamily: '"Graduate", serif',
@@ -463,7 +463,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
             alt={player.name}
             className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl border-4 border-white object-cover shadow-md ${!player.isAvailable ? 'grayscale opacity-80' : ''}`}
           />
-          <div className={`absolute -bottom-1 -right-1 w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white ${player.isAvailable ? 'bg-green-500' : 'bg-red-500'}`} title={player.isAvailable ? 'Available' : 'Unavailable'}></div>
+          <div className={`absolute -bottom-1 -right-1 w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white ${player.isAvailable ? 'bg-blue-500' : 'bg-red-500'}`} title={player.isAvailable ? 'Available' : 'Unavailable'}></div>
         </div>
       </div>
 
@@ -478,7 +478,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                 onClick={(e) => handleToggleAvailability(player, e)}
                 className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black shadow-sm transition-all whitespace-nowrap
                   ${player.isAvailable
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                     : 'bg-red-100 text-red-700 hover:bg-red-200'}
                 `}
                 title="Toggle Availability"
@@ -535,9 +535,9 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
         <div className="flex gap-2">
             <button
               onClick={handleExportExcel}
-              className="px-4 py-2.5 bg-white text-emerald-700 border border-emerald-100 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:bg-emerald-50 flex items-center gap-2"
+              className="px-4 py-2.5 bg-white text-blue-700 border border-blue-100 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:bg-blue-50 flex items-center gap-2"
             >
-              <Activity size={16} className="text-emerald-500" /> Export Excel
+              <Activity size={16} className="text-blue-500" /> Export Excel
             </button>
           
           {canManagePlayers && (
@@ -652,7 +652,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                     setShowPasswordModal(true);
                   }
                 }}
-                className={`flex-1 py-3 px-4 whitespace-nowrap text-sm font-bold border-b-2 transition-colors ${activeEditTab === 'batting' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:bg-slate-50'} ${!isStatsUnlocked && editingPlayer ? 'opacity-70' : ''}`}
+                className={`flex-1 py-3 px-4 whitespace-nowrap text-sm font-bold border-b-2 transition-colors ${activeEditTab === 'batting' ? 'border-sky-600 text-sky-600' : 'border-transparent text-slate-500 hover:bg-slate-50'} ${!isStatsUnlocked && editingPlayer ? 'opacity-70' : ''}`}
               >
                 <div className="flex items-center justify-center gap-2">
                   Batting Stats
@@ -727,7 +727,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                               id="isAvailable"
                               checked={formData.isAvailable || false}
                               onChange={handleInputChange}
-                              className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
+                              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                             />
                             <label htmlFor="isAvailable" className="text-sm font-bold text-slate-700">Available for Matches</label>
                           </div>
@@ -872,7 +872,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                         step={key === 'average' || key === 'strikeRate' ? '0.01' : '1'}
                         value={formData.battingStats ? (formData.battingStats as any)[key] : ''}
                         onChange={(e) => handleStatChange('batting', key as keyof BattingStats, e.target.value)}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       />
                     </div>
                   ))}
@@ -891,7 +891,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                         step={key === 'average' || key === 'economy' || key === 'strikeRate' ? '0.01' : '1'}
                         value={formData.bowlingStats ? (formData.bowlingStats as any)[key] : ''}
                         onChange={(e) => handleStatChange('bowling', key as keyof BowlingStats, e.target.value)}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       />
                     </div>
                   ))}
@@ -986,7 +986,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
               {/* Jersey Number Watermark (Unified Style) */}
               {(viewingPlayer.jerseyNumber !== undefined && viewingPlayer.jerseyNumber !== null) && (
                 <div 
-                  className="absolute top-0 right-4 text-[6rem] md:text-[9rem] font-black select-none z-0 pointer-events-none text-[#A3E635]/30 leading-none"
+                  className="absolute top-0 right-4 text-[6rem] md:text-[9rem] font-black select-none z-0 pointer-events-none text-blue-400/20 leading-none"
                   style={{ 
                     transform: 'rotate(-15deg) scale(1.2)', 
                     fontFamily: '"Graduate", serif',
@@ -1013,7 +1013,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                 </div>
               </div>
               <div className="absolute top-4 md:top-6 right-12 md:right-16 flex flex-col md:flex-row gap-2">
-                {viewingPlayer.isCaptain && <div className="bg-yellow-500 text-white px-3 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg text-center">CAPTAIN</div>}
+                {viewingPlayer.isCaptain && <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg text-center">CAPTAIN</div>}
                 {viewingPlayer.isViceCaptain && <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] md:text-xs font-bold shadow-lg text-center">VICE CAPTAIN</div>}
               </div>
             </div>
@@ -1055,13 +1055,13 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                 <div className="flex gap-2 md:gap-4 mb-4 overflow-x-auto pb-2">
                   <button
                     onClick={() => setActiveStatTab('batting')}
-                    className={`px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all border whitespace-nowrap ${activeStatTab === 'batting' ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-500/30' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                    className={`px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all border whitespace-nowrap ${activeStatTab === 'batting' ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
                   >
                     BATTING STATISTICS
                   </button>
                   <button
                     onClick={() => setActiveStatTab('bowling')}
-                    className={`px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all border whitespace-nowrap ${activeStatTab === 'bowling' ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-500/30' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                    className={`px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all border whitespace-nowrap ${activeStatTab === 'bowling' ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
                   >
                     BOWLING STATISTICS
                   </button>
@@ -1071,13 +1071,13 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                   <div className="overflow-x-auto">
                     {activeStatTab === 'batting' ? (
                       <table className="w-full text-[11px] md:text-xs text-left">
-                        <thead className="bg-[#00703c] text-white font-bold uppercase border-b border-emerald-800">
+                        <thead className="bg-[#1e3a8a] text-white font-bold uppercase border-b border-blue-900">
                           <tr>
-                            <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#00703c] z-10">Details</th>
+                            <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-10">Details</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Inns</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">NO</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap bg-emerald-700/50">Runs</th>
+                            <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/50">Runs</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Balls</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Ave</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">SR</th>
@@ -1096,7 +1096,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                             onClick={() => setIsStatsExpanded(!isStatsExpanded)}
                           >
                             <td className="p-2 md:p-3 flex items-center gap-2 whitespace-nowrap sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">
-                              <div className={`p-1 rounded-md transition-colors ${isStatsExpanded ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                              <div className={`p-1 rounded-md transition-colors ${isStatsExpanded ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'}`}>
                                 {isStatsExpanded ? <Minus size={14} /> : <Plus size={14} />}
                               </div>
                               Career Totals
@@ -1104,7 +1104,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.matches || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.innings || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.notOuts || '0'}</td>
-                            <td className="p-2 md:p-3 text-center font-black text-emerald-700 bg-emerald-50/50">{viewingPlayer.battingStats?.runs || '0'}</td>
+                            <td className="p-2 md:p-3 text-center font-black text-blue-700 bg-blue-50/50">{viewingPlayer.battingStats?.runs || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.balls || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.average || '0.00'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.strikeRate || '0.00'}</td>
@@ -1168,15 +1168,15 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                       </table>
                     ) : (
                       <table className="w-full text-[11px] md:text-xs text-left">
-                        <thead className="bg-[#00703c] text-white font-bold uppercase border-b border-emerald-800">
+                        <thead className="bg-[#1e3a8a] text-white font-bold uppercase border-b border-blue-900">
                           <tr>
-                            <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#00703c] z-10">Details</th>
+                            <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-10">Details</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Inns</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Overs</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Mdns</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Runs</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap bg-emerald-700/50">Wkts</th>
+                            <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/50">Wkts</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Ave</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">Econ</th>
                             <th className="p-2 md:p-3 text-center whitespace-nowrap">SR</th>
@@ -1192,7 +1192,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                             onClick={() => setIsStatsExpanded(!isStatsExpanded)}
                           >
                             <td className="p-2 md:p-3 flex items-center gap-2 whitespace-nowrap sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">
-                              <div className={`p-1 rounded-md transition-colors ${isStatsExpanded ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                              <div className={`p-1 rounded-md transition-colors ${isStatsExpanded ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'}`}>
                                 {isStatsExpanded ? <Minus size={14} /> : <Plus size={14} />}
                               </div>
                               Career Totals
@@ -1202,7 +1202,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.overs || '0.0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.maidens || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.runs || '0'}</td>
-                            <td className="p-2 md:p-3 text-center font-black text-emerald-700 bg-emerald-50/50">{viewingPlayer.bowlingStats?.wickets || '0'}</td>
+                            <td className="p-2 md:p-3 text-center font-black text-blue-700 bg-blue-50/50">{viewingPlayer.bowlingStats?.wickets || '0'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.average || '0.00'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.economy || '0.00'}</td>
                             <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.strikeRate || '0.00'}</td>
@@ -1268,7 +1268,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                 <div className="grid grid-cols-1 gap-4 text-sm">
                   <div className="flex justify-between py-2 border-b border-slate-200">
                     <span className="text-slate-500">Status</span>
-                    <span className={`font-bold px-2 py-0.5 rounded-md ${viewingPlayer.isAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    <span className={`font-bold px-2 py-0.5 rounded-md ${viewingPlayer.isAvailable ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
                       {viewingPlayer.isAvailable ? 'Available' : 'Unavailable'}
                     </span>
                   </div>

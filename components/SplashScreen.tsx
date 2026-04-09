@@ -132,7 +132,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
             {teamLogo && !imgError ? (
               <img src={teamLogo} className="w-24 h-24 object-contain" alt="Team Logo" />
             ) : (
-              <img src="/INS-LOGO.png" className="w-24 h-24 object-contain" alt="INS" />
+              <img src="/INS%20LOGO.PNG" className="w-24 h-24 object-contain" alt="INS" />
             )}
           </div>
           <h2 className="text-3xl md:text-5xl text-slate-300 font-cursive tracking-wide min-h-[60px]">
@@ -184,7 +184,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
 
           {/* Main Team Logo */}
           <div className="mb-6 transform hover:scale-105 transition-transform duration-500">
-            <div className="w-32 h-32 md:w-48 md:h-48 bg-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.5)] border-4 border-white/10 relative overflow-hidden group">
+            <div className="w-32 h-32 md:w-48 md:h-48 bg-transparent rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.3)] border-4 border-white/10 relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-tr from-blue-700 to-blue-500 opacity-50"></div>
               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
               {teamLogo && !imgError ? (

@@ -491,15 +491,15 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
           </div>
           
           <div className="team-score-block">
-            {match.homeLogo && <img src={match.homeLogo} alt="Home" className="team-logo-small" />}
-            {!match.homeLogo && <div className="team-logo-small bg-slate-800 flex items-center justify-center text-[8px]">LOGO</div>}
+            {homeTeamLogo && <img src={homeTeamLogo} alt="Home" className="team-logo-small" />}
+            {!homeTeamLogo && <div className="team-logo-small bg-slate-800 flex items-center justify-center text-[8px]">LOGO</div>}
             
             <span className="team-name-big">INDIAN STRIKERS: {homeRuns}/{homeWkts}</span>
             <span className="vs-divider">VS</span>
             <span className="team-name-big">{(match as any).opponentName || opponentName}: {awayRuns}/{awayWkts}</span>
             
-            {match.opponentLogo && <img src={match.opponentLogo} alt="Away" className="team-logo-small" />}
-            {!match.opponentLogo && <div className="team-logo-small bg-slate-800 flex items-center justify-center text-[8px]">LOGO</div>}
+            {opponentLogo && <img src={opponentLogo} alt="Away" className="team-logo-small" />}
+            {!opponentLogo && <div className="team-logo-small bg-slate-800 flex items-center justify-center text-[8px]">LOGO</div>}
           </div>
         </div>
 
