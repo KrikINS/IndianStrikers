@@ -346,7 +346,7 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
 };
 
 // --- Carousel Component for Weekly Performers ---
-const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: Player[], onSelectHero: (data: any) => void }) => {
+const WeeklyPerformerCarousel = ({ performers, onSelectHero }: { performers: any[], onSelectHero: (data: any) => void }) => {
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
