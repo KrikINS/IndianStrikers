@@ -39,6 +39,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                     : new Date().toISOString(),
                 groundId: formData.groundId,
                 tournament: selectedTournament,
+                tournamentId: formData.tournamentId,
                 stage: formData.stage,
                 status: formData.status,
                 matchFormat: formData.matchFormat,

@@ -56,10 +56,8 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                 const psid = String((player as any).player_id || '');
                 const pname = String(player.name || '').toLowerCase();
                 const target = searchId.toLowerCase();
-
-                return pid === searchId || psid === searchId || pname === target || pid.includes(searchId);
+                return pid === searchId || psid === searchId || pname === target;
             });
-
             if (p) return p.name;
         } else {
             // Check opponent roster
@@ -126,20 +124,24 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
     const calculateTotalExtras = (data: InningsData) => {
         const ext = data.extras || {};
-        const sum = (Number((ext as any).wide || (ext as any).wides || 0)) +
-            (Number((ext as any).no_ball || (ext as any).noBall || 0)) +
-            (Number(ext.legByes || 0)) +
-            (Number(ext.byes || 0));
-
-        if (sum > 0) return sum;
-
-        // Fallback: Sum from bowling attack
-        let bowlExtras = 0;
+        
+        // 1. Get Wides & No Balls (Prioritize sum from bowling attack as it's more detailed)
+        let bowlWides = 0;
+        let bowlNBs = 0;
         data.bowling?.forEach(b => {
-            bowlExtras += (Number((b as any).wides || (b as any).wide || 0)) +
-                (Number((b as any).no_balls || (b as any).noBall || 0));
+            bowlWides += (Number((b as any).wides || (b as any).wide || 0));
+            bowlNBs += (Number((b as any).no_balls || (b as any).noBall || (b as any).no_ball || 0));
         });
-        return bowlExtras || 0;
+
+        // Use the higher value between summary and bowling sum (robustness for different scoring styles)
+        const totalWides = Math.max(bowlWides, Number((ext as any).wide || (ext as any).wides || 0));
+        const totalNBs = Math.max(bowlNBs, Number((ext as any).no_ball || (ext as any).noBall || 0));
+        
+        // 2. Add Leg Byes & Byes (Always from summary)
+        const lb = Number(ext.legByes || 0);
+        const b = Number(ext.byes || 0);
+
+        return totalWides + totalNBs + lb + b;
     };
 
     const shareScorecard = async () => {
@@ -178,7 +180,8 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                         const shareData = {
                             files: [file],
                             title: `Match Scorecard: Indian Strikers vs ${match.opponentName}`,
-                            text: `Detailed scorecard for our match against ${match.opponentName}. #IndianStrikers #Cricket`
+                            text: `Detailed scorecard for our match against ${match.opponentName}. #IndianStrikers #Cricket`,
+                            url: `${window.location.origin}/#/scorecard/${match.id}`
                         };
 
                         if (navigator.canShare && navigator.canShare(shareData)) {
@@ -188,7 +191,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                             await navigator.share({
                                 title: shareData.title,
                                 text: shareData.text,
-                                url: window.location.href
+                                url: shareData.url
                             });
                         }
                     }
@@ -281,6 +284,11 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
              return hasNotPlayed && !activeBatters.find(ab => ab.playerId === b.playerId);
         });
 
+        const displayWides = Number((data.extras as any)?.wide || (data.extras as any)?.wides || 0) || 
+                             data.bowling?.reduce((acc: number, b: any) => acc + (Number(b.wides || b.wide || 0)), 0) || 0;
+        const displayNBs = Number((data.extras as any)?.no_ball || (data.extras as any)?.noBall || (data.extras as any)?.no_balls || 0) || 
+                           data.bowling?.reduce((acc: number, b: any) => acc + (Number(b.no_balls || b.noBall || b.nb || 0)), 0) || 0;
+
         return (
             <div ref={ref} className="bg-white p-3 md:p-5 rounded-3xl border border-slate-200 shadow-xl space-y-3">
                 {/* Team Sub-Header */}
@@ -357,7 +365,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
                                     <tr className="bg-slate-50 font-black text-slate-900 border-t border-slate-200">
                                         <td colSpan={2} className="py-2 px-3 uppercase tracking-widest text-[9px] text-slate-500">
-                                            EXTRAS (Wd {Number((data.extras as any)?.wide || (data.extras as any)?.wides || 0)}, Nb {Number((data.extras as any)?.no_ball || (data.extras as any)?.noBall || 0)}, Lb {data.extras?.legByes || 0}, B {data.extras?.byes || 0})
+                                            EXTRAS (Wd {displayWides}, Nb {displayNBs}, Lb {data.extras?.legByes || 0}, B {data.extras?.byes || 0})
                                         </td>
                                         <td colSpan={5} className="py-2 px-3 text-right text-lg font-black italic graduate text-sky-600">
                                             {extrasCount}

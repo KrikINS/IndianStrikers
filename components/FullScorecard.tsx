@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScheduledMatch, Performer } from '../types';
+import { ScheduledMatch, Performer, Player } from '../types';
 import { Trophy, Calendar, MapPin, User, Target, Shield, Award, Zap } from 'lucide-react';
 
 interface FullScorecardProps {
@@ -7,9 +7,10 @@ interface FullScorecardProps {
   homeTeamName: string;
   opponentName: string;
   groundName?: string;
+  players?: Player[];
 }
 
-export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamName, opponentName, groundName }) => {
+export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamName, opponentName, groundName, players = [] }) => {
   const battingPerformers = match.performers?.filter((p: Performer) => p.runs > 0 || p.balls > 0 || p.isNotOut) || [];
   const bowlingPerformers = match.performers?.filter((p: Performer) => p.bowlingOvers > 0) || [];
 
@@ -87,10 +88,10 @@ export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamNam
             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Did Not Bat:</span>
             <div className="flex flex-wrap gap-x-2 text-[11px] font-bold text-slate-300">
               {match.homeTeamXI
-                .filter(name => !battingPerformers.some(p => p.playerName === name))
-                .map((name, i, arr) => (
-                  <span key={name}>
-                    {name}{i < arr.length - 1 ? ',' : ''}
+                .filter(id => !battingPerformers.some(p => p.playerId === id || p.playerName === id))
+                .map((id, i, arr) => (
+                  <span key={id}>
+                    {players.find(p => p.id === id)?.name || id}{i < arr.length - 1 ? ',' : ''}
                   </span>
                 ))
               }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -20,7 +20,7 @@ import UserManagement from './components/UserManagement';
 import { ScorecardPage } from './components/ScorecardPage';
 import { Player, UserRole, OpponentTeam } from './types';
 import { getPlayers, addPlayer, updatePlayer, deletePlayer, getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo, getMatches } from './services/storageService';
-import { Menu } from 'lucide-react';
+import { Menu, Shield, ArrowRight } from 'lucide-react';
 import KirikINSLogo from './components/KirikINSLogo';
 
 declare global {
@@ -28,6 +28,22 @@ declare global {
     refreshAppData: () => Promise<void>;
   }
 }
+
+const Unauthorized = () => (
+  <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white/[0.02] backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl mx-auto max-w-2xl mt-12 animate-in fade-in zoom-in duration-500">
+    <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-8 border border-red-500/20 shadow-[0_0_50px_-12px_rgba(239,68,68,0.5)]">
+      <Shield size={48} className="text-red-500" strokeWidth={1.5} />
+    </div>
+    <h1 className="text-4xl font-black text-white mb-4 uppercase italic tracking-tighter">Not Authorized</h1>
+    <p className="text-slate-400 max-w-md mb-10 text-lg leading-relaxed">
+      You are not authorized to access this department. Please contact the administrator to upgrade your access level or return to the main dashboard.
+    </p>
+    <Link to="/home" className="group relative px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition-all shadow-[0_10px_30px_-10px_rgba(37,99,235,0.6)] uppercase tracking-[0.2em] text-xs flex items-center gap-3 active:scale-95">
+      <span>Return Home</span>
+      <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+    </Link>
+  </div>
+);
 
 const AppContent: React.FC<{
   players: Player[],
@@ -111,9 +127,9 @@ const AppContent: React.FC<{
             />
             <Route path="/memories" element={<Memories userRole={userRole} currentUser={currentUser} />} />
             <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={userRole} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
-            <Route path="/scorer" element={(userRole === 'admin' || userRole === 'scorer') ? <ScorerDashboard /> : <Navigate to="/home" />} />
+            <Route path="/scorer" element={(userRole === 'admin' || userRole === 'scorer') ? <ScorerDashboard /> : <Unauthorized />} />
             {/* Control Panel Routes - Admin only */}
-            <Route path="/control-panel" element={userRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Navigate to="/home" />}>
+            <Route path="/control-panel" element={userRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Unauthorized />}>
               <Route index element={<Navigate to="grounds" replace />} />
               <Route path="grounds" element={<GroundsManager />} />
               <Route path="tournaments" element={<TournamentsManager />} />
@@ -121,7 +137,7 @@ const AppContent: React.FC<{
               <Route path="users" element={<UserManagement />} />
             </Route>
             
-            <Route path="/scorecard/:id" element={<ScorecardPage opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />
+            <Route path="/scorecard/:id" element={<ScorecardPage players={players} opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />
             
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>

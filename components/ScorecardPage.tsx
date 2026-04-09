@@ -4,14 +4,15 @@ import { useMatchCenter } from './matchCenterStore';
 import { useMasterData } from './masterDataStore';
 import { FullScorecard } from './FullScorecard';
 import { ArrowLeft, Share2, Download } from 'lucide-react';
-import { OpponentTeam, ScheduledMatch, Ground } from '../types';
+import { OpponentTeam, ScheduledMatch, Ground, Player } from '../types';
 
 interface ScorecardPageProps {
     opponents: OpponentTeam[];
     homeTeamName: string;
+    players: Player[];
 }
 
-export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTeamName }) => {
+export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTeamName, players }) => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const matches = useMatchCenter(state => state.matches);
@@ -63,8 +64,9 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTea
             <FullScorecard 
                 match={match}
                 homeTeamName={homeTeamName}
-                opponentName={opponent?.name || match.opponentId.replace(/-/g, ' ')}
+                opponentName={opponent?.name || match.opponentId || 'Opponent'}
                 groundName={ground?.name}
+                players={players}
             />
         </div>
     );

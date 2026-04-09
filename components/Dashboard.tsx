@@ -153,8 +153,8 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
           <div className="absolute -inset-0.5 bg-sky-500/20 rounded-full blur-md"></div>
           
           <div className="relative bg-[#0f172a]/80 backdrop-blur-xl border border-sky-400/30 px-6 py-2 rounded-full shadow-2xl">
-            <p className="text-[10px] md:text-xs font-black italic uppercase tracking-[0.15rem] animate-bounce-shimmer leading-none flex items-center">
-              ONE TEAM <span className="mx-2 text-sky-400/40 text-[8px]">•</span> ONE DREAM
+            <p className="text-[13px] md:text-[15px] font-black italic uppercase tracking-[0.15rem] animate-bounce-shimmer leading-none flex items-center">
+              ONE TEAM <span className="mx-2 text-sky-400/40 text-[10px]">•</span> ONE DREAM
             </p>
           </div>
         </div>
@@ -176,21 +176,21 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
                 {/* 1. BRANDING LAYER (TOP) */}
                 <div className="absolute top-0 left-0 right-0 z-50">
                   {/* Header Content: Logo + Title */}
-                  <div className="absolute top-4 left-2 flex items-center gap-1.5">
-                    <img src="/INS%20LOGO.PNG" className="w-[110px] h-[110px] object-contain drop-shadow-2xl" alt="Logo" />
-                    <div className="flex flex-col -mt-1">
-                      <h1 className="text-[20px] font-[1000] italic text-white uppercase leading-none tracking-tighter drop-shadow-md">
+                  <div className="absolute top-6 left-2 flex items-center gap-1.5">
+                    <img src="/INS%20LOGO.PNG" className="w-[100px] h-[100px] object-contain drop-shadow-2xl" alt="Logo" />
+                    <div className="flex flex-col -mt-1 ml-1">
+                      <h1 className="text-[18px] font-[1000] italic text-white uppercase leading-none tracking-tighter drop-shadow-md">
                         MATCH DAY
                       </h1>
-                      <h2 className="text-[26px] font-[1000] italic text-sky-400 uppercase leading-none tracking-tight -mt-0.5 drop-shadow-lg">
+                      <h2 className="text-[24px] font-[1000] italic text-sky-400 uppercase leading-none tracking-tight -mt-0.5 drop-shadow-lg">
                         HERO
                       </h2>
                     </div>
                   </div>
                   
-                  {/* Motto - Page Separator Style (Right Aligned) */}
-                  <div className="absolute top-2 right-0 bg-white/5 backdrop-blur-3xl border-l border-b border-white/10 pl-4 pr-3 py-1 rounded-bl-2xl shadow-2xl">
-                    <span className="text-[7px] font-black italic text-white tracking-[0.25em] uppercase">One Team, One Dream</span>
+                  {/* Motto - Page Separator Style (Right Aligned) - Moved down for breathing space */}
+                  <div className="absolute top-10 right-0 bg-white/5 backdrop-blur-3xl border-l border-b border-white/10 pl-6 pr-4 py-1.5 rounded-bl-3xl shadow-2xl">
+                    <span className="text-[10px] font-black italic text-white tracking-[0.35em] uppercase">One Team, One Dream</span>
                   </div>
                 </div>
 
@@ -205,14 +205,20 @@ const Dashboard: React.FC<DashboardProps> = ({ players, userRole = 'guest', team
                 {/* 3. CONTENT STACK: PLAYER IMAGE -> NAME -> DETAILS -> BOXES */}
                 <div className="absolute inset-x-0 bottom-[30px] flex flex-col items-center z-30 px-8">
                    
-                   {/* Player Picture - Now sits precisely above the name with a cinematic fade */}
-                   <div className="w-full flex justify-center mb-6">
+                   {/* Player Picture - Now sits precisely above the name with a cinematic fade on all sides */}
+                   <div className="w-full flex justify-center mb-8 relative">
+                      {/* Sub-glow behind player */}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-sky-500/10 blur-[60px] rounded-full"></div>
+                      
                       <img 
                         src={selectedHero.player.avatarUrl} 
-                        className="max-h-[380px] w-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)]" 
+                        className="max-h-[380px] w-auto object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] relative z-10" 
                         style={{ 
-                          maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 95%)',
-                          WebkitMaskImage: 'radial-gradient(ellipse at center, black 40%, transparent 95%)'
+                          // Cinematic fade on all sides using multiple mask gradients
+                          maskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent), linear-gradient(to right, transparent, black 15%, black 85%, transparent)',
+                          WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent), linear-gradient(to right, transparent, black 15%, black 85%, transparent)',
+                          maskComposite: 'intersect',
+                          WebkitMaskComposite: 'source-in'
                         }}
                         crossOrigin="anonymous" 
                         alt={selectedHero.player.name}
@@ -624,7 +630,7 @@ const WeeklyPerformerCarousel = ({
                     statsValue: player.wickets > 0 ? `${player.wickets}/${player.bowlingRuns}` : `${player.runs} (${player.balls})`,
                     matchDate: player.matchDate,
                     matchTime: player.matchTime || (player.matchDate ? new Date(player.matchDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined),
-                    opponentName: player.opponentName || opponents.find((o: any) => o.id === player.opponentId)?.name || 'TEAM',
+                    opponentName: opponents.find((o: any) => o.id === player.opponentId)?.name || player.opponentName || 'TEAM',
                     groundName: player.groundName || grounds.find((g: any) => g.id === player.groundId)?.name || 'CRICKET GROUND',
                     fullStats: player
                   })}

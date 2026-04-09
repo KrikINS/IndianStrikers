@@ -179,6 +179,7 @@ export interface ScheduledMatch {
   date: string;
   groundId: string;
   tournament: string;
+  tournamentId?: string;
   stage: MatchStage;
   status: MatchStatus;
   homeTeamXI: string[]; // Array of Player IDs from Squad Roster

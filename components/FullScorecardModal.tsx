@@ -209,8 +209,8 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
     return innings.bowling.reduce((max: number, b: any) => Math.max(max, b.overs || 0), 0);
   };
 
-  const autoWides = inningsData.bowling.reduce((acc: number, b) => acc + (b.wides || 0), 0);
-  const autoNBs = inningsData.bowling.reduce((acc: number, b: any) => acc + (b.no_balls || 0), 0);
+  const autoWides = inningsData.bowling.reduce((acc: number, b: any) => acc + (Number(b.wides || b.wide || 0)), 0);
+  const autoNBs = inningsData.bowling.reduce((acc: number, b: any) => acc + (Number(b.no_balls || b.noBall || b.nb || 0)), 0);
 
   const homeInnings = isHomeBattingFirst ? scorecard.innings1 : scorecard.innings2;
   const awayInnings = isHomeBattingFirst ? scorecard.innings2 : scorecard.innings1;
@@ -638,7 +638,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
               </div>
 
               <span className="total-extras">
-                Total: {Number(autoWides) + Number(autoNBs) + (inningsData.extras.legByes || 0) + (inningsData.extras.byes || 0)}
+                Total: {(Number(autoWides || 0) + Number(autoNBs || 0) + Number(inningsData.extras.legByes || 0) + Number(inningsData.extras.byes || 0))}
               </span>
             </div>
             

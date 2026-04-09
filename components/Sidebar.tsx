@@ -102,18 +102,14 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
 
   const controlPanelLinks: SidebarLink[] = [];
 
-  if (userRole === 'admin' || userRole === 'scorer') {
-    mainLinks.push({ to: '/scorer', icon: <ClipboardList size={20} />, label: 'Scorer Dashboard' });
-  }
+  mainLinks.push({ to: '/scorer', icon: <ClipboardList size={20} />, label: 'Scorer Dashboard' });
 
-  if (userRole === 'admin') {
-    controlPanelLinks.push({ 
-      to: '/control-panel/grounds', 
-      icon: <Settings size={20} />, 
-      label: 'Control Panel',
-      badge: pendingRequests > 0 ? pendingRequests : undefined
-    });
-  }
+  controlPanelLinks.push({ 
+    to: '/control-panel/grounds', 
+    icon: <Settings size={20} />, 
+    label: 'Control Panel',
+    badge: (userRole === 'admin' && pendingRequests > 0) ? pendingRequests : undefined
+  });
 
   const effectiveAvatar = linkedPlayer?.avatarUrl || currentUser?.avatarUrl;
 
