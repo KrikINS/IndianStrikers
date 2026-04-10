@@ -16,6 +16,7 @@ import html2canvas from 'html2canvas';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
 import { useMasterData } from './masterDataStore';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
+import { useCricketScorer } from './matchStore';
 import PointsTable from './PointsTable';
 
 // Constants for Carousel
@@ -742,8 +743,23 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                 <button
                                     onClick={async () => {
                                         if (window.confirm("Initialize a New System Logic Test? This will create a local sandbox environment.")) {
-                                            await createSandboxMatch();
-                                            await syncWithCloud();
+                                            try {
+                                                const matchId = await createSandboxMatch();
+                                                console.log('Sandbox Created:', matchId);
+                                                
+                                                // Initialize the Scorer Store with this match
+                                                useCricketScorer.getState().initializeMatch({
+                                                    matchId,
+                                                    matchType: 'T20',
+                                                    ground: 'Sandbox Virtual Ground',
+                                                    maxOvers: 20
+                                                });
+
+                                                navigate('/scorer');
+                                            } catch (err: any) {
+                                                alert("Failed to initialize sandbox: " + err.message);
+                                                console.error(err);
+                                            }
                                         }
                                     }}
                                     className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg border border-slate-700 hover:border-sky-500 hover:bg-slate-800 flex items-center gap-2 group"

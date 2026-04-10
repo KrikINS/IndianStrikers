@@ -81,6 +81,7 @@ interface ScorerStore extends MatchState {
         ground: string;
         maxOvers: number;
     }) => void;
+    updateMatchSettings: (data: Partial<MatchState>) => void;
     setToss: (winnerId: string | null, choice: 'Bat' | 'Bowl' | null) => void;
     startInnings: (num: 1 | 2, batId: string, bowlId: string, strId: string, nStrId: string, bwlId: string) => void;
     recordBall: (payload: {
@@ -93,6 +94,7 @@ interface ScorerStore extends MatchState {
     undoLastBall: () => void;
     setNewBowler: (id: string) => void;
     resetMatch: () => void;
+    clearInnings: () => void;
     getOvers: (balls: number) => string;
 }
 
@@ -119,6 +121,8 @@ export const useCricketScorer = create<ScorerStore>()(
             ...INITIAL_STATE,
 
             initializeMatch: (data) => set({ ...INITIAL_STATE, ...data }),
+
+            updateMatchSettings: (data) => set((state) => ({ ...state, ...data })),
 
             setToss: (winnerId, choice) => set({ toss: { winnerId, choice } }),
 
@@ -228,6 +232,17 @@ export const useCricketScorer = create<ScorerStore>()(
 
             setNewBowler: (id) => set({ currentBowlerId: id }),
             resetMatch: () => set(INITIAL_STATE),
+            clearInnings: () => {
+                const state = get();
+                set({
+                    ...INITIAL_STATE,
+                    matchId: state.matchId,
+                    matchType: state.matchType,
+                    ground: state.ground,
+                    maxOvers: state.maxOvers,
+                    toss: state.toss
+                });
+            },
             getOvers: (balls) => `${Math.floor(balls / 6)}.${balls % 6}`
         }),
         { name: 'ins-cricket-scorer' }

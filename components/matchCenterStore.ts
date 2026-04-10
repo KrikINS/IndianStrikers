@@ -8,7 +8,7 @@ export type { Performer, MatchStatus, MatchStage, FullScorecardData };
 interface MatchStore {
   matches: ScheduledMatch[];
   setMatches: (matches: ScheduledMatch[]) => void;
-  addMatch: (match: Omit<ScheduledMatch, 'id'>) => Promise<void>;
+  addMatch: (match: Omit<ScheduledMatch, 'id'>) => Promise<string>;
   updateMatch: (id: string, updates: Partial<ScheduledMatch>) => Promise<void>;
   deleteMatch: (id: string) => Promise<void>;
   setPlayingXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => Promise<void>;
@@ -19,7 +19,7 @@ interface MatchStore {
   getSortedMatches: () => ScheduledMatch[];
   resetZombieMatches: () => void;
   purgeTestData: () => Promise<void>;
-  createSandboxMatch: () => Promise<void>;
+  createSandboxMatch: () => Promise<string>;
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
 }
@@ -51,6 +51,7 @@ export const useMatchCenter = create<MatchStore>()(
         try {
           const savedMatch = await api.addMatch(match);
           set((state) => ({ matches: [...state.matches, savedMatch] }));
+          return savedMatch.id;
         } catch (e) {
           console.error("Failed to add match:", e);
           throw e;
@@ -221,7 +222,7 @@ export const useMatchCenter = create<MatchStore>()(
           isHomeBattingFirst: true,
           tournament: 'Practice'
         };
-        await get().addMatch(testMatch);
+        return await get().addMatch(testMatch);
       }
     }),
     {
