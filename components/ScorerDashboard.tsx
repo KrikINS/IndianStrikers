@@ -804,9 +804,23 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
     return (
       <SetupContainer>
         <Header>
-          <button title="Back to Match Center" onClick={() => navigate('/match-center')} className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-500"><ChevronLeft /></button>
-          <span style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '1px' }}>MATCH SETUP</span>
-          <Settings size={20} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button title="Back to Match Center" onClick={() => navigate('/match-center')} className="p-2 hover:bg-slate-100/10 rounded-xl transition-all text-white"><ChevronLeft /></button>
+            <span style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '1px' }}>MATCH SETUP</span>
+          </div>
+          {store.innings1 && (
+            <button 
+              onClick={() => {
+                if (window.confirm("RESET SCORER? This will permanently clear all recorded balls for THIS session. You will need to re-select toss and openers. Proceed?")) {
+                  store.hardReset();
+                  setSetupStep('preview');
+                }
+              }}
+              style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#ef4444', padding: '6px 12px', borderRadius: 8, fontSize: '10px', fontWeight: 900, cursor: 'pointer' }}
+            >
+              RESET SCORER
+            </button>
+          )}
         </Header>
 
         <SetupCard>

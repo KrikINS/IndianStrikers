@@ -110,6 +110,7 @@ interface ScorerStore extends MatchState {
     changeBowler: (id: string) => void;
     resetMatch: () => void;
     clearInnings: () => void;
+    hardReset: () => void;
     getOvers: (balls: number) => string;
 }
 
@@ -140,17 +141,35 @@ export const useCricketScorer = create<ScorerStore>()(
         (set, get) => ({
             ...INITIAL_STATE,
 
-            initializeMatch: (data) => set({ 
-                ...INITIAL_STATE, 
-                matchId: data.matchId,
-                matchType: data.matchType,
-                tournament: data.tournament,
-                ground: data.ground,
-                opponentName: data.opponentName,
-                maxOvers: data.maxOvers,
-                homeXI: data.homeXI || [],
-                awayXI: data.awayXI || []
-            }),
+            hardReset: () => set({ ...INITIAL_STATE }),
+
+            initializeMatch: (data) => {
+                const current = get();
+                // If we're already scoring this match and have data, don't wipe it
+                if (current.matchId === data.matchId && current.innings1) {
+                    // Just update metadata if needed
+                    set({
+                        matchType: data.matchType,
+                        tournament: data.tournament,
+                        ground: data.ground,
+                        opponentName: data.opponentName,
+                        maxOvers: data.maxOvers
+                    });
+                    return;
+                }
+
+                set({ 
+                    ...INITIAL_STATE, 
+                    matchId: data.matchId,
+                    matchType: data.matchType,
+                    tournament: data.tournament,
+                    ground: data.ground,
+                    opponentName: data.opponentName,
+                    maxOvers: data.maxOvers,
+                    homeXI: data.homeXI || [],
+                    awayXI: data.awayXI || []
+                });
+            },
 
             updateMatchSettings: (data) => set((state) => ({ ...state, ...data })),
 

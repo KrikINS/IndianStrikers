@@ -266,7 +266,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         setTimeout(() => setShowSyncSuccess(false), 3000);
     };
 
-    const handleStartScoring = (matchId: string) => {
+    const handleStartScoring = async (matchId: string) => {
         const match = matches.find(m => m.id === matchId);
         if (!match) return;
 
@@ -276,7 +276,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             return;
         }
 
-        // Initialize store before navigating
+        // Initialize store before navigating. initializeMatch is now non-destructive if IDs match.
         useCricketScorer.getState().initializeMatch({
             matchId: match.id,
             matchType: match.matchFormat || 'T20',
@@ -289,7 +289,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         });
 
         if (match.status === 'upcoming') {
-            updateMatchStatus(matchId, 'live');
+            await updateMatchStatus(matchId, 'live');
         }
 
         navigate(`/scorer/${matchId}`);
