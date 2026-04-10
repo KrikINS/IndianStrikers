@@ -105,7 +105,7 @@ const PointsTable: React.FC<PointsTableProps> = ({ userRole = 'guest', opponents
   };
 
   return (
-    <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-800 w-full mt-8">
+    <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-800 w-full">
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 md:p-6 border-b border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h3 className="text-white font-black text-lg md:text-xl flex items-center gap-2">

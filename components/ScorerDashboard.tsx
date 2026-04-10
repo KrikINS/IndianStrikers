@@ -680,7 +680,16 @@ const ScoreSummaryCard = styled.div`
   align-items: center;
 `;
 
-const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ matchId: propMatchId, players }) => {
+import { 
+  InningsBattingEntry, 
+  InningsBowlingEntry, 
+  Player, 
+  ScheduledMatch,
+  MatchStatus,
+  OpponentTeam
+} from '../types';
+
+const ScorerDashboard: React.FC<{ matchId?: string, players: Player[] }> = ({ matchId: propMatchId, players }) => {
   const store = useCricketScorer();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -1345,10 +1354,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
       }
     }
 
-    }
-
-    if (innings.totalBalls !== undefined && (innings.totalBalls + (type === 'legal' ? 1 : 0)) % 6 === 0 && type === 'legal') {
-      setShowBowlerModal(true);
+    if (type === 'legal' && !isWicket) {
+      const nextBalls = (innings.totalBalls || 0) + 1;
+      if (nextBalls % 6 === 0) {
+        setTimeout(() => setShowBowlerModal(true), 1500);
+      }
     }
   };
 
@@ -1689,14 +1699,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
             else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
             else if (ball.type === 'bye') display = `B${ball.runs}`;
 
-            const showSeparator = idx > 0 && last30[idx-1].overNumber !== ball.overNumber;
+            const isLastBallOfOver = ball.ballNumber === 6 && ball.isLegal;
+            const showSeparator = isLastBallOfOver && idx < last30.length - 1;
 
             return (
               <React.Fragment key={`${idx}-${ball.timestamp}`}>
-                {showSeparator && <OverSeparator />}
                 <BallCircle $type={display}>
                   {display}
                 </BallCircle>
+                {showSeparator && <OverSeparator />}
               </React.Fragment>
             );
           });

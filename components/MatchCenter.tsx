@@ -47,7 +47,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
     const { grounds, tournaments, syncMasterData } = useMasterData();
 
     // Filters and Search
-    const [activeTab, setActiveTab] = useState<'list' | 'cards'>('list');
+    const [activeTab, setActiveTab] = useState<'list' | 'cards' | 'standings'>('list');
     const [searchQuery, setSearchQuery] = useState('');
     const [formatFilter, setFormatFilter] = useState<'All' | 'T20' | 'One Day'>('All');
     const [tournamentFilter, setTournamentFilter] = useState('All');
@@ -785,6 +785,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                         >
                             <LayoutIcon size={16} /> Match Cards
                         </button>
+                        <button
+                            onClick={() => setActiveTab('standings')}
+                            className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
+                            ${activeTab === 'standings' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
+                        >
+                            <TableProperties size={16} /> Standings
+                        </button>
                     </div>
 
                     {/* Content Area */}
@@ -927,15 +934,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                         </button>
                                     )}
                                 </div>
-
-                                {/* STANDINGS / POINTS TABLE SECTION */}
-                                <div className="px-6 pb-20">
-                                    <PointsTable 
-                                        tournaments={tournaments} 
-                                        userRole={userRole} 
-                                        opponents={opponents} 
-                                    />
-                                </div>
                             </div>
                         )}
 
@@ -973,6 +971,16 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                         />
                                     </div>
                                 )}
+                            </div>
+                        )}
+
+                        {activeTab === 'standings' && (
+                            <div className="px-6 pb-20 pt-4">
+                                <PointsTable 
+                                    tournaments={tournaments} 
+                                    userRole={userRole} 
+                                    opponents={opponents} 
+                                />
                             </div>
                         )}
                     </div>
