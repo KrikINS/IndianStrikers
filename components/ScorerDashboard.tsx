@@ -27,7 +27,8 @@ import {
 } from 'lucide-react';
 import { useCricketScorer } from './matchStore';
 import { useMatchCenter, updateMatchInStore } from './matchCenterStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useMasterData } from './masterDataStore';
 import _ from 'lodash';
 
 const DashboardContainer = styled.div`
@@ -662,6 +663,7 @@ const ScoreSummaryCard = styled.div`
 const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ matchId: propMatchId, players }) => {
   const store = useCricketScorer();
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [showWicketModal, setShowWicketModal] = useState(false);
   const [showBowlerModal, setShowBowlerModal] = useState(false);
   const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_home' | 'squad_away' | 'openers_bat' | 'openers_bowl' | null>(store.innings1 ? null : 'preview');
@@ -705,8 +707,29 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
 
   // Get metadata from MatchCenterStore
   const matches = useMatchCenter(s => s.matches);
-  const activeMatchId = propMatchId || store.matchId;
+  const { grounds } = useMasterData();
+  const activeMatchId = id || propMatchId || store.matchId;
   const matchMeta = matches.find(m => m.id === activeMatchId);
+
+  // Sync with URL ID: If the URL ID is different from the store's ID, try to load it
+  useEffect(() => {
+    if (activeMatchId && activeMatchId !== store.matchId) {
+      if (matchMeta) {
+        if (matchMeta.live_data) {
+          store.updateMatchSettings(matchMeta.live_data);
+        } else {
+          store.initializeMatch({
+            matchId: matchMeta.id,
+            matchType: matchMeta.matchFormat || 'T20',
+            ground: grounds.find(g => g.id === matchMeta.groundId)?.name || 'Default Ground',
+            maxOvers: matchMeta.maxOvers || 20,
+            homeXI: matchMeta.homeTeamXI,
+            awayXI: matchMeta.opponentTeamXI
+          });
+        }
+      }
+    }
+  }, [activeMatchId, store.matchId, matchMeta, grounds]);
 
   const syncToDatabase = useCallback(
     _.debounce((state: any) => {

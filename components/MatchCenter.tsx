@@ -277,6 +277,16 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             return;
         }
 
+        // Initialize store before navigating
+        useCricketScorer.getState().initializeMatch({
+            matchId: match.id,
+            matchType: match.matchFormat || 'T20',
+            ground: grounds.find(g => g.id === match.groundId)?.name || 'Default Ground',
+            maxOvers: match.maxOvers || 20,
+            homeXI: match.homeTeamXI,
+            awayXI: match.opponentTeamXI
+        });
+
         if (match.status === 'upcoming') {
             updateMatchStatus(matchId, 'live');
         }

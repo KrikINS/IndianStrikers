@@ -84,6 +84,8 @@ interface ScorerStore extends MatchState {
         matchType: 'T20' | 'One Day';
         ground: string;
         maxOvers: number;
+        homeXI?: string[];
+        awayXI?: string[];
     }) => void;
     updateMatchSettings: (data: Partial<MatchState>) => void;
     setToss: (winnerId: string | null, choice: 'Bat' | 'Bowl' | null) => void;
@@ -132,7 +134,15 @@ export const useCricketScorer = create<ScorerStore>()(
         (set, get) => ({
             ...INITIAL_STATE,
 
-            initializeMatch: (data) => set({ ...INITIAL_STATE, ...data }),
+            initializeMatch: (data) => set({ 
+                ...INITIAL_STATE, 
+                matchId: data.matchId,
+                matchType: data.matchType,
+                ground: data.ground,
+                maxOvers: data.maxOvers,
+                homeXI: data.homeXI || [],
+                awayXI: data.awayXI || []
+            }),
 
             updateMatchSettings: (data) => set((state) => ({ ...state, ...data })),
 
