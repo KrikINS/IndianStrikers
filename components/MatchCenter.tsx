@@ -724,6 +724,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                 <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : syncStatus === 'success' ? 'Synced' : 'Sync Cloud'}</span>
                             </button>
                             <button
+                                title="Schedule a new match"
                                 onClick={() => setShowAddModal(true)}
                                 className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
                             >
@@ -738,6 +739,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                 </div>
                                 
                                 <button
+                                    title="Launch system logic test sandbox"
                                     onClick={async () => {
                                         if (window.confirm("Initialize a New System Logic Test? This will create a local sandbox environment.")) {
                                             try {
@@ -766,6 +768,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                 </button>
 
                                 <button
+                                    title="Purge All Test Data"
                                     onClick={async () => {
                                         if (window.confirm("FINAL CONFIRMATION: This will permanently delete ALL 'is_test' matches and their associated ledger entries. This action cannot be undone. Proceed?")) {
                                             await purgeTestData();
@@ -774,7 +777,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                         }
                                     }}
                                     className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-red-600 transition-all shadow-md group border border-slate-700"
-                                    title="Purge All Test Data"
                                 >
                                     <AlertCircle size={18} className="text-red-400 group-hover:text-white" />
                                 </button>

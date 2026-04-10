@@ -149,10 +149,9 @@ function WeeklyPerformerCarousel({
         </motion.div>
       </div>
       
-      {/* Navigation Arrows */}
       <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none">
-        <button onClick={() => setIndex(prev => prev - 1)} className="p-3 rounded-full bg-slate-900/50 border border-white/10 text-white pointer-events-auto hover:bg-sky-500 transition-all"><ChevronLeft size={24}/></button>
-        <button onClick={() => setIndex(prev => prev + 1)} className="p-3 rounded-full bg-slate-900/50 border border-white/10 text-white pointer-events-auto hover:bg-sky-500 transition-all"><ChevronRight size={24}/></button>
+        <button title="Previous Slide" onClick={() => setIndex(prev => prev - 1)} className="p-3 rounded-full bg-slate-900/50 border border-white/10 text-white pointer-events-auto hover:bg-sky-500 transition-all"><ChevronLeft size={24}/></button>
+        <button title="Next Slide" onClick={() => setIndex(prev => prev + 1)} className="p-3 rounded-full bg-slate-900/50 border border-white/10 text-white pointer-events-auto hover:bg-sky-500 transition-all"><ChevronRight size={24}/></button>
       </div>
     </div>
   );
@@ -272,7 +271,7 @@ export default function Dashboard({ players, userRole = 'guest' }: DashboardProp
                       <h3 className="font-black text-2xl text-slate-900 uppercase">Poster Created</h3>
                       <div className="h-1 w-12 bg-blue-600 rounded-full mt-1"></div>
                     </div>
-                    <button onClick={() => setSelectedHero(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X /></button>
+                    <button title="Close Poster" onClick={() => setSelectedHero(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X /></button>
                   </div>
                   <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 italic mb-8">
                     <p className="text-sm text-slate-500 font-medium leading-relaxed">

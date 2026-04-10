@@ -784,9 +784,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
     return (
       <SetupContainer>
         <Header>
-          <IconButton onClick={() => navigate('/match-center')} aria-label="Go back">
-            <ChevronLeft size={24} />
-          </IconButton>
+          <button title="Back to Match Center" onClick={() => navigate('/match-center')} className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-500"><ChevronLeft /></button>
           <span style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '1px' }}>MATCH SETUP</span>
           <Settings size={20} />
         </Header>
@@ -1214,13 +1212,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
     <DashboardContainer>
       <>
         <Header>
-        <IconButton onClick={() => {
+        <button title="Back to Match Center" onClick={() => {
           if (window.confirm("Are you sure you want to exit? Unsaved progress for this ball may be lost.")) {
             navigate('/match-center');
           }
-        }} aria-label="Go back">
-          <ChevronLeft size={24} />
-        </IconButton>
+        }} className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-500"><ChevronLeft size={24} /></button>
         
         <BadgeContainer>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -1247,12 +1243,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
         </BadgeContainer>
 
         <div style={{ display: 'flex', gap: 12 }}>
-          <IconButton onClick={() => setShowLineups(true)} aria-label="View Lineups">
-            <Users size={22} />
-          </IconButton>
-          <IconButton onClick={() => setShowPurgeConfirm(true)} aria-label="Reset Match">
-            <RotateCcw size={20} />
-          </IconButton>
+          <button title="View Lineups" onClick={() => setShowLineups(true)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><Users size={22} /></button>
+          <button title="Reset Match" onClick={() => setShowPurgeConfirm(true)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><RotateCcw size={20} /></button>
           <Settings size={22} />
         </div>
       </Header>
@@ -1312,9 +1304,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
             <PremiumModalContent onClick={e => e.stopPropagation()}>
               <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900 }}>TEAM SQUADS</h2>
-                <IconButton onClick={() => setShowLineups(false)}>
-                  <X size={24} />
-                </IconButton>
+                <button title="Close" onClick={() => setShowLineups(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X size={24} /></button>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div>
@@ -1377,6 +1367,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
             {store.innings1?.battingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'SANDBOX XI')} vs {store.innings1?.bowlingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'SANDBOX XI')}
           </div>
           <button 
+            title="Full Scorecard"
             onClick={() => setShowScorecardModal(true)}
             style={{ 
               background: 'rgba(0,31,63,0.05)', border: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', 
@@ -1426,13 +1417,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
         <ParticipantCard $active>
           <CardHeader>
             <NameLabel>Striker*</NameLabel>
-            <IconButton 
-              onClick={() => store.switchStriker()} 
-              style={{ color: '#339AF0', background: 'rgba(51,154,240,0.1)' }}
+            <button 
               title="Switch Striker"
+              onClick={() => store.switchStriker()} 
+              style={{ color: '#339AF0', background: 'rgba(51,154,240,0.1)', border: 'none', borderRadius: '50%', padding: '4px', cursor: 'pointer' }}
             >
               <RefreshCcw size={12} />
-            </IconButton>
+            </button>
           </CardHeader>
           <StatValue>{getPlayerName(store.strikerId)}</StatValue>
           <div style={{ fontSize: '0.8rem' }}>{strikerStats.runs}({strikerStats.balls})</div>
@@ -1459,13 +1450,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                   })()}
                 </div>
               </div>
-              <IconButton 
-                onClick={() => { if(window.confirm("Undo last ball?")) store.undoLastBall(); }}
-                style={{ background: 'rgba(0,0,0,0.05)', color: '#001F3F' }}
+              <button 
                 title="Undo last ball"
+                onClick={() => { if(window.confirm("Undo last ball?")) store.undoLastBall(); }}
+                style={{ background: 'rgba(0,0,0,0.05)', color: '#001F3F', border: 'none', borderRadius: '50%', padding: '4px', cursor: 'pointer' }}
               >
                 <Undo size={14} />
-              </IconButton>
+              </button>
             </div>
           </CardHeader>
           <StatValue>{getPlayerName(store.currentBowlerId)}</StatValue>
