@@ -20,7 +20,8 @@ import {
   Trophy,
   ChevronRight,
   RefreshCcw,
-  Repeat
+  Repeat,
+  LayoutList
 } from 'lucide-react';
 import { useCricketScorer } from './matchStore';
 import { useMatchCenter, updateMatchInStore } from './matchCenterStore';
@@ -208,7 +209,7 @@ const BallCircle = styled.div<{ $type: string }>`
     if (props.$type === 'W') return 'linear-gradient(135deg, #FF4B2B 0%, #FF416C 100%)';
     if (props.$type === '4') return 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)';
     if (props.$type === '6') return 'linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%)';
-    if (props.$type.includes('WD') || props.$type.includes('NB')) return 'linear-gradient(135deg, #fcead3 0%, #f7971e 100%)';
+    if (props.$type.startsWith('WD') || props.$type.startsWith('NB')) return 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
     if (props.$type === '0') return 'rgba(255,255,255,0.05)';
     return 'rgba(255,255,255,0.15)';
   }};
@@ -252,11 +253,12 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: #FFFFFF;
+  background: #001F3F; /* Dark Navy Blue */
+  color: #FFFFFF;
   width: 100%;
   max-width: 480px;
   border-radius: 24px;
-  padding: 24px;
+  padding: 32px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 40px rgba(0,0,0,0.4);
@@ -600,6 +602,39 @@ const CoinFace = styled.div<{ $side: 'front' | 'back' }>`
   background-image: url(${props => props.$side === 'front' ? '/assets/coin/heads.png' : '/assets/coin/tails.png'});
   transform: ${props => props.$side === 'back' ? 'rotateY(180deg)' : 'none'};
 `;
+const ScoreCardTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 24px;
+  font-size: 0.8rem;
+`;
+
+const Th = styled.th`
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  opacity: 0.5;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.5px;
+`;
+
+const Td = styled.td`
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-weight: 600;
+`;
+
+const ScoreSummaryCard = styled.div`
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
 
 const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ matchId: propMatchId, players }) => {
   const store = useCricketScorer();
@@ -621,11 +656,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   const [showRunOutModal, setShowRunOutModal] = useState(false);
   const [showPenaltyModal, setShowPenaltyModal] = useState(false);
   const [showBatterSelectModal, setShowBatterSelectModal] = useState(false);
-  const [showWicketSplash, setShowWicketSplash] = useState(false);
+  const [showScorecardModal, setShowScorecardModal] = useState(false);
+  const [showFielderModal, setShowFielderModal] = useState(false);
+  const [pendingFielderId, setPendingFielderId] = useState<string | null>(null);
+  const [splash, setSplash] = useState<{ show: boolean, title: string, subtitle: string, color: string } | null>(null);
   const [pendingWicketType, setPendingWicketType] = useState<any>(null);
   const [extraType, setExtraType] = useState<'wd' | 'nb' | 'byes' | 'lb'>('nb');
   const [nbSubType, setNbSubType] = useState<'bat' | 'bye' | 'lb'>('bat');
-  const [runOutInvolved, setRunOutInvolved] = useState<{ victimId: string, runs: number } | null>(null);
+  const [runOutInvolved, setRunOutInvolved] = useState<{ victimId: string, runs: number, ballType?: any, subType?: any } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
 
@@ -999,9 +1037,54 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
 
   const handleRecord = (runs: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string) => {
     store.recordBall({ runs, type, isWicket, wicketType, subType, outPlayerId, newBatterId });
+    
+    // Milestone Detection logic
+    const history = (store.currentInnings === 1 ? store.innings1 : store.innings2)?.history || [];
+    
+    const triggerSplash = (title: string, subtitle: string, color: string) => {
+      setSplash({ show: true, title, subtitle, color });
+      setTimeout(() => setSplash(null), 2000);
+    };
+
+    if (isWicket) {
+      // Check for bowler hat-trick
+      const bowlerBalls = history.filter(b => b.bowlerId === store.currentBowlerId && b.type === 'legal');
+      if (bowlerBalls.length >= 2 && bowlerBalls.slice(-2).every(b => b.isWicket)) {
+        triggerSplash('HAT-TRICK!', '3 WICKETS IN 3 BALLS', 'linear-gradient(135deg, #FF4B2B 0%, #FF416C 100%)');
+      } else {
+        triggerSplash('OUT!', wicketType?.toUpperCase() || 'WICKET', '#FF4D4D');
+      }
+    } else if (runs === 6) {
+      const strikerBalls = history.filter(b => b.batterId === store.strikerId && b.type === 'legal');
+      if (strikerBalls.length >= 2 && strikerBalls.slice(-2).every(b => b.runs === 6)) {
+        triggerSplash('HAT-TRICK OF 6s!', 'MAXIMUM OVERDRIVE', 'linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%)');
+      } else {
+        triggerSplash('SIX!', 'MAXIMUM!', '#FAB005');
+      }
+    } else if (runs === 4) {
+      const strikerBalls = history.filter(b => b.batterId === store.strikerId && b.type === 'legal');
+      if (strikerBalls.length >= 2 && strikerBalls.slice(-2).every(b => b.runs === 4)) {
+        triggerSplash('HAT-TRICK OF 4s!', 'BOUNDARY MASTER', 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)');
+      }
+    }
+
     if (currentInnings?.totalBalls !== undefined && (currentInnings.totalBalls + (type === 'legal' ? 1 : 0)) % 6 === 0 && type === 'legal') {
       setShowBowlerModal(true);
     }
+  };
+
+  const triggerWicketSplash = (type: string) => {
+    setSplash({ 
+      show: true, 
+      title: 'OUT!', 
+      subtitle: (type || 'WICKET').toUpperCase(), 
+      color: '#FF4D4D' 
+    });
+    // Let splash stay for 2 seconds then show next batter selection
+    setTimeout(() => {
+      setSplash(null);
+      setShowBatterSelectModal(true);
+    }, 2000);
   };
 
   const getPlayerName = (id: string | null) => players.find(p => p.id === id)?.name || 'Unknown';
@@ -1150,8 +1233,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
       </AnimatePresence>
 
       <ScoreSection>
-        <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#001F3F', opacity: 0.6, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '1px' }}>
-          {store.innings1?.battingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'SANDBOX XI')} vs {store.innings1?.bowlingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'SANDBOX XI')}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+           <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#001F3F', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '1px' }}>
+            {store.innings1?.battingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'SANDBOX XI')} vs {store.innings1?.bowlingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'SANDBOX XI')}
+          </div>
+          <button 
+            onClick={() => setShowScorecardModal(true)}
+            style={{ 
+              background: 'rgba(0,31,63,0.05)', border: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', 
+              gap: 4, padding: '4px 8px', color: '#001F3F', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' 
+            }}
+          >
+            <LayoutList size={11} /> FULL SCORECARD
+          </button>
         </div>
         <MainScore>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</MainScore>
         <OversText>OVERS {store.getOvers(currentInnings?.totalBalls || 0)}</OversText>
@@ -1246,10 +1340,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
           const last30 = balls.slice(-30);
           
           return last30.map((ball: any, idx: number) => {
-            let display = String(ball.runs);
-            if (ball.isWicket) display = 'W';
-            else if (ball.type === 'wide') display = 'WD';
-            else if (ball.type === 'no-ball') display = 'NB';
+            let display = ball.runs.toString();
+            if (ball.isWicket) {
+              const prefix = ball.type === 'no-ball' ? 'NB' : ball.type === 'wide' ? 'WD' : '';
+              const amount = ball.runs > 0 ? `+${ball.runs}` : '';
+              display = prefix ? `${prefix}${amount}+W` : 'W';
+            }
+            else if (ball.type === 'wide') display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
+            else if (ball.type === 'no-ball') display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
             else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
             else if (ball.type === 'bye') display = `B${ball.runs}`;
 
@@ -1363,7 +1461,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
 
             <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Select additional runs scored</p>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
               {[0, 1, 2, 3, 4, 6].map(runs => (
                 <ScoringBtn 
                   key={runs} 
@@ -1377,6 +1475,25 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                 </ScoringBtn>
               ))}
             </div>
+
+            <button
+               onClick={() => {
+                 setRunOutInvolved({ 
+                   victimId: '', 
+                   runs: 0, 
+                   ballType: extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye')),
+                   subType: extraType === 'nb' ? nbSubType : 'bat'
+                 });
+                 setShowNBModal(false);
+               }}
+               style={{ 
+                 width: '100%', padding: '16px', borderRadius: 12, border: '2px solid #FAB005', 
+                 background: 'rgba(250, 176, 5, 0.1)', color: '#FAB005', fontWeight: 900, 
+                 fontSize: '0.9rem', cursor: 'pointer', marginBottom: 12 
+               }}
+            >
+              RUN OUT
+            </button>
             
             <button 
               onClick={() => setShowNBModal(false)}
@@ -1402,7 +1519,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                   }}
                   onClick={() => {
                     setPendingWicketType(type);
-                    setShowBatterSelectModal(true);
+                    if (type === 'Caught' || type === 'Stumped') {
+                      setShowWicketModal(false);
+                      setShowFielderModal(true);
+                    } else {
+                      setShowWicketModal(false);
+                      triggerWicketSplash(type);
+                    }
                   }}
                 >
                   {type}
@@ -1410,7 +1533,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
               ))}
               <button
                 style={{ gridColumn: 'span 2', padding: 16, borderRadius: 12, border: '2px solid #FAB005', background: 'rgba(250, 176, 5, 0.1)', color: '#FAB005', fontWeight: 900 }}
-                onClick={() => setRunOutInvolved({ victimId: '', runs: 0 })}
+                onClick={() => setRunOutInvolved({ victimId: '', runs: 0, ballType: 'legal', subType: 'bat' })}
               >
                 RUN OUT
               </button>
@@ -1419,57 +1542,69 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
         </ModalOverlay>
       )}
 
-      {showBatterSelectModal && (
-        <ModalOverlay onClick={() => setShowBatterSelectModal(false)}>
+
+      <AnimatePresence>
+        {splash?.show && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.5 }}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              background: splash.color.includes('gradient') ? splash.color : `rgba(${splash.color === '#FF4D4D' ? '255, 77, 77' : '250, 176, 5'}, 0.9)`, 
+              zIndex: 9999, pointerEvents: 'none',
+              textAlign: 'center',
+              padding: 20
+            }}
+          >
+            <motion.h1 
+              initial={{ y: 20 }}
+              animate={{ y: 0 }}
+              style={{ color: '#FFF', fontSize: 'clamp(3rem, 15vw, 8rem)', fontWeight: 900, textShadow: '0 10px 30px rgba(0,0,0,0.5)', margin: 0, lineHeight: 1 }}
+            >
+              {splash.title}
+            </motion.h1>
+            {splash.subtitle && (
+               <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                style={{ color: '#FFF', fontSize: 'clamp(1rem, 4vw, 2rem)', fontWeight: 800, textShadow: '0 4px 10px rgba(0,0,0,0.3)', marginTop: 20, textTransform: 'uppercase', letterSpacing: '2px' }}
+               >
+                 {splash.subtitle}
+               </motion.p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {showFielderModal && (
+        <ModalOverlay onClick={() => setShowFielderModal(false)}>
           <ModalContent onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>SELECT NEXT BATTER</h2>
-            <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Choose player from the bench</p>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>SELECT FIELDER</h2>
+            <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Who made the {pendingWicketType === 'Caught' ? 'catch' : 'stumping'}?</p>
             
             <SelectionGrid style={{ maxHeight: '50vh' }}>
               {players
                 .filter(p => {
-                  const battingTeamXI = store.currentInnings === 1 ? homeXI : awayXI;
-                  const isInCategory = battingTeamXI.includes(p.id);
-                  const isAlreadyBatting = p.id === store.strikerId || p.id === store.nonStrikerId;
-                  const alreadyOut = currentInnings.battingStats[p.id]?.status === 'out';
-                  return isInCategory && !isAlreadyBatting && !alreadyOut;
+                  const fieldingTeamXI = currentInnings.bowlingTeamId === 'HOME' ? homeXI : awayXI;
+                  return fieldingTeamXI.includes(p.id);
                 })
                 .map(p => (
-                <PlayerCard 
-                  key={p.id} 
-                  onClick={() => {
-                    if (runOutInvolved) {
-                      handleRecord(runOutInvolved.runs, 'legal', true, 'Run Out', 'bat', runOutInvolved.victimId, p.id);
-                      setRunOutInvolved(null);
-                    } else {
-                      handleRecord(0, 'legal', true, pendingWicketType, 'bat', undefined, p.id);
-                    }
-                    setShowBatterSelectModal(false);
-                    setShowWicketModal(false);
-                    setPendingWicketType(null);
-                    
-                    // Trigger Splash
-                    setShowWicketSplash(true);
-                    setTimeout(() => setShowWicketSplash(false), 1500);
-                  }}
-                >
-                  <User size={16} />
-                  <div style={{ flex: 1 }}>
+                  <PlayerCard key={p.id} onClick={() => {
+                    setPendingFielderId(p.id);
+                    setShowFielderModal(false);
+                    triggerWicketSplash(pendingWicketType);
+                  }}>
+                    <User size={16} />
                     <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{p.role || 'Player'}</div>
-                  </div>
-                </PlayerCard>
-              ))}
-              {players.filter(p => {
-                const bId = store.currentInnings === 1 ? homeXI : awayXI;
-                return bId.includes(p.id) && p.id !== store.strikerId && p.id !== store.nonStrikerId && currentInnings.battingStats[p.id]?.status !== 'out';
-              }).length === 0 && (
-                <div style={{ textAlign: 'center', opacity: 0.4, padding: 20 }}>No more players available.</div>
-              )}
+                  </PlayerCard>
+                ))}
             </SelectionGrid>
-
             <button 
-              onClick={() => setShowBatterSelectModal(false)}
+              onClick={() => setShowFielderModal(false)}
               style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 24, cursor: 'pointer', width: '100%' }}
             >
               CANCEL
@@ -1477,23 +1612,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
           </ModalContent>
         </ModalOverlay>
       )}
-
-      <AnimatePresence>
-        {showWicketSplash && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.5 }}
-            style={{
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(255, 77, 77, 0.9)', zIndex: 9999, pointerEvents: 'none'
-            }}
-          >
-            <h1 style={{ color: '#FFF', fontSize: '8rem', fontWeight: 900, textShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>OUT!</h1>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {runOutInvolved && (
         <ModalOverlay>
@@ -1543,7 +1661,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
               $variant="primary" 
               disabled={!runOutInvolved.victimId}
               onClick={() => {
-                setShowBatterSelectModal(true);
+                triggerWicketSplash('Run Out');
               }}
             >
               SELECT NEXT BATTER
@@ -1700,6 +1818,187 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
             </ActionButton>
           </ModalContent>
         </ModalOverlay>
+      )}
+      {showBatterSelectModal && (
+        <ModalOverlay onClick={() => setShowBatterSelectModal(false)}>
+          <ModalContent onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>SELECT NEXT BATTER</h2>
+            <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Choose player from the bench</p>
+            
+            <SelectionGrid style={{ maxHeight: '50vh' }}>
+              {players
+                .filter(p => {
+                  const battingTeamXI = store.currentInnings === 1 ? homeXI : awayXI;
+                  const isInCategory = battingTeamXI.includes(p.id);
+                  const isAlreadyBatting = p.id === store.strikerId || p.id === store.nonStrikerId;
+                  const alreadyOut = currentInnings.battingStats[p.id]?.status === 'out';
+                  return isInCategory && !isAlreadyBatting && !alreadyOut;
+                })
+                .map(p => (
+                <PlayerCard 
+                  key={p.id} 
+                  onClick={() => {
+                    if (runOutInvolved) {
+                      handleRecord(
+                        runOutInvolved.runs, 
+                        runOutInvolved.ballType || 'legal', 
+                        true, 
+                        'Run Out', 
+                        runOutInvolved.subType || 'bat', 
+                        runOutInvolved.victimId, 
+                        p.id
+                      );
+                      setRunOutInvolved(null);
+                    } else {
+                      // Include fielder name in dismissal string if pending
+                      let dismissal = pendingWicketType;
+                      if (pendingFielderId && (pendingWicketType === 'Caught' || pendingWicketType === 'Stumped')) {
+                        const fielder = players.find(fp => fp.id === pendingFielderId);
+                        dismissal = `${pendingWicketType === 'Caught' ? 'c' : 'st'} ${fielder?.name || 'Fielder'}`;
+                      }
+                      handleRecord(0, 'legal', true, dismissal, 'bat', undefined, p.id);
+                    }
+                    setShowBatterSelectModal(false);
+                    setShowWicketModal(false);
+                    setPendingWicketType(null);
+                    setPendingFielderId(null);
+                  }}
+                >
+                  <User size={16} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{p.role || 'Player'}</div>
+                  </div>
+                </PlayerCard>
+              ))}
+              {players.filter(p => {
+                const bId = store.currentInnings === 1 ? homeXI : awayXI;
+                return bId.includes(p.id) && p.id !== store.strikerId && p.id !== store.nonStrikerId && currentInnings.battingStats[p.id]?.status !== 'out';
+              }).length === 0 && (
+                <div style={{ textAlign: 'center', opacity: 0.4, padding: 20 }}>No more players available.</div>
+              )}
+            </SelectionGrid>
+
+            <button 
+              onClick={() => setShowBatterSelectModal(false)}
+              style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 24, cursor: 'pointer', width: '100%' }}
+            >
+              CANCEL
+            </button>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+      {showScorecardModal && (
+        <PremiumModalOverlay
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setShowScorecardModal(false)}
+        >
+          <PremiumModalContent onClick={e => e.stopPropagation()} style={{ paddingBottom: 40 }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900 }}>FULL SCORECARD</h2>
+              <IconButton onClick={() => setShowScorecardModal(false)}>
+                <X size={24} />
+              </IconButton>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
+              <ScoreSummaryCard>
+                <div>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 800 }}>TOTAL SCORE</div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#FAB005' }}>
+                    {currentInnings.totalRuns}/{currentInnings.wickets}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 800 }}>OVERS</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>
+                    {store.getOvers(currentInnings.totalBalls)} / {store.maxOvers}
+                  </div>
+                </div>
+              </ScoreSummaryCard>
+
+              <h3 style={{ fontSize: '0.8rem', color: '#FAB005', marginBottom: 12, textTransform: 'uppercase', fontWeight: 900 }}>Batting</h3>
+              <ScoreCardTable>
+                <thead>
+                  <tr>
+                    <Th>Batter</Th>
+                    <Th>Status</Th>
+                    <Th style={{ textAlign: 'center' }}>R</Th>
+                    <Th style={{ textAlign: 'center' }}>B</Th>
+                    <Th style={{ textAlign: 'center' }}>4s</Th>
+                    <Th style={{ textAlign: 'center' }}>6s</Th>
+                    <Th style={{ textAlign: 'right' }}>SR</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(currentInnings.battingStats).map(([id, stat]) => (
+                    <tr key={id}>
+                      <Td style={{ color: (store.strikerId === id || store.nonStrikerId === id) ? '#FAB005' : '#FFF' }}>
+                        {getPlayerName(id)}{(store.strikerId === id || store.nonStrikerId === id) ? '*' : ''}
+                      </Td>
+                      <Td style={{ fontSize: '0.7rem', opacity: 0.6 }}>{stat.status === 'batting' ? 'not out' : (stat.outHow || 'out')}</Td>
+                      <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
+                      <Td style={{ textAlign: 'center' }}>{stat.balls}</Td>
+                      <Td style={{ textAlign: 'center' }}>{stat.fours}</Td>
+                      <Td style={{ textAlign: 'center' }}>{stat.sixes}</Td>
+                      <Td style={{ textAlign: 'right', opacity: 0.8 }}>
+                        {stat.balls > 0 ? ((stat.runs / stat.balls) * 100).toFixed(1) : '0.0'}
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </ScoreCardTable>
+
+              <h3 style={{ fontSize: '0.8rem', color: '#FAB005', marginBottom: 12, textTransform: 'uppercase', fontWeight: 900 }}>Bowling</h3>
+              <ScoreCardTable>
+                <thead>
+                  <tr>
+                    <Th>Bowler</Th>
+                    <Th style={{ textAlign: 'center' }}>O</Th>
+                    <Th style={{ textAlign: 'center' }}>M</Th>
+                    <Th style={{ textAlign: 'center' }}>R</Th>
+                    <Th style={{ textAlign: 'center' }}>W</Th>
+                    <Th style={{ textAlign: 'right' }}>Econ</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(currentInnings.bowlingStats).map(([id, stat]) => (
+                    <tr key={id}>
+                      <Td style={{ color: store.currentBowlerId === id ? '#FAB005' : '#FFF' }}>
+                        {getPlayerName(id)}{store.currentBowlerId === id ? '*' : ''}
+                      </Td>
+                      <Td style={{ textAlign: 'center' }}>{stat.overs}</Td>
+                      <Td style={{ textAlign: 'center' }}>{stat.maidens || 0}</Td>
+                      <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
+                      <Td style={{ textAlign: 'center' }}>{stat.wickets}</Td>
+                      <Td style={{ textAlign: 'right', opacity: 0.8 }}>
+                        {stat.overs > 0 ? (stat.runs / stat.overs).toFixed(2) : '0.00'}
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </ScoreCardTable>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.75rem' }}>
+                <span style={{ opacity: 0.5, fontWeight: 700 }}>EXTRAS</span>
+                <span style={{ fontWeight: 900 }}>
+                  {currentInnings.extras.wides + currentInnings.extras.noBalls + currentInnings.extras.byes + currentInnings.extras.legByes + currentInnings.extras.penalty} 
+                  {' '}(wd {currentInnings.extras.wides}, nb {currentInnings.extras.noBalls}, b {currentInnings.extras.byes}, lb {currentInnings.extras.legByes}, pen {currentInnings.extras.penalty})
+                </span>
+              </div>
+            </div>
+
+            <ActionButton 
+              $variant="primary" 
+              onClick={() => setShowScorecardModal(false)}
+              style={{ margin: '30px 20px 0', width: 'auto' }}
+            >
+              CLOSE SCORECARD
+            </ActionButton>
+          </PremiumModalContent>
+        </PremiumModalOverlay>
       )}
       </>
     </DashboardContainer>

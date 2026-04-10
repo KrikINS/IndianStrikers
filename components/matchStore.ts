@@ -253,8 +253,8 @@ export const useCricketScorer = create<ScorerStore>()(
                     bowlerId: bwlId_active,
                     strikerId: sId_active,
                     nonStrikerId: state.nonStrikerId,
-                    overNumber: Math.floor(nextInnings.totalBalls / 6),
-                    ballNumber: (nextInnings.totalBalls % 6) || 6,
+                    overNumber: Math.floor((nextInnings.totalBalls - (isLegal ? 1 : 0)) / 6),
+                    ballNumber: ((nextInnings.totalBalls - (isLegal ? 1 : 0)) % 6) + 1,
                     isLegal,
                     timestamp: new Date().toISOString()
                 };
