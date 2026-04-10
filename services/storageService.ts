@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4001/api';
@@ -260,6 +261,14 @@ export const finalizeMatch = async (id: string, matchData: any, updatedPlayers: 
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ matchData, updatedPlayers })
+  });
+  return handleResponse(res);
+};
+
+export const deleteMatchStats = async (matchId: string) => {
+  const res = await fetch(`${API_URL}/matches/${matchId}/stats`, {
+    method: 'DELETE',
+    headers: getHeaders()
   });
   return handleResponse(res);
 };

@@ -9,7 +9,7 @@ export interface LivePlayer {
     balls: number;
     fours: number;
     sixes: number;
-    status: 'batting' | 'out' | 'dnb';
+    status: 'batting' | 'out' | 'dnb' | 'retired_hurt';
     outHow?: string;
 }
 
@@ -75,6 +75,7 @@ export interface MatchState {
     homeXI: string[];
     awayXI: string[];
     historyStack: MatchState[];
+    manOfTheMatch: string | null;
 }
 
 interface ScorerStore extends MatchState {
@@ -123,6 +124,7 @@ const INITIAL_STATE: MatchState = {
     homeXI: [],
     awayXI: [],
     historyStack: [],
+    manOfTheMatch: null,
 };
 
 export const useCricketScorer = create<ScorerStore>()(
@@ -141,6 +143,7 @@ export const useCricketScorer = create<ScorerStore>()(
                 strikerId: strId,
                 nonStrikerId: nStrId,
                 currentBowlerId: bwlId,
+                isFreeHit: false, // Reset Free Hit at start of innings
                 [num === 1 ? 'innings1' : 'innings2']: {
                     battingTeamId: batId,
                     bowlingTeamId: bowlId,
@@ -214,7 +217,15 @@ export const useCricketScorer = create<ScorerStore>()(
                 b.balls += (type !== 'wide') ? 1 : 0;
                 if (batsmenRuns === 4) b.fours += 1;
                 if (batsmenRuns === 6) b.sixes += 1;
-                if (isWicket) b.status = 'out';
+                if (isWicket) {
+                    if (wicketType === 'Retired Hurt') {
+                        b.status = 'retired_hurt';
+                        b.outHow = 'Retired Hurt';
+                    } else {
+                        b.status = 'out';
+                        b.outHow = wicketType;
+                    }
+                }
 
                 // Update Bowler Stats
                 const bwlId_active = state.currentBowlerId!;
@@ -240,6 +251,16 @@ export const useCricketScorer = create<ScorerStore>()(
                     const victimId = outPlayerId || state.strikerId;
                     if (victimId === sId) sId = newBatterId || null;
                     else nsId = newBatterId || null;
+
+                    // If a new batter is coming in (whether fresh or returning)
+                    if (newBatterId) {
+                        if (!nextInnings.battingStats[newBatterId]) {
+                            nextInnings.battingStats[newBatterId] = { id: newBatterId, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting' };
+                        } else {
+                            // Returning batter (Retired Hurt)
+                            nextInnings.battingStats[newBatterId].status = 'batting';
+                        }
+                    }
                 }
 
                 // Normal rotation based on runs
@@ -260,11 +281,24 @@ export const useCricketScorer = create<ScorerStore>()(
                 };
                 nextInnings.history = [...(nextInnings.history || []), ballRecord];
 
+                // Match Complete check
+                let finished = state.isFinished;
+                if (state.currentInnings === 2) {
+                    const maxBalls = (state.maxOvers || 20) * 6;
+                    const innings1Runs = state.innings1?.totalRuns || 0;
+                    const runsNeeded = innings1Runs + 1;
+                    
+                    if (nextInnings.totalRuns >= runsNeeded || nextInnings.wickets === 10 || nextInnings.totalBalls >= maxBalls) {
+                        finished = true;
+                    }
+                }
+
                 set({
                     [inningsKey]: nextInnings,
                     strikerId: sId,
                     nonStrikerId: nsId,
                     isFreeHit: isNoBall || (state.isFreeHit && (isWide || isNoBall)),
+                    isFinished: finished,
                     historyStack: [...state.historyStack, prevState].slice(-20)
                 });
             },

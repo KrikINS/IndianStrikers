@@ -37,6 +37,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
     bowling: [],
     extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 },
     totalRuns: 0, totalWickets: 0, totalOvers: 0,
+    history: []
   };
 
   // 2. Scorecard State
@@ -130,7 +131,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
   };
 
   const calculateInningsWickets = (inn: InningsData) => {
-    return inn.batting.filter(b => b.outHow !== 'Not Out' && b.outHow !== 'Did Not Bat' && b.playerId).length;
+    return inn.batting.filter(b => b.outHow !== 'Not Out' && b.outHow !== 'Did Not Bat' && b.outHow !== 'Retired Hurt' && b.playerId).length;
   };
 
   const handleSave = async () => {

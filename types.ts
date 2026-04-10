@@ -221,10 +221,13 @@ export interface ScheduledMatch {
   performers?: Performer[];
   toss_winner_id?: string;
   toss_choice?: 'Bat' | 'Field';
+  is_test?: boolean;
+  title?: string;
+  time?: string;
+  venue?: string;
   isCareerSynced?: boolean;
   live_data?: any;
   last_updated?: string;
-  is_test?: boolean;
 }
 
 export interface FieldPosition {

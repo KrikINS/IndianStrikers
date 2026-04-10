@@ -19,10 +19,7 @@ import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '
 import { useCricketScorer } from './matchStore';
 import PointsTable from './PointsTable';
 
-// Constants for Carousel
-const CARD_WIDTH = 340;
-const GAP = 24;
-const VISIBLE_COUNT = 3; // Number of items cloned for infinite feel
+// Responsive constants for Carousel handled inside component
 
 interface MatchCenterProps {
     players: Player[];
@@ -1275,10 +1272,19 @@ const MatchCardCarousel = ({
 }: any) => {
     const [index, setIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const CARD_WIDTH = 340;
-    const CARD_GAP = 32;
-    const TOTAL_WIDTH = CARD_WIDTH + CARD_GAP;
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Responsive width calculation
+    const getCarouselMetrics = () => {
+        if (typeof window === 'undefined') return { width: 340, gap: 24 };
+        if (window.innerWidth < 380) return { width: 280, gap: 16 };
+        if (window.innerWidth < 420) return { width: 310, gap: 20 };
+        return { width: 340, gap: 24 };
+    };
+
+    const { width: CARD_WIDTH, gap: GAP } = getCarouselMetrics();
+    const VISIBLE_COUNT = 3; 
+    const TOTAL_WIDTH = CARD_WIDTH + GAP;
 
     // Auto-Play Logic
     useEffect(() => {

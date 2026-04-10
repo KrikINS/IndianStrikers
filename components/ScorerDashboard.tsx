@@ -21,7 +21,9 @@ import {
   ChevronRight,
   RefreshCcw,
   Repeat,
-  LayoutList
+  LayoutList,
+  Star,
+  Zap
 } from 'lucide-react';
 import { useCricketScorer } from './matchStore';
 import { useMatchCenter, updateMatchInStore } from './matchCenterStore';
@@ -126,7 +128,7 @@ const ScoreSection = styled.div`
 `;
 
 const MainScore = styled.h1`
-  font-size: 3.5rem;
+  font-size: clamp(2.5rem, 12vw, 3.5rem);
   font-weight: 800;
   margin: 0;
   color: #001F3F;
@@ -139,12 +141,17 @@ const OversText = styled.div`
 `;
 
 const ActiveParticipants = styled.div`
-  padding: 16px;
+  padding: 12px;
   background: #FFFFFF;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
   border-bottom: 1px solid #F1F3F5;
+
+  @media (min-width: 768px) {
+    padding: 16px;
+    gap: 16px;
+  }
 `;
 
 const ParticipantCard = styled.div<{ $active?: boolean }>`
@@ -218,8 +225,13 @@ const BallCircle = styled.div<{ $type: string }>`
 const ControlsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  padding: 20px;
+  gap: 8px;
+  padding: 12px;
+
+  @media (min-width: 400px) {
+    gap: 12px;
+    padding: 20px;
+  }
 `;
 
 const ScoringBtn = styled.button<{ $variant?: 'run' | 'wicket' | 'extra' | 'undo' }>`
@@ -258,11 +270,15 @@ const ModalContent = styled.div`
   width: 100%;
   max-width: 480px;
   border-radius: 24px;
-  padding: 32px;
+  padding: 20px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 40px rgba(0,0,0,0.4);
   position: relative;
+
+  @media (min-width: 480px) {
+    padding: 32px;
+  }
 `;
 
 const SetupContainer = styled.div`
@@ -448,6 +464,7 @@ const PremiumModalOverlay = styled(motion.div)`
 
 const PremiumModalContent = styled.div`
   background: #111;
+  color: #FFFFFF;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 20px;
   width: 100%;
@@ -477,11 +494,17 @@ const PlayerCard = styled.div<{ $selected?: boolean; $disabled?: boolean }>`
 
 const SelectionGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-  padding: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  padding: 12px;
   overflow-y: auto;
   max-height: 400px;
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    padding: 16px;
+  }
 `;
 
 const StatRibbon = styled.div`
@@ -641,9 +664,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   const navigate = useNavigate();
   const [showWicketModal, setShowWicketModal] = useState(false);
   const [showBowlerModal, setShowBowlerModal] = useState(false);
-  const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_home' | 'squad_away' | 'openers'>('preview');
-  const [tossWinner, setTossWinner] = useState<'home' | 'away' | null>(null);
-  const [tossChoice, setTossChoice] = useState<'Bat' | 'Bowl' | null>(null);
+  const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_home' | 'squad_away' | 'openers_bat' | 'openers_bowl' | null>(store.innings1 ? null : 'preview');
+  const [tossWinner, setTossWinner] = useState<'home' | 'away' | null>(store.toss.winnerId ? (store.toss.winnerId === 'HOME' ? 'home' : 'away') : null);
+  const [tossChoice, setTossChoice] = useState<'Bat' | 'Bowl' | null>(store.toss.choice || null);
   const [tempMaxOvers, setTempMaxOvers] = useState(20);
   
   const { homeXI, awayXI } = store;
@@ -673,6 +696,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
     }
   }, [store.maxOvers]);
 
+  useEffect(() => {
+    if (store.toss.winnerId) {
+      setTossWinner(store.toss.winnerId === 'HOME' ? 'home' : 'away');
+      setTossChoice(store.toss.choice);
+    }
+  }, [store.toss]);
+
   // Get metadata from MatchCenterStore
   const matches = useMatchCenter(s => s.matches);
   const activeMatchId = propMatchId || store.matchId;
@@ -694,10 +724,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   const currentInnings = store.currentInnings === 1 ? store.innings1 : store.innings2;
   const isBattingFinishing = currentInnings && (
     currentInnings.wickets === 10 || 
-    currentInnings.totalBalls >= (store.maxOvers || 20) * 6
+    currentInnings.totalBalls >= (store.maxOvers || 20) * 6 ||
+    (store.currentInnings === 2 && currentInnings.totalRuns > (store.innings1?.totalRuns || 0))
   );
-  const isMatchComplete = store.currentInnings === 2 && isBattingFinishing;
-  const isInningsBreak = store.currentInnings === 1 && isBattingFinishing;
+  const isMatchComplete = store.isFinished;
+  const isInningsBreak = store.currentInnings === 1 && isBattingFinishing && !store.isFinished;
 
   // Trigger Bowler Selection at start of innings or if bowler missing
   React.useEffect(() => {
@@ -711,42 +742,43 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
     }
   }, [store.currentInnings, store.currentBowlerId, currentInnings, showBowlerModal]);
 
-  if (!currentInnings) {
-    const isReadyToStart = tossWinner && tossChoice && homeXI.length === 11 && awayXI.length === 11 && selStriker && selNonStriker;
+  if (setupStep !== null) {
+    const isReadyToStart = tossWinner && tossChoice && homeXI.length === 11 && awayXI.length === 11 && selStriker && selNonStriker && selBowler;
 
     const handleStartMatch = () => {
       if (!isReadyToStart) return;
 
       const winnerId = tossWinner === 'home' ? 'HOME' : 'AWAY';
-      store.setToss(winnerId, tossChoice);
+      store.setToss(winnerId, tossChoice!);
       
-      // Update match settings before starting
-      store.updateMatchSettings({ 
-        maxOvers: tempMaxOvers 
-      });
+      const homeBatting = (winnerId === 'HOME' && tossChoice === 'Bat') || (winnerId === 'AWAY' && tossChoice === 'Bowl');
+      const startBatTeamId = homeBatting ? 'HOME' : 'AWAY';
+      const startBowlTeamId = startBatTeamId === 'HOME' ? 'AWAY' : 'HOME';
 
-      // Valid IDs from selection
-      const batTeamId = (tossWinner === 'home' && tossChoice === 'Bat') || (tossWinner === 'away' && tossChoice === 'Bowl') ? 'HOME' : 'AWAY';
-      const bowlTeamId = batTeamId === 'HOME' ? 'AWAY' : 'HOME';
+      const currentBatTeamId = store.innings1 ? (startBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : startBatTeamId;
+      const currentBowlTeamId = currentBatTeamId === 'HOME' ? 'AWAY' : 'HOME';
 
-      // If we are starting match from scratch
-      if (!store.innings1?.battingTeamId) {
-        store.startInnings(1, batTeamId, bowlTeamId, selStriker!, selNonStriker!, '');
-      } else {
-        // This is starting 2nd innings
-        const i1 = store.innings1!;
-        store.startInnings(2, i1.bowlingTeamId, i1.battingTeamId, selStriker!, selNonStriker!, '');
-      }
+      store.updateMatchSettings({ maxOvers: tempMaxOvers });
+      store.startInnings(
+        store.innings1 ? 2 : 1,
+        currentBatTeamId,
+        currentBowlTeamId,
+        selStriker!,
+        selNonStriker!,
+        selBowler!
+      );
       
       // Persist the toss outcome and match status to the metadata store
       if (activeMatchId) {
         updateMatchInStore(activeMatchId, { 
-          isHomeBattingFirst: batTeamId === 'HOME', 
+          isHomeBattingFirst: startBatTeamId === 'HOME', 
           status: 'live',
           homeTeamXI: homeXI,
           opponentTeamXI: awayXI
         });
       }
+
+      setSetupStep(null);
     };
 
     return (
@@ -946,7 +978,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                     <ActionButton 
                       $variant="primary" 
                       disabled={(setupStep === 'squad_home' ? homeXI.length : awayXI.length) < 11} 
-                      onClick={() => setSetupStep(setupStep === 'squad_home' ? 'squad_away' : 'openers')}
+                      onClick={() => setSetupStep(setupStep === 'squad_home' ? 'squad_away' : 'openers_bat')}
                     >
                       {setupStep === 'squad_home' ? 'Next Team' : 'Choose Openers'}
                     </ActionButton>
@@ -965,54 +997,109 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                     Auto-Fill 11 Players
                   </button>
                 </>
-              ) : (
+               ) : setupStep === 'openers_bat' ? (
+                 <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                     <Users size={20} color="#FAB005" />
+                     <h3 style={{ margin: 0, fontWeight: 900 }}>CHOOSE OPENING BATSMEN</h3>
+                    </div>
+
+                    {(() => {
+                      const firstInningsBatTeamId = (tossWinner === 'home' && tossChoice === 'Bat') || (tossWinner === 'away' && tossChoice === 'Bowl') ? 'HOME' : 'AWAY';
+                      const batTeamId = store.innings1 ? (firstInningsBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeamId;
+                      const batSquad = batTeamId === 'HOME' ? homeXI : awayXI;
+
+                      return (
+                        <>
+                          <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Striker & Non-Striker ({batTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'Away')})</p>
+                          <SelectionGrid>
+                            {players
+                              .filter(p => batSquad.includes(p.id))
+                              .map(p => (
+                              <PlayerCard 
+                                key={p.id}
+                                $selected={selStriker === p.id || selNonStriker === p.id}
+                                onClick={() => {
+                                  if (selStriker === p.id) setSelStriker(null);
+                                  else if (selNonStriker === p.id) setSelNonStriker(null);
+                                  else if (!selStriker) setSelStriker(p.id);
+                                  else if (!selNonStriker) setSelNonStriker(p.id);
+                                }}
+                              >
+                                <User size={16} />
+                                <div>
+                                  <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>{p.name}</div>
+                                  <div style={{ fontSize: '0.6rem', opacity: 0.6 }}>{p.role}</div>
+                                </div>
+                                {(selStriker === p.id || selNonStriker === p.id) && (
+                                  <div style={{ marginLeft: 'auto', background: '#FAB005', color: '#111', fontSize: '8px', fontWeight: 900, padding: '2px 4px', borderRadius: 4 }}>
+                                    {selStriker === p.id ? 'STRIKER' : 'NON-STRIKER'}
+                                  </div>
+                                )}
+                              </PlayerCard>
+                            ))}
+                          </SelectionGrid>
+                        </>
+                      );
+                    })()}
+
+                    <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
+                      <ActionButton onClick={() => setSetupStep('squad_away')}>Back</ActionButton>
+                      <ActionButton $variant="primary" disabled={!selStriker || !selNonStriker} onClick={() => setSetupStep('openers_bowl')}>
+                        Choose Bowler
+                      </ActionButton>
+                    </div>
+                  </>
+               ) : (
                 <>
                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                    <Users size={20} color="#FAB005" />
-                    <h3 style={{ margin: 0, fontWeight: 900 }}>SQUAD SELECTION</h3>
-                  </div>
+                     <Users size={20} color="#FAB005" />
+                     <h3 style={{ margin: 0, fontWeight: 900 }}>CHOOSE OPENING BOWLER</h3>
+                   </div>
 
-                  <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Striker & Non-Striker</p>
-                  <SelectionGrid>
-                    {players
-                      .filter(p => {
-                        const batTeamId = (tossWinner === 'home' && tossChoice === 'Bat') || (tossWinner === 'away' && tossChoice === 'Bowl') ? 'HOME' : 'AWAY';
-                        const squad = batTeamId === 'HOME' ? homeXI : awayXI;
-                        return squad.includes(p.id);
-                      })
-                      .map(p => (
-                      <PlayerCard 
-                        key={p.id}
-                        $selected={selStriker === p.id || selNonStriker === p.id}
-                        onClick={() => {
-                          if (selStriker === p.id) setSelStriker(null);
-                          else if (selNonStriker === p.id) setSelNonStriker(null);
-                          else if (!selStriker) setSelStriker(p.id);
-                          else if (!selNonStriker) setSelNonStriker(p.id);
-                        }}
-                      >
-                        <User size={16} />
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>{p.name}</div>
-                          <div style={{ fontSize: '0.6rem', opacity: 0.6 }}>{p.role}</div>
-                        </div>
-                        {(selStriker === p.id || selNonStriker === p.id) && (
-                          <div style={{ marginLeft: 'auto', background: '#FAB005', color: '#111', fontSize: '8px', fontWeight: 900, padding: '2px 4px', borderRadius: 4 }}>
-                            {selStriker === p.id ? 'STRIKER' : 'NON-STRIKER'}
-                          </div>
-                        )}
-                      </PlayerCard>
-                    ))}
-                  </SelectionGrid>
+                   {(() => {
+                     const firstBatTeamId = (tossWinner === 'home' && tossChoice === 'Bat') || (tossWinner === 'away' && tossChoice === 'Bowl') ? 'HOME' : 'AWAY';
+                     const batTeamId = store.innings1 ? (firstBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : firstBatTeamId;
+                     const bowlTeamId = batTeamId === 'HOME' ? 'AWAY' : 'HOME';
+                     const bowlSquad = bowlTeamId === 'HOME' ? homeXI : awayXI;
 
-                  <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
-                    <ActionButton onClick={() => setSetupStep('squad_away')}>Back to Squads</ActionButton>
-                    <ActionButton $variant="primary" disabled={!isReadyToStart} onClick={handleStartMatch}>
-                      Start Match
-                    </ActionButton>
-                  </div>
-                </>
-              )}
+                     return (
+                       <>
+                         <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Opening Bowler ({bowlTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'Away')})</p>
+                         <SelectionGrid>
+                           {players
+                             .filter(p => bowlSquad.includes(p.id))
+                             .map(p => (
+                             <PlayerCard 
+                               key={p.id}
+                               $selected={selBowler === p.id}
+                               onClick={() => setSelBowler(selBowler === p.id ? null : p.id)}
+                             >
+                               <User size={16} />
+                               <div>
+                                 <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>{p.name}</div>
+                                 <div style={{ fontSize: '0.6rem', opacity: 0.6 }}>{p.role}</div>
+                               </div>
+                               {selBowler === p.id && (
+                                 <div style={{ marginLeft: 'auto', background: '#FAB005', color: '#111', fontSize: '8px', fontWeight: 900, padding: '2px 4px', borderRadius: 4 }}>
+                                   BOWLER
+                                 </div>
+                               )}
+                             </PlayerCard>
+                           ))}
+                         </SelectionGrid>
+                       </>
+                     );
+                   })()}
+
+                   <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
+                     <ActionButton onClick={() => setSetupStep('openers_bat')}>Back to Batsmen</ActionButton>
+                     <ActionButton $variant="primary" disabled={!isReadyToStart} onClick={handleStartMatch}>
+                       {store.innings1 ? 'Start 2nd Innings' : 'Start Match'}
+                     </ActionButton>
+                   </div>
+                 </>
+               )}
         </SetupCard>
 
         <button 
@@ -1088,9 +1175,39 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   };
 
   const getPlayerName = (id: string | null) => players.find(p => p.id === id)?.name || 'Unknown';
+
+  const calculateTopPerformers = () => {
+    const scores: Record<string, { id: string, name: string, score: number, runs: number, wickets: number, maidens: number }> = {};
+    
+    [store.innings1, store.innings2].forEach(inn => {
+      if (!inn) return;
+      Object.entries(inn.battingStats || {}).forEach(([id, s]: [string, any]) => {
+        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, wickets: 0, maidens: 0 };
+        scores[id].runs += s.runs;
+        scores[id].score += s.runs + (s.fours * 2) + (s.sixes * 4);
+        if (s.runs >= 50) scores[id].score += 50;
+        if (s.runs >= 100) scores[id].score += 100;
+      });
+      Object.entries(inn.bowlingStats || {}).forEach(([id, s]: [string, any]) => {
+        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, wickets: 0, maidens: 0 };
+        scores[id].wickets += s.wickets;
+        scores[id].maidens += s.maidens || 0;
+        scores[id].score += (s.wickets * 25) + ((s.maidens || 0) * 10);
+      });
+    });
+
+    return Object.values(scores)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  };
+  
+  
+  // Guard for main dashboard rendering
+  if (!currentInnings) return null;
+
   const strikerStats = currentInnings.battingStats[store.strikerId || ''] || { runs: 0, balls: 0 };
   const nonStrikerStats = currentInnings.battingStats[store.nonStrikerId || ''] || { runs: 0, balls: 0 };
-  const bowlerStats = currentInnings?.bowlingStats[store.currentBowlerId || ''] || { overs: 0, runs: 0, wickets: 0 };
+  const bowlerStats = currentInnings.bowlingStats[store.currentBowlerId || ''] || { overs: 0, runs: 0, wickets: 0 };
 
 
   return (
@@ -1206,8 +1323,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                     {players
                       .filter(p => homeXI.includes(p.id))
                       .map(p => (
-                      <div key={p.id} style={{ fontSize: '0.85rem', padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: 6 }}>
-                        {p.name} <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>({p.role})</span>
+                      <div key={p.id} style={{ 
+                        fontSize: '0.85rem', 
+                        padding: '10px 12px', 
+                        background: 'rgba(255,255,255,0.08)', 
+                        borderRadius: 8,
+                        color: '#FFFFFF',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <span style={{ fontWeight: 600 }}>{p.name}</span>
+                        <span style={{ opacity: 0.6, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>{p.role}</span>
                       </div>
                     ))}
                     {homeXI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.8rem' }}>No XI Selected</div>}
@@ -1219,8 +1347,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                     {players
                       .filter(p => awayXI.includes(p.id))
                       .map(p => (
-                      <div key={p.id} style={{ fontSize: '0.85rem', padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: 6 }}>
-                        {p.name} <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>({p.role})</span>
+                      <div key={p.id} style={{ 
+                        fontSize: '0.85rem', 
+                        padding: '10px 12px', 
+                        background: 'rgba(255,255,255,0.08)', 
+                        borderRadius: 8,
+                        color: '#FFFFFF',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <span style={{ fontWeight: 600 }}>{p.name}</span>
+                        <span style={{ opacity: 0.6, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>{p.role}</span>
                       </div>
                     ))}
                     {awayXI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.8rem' }}>No XI Selected</div>}
@@ -1783,7 +1922,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
             <ActionButton 
               $variant="primary" 
               onClick={() => {
-                setSetupStep('openers');
+                setSetupStep('openers_bat');
                 // The currentInnings will still be 1 until we call startInnings for 2
                 // We'll handle selecting openers for the other team
                 setSelStriker(null);
@@ -1797,22 +1936,77 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
         </ModalOverlay>
       )}
 
-      {isMatchComplete && (
+      {isMatchComplete && !store.manOfTheMatch && (
+        <ModalOverlay>
+          <ModalContent style={{ maxWidth: 640 }}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{ background: 'rgba(250, 176, 5, 0.1)', width: 64, height: 64, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <Trophy size={32} color="#FAB005" />
+              </div>
+              <h1 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: 4 }}>PERFORMER SPOTLIGHT</h1>
+              <p style={{ opacity: 0.6, fontSize: '0.9rem' }}>Select the Man of the Match based on performance</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 24 }}>
+              {calculateTopPerformers().map((p, idx) => (
+                <button
+                  key={p.id}
+                  onClick={() => store.updateMatchSettings({ manOfTheMatch: p.id })}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16,
+                    background: idx === 0 ? 'rgba(250, 176, 5, 0.08)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${idx === 0 ? 'rgba(250, 176, 5, 0.2)' : 'rgba(255,255,255,0.05)'}`,
+                    color: '#FFF', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                >
+                  <div style={{ background: idx === 0 ? '#FAB005' : 'rgba(255,255,255,0.1)', color: idx === 0 ? '#000' : '#FFF', width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem' }}>
+                    #{idx + 1}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, fontSize: '1rem', color: idx === 0 ? '#FAB005' : '#FFF' }}>{p.name}</div>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: 2 }}>
+                      {p.runs > 0 && <span>{p.runs} Runs • </span>}
+                      {p.wickets > 0 && <span>{p.wickets} Wickets • </span>}
+                      {p.maidens > 0 && <span>{p.maidens} Maidens</span>}
+                    </div>
+                  </div>
+                  <Zap size={18} color={idx === 0 ? '#FAB005' : 'rgba(255,255,255,0.2)'} fill={idx === 0 ? '#FAB005' : 'none'} />
+                </button>
+              ))}
+            </div>
+            
+            <p style={{ textAlign: 'center', fontSize: '0.7rem', opacity: 0.4, fontStyle: 'italic' }}>
+              Ranking is suggested based on runs, wickets, and match impact.
+            </p>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {isMatchComplete && store.manOfTheMatch && (
         <ModalOverlay>
           <ModalContent style={{ textAlign: 'center', padding: 40 }}>
+            <div style={{ marginBottom: 24 }}>
+               <Star size={48} color="#FAB005" fill="#FAB005" style={{ filter: 'drop-shadow(0 0 10px rgba(250, 176, 5, 0.5))' }} />
+            </div>
             <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: 12 }}>MATCH COMPLETED!</h1>
-            <h2 style={{ color: '#FAB005', marginBottom: 32 }}>
+            <h2 style={{ color: '#FAB005', marginBottom: 12 }}>
               {(() => {
                 const i1 = store.innings1?.totalRuns || 0;
                 const i2 = store.innings2?.totalRuns || 0;
                 if (i2 > i1) {
-                  return `${store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'SANDBOX XI')} WON BY ${10 - (store.innings2?.wickets || 0)} WICKETS`;
+                  return `${store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'Away')} WON BY ${10 - (store.innings2?.wickets || 0)} WICKETS`;
                 } else if (i1 > i2) {
-                  return `${store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'SANDBOX XI')} WON BY ${i1 - i2} RUNS`;
+                  return `${store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'Away')} WON BY ${i1 - i2} RUNS`;
                 }
                 return "MATCH TIED";
               })()}
             </h2>
+            
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', marginBottom: 32 }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Man of the Match</p>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0 }}>{getPlayerName(store.manOfTheMatch)}</h3>
+            </div>
+
             <ActionButton $variant="primary" onClick={() => navigate('/match-center')}>
               RETURN TO MATCH CENTER
             </ActionButton>
@@ -1831,7 +2025,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                   const battingTeamXI = store.currentInnings === 1 ? homeXI : awayXI;
                   const isInCategory = battingTeamXI.includes(p.id);
                   const isAlreadyBatting = p.id === store.strikerId || p.id === store.nonStrikerId;
-                  const alreadyOut = currentInnings.battingStats[p.id]?.status === 'out';
+                  const status = currentInnings.battingStats[p.id]?.status;
+                  const alreadyOut = status === 'out';
                   return isInCategory && !isAlreadyBatting && !alreadyOut;
                 })
                 .map(p => (
@@ -1867,7 +2062,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                   <User size={16} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{p.role || 'Player'}</div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>
+                      {currentInnings.battingStats[p.id]?.status === 'retired_hurt' ? 'RETIRED HURT' : (p.role || 'Player')}
+                    </div>
                   </div>
                 </PlayerCard>
               ))}
@@ -1908,13 +2105,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                 <div>
                   <div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 800 }}>TOTAL SCORE</div>
                   <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#FAB005' }}>
-                    {currentInnings.totalRuns}/{currentInnings.wickets}
+                    {(currentInnings as any).totalRuns}/{(currentInnings as any).wickets}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 800 }}>OVERS</div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>
-                    {store.getOvers(currentInnings.totalBalls)} / {store.maxOvers}
+                    {store.getOvers((currentInnings as any).totalBalls)} / {store.maxOvers}
                   </div>
                 </div>
               </ScoreSummaryCard>
@@ -1933,10 +2130,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(currentInnings.battingStats).map(([id, stat]) => (
+                  {(Object.entries((currentInnings as any).battingStats) as [string, any][]).map(([id, stat]) => (
                     <tr key={id}>
                       <Td style={{ color: (store.strikerId === id || store.nonStrikerId === id) ? '#FAB005' : '#FFF' }}>
                         {getPlayerName(id)}{(store.strikerId === id || store.nonStrikerId === id) ? '*' : ''}
+                        {(store as any).manOfTheMatch === id && <Star size={10} fill="#FAB005" color="#FAB005" style={{ marginLeft: 6 }} />}
                       </Td>
                       <Td style={{ fontSize: '0.7rem', opacity: 0.6 }}>{stat.status === 'batting' ? 'not out' : (stat.outHow || 'out')}</Td>
                       <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
@@ -1964,10 +2162,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(currentInnings.bowlingStats).map(([id, stat]) => (
+                  {(Object.entries((currentInnings as any).bowlingStats) as [string, any][]).map(([id, stat]) => (
                     <tr key={id}>
                       <Td style={{ color: store.currentBowlerId === id ? '#FAB005' : '#FFF' }}>
                         {getPlayerName(id)}{store.currentBowlerId === id ? '*' : ''}
+                        {(store as any).manOfTheMatch === id && <Star size={10} fill="#FAB005" color="#FAB005" style={{ marginLeft: 6 }} />}
                       </Td>
                       <Td style={{ textAlign: 'center' }}>{stat.overs}</Td>
                       <Td style={{ textAlign: 'center' }}>{stat.maidens || 0}</Td>
@@ -1984,8 +2183,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.75rem' }}>
                 <span style={{ opacity: 0.5, fontWeight: 700 }}>EXTRAS</span>
                 <span style={{ fontWeight: 900 }}>
-                  {currentInnings.extras.wides + currentInnings.extras.noBalls + currentInnings.extras.byes + currentInnings.extras.legByes + currentInnings.extras.penalty} 
-                  {' '}(wd {currentInnings.extras.wides}, nb {currentInnings.extras.noBalls}, b {currentInnings.extras.byes}, lb {currentInnings.extras.legByes}, pen {currentInnings.extras.penalty})
+                  {((currentInnings as any)?.extras?.wides || 0) + ((currentInnings as any)?.extras?.noBalls || 0) + ((currentInnings as any)?.extras?.byes || 0) + ((currentInnings as any)?.extras?.legByes || 0) + ((currentInnings as any)?.extras?.penalty || 0)} 
+                  {' '}(wd {(currentInnings as any)?.extras?.wides || 0}, nb {(currentInnings as any)?.extras?.noBalls || 0}, b {(currentInnings as any)?.extras?.byes || 0}, lb {(currentInnings as any)?.extras?.legByes || 0}, pen {(currentInnings as any)?.extras?.penalty || 0})
                 </span>
               </div>
             </div>

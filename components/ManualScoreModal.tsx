@@ -50,6 +50,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     bowling: [],
     extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 },
     totalRuns: 0, totalWickets: 0, totalOvers: 0,
+    history: []
   };
 
   const [scorecard, setScorecard] = useState<FullScorecardData>({
@@ -491,7 +492,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                                           <td><input type="number" min="0" title="Sixes" className="compact-input" value={entry.sixes} onChange={e => updateBatting(activeInnings, p.id, p.name, 'sixes', e.target.valueAsNumber || 0)} /></td>
                                           <td>
                                               <select title="Dismissal" className="dismissal-select" value={entry.outHow} onChange={e => updateBatting(activeInnings, p.id, p.name, 'outHow', e.target.value)}>
-                                                  {['Not Out', 'Bowled', 'Caught', 'LBW', 'Run Out', 'Stumped', 'Did Not Bat', 'Hit Wicket'].map(o => <option key={o}>{o}</option>)}
+                                                  {['Not Out', 'Bowled', 'Caught', 'LBW', 'Run Out', 'Stumped', 'Did Not Bat', 'Hit Wicket', 'Retired Hurt', 'Retired Out'].map(o => <option key={o}>{o}</option>)}
                                               </select>
                                           </td>
                                       </tr>

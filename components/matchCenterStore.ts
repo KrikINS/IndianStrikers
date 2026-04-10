@@ -185,13 +185,8 @@ export const useMatchCenter = create<MatchStore>()(
           
           for (const m of testMatches) {
             // Delete stats first (ledger entries)
-            const { error: statsErr } = await api.supabase
-              .from('player_match_stats')
-              .delete()
-              .eq('match_id', m.id);
+            await api.deleteMatchStats(m.id);
             
-            if (statsErr) console.warn(`Failed to delete stats for match ${m.id}:`, statsErr.message);
-
             // Delete match
             await api.deleteMatch(m.id);
           }
@@ -212,7 +207,10 @@ export const useMatchCenter = create<MatchStore>()(
           time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
           venue: 'Sandbox Virtual Ground',
           opponentName: 'Sandbox XI',
+          opponentId: 'sandbox-id',
+          groundId: 'sandbox-ground',
           matchFormat: 'T20',
+          stage: 'League',
           status: 'upcoming',
           is_test: true,
           homeTeamXI: [],
