@@ -696,15 +696,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   }, [store.toss]);
 
   // Get metadata from MatchCenterStore
-  const { matches, fetchMatches } = useMatchCenter();
-  const { grounds } = useMasterData();
+  const { matches, syncWithCloud } = useMatchCenter();
+  const { grounds, syncMasterData } = useMasterData();
   const activeMatchId = id || propMatchId || store.matchId;
   
   useEffect(() => {
     if (matches.length === 0) {
-      fetchMatches();
+      syncWithCloud().catch(console.error);
     }
-  }, [matches.length, fetchMatches]);
+    syncMasterData().catch(console.error);
+  }, [matches.length, syncWithCloud, syncMasterData]);
 
   const matchMeta = matches.find(m => m.id === activeMatchId);
 
@@ -829,7 +830,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                     <Shield size={40} color="rgba(255,255,255,0.3)" />
                   </TeamLogoCircle>
                   <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>
-                    {matchMeta?.opponentName?.toUpperCase() || 'OPPONENT'}
+                    {matchMeta?.opponentName?.toUpperCase() || 'LOADING...'}
                   </span>
                 </TeamBlock>
               </TeamRow>
@@ -863,8 +864,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                 <TossOption $selected={tossWinner === 'home'} onClick={() => setTossWinner('home')}>
                   Indian Strikers
                 </TossOption>
-                <TossOption $selected={tossWinner === 'away'} onClick={() => setTossWinner('away')}>
-                  {matchMeta?.opponentName || 'OPPONENT TEAM'}
+                 <TossOption $selected={tossWinner === 'away'} onClick={() => setTossWinner('away')}>
+                  {matchMeta ? matchMeta.opponentName : 'LOADING...'}
                 </TossOption>
               </div>
 
