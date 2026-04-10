@@ -713,21 +713,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   useEffect(() => {
     if (activeMatchId && activeMatchId !== store.matchId) {
       if (matchMeta) {
-        if (matchMeta.live_data) {
-          store.updateMatchSettings(matchMeta.live_data);
-        } else {
-          store.initializeMatch({
-            matchId: matchMeta.id,
-            matchType: matchMeta.matchFormat || 'T20',
-            ground: grounds.find(g => g.id === matchMeta.groundId)?.name || 'Default Ground',
-            maxOvers: matchMeta.maxOvers || 20,
-            homeXI: matchMeta.homeTeamXI,
-            awayXI: matchMeta.opponentTeamXI
-          });
-        }
+        console.log(`[Scorer] Syncing with URL ID: ${activeMatchId}`);
+        store.initializeMatch({
+          matchId: matchMeta.id,
+          matchType: matchMeta.matchFormat || 'T20',
+          tournament: matchMeta.tournament || 'Live Match',
+          ground: grounds.length > 0 ? (grounds.find(g => g.id === matchMeta.groundId)?.name || 'Local Ground') : 'Local Ground',
+          opponentName: matchMeta.opponentName || 'OPPONENT',
+          maxOvers: matchMeta.maxOvers || 20,
+          homeXI: matchMeta.homeTeamXI,
+          awayXI: matchMeta.opponentTeamXI
+        });
       }
     }
-  }, [activeMatchId, store.matchId, matchMeta, grounds]);
+  }, [activeMatchId, matchMeta, store, grounds]);
 
   const syncToDatabase = useCallback(
     _.debounce((state: any) => {
@@ -830,7 +829,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                     <Shield size={40} color="rgba(255,255,255,0.3)" />
                   </TeamLogoCircle>
                   <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>
-                    {matchMeta?.opponentName?.toUpperCase() || 'LOADING...'}
+                    {(store.opponentName || matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
                   </span>
                 </TeamBlock>
               </TeamRow>
@@ -865,7 +864,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                   Indian Strikers
                 </TossOption>
                  <TossOption $selected={tossWinner === 'away'} onClick={() => setTossWinner('away')}>
-                  {matchMeta ? matchMeta.opponentName : 'LOADING...'}
+                  {store.opponentName || matchMeta?.opponentName || 'OPPONENT'}
                 </TossOption>
               </div>
 
@@ -1030,7 +1029,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
 
                       return (
                         <>
-                          <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Striker & Non-Striker ({batTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'OPPONENT')})</p>
+                          <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Striker & Non-Striker ({batTeamId === 'HOME' ? 'Indian Strikers' : (store.opponentName || matchMeta?.opponentName || 'OPPONENT')})</p>
                           <SelectionGrid>
                             {players
                               .filter(p => batSquad.includes(p.id))
@@ -1084,7 +1083,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
 
                      return (
                        <>
-                         <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Opening Bowler ({bowlTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'OPPONENT')})</p>
+                         <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Opening Bowler ({bowlTeamId === 'HOME' ? 'Indian Strikers' : (store.opponentName || matchMeta?.opponentName || 'OPPONENT')})</p>
                          <SelectionGrid>
                            {players
                              .filter(p => bowlSquad.includes(p.id))

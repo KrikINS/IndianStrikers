@@ -281,7 +281,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         useCricketScorer.getState().initializeMatch({
             matchId: match.id,
             matchType: match.matchFormat || 'T20',
+            tournament: match.tournament || 'Live Match',
             ground: grounds.find(g => g.id === match.groundId)?.name || 'Default Ground',
+            opponentName: match.opponentName || 'Opponent',
             maxOvers: match.maxOvers || 20,
             homeXI: match.homeTeamXI,
             awayXI: match.opponentTeamXI

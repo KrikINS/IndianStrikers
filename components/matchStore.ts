@@ -58,8 +58,10 @@ export interface InningsState {
 export interface MatchState {
     matchId: string | null;
     matchType: 'T20' | 'One Day';
-    maxOvers: number;
+    tournament: string;
     ground: string;
+    opponentName: string;
+    maxOvers: number;
     toss: {
         winnerId: string | null;
         choice: 'Bat' | 'Bowl' | null;
@@ -82,7 +84,9 @@ interface ScorerStore extends MatchState {
     initializeMatch: (data: {
         matchId: string;
         matchType: 'T20' | 'One Day';
+        tournament: string;
         ground: string;
+        opponentName: string;
         maxOvers: number;
         homeXI?: string[];
         awayXI?: string[];
@@ -112,8 +116,10 @@ interface ScorerStore extends MatchState {
 const INITIAL_STATE: MatchState = {
     matchId: null,
     matchType: 'T20',
-    maxOvers: 20,
+    tournament: '',
     ground: '',
+    opponentName: '',
+    maxOvers: 20,
     toss: { winnerId: null, choice: null },
     innings1: null,
     innings2: null,
@@ -138,7 +144,9 @@ export const useCricketScorer = create<ScorerStore>()(
                 ...INITIAL_STATE, 
                 matchId: data.matchId,
                 matchType: data.matchType,
+                tournament: data.tournament,
                 ground: data.ground,
+                opponentName: data.opponentName,
                 maxOvers: data.maxOvers,
                 homeXI: data.homeXI || [],
                 awayXI: data.awayXI || []
