@@ -696,9 +696,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   }, [store.toss]);
 
   // Get metadata from MatchCenterStore
-  const matches = useMatchCenter(s => s.matches);
+  const { matches, fetchMatches } = useMatchCenter();
   const { grounds } = useMasterData();
   const activeMatchId = id || propMatchId || store.matchId;
+  
+  useEffect(() => {
+    if (matches.length === 0) {
+      fetchMatches();
+    }
+  }, [matches.length, fetchMatches]);
+
   const matchMeta = matches.find(m => m.id === activeMatchId);
 
   // Sync with URL ID: If the URL ID is different from the store's ID, try to load it
@@ -857,7 +864,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                   Indian Strikers
                 </TossOption>
                 <TossOption $selected={tossWinner === 'away'} onClick={() => setTossWinner('away')}>
-                  {matchMeta?.opponentName || 'SANDBOX XI'}
+                  {matchMeta?.opponentName || 'OPPONENT TEAM'}
                 </TossOption>
               </div>
 
@@ -1022,7 +1029,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
 
                       return (
                         <>
-                          <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Striker & Non-Striker ({batTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'Away')})</p>
+                          <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Striker & Non-Striker ({batTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'OPPONENT')})</p>
                           <SelectionGrid>
                             {players
                               .filter(p => batSquad.includes(p.id))
@@ -1076,7 +1083,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
 
                      return (
                        <>
-                         <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Opening Bowler ({bowlTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'Away')})</p>
+                         <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Opening Bowler ({bowlTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'OPPONENT')})</p>
                          <SelectionGrid>
                            {players
                              .filter(p => bowlSquad.includes(p.id))
@@ -1915,7 +1922,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
           <ModalContent style={{ textAlign: 'center', padding: 40 }}>
             <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: 12 }}>INNINGS COMPLETED!</h1>
             <p style={{ opacity: 0.6, marginBottom: 32 }}>
-              {store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'SANDBOX XI')} finished at {store.innings1?.totalRuns || 0}/{store.innings1?.wickets || 0}
+              {store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'OPPONENT')} finished at {store.innings1?.totalRuns || 0}/{store.innings1?.wickets || 0}
             </p>
             <div style={{ background: 'rgba(255,255,255,0.05)', padding: 24, borderRadius: 16, marginBottom: 32 }}>
               <p style={{ fontSize: '0.8rem', opacity: 0.4, textTransform: 'uppercase', fontWeight: 800, marginBottom: 8 }}>Target</p>
