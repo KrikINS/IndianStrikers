@@ -78,6 +78,20 @@ export interface InningsBowlingEntry {
   is_hero?: boolean;
 }
 
+export interface BallRecord {
+  runs: number;
+  type: 'legal' | 'wide' | 'no-ball' | 'bye' | 'leg-bye' | 'penalty';
+  isWicket: boolean;
+  wicketType?: string;
+  bowlerId: string;
+  strikerId: string;
+  nonStrikerId: string;
+  overNumber: number;
+  ballNumber: number; // 1-6 for legal balls
+  isLegal: boolean;
+  timestamp: string;
+}
+
 export interface InningsExtras {
   wide: number;
   no_ball: number;
@@ -93,6 +107,7 @@ export interface InningsData {
   totalWickets: number;
   totalOvers: number;
   fallOfWickets?: string;
+  history: BallRecord[];
 }
 
 export interface FullScorecardData {

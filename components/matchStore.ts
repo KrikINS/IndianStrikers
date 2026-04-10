@@ -30,7 +30,7 @@ export interface BallRecord {
     extraRuns: number;
     type: 'legal' | 'wide' | 'no-ball' | 'bye' | 'leg-bye';
     isWicket: boolean;
-    wicketType?: 'Bowled' | 'Caught' | 'LBW' | 'Run Out' | 'Stumped' | 'Hit Wicket' | 'Retired';
+    wicketType?: 'Bowled' | 'Caught' | 'LBW' | 'Run Out' | 'Stumped' | 'Hit Wicket' | 'Retired Hurt' | 'Retired Out' | 'Timed Out' | 'Obstructing the Field';
     batterId: string;
     bowlerId: string;
     commentary: string;
@@ -47,6 +47,7 @@ export interface InningsState {
         noBalls: number;
         byes: number;
         legByes: number;
+        penalty: number;
     };
     battingStats: Record<string, LivePlayer>;
     bowlingStats: Record<string, LiveBowler>;
@@ -71,6 +72,8 @@ export interface MatchState {
     currentBowlerId: string | null;
     isFreeHit: boolean;
     isFinished: boolean;
+    homeXI: string[];
+    awayXI: string[];
     historyStack: MatchState[];
 }
 
@@ -89,10 +92,15 @@ interface ScorerStore extends MatchState {
         type: BallRecord['type'];
         isWicket: boolean;
         wicketType?: BallRecord['wicketType'];
+        subType?: 'bat' | 'bye' | 'lb';
+        outPlayerId?: string;
         newBatterId?: string;
     }) => void;
+    recordPenalty: (team: 'batting' | 'bowling', runs: number) => void;
     undoLastBall: () => void;
+    switchStriker: () => void;
     setNewBowler: (id: string) => void;
+    changeBowler: (id: string) => void;
     resetMatch: () => void;
     clearInnings: () => void;
     getOvers: (balls: number) => string;
@@ -112,6 +120,8 @@ const INITIAL_STATE: MatchState = {
     currentBowlerId: null,
     isFreeHit: false,
     isFinished: false,
+    homeXI: [],
+    awayXI: [],
     historyStack: [],
 };
 
@@ -137,7 +147,7 @@ export const useCricketScorer = create<ScorerStore>()(
                     totalRuns: 0,
                     wickets: 0,
                     totalBalls: 0,
-                    extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0 },
+                    extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, penalty: 0 },
                     battingStats: {},
                     bowlingStats: {},
                     fallOfWickets: [],
@@ -147,6 +157,14 @@ export const useCricketScorer = create<ScorerStore>()(
 
             recordBall: (payload) => {
                 const state = get();
+                const innings = state.currentInnings === 1 ? state.innings1 : state.innings2;
+                const inningsKey = state.currentInnings === 1 ? 'innings1' : 'innings2';
+                
+                if (!innings || !state.strikerId || !state.currentBowlerId) {
+                    console.error("Missing innings, striker or bowler ID");
+                    return;
+                }
+
                 // Save current state to stack for UNDO
                 const prevState = JSON.parse(JSON.stringify({
                     matchId: state.matchId,
@@ -158,36 +176,40 @@ export const useCricketScorer = create<ScorerStore>()(
                     nonStrikerId: state.nonStrikerId,
                     currentBowlerId: state.currentBowlerId,
                     isFreeHit: state.isFreeHit,
-                    isFinished: state.isFinished
+                    isFinished: state.isFinished,
+                    homeXI: state.homeXI,
+                    awayXI: state.awayXI
                 }));
 
-                const { runs, type, isWicket, wicketType, newBatterId } = payload;
-                const inningsKey = state.currentInnings === 1 ? 'innings1' : 'innings2';
-                const innings = state[inningsKey];
-                if (!innings || !state.strikerId || !state.currentBowlerId) return;
-
+                const { runs, type, isWicket, wicketType, subType = 'bat', outPlayerId, newBatterId } = payload;
                 const isWide = type === 'wide';
                 const isNoBall = type === 'no-ball';
                 const isLegal = !isWide && !isNoBall;
                 const extraRuns = (isWide || isNoBall) ? 1 : 0;
-                const batsmenRuns = (type === 'legal') ? runs : 0;
+                
+                // Rules: 
+                // - Only 'bat' subType counts for batsman runs.
+                // - Wides are NEVER bat runs.
+                // - No balls can be bat runs or byes/lb.
+                const batsmenRuns = (subType === 'bat' && (type === 'legal' || type === 'no-ball')) ? runs : 0;
 
                 // Deep Clone Innings to avoid direct mutation
                 const nextInnings = JSON.parse(JSON.stringify(innings));
                 nextInnings.totalRuns += runs + extraRuns;
                 nextInnings.totalBalls += isLegal ? 1 : 0;
-                if (isWicket) nextInnings.wickets += 1;
+                if (isWicket && wicketType !== 'Retired Hurt') nextInnings.wickets += 1;
                 
-                if (isWide) nextInnings.extras.wides += 1;
+                if (isWide) nextInnings.extras.wides += 1 + runs;
                 if (isNoBall) nextInnings.extras.noBalls += 1;
-                if (type === 'bye') nextInnings.extras.byes += runs;
-                if (type === 'leg-bye') nextInnings.extras.legByes += runs;
+                if (type === 'bye' || (isNoBall && subType === 'bye')) nextInnings.extras.byes += runs;
+                if (type === 'leg-bye' || (isNoBall && subType === 'lb')) nextInnings.extras.legByes += runs;
 
                 // Update Batsman Stats
-                if (!nextInnings.battingStats[state.strikerId]) {
-                    nextInnings.battingStats[state.strikerId] = { id: state.strikerId, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting' };
+                const sId_active = state.strikerId!;
+                if (!nextInnings.battingStats[sId_active]) {
+                    nextInnings.battingStats[sId_active] = { id: sId_active, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting' };
                 }
-                const b = nextInnings.battingStats[state.strikerId];
+                const b = nextInnings.battingStats[sId_active];
                 b.runs += batsmenRuns;
                 b.balls += (type !== 'wide') ? 1 : 0;
                 if (batsmenRuns === 4) b.fours += 1;
@@ -195,29 +217,97 @@ export const useCricketScorer = create<ScorerStore>()(
                 if (isWicket) b.status = 'out';
 
                 // Update Bowler Stats
-                if (!nextInnings.bowlingStats[state.currentBowlerId]) {
-                    nextInnings.bowlingStats[state.currentBowlerId] = { id: state.currentBowlerId, name: 'Unknown', overs: 0, maidens: 0, runs: 0, wickets: 0 };
+                const bwlId_active = state.currentBowlerId!;
+                if (!nextInnings.bowlingStats[bwlId_active]) {
+                    nextInnings.bowlingStats[bwlId_active] = { id: bwlId_active, name: 'Unknown', overs: 0, maidens: 0, runs: 0, wickets: 0 };
                 }
-                const bw = nextInnings.bowlingStats[state.currentBowlerId];
-                bw.runs += (batsmenRuns + extraRuns + (type === 'bye' || type === 'leg-bye' ? 0 : 0)); // Byes don't count against bowler
-                if (isWicket && wicketType !== 'Run Out') bw.wickets += 1;
+                const bw = nextInnings.bowlingStats[bwlId_active];
+                // Bowler runs: bat runs + wides + no-balls. Byes/Leg-byes NOT counted for bowler.
+                const isTrulyExtra = type === 'bye' || type === 'leg-bye' || (isNoBall && subType !== 'bat');
+                bw.runs += (isWide ? (1 + runs) : (isNoBall ? (1 + (subType === 'bat' ? runs : 0)) : (isTrulyExtra ? 0 : runs)));
+                
+                const isBowlerWicket = isWicket && !['Run Out', 'Retired Hurt', 'Retired Out', 'Timed Out', 'Obstructing the Field'].includes(wicketType || '');
+                if (isBowlerWicket) bw.wickets += 1;
                 const totalBallsByHim = Math.floor(bw.overs) * 6 + Math.round((bw.overs % 1) * 10) + (isLegal ? 1 : 0);
                 bw.overs = Math.floor(totalBallsByHim / 6) + (totalBallsByHim % 6 / 10);
 
                 // Strike Rotation
-                let sId = state.strikerId;
-                let nsId = state.nonStrikerId;
-                if (batsmenRuns % 2 !== 0) [sId, nsId] = [nsId, sId];
-                if (isLegal && nextInnings.totalBalls % 6 === 0) [sId, nsId] = [nsId, sId];
-                if (isWicket && newBatterId) sId = newBatterId;
+                let sId: string | null = state.strikerId;
+                let nsId: string | null = state.nonStrikerId;
+                
+                // Handle Wicket specific rotation
+                if (isWicket) {
+                    const victimId = outPlayerId || state.strikerId;
+                    if (victimId === sId) sId = newBatterId || null;
+                    else nsId = newBatterId || null;
+                }
+
+                // Normal rotation based on runs
+                if (runs % 2 !== 0) [sId, nsId] = [nsId, sId];
+                // Construct Ball Record for Timeline
+                const ballRecord: any = {
+                    runs,
+                    type,
+                    isWicket,
+                    wicketType,
+                    bowlerId: bwlId_active,
+                    strikerId: sId_active,
+                    nonStrikerId: state.nonStrikerId,
+                    overNumber: Math.floor(nextInnings.totalBalls / 6),
+                    ballNumber: (nextInnings.totalBalls % 6) || 6,
+                    isLegal,
+                    timestamp: new Date().toISOString()
+                };
+                nextInnings.history = [...(nextInnings.history || []), ballRecord];
 
                 set({
                     [inningsKey]: nextInnings,
                     strikerId: sId,
                     nonStrikerId: nsId,
-                    isFreeHit: isNoBall,
+                    isFreeHit: isNoBall || (state.isFreeHit && (isWide || isNoBall)),
                     historyStack: [...state.historyStack, prevState].slice(-20)
                 });
+            },
+
+            recordPenalty: (side, runs) => {
+                const state = get();
+                const prevState = JSON.parse(JSON.stringify(state));
+                delete prevState.historyStack; 
+
+                const currentKey = state.currentInnings === 1 ? 'innings1' : 'innings2';
+                const otherKey = state.currentInnings === 1 ? 'innings2' : 'innings1';
+                
+                const targetKey = side === 'batting' ? currentKey : otherKey;
+                const targetInnings = state[targetKey];
+
+                if (targetInnings) {
+                    const nextInnings = JSON.parse(JSON.stringify(targetInnings));
+                    nextInnings.totalRuns += runs;
+                    nextInnings.extras.penalty += runs;
+                    set({ 
+                        [targetKey]: nextInnings,
+                        historyStack: [...state.historyStack, prevState].slice(-20)
+                    });
+                } else {
+                    const currentInningsState = state[currentKey];
+                    if (!currentInningsState) return;
+
+                    set({
+                        [targetKey]: {
+                            battingTeamId: currentInningsState.bowlingTeamId,
+                            bowlingTeamId: currentInningsState.battingTeamId,
+                            totalRuns: runs,
+                            wickets: 0,
+                            totalBalls: 0,
+                            extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, penalty: runs },
+                            battingStats: {},
+                            bowlingStats: {},
+                            fallOfWickets: [],
+                            history: []
+                        },
+                        historyStack: [...state.historyStack, prevState].slice(-20)
+                    });
+                }
             },
 
             undoLastBall: () => {
@@ -230,7 +320,20 @@ export const useCricketScorer = create<ScorerStore>()(
                 });
             },
 
+            switchStriker: () => {
+                const state = get();
+                const prevState = JSON.parse(JSON.stringify(state));
+                delete prevState.historyStack;
+
+                set({
+                    strikerId: state.nonStrikerId,
+                    nonStrikerId: state.strikerId,
+                    historyStack: [...state.historyStack, prevState].slice(-20)
+                });
+            },
+
             setNewBowler: (id) => set({ currentBowlerId: id }),
+            changeBowler: (id) => set({ currentBowlerId: id }),
             resetMatch: () => set(INITIAL_STATE),
             clearInnings: () => {
                 const state = get();
