@@ -30,6 +30,7 @@ import { useMatchCenter, updateMatchInStore } from './matchCenterStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMasterData } from './masterDataStore';
 import _ from 'lodash';
+import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
 
 const DashboardContainer = styled.div`
   min-height: 100vh;
@@ -703,7 +704,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   const [showScorecardModal, setShowScorecardModal] = useState(false);
   const [showFielderModal, setShowFielderModal] = useState(false);
   const [pendingFielderId, setPendingFielderId] = useState<string | null>(null);
-  const [splash, setSplash] = useState<{ show: boolean, title: string, subtitle: string, color: string } | null>(null);
   const [pendingWicketType, setPendingWicketType] = useState<any>(null);
   const [extraType, setExtraType] = useState<'wd' | 'nb' | 'byes' | 'lb'>('nb');
   const [nbSubType, setNbSubType] = useState<'bat' | 'bye' | 'lb'>('bat');
@@ -712,6 +712,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
   const posterRef = useRef<HTMLDivElement>(null);
+  const milestoneRef = useRef<MilestoneOverlayRef>(null);
 
   useEffect(() => {
     if (store.maxOvers) {
@@ -1281,53 +1282,84 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   const handleRecord = (runs: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string) => {
     store.recordBall({ runs, type, isWicket, wicketType, subType, outPlayerId, newBatterId });
     
-    // Milestone Detection logic
-    const history = (store.currentInnings === 1 ? store.innings1 : store.innings2)?.history || [];
+    // --- Milestone Detection & Animation Bridge ---
+    const innings = store.currentInnings === 1 ? store.innings1 : store.innings2;
+    if (!innings) return;
     
-    const triggerSplash = (title: string, subtitle: string, color: string) => {
-      setSplash({ show: true, title, subtitle, color });
-      setTimeout(() => setSplash(null), 2000);
-    };
+    const sId = store.strikerId || '';
+    const bId = store.currentBowlerId || '';
+    const sName = getPlayerName(sId);
+    const bName = getPlayerName(bId);
 
+    // 1. Boundaries
+    if (runs === 4 && subType === 'bat') {
+      milestoneRef.current?.trigger({ type: 'FOUR', playerName: sName });
+    } else if (runs === 6 && subType === 'bat') {
+      milestoneRef.current?.trigger({ type: 'SIX', playerName: sName });
+    }
+
+    // 2. Wickets & Ducks
     if (isWicket) {
-      // Check for bowler hat-trick
-      const bowlerBalls = history.filter(b => b.bowlerId === store.currentBowlerId && b.type === 'legal');
-      if (bowlerBalls.length >= 2 && bowlerBalls.slice(-2).every(b => b.isWicket)) {
-        triggerSplash('HAT-TRICK!', '3 WICKETS IN 3 BALLS', 'linear-gradient(135deg, #FF4B2B 0%, #FF416C 100%)');
+      const victimId = outPlayerId || sId;
+      const victimName = getPlayerName(victimId);
+      const bStat = innings.battingStats[victimId];
+      
+      if (bStat && bStat.runs === 0) {
+        if (bStat.balls === 1) {
+          milestoneRef.current?.trigger({ type: 'GOLDEN_DUCK', playerName: victimName });
+        } else {
+          milestoneRef.current?.trigger({ type: 'DUCK', playerName: victimName });
+        }
       } else {
-        triggerSplash('OUT!', wicketType?.toUpperCase() || 'WICKET', '#FF4D4D');
+        milestoneRef.current?.trigger({ type: 'WICKET', playerName: victimName });
       }
-    } else if (runs === 6) {
-      const strikerBalls = history.filter(b => b.batterId === store.strikerId && b.type === 'legal');
-      if (strikerBalls.length >= 2 && strikerBalls.slice(-2).every(b => b.runs === 6)) {
-        triggerSplash('HAT-TRICK OF 6s!', 'MAXIMUM OVERDRIVE', 'linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%)');
-      } else {
-        triggerSplash('SIX!', 'MAXIMUM!', '#FAB005');
+
+      // Check Bowler Hat-trick
+      const bowlerBalls = (innings.history || []).filter(b => b.bowlerId === bId && b.isLegal);
+      if (bowlerBalls.length >= 3) {
+        const last3 = bowlerBalls.slice(-3);
+        const isHatTrick = last3.every(b => b.isWicket && !['Run Out', 'Retired Hurt', 'Retired Out'].includes(b.wicketType || ''));
+        if (isHatTrick) {
+          milestoneRef.current?.trigger({ type: 'HAT_TRICK', playerName: bName });
+        }
       }
-    } else if (runs === 4) {
-      const strikerBalls = history.filter(b => b.batterId === store.strikerId && b.type === 'legal');
-      if (strikerBalls.length >= 2 && strikerBalls.slice(-2).every(b => b.runs === 4)) {
-        triggerSplash('HAT-TRICK OF 4s!', 'BOUNDARY MASTER', 'linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%)');
+
+      // Check 4w/5w Hauls
+      const bwStat = innings.bowlingStats[bId];
+      if (bwStat) {
+        if (bwStat.wickets === 5) {
+          milestoneRef.current?.trigger({ type: 'FIVE_WICKET', playerName: bName, subText: `${bwStat.wickets}-${bwStat.runs}` });
+        } else if (bwStat.wickets === 4) {
+          milestoneRef.current?.trigger({ type: 'FOUR_WICKET', playerName: bName, subText: `${bwStat.wickets}-${bwStat.runs}` });
+        }
       }
     }
 
-    if (currentInnings?.totalBalls !== undefined && (currentInnings.totalBalls + (type === 'legal' ? 1 : 0)) % 6 === 0 && type === 'legal') {
+    // 3. Batting Benchmarks (50/100)
+    const strikerStat = innings.battingStats[sId];
+    if (strikerStat && subType === 'bat') {
+      if (strikerStat.runs === 50) {
+        milestoneRef.current?.trigger({ type: 'FIFTY', playerName: sName });
+      } else if (strikerStat.runs === 100) {
+        milestoneRef.current?.trigger({ type: 'HUNDRED', playerName: sName });
+      }
+    }
+
+    }
+
+    if (innings.totalBalls !== undefined && (innings.totalBalls + (type === 'legal' ? 1 : 0)) % 6 === 0 && type === 'legal') {
       setShowBowlerModal(true);
     }
   };
 
   const triggerWicketSplash = (type: string) => {
-    setSplash({ 
-      show: true, 
-      title: 'OUT!', 
-      subtitle: (type || 'WICKET').toUpperCase(), 
-      color: '#FF4D4D' 
-    });
-    // Let splash stay for 2 seconds then show next batter selection
+    const victimName = getPlayerName(runOutInvolved?.victimId || store.strikerId);
+    milestoneRef.current?.trigger({ type: 'WICKET', playerName: victimName });
+    
+    // Let animation play for a moment then show next batter selection
     setTimeout(() => {
-      setSplash(null);
       setShowBatterSelectModal(true);
-    }, 2000);
+    }, 1500);
   };
 
   const getPlayerName = (id: string | null) => players.find(p => p.id === id)?.name || 'Unknown';
@@ -1849,42 +1881,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
       )}
 
 
-      <AnimatePresence>
-        {splash?.show && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.5 }}
-            style={{
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              background: splash.color.includes('gradient') ? splash.color : `rgba(${splash.color === '#FF4D4D' ? '255, 77, 77' : '250, 176, 5'}, 0.9)`, 
-              zIndex: 9999, pointerEvents: 'none',
-              textAlign: 'center',
-              padding: 20
-            }}
-          >
-            <motion.h1 
-              initial={{ y: 20 }}
-              animate={{ y: 0 }}
-              style={{ color: '#FFF', fontSize: 'clamp(3rem, 15vw, 8rem)', fontWeight: 900, textShadow: '0 10px 30px rgba(0,0,0,0.5)', margin: 0, lineHeight: 1 }}
-            >
-              {splash.title}
-            </motion.h1>
-            {splash.subtitle && (
-               <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                style={{ color: '#FFF', fontSize: 'clamp(1rem, 4vw, 2rem)', fontWeight: 800, textShadow: '0 4px 10px rgba(0,0,0,0.3)', marginTop: 20, textTransform: 'uppercase', letterSpacing: '2px' }}
-               >
-                 {splash.subtitle}
-               </motion.p>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* MilestoneOverlay handles everything now */}
 
       {showFielderModal && (
         <ModalOverlay onClick={() => setShowFielderModal(false)}>
@@ -2450,6 +2447,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
           </PremiumModalContent>
         </PremiumModalOverlay>
       )}
+      <MilestoneOverlay ref={milestoneRef} />
       </>
     </DashboardContainer>
   );
