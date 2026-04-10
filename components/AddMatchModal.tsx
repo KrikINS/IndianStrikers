@@ -29,15 +29,21 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         setIsSaving(true);
         
         try {
-            const selectedGround = grounds.find((g: { id: string, name: string }) => g.id === formData.groundId)?.name || 'TBD';
+            const selectedOpponent = opponents.find(o => o.id === formData.opponentId);
+            const opponentName = selectedOpponent?.name || 'Opponent';
+            const opponentLogo = selectedOpponent?.logoUrl || '';
             const selectedTournament = tournaments.find((t: { id: string, name: string }) => t.id === formData.tournamentId)?.name || 'Friendly';
+            const selectedVenue = grounds.find(g => g.id === formData.groundId)?.name || 'Local Ground';
 
             const newMatch: Omit<ScheduledMatch, 'id'> = {
                 opponentId: formData.opponentId,
+                opponentName,
+                opponentLogo,
                 date: (formData.date && !isNaN(new Date(formData.date).getTime())) 
                     ? new Date(formData.date).toISOString() 
                     : new Date().toISOString(),
                 groundId: formData.groundId,
+                venue: selectedVenue,
                 tournament: selectedTournament,
                 tournamentId: formData.tournamentId,
                 stage: formData.stage,

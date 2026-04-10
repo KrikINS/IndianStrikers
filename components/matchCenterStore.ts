@@ -19,7 +19,6 @@ interface MatchStore {
   getSortedMatches: () => ScheduledMatch[];
   resetZombieMatches: () => void;
   purgeTestData: () => Promise<void>;
-  createSandboxMatch: () => Promise<string>;
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
 }
@@ -178,10 +177,18 @@ export const useMatchCenter = create<MatchStore>()(
 
       purgeTestData: async () => {
         try {
-          const testMatches = get().matches.filter(m => m.is_test);
-          if (testMatches.length === 0) return;
+          // Include matches marked is_test OR matches with Sandbox XI as opponent
+          const testMatches = get().matches.filter(m => 
+            m.is_test || 
+            m.opponentName === 'Sandbox XI' || 
+            (m.opponentId && String(m.opponentId).includes('sandbox'))
+          );
+          if (testMatches.length === 0) {
+            console.log("[Admin] No test/sandbox data found to purge.");
+            return;
+          }
 
-          console.log(`[Admin] Purging ${testMatches.length} test matches...`);
+          console.log(`[Admin] Purging ${testMatches.length} test/sandbox matches...`);
           
           for (const m of testMatches) {
             // Delete stats first (ledger entries)
@@ -192,35 +199,12 @@ export const useMatchCenter = create<MatchStore>()(
           }
 
           set((state) => ({
-            matches: state.matches.filter(m => !m.is_test)
+            matches: state.matches.filter(m => !testMatches.some(tm => tm.id === m.id))
           }));
         } catch (e) {
           console.error("Purge failed:", e);
           throw e;
         }
-      },
-
-      createSandboxMatch: async () => {
-        const testMatch: Omit<ScheduledMatch, 'id'> = {
-          title: 'SYSTEM LOGIC TEST',
-          date: new Date().toISOString().split('T')[0],
-          time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-          venue: 'Sandbox Virtual Ground',
-          opponentName: 'Sandbox XI',
-          opponentId: 'sandbox-id',
-          groundId: 'sandbox-ground',
-          matchFormat: 'T20',
-          stage: 'League',
-          status: 'upcoming',
-          is_test: true,
-          homeTeamXI: [],
-          opponentTeamXI: [],
-          isLiveScored: true,
-          isLocked: false,
-          isHomeBattingFirst: true,
-          tournament: 'Practice'
-        };
-        return await get().addMatch(testMatch);
       }
     }),
     {

@@ -42,8 +42,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         finalizeMatch,
         syncWithCloud,
         getSortedMatches,
-        purgeTestData,
-        createSandboxMatch
+        purgeTestData
     } = useMatchCenter();
     const { grounds, tournaments, syncMasterData } = useMasterData();
 
@@ -995,6 +994,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                 {editingMatch && (
                     <EditMatchModal
                         match={editingMatch}
+                        allOpponents={opponents}
                         isOpen={!!editingMatch}
                         onClose={() => setEditingMatch(null)}
                         onSave={handleSaveMatch}

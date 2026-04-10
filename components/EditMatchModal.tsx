@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ScheduledMatch, MatchStatus, MatchStage } from '../types';
+import { ScheduledMatch, MatchStatus, MatchStage, OpponentTeam } from '../types';
 import { useMasterData } from './masterDataStore';
-import { X, Save, AlertCircle } from 'lucide-react';
+import { X, Save, AlertCircle, Shield } from 'lucide-react';
 
 interface EditMatchModalProps {
     match: ScheduledMatch;
+    allOpponents: OpponentTeam[];
     isOpen: boolean;
     onClose: () => void;
     onSave: (updatedMatch: ScheduledMatch) => void;
 }
 
-const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, isOpen, onClose, onSave }) => {
+const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, allOpponents, isOpen, onClose, onSave }) => {
     const { grounds, tournaments } = useMasterData();
     const [formData, setFormData] = useState<ScheduledMatch>(match);
     const [localDate, setLocalDate] = useState(match.date? match.date.slice(0, 16) : '');
@@ -30,6 +31,26 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, isOpen, onClose,
         if (!isNaN(d.getTime())) {
             finalData.date = d.toISOString();
         }
+
+        // Ensure metadata is synced
+        if (finalData.opponentId) {
+            const opp = allOpponents.find(o => o.id === finalData.opponentId);
+            if (opp) {
+                finalData.opponentName = opp.name;
+                finalData.opponentLogo = opp.logoUrl;
+            }
+        }
+
+        if (finalData.tournamentId) {
+            const tour = tournaments.find(t => t.id === finalData.tournamentId);
+            if (tour) finalData.tournament = tour.name;
+        }
+
+        if (finalData.groundId) {
+            const g = grounds.find(g => g.id === finalData.groundId);
+            if (g) finalData.venue = g.name;
+        }
+
         onSave(finalData);
     };
 
@@ -56,6 +77,25 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, isOpen, onClose,
 
                 <form onSubmit={handleSave} className="p-6 space-y-4">
                     <div className="grid grid-cols-2 gap-4">
+                        {/* Opponent Selection (Added) */}
+                        <div className="space-y-1.5 col-span-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Opponent Team</label>
+                            <div className="relative">
+                                <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                                <select 
+                                    value={formData.opponentId || ''}
+                                    onChange={(e) => setFormData({...formData, opponentId: e.target.value})}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
+                                    title="Select Opponent"
+                                >
+                                    <option value="">Select Opponent...</option>
+                                    {allOpponents.map(opp => (
+                                        <option key={opp.id} value={opp.id}>{opp.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
                         {/* Status */}
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Match Status</label>

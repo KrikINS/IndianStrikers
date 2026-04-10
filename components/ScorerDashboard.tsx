@@ -828,7 +828,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                   <TeamLogoCircle>
                     <Shield size={40} color="rgba(255,255,255,0.3)" />
                   </TeamLogoCircle>
-                  <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>
+                  <span style={{ fontStyle: 'italic', fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: '#FAB005' }}>
                     {(store.opponentName || matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
                   </span>
                 </TeamBlock>
@@ -911,7 +911,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       {setupStep === 'squad_home' ? <Shield size={20} color="#FAB005" /> : <Users size={20} color="#FAB005" />}
                       <h3 style={{ margin: 0, fontWeight: 900 }}>
-                        {setupStep === 'squad_home' ? 'HOME SQUAD' : 'AWAY SQUAD'}
+                        {setupStep === 'squad_home' ? 'INDIAN STRIKERS ROSTER' : `${(store.opponentName || 'OPPONENT').toUpperCase()} ROSTER`}
                       </h3>
                     </div>
                     <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#FAB005' }}>
