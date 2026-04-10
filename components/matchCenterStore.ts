@@ -123,7 +123,10 @@ export const useMatchCenter = create<MatchStore>()(
           const dbMatches = rawDbMatches.filter(m => 
             m.tournament !== "Dummy Tournament" && 
             m.opponentName !== "Unknown" &&
+            m.opponentName !== "Sandbox XI" &&
+            !m.is_test &&
             !String(m.id).toLowerCase().includes("dummy") &&
+            !String(m.id).toLowerCase().includes("sandbox") &&
             m.id !== '00000000-0000-0000-0000-000000000001'
           );
 
@@ -154,7 +157,10 @@ export const useMatchCenter = create<MatchStore>()(
         const cleanMatches = matches.filter(m => 
           m.tournament !== "Dummy Tournament" && 
           m.opponentName !== "Unknown" &&
+          m.opponentName !== "Sandbox XI" &&
+          !m.is_test &&
           !String(m.id).toLowerCase().includes("dummy") &&
+          !String(m.id).toLowerCase().includes("sandbox") &&
           m.id !== '00000000-0000-0000-0000-000000000001'
         );
 

@@ -102,7 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
 
   const controlPanelLinks: SidebarLink[] = [];
 
-  mainLinks.push({ to: '/scorer', icon: <ClipboardList size={20} />, label: 'Scorer Dashboard' });
+  mainLinks.push({ to: '/scorer', icon: <ClipboardList size={20} />, label: 'Strikers Pulse' });
 
   controlPanelLinks.push({ 
     to: '/control-panel/grounds', 

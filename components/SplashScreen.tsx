@@ -50,7 +50,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
 
   useEffect(() => {
     if (isAppLoading) {
-      const fullText = "Legacy of Few Kirukkans";
+      const fullText = "Initializing Strikers Pulse...";
       let currentIndex = 0;
       setProgress(0);
 

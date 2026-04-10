@@ -111,6 +111,7 @@ interface ScorerStore extends MatchState {
     resetMatch: () => void;
     clearInnings: () => void;
     hardReset: () => void;
+    resetStore: () => void;
     getOvers: (balls: number) => string;
 }
 
@@ -142,6 +143,7 @@ export const useCricketScorer = create<ScorerStore>()(
             ...INITIAL_STATE,
 
             hardReset: () => set({ ...INITIAL_STATE }),
+            resetStore: () => set({ ...INITIAL_STATE }),
 
             initializeMatch: (data) => {
                 const current = get();

@@ -272,6 +272,35 @@ const ModalContent = styled.div`
   }
 `;
 
+const InningsBreakModal = styled.div`
+  position: fixed;
+  inset: 0;
+  background: #FFFFFF;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  color: #001F3F;
+  font-family: 'Inter', sans-serif;
+`;
+
+const HeroPosterWrapper = styled.div`
+  width: 360px;
+  height: 640px;
+  background: #0c1222;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+`;
+
+const PosterContainer = styled.div`
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+`;
+
 const SetupContainer = styled.div`
   min-height: 100vh;
   background: linear-gradient(135deg, #001F3F 0%, #083358 100%);
@@ -681,6 +710,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   const [runOutInvolved, setRunOutInvolved] = useState<{ victimId: string, runs: number, ballType?: any, subType?: any } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
+  const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
+  const posterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (store.maxOvers) {
@@ -701,11 +732,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   const activeMatchId = id || propMatchId || store.matchId;
   
   useEffect(() => {
+    // State Reset: Clear all previous match data on component mount
+    console.log("[Scorer] Component mounted. Resetting store for fresh session...");
+    store.resetStore();
+
     if (matches.length === 0) {
       syncWithCloud().catch(console.error);
     }
     syncMasterData().catch(console.error);
-  }, [matches.length, syncWithCloud, syncMasterData]);
+  }, []); // Only on mount
 
   const matchMeta = matches.find(m => m.id === activeMatchId);
 
@@ -713,13 +748,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   useEffect(() => {
     if (activeMatchId && activeMatchId !== store.matchId) {
       if (matchMeta) {
+        // Data Fetching: Ensure opponent is correctly resolved.
+        // Never default to 'Sandbox XI' unless is_test is true.
+        const resolvedOpponentName = (matchMeta.opponentName === 'Sandbox XI' && !matchMeta.is_test)
+          ? 'OPPONENT' 
+          : (matchMeta.opponentName || 'OPPONENT');
+
         console.log(`[Scorer] Syncing with URL ID: ${activeMatchId}`);
+        // Validation: Source of Truth check
+        console.log(`Scoring initialized for: ${matchMeta.tournament || 'Live Match'} | Opponent: ${resolvedOpponentName}`);
+
         store.initializeMatch({
           matchId: matchMeta.id,
           matchType: matchMeta.matchFormat || 'T20',
           tournament: matchMeta.tournament || 'Live Match',
           ground: grounds.length > 0 ? (grounds.find(g => g.id === matchMeta.groundId)?.name || 'Local Ground') : 'Local Ground',
-          opponentName: matchMeta.opponentName || 'OPPONENT',
+          opponentName: resolvedOpponentName,
           maxOvers: matchMeta.maxOvers || 20,
           homeXI: matchMeta.homeTeamXI,
           awayXI: matchMeta.opponentTeamXI
@@ -741,6 +785,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
     syncToDatabase(store);
   }, [store, syncToDatabase]);
 
+  const handleUpdateMatchStatus = async (status: MatchStatus) => {
+    if (activeMatchId) {
+      await updateMatchStatus(activeMatchId, status);
+    }
+  };
+
   const currentInnings = store.currentInnings === 1 ? store.innings1 : store.innings2;
   const isBattingFinishing = currentInnings && (
     currentInnings.wickets === 10 || 
@@ -761,6 +811,80 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
       }
     }
   }, [store.currentInnings, store.currentBowlerId, currentInnings, showBowlerModal]);
+
+  // Nuclear trace detection for Sandbox matches
+  useEffect(() => {
+    if (activeMatchId && (String(activeMatchId).toLowerCase().includes('sandbox') || matchMeta?.opponentName === 'Sandbox XI' || matchMeta?.is_test)) {
+      console.warn("[Scorer] Sandbox/Test match detected. Redirecting to safety.");
+      navigate('/match-center');
+    }
+  }, [activeMatchId, matchMeta, navigate]);
+
+  // INITIAL STATE: If no ID is provided, show upcoming matches list
+  if (!activeMatchId) {
+    const upcoming = matches.filter(m => m.status !== 'completed');
+    return (
+      <DashboardContainer>
+        <Header>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button title="Back" onClick={() => navigate('/match-center')} className="p-2 hover:bg-slate-100/10 rounded-xl transition-all text-white"><ChevronLeft /></button>
+            <span style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '1px' }}>LIVE SCORER</span>
+          </div>
+        </Header>
+        <div style={{ padding: '24px 16px', maxWidth: 500, margin: '0 auto', width: '100%' }}>
+          <div style={{ marginBottom: 32, textAlign: 'center' }}>
+            <Zap size={32} color="#FAB005" style={{ marginBottom: 12 }} />
+            <h2 style={{ fontWeight: 900, color: '#001F3F', margin: '0 0 8px 0' }}>SCORER DASHBOARD</h2>
+            <p style={{ opacity: 0.6, fontSize: '0.85rem' }}>Select an active or upcoming match to start recording balls.</p>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', letterSpacing: '1px', marginBottom: 4 }}>AVAILABLE MATCHES</div>
+            {upcoming.map(m => (
+              <motion.div 
+                key={m.id} 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate(`/scorer/${m.id}`)}
+                style={{ 
+                  background: 'white', padding: '16px 20px', borderRadius: 16, 
+                  border: '1px solid #E9ECEF', cursor: 'pointer',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                }}
+              >
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Shield size={14} color="#001F3F" />
+                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#001F3F' }}>{m.opponentName}</div>
+                    {m.status === 'live' && (
+                      <span style={{ background: '#FF4B2B', color: 'white', fontSize: '8px', fontWeight: 900, padding: '2px 6px', borderRadius: 4 }}>LIVE</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: 4, fontWeight: 600 }}>
+                    {m.tournament} • {new Date(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+                <ChevronRight size={20} color="#FAB005" />
+              </motion.div>
+            ))}
+            {upcoming.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 20px', background: '#F8F9FA', borderRadius: 16, border: '1px dashed #DEE2E6' }}>
+                <LayoutList size={24} color="#ADB5BD" style={{ marginBottom: 12 }} />
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#ADB5BD', fontWeight: 600 }}>No upcoming matches scheduled.</p>
+                <button 
+                  onClick={() => navigate('/match-center')}
+                  style={{ background: 'none', border: 'none', color: '#339AF0', fontSize: '0.8rem', fontWeight: 700, marginTop: 12, cursor: 'pointer' }}
+                >
+                  Schedule in Match Center
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </DashboardContainer>
+    );
+  }
 
   if (setupStep !== null) {
     const isReadyToStart = tossWinner && tossChoice && homeXI.length === 11 && awayXI.length === 11 && selStriker && selNonStriker && selBowler;
@@ -1209,20 +1333,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
   const getPlayerName = (id: string | null) => players.find(p => p.id === id)?.name || 'Unknown';
 
   const calculateTopPerformers = () => {
-    const scores: Record<string, { id: string, name: string, score: number, runs: number, wickets: number, maidens: number }> = {};
+    const scores: Record<string, { id: string, name: string, score: number, runs: number, balls: number, wickets: number, maidens: number, runsConceded: number }> = {};
     
     [store.innings1, store.innings2].forEach(inn => {
       if (!inn) return;
       Object.entries(inn.battingStats || {}).forEach(([id, s]: [string, any]) => {
-        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, wickets: 0, maidens: 0 };
+        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, balls: 0, wickets: 0, maidens: 0, runsConceded: 0 };
         scores[id].runs += s.runs;
+        scores[id].balls += s.balls;
         scores[id].score += s.runs + (s.fours * 2) + (s.sixes * 4);
         if (s.runs >= 50) scores[id].score += 50;
         if (s.runs >= 100) scores[id].score += 100;
       });
       Object.entries(inn.bowlingStats || {}).forEach(([id, s]: [string, any]) => {
-        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, wickets: 0, maidens: 0 };
+        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, balls: 0, wickets: 0, maidens: 0, runsConceded: 0 };
         scores[id].wickets += s.wickets;
+        scores[id].runsConceded += s.runs;
         scores[id].maidens += s.maidens || 0;
         scores[id].score += (s.wickets * 25) + ((s.maidens || 0) * 10);
       });
@@ -1231,6 +1357,29 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
     return Object.values(scores)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
+  };
+
+  const downloadHeroPoster = async () => {
+    if (!posterRef.current || isGeneratingPoster) return;
+    setIsGeneratingPoster(true);
+    try {
+      // Small delay to ensure render
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const canvas = await html2canvas(posterRef.current, { 
+        backgroundColor: '#0c1222', 
+        scale: 2, 
+        useCORS: true,
+        logging: false
+      });
+      const link = document.createElement('a');
+      link.download = `StrikersPulse_Hero_${getPlayerName(store.manOfTheMatch).replace(/\s+/g, '_')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) { 
+      console.error("Poster Generation Failed:", err);
+    } finally { 
+      setIsGeneratingPoster(false); 
+    }
   };
   
   
@@ -1252,28 +1401,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
           }
         }} className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-500"><ChevronLeft size={24} /></button>
         
-        <BadgeContainer>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontWeight: 900, fontSize: '13px', letterSpacing: '0.5px' }}>
-              {(() => {
-                const isInnings1 = store.currentInnings === 1;
-                const activeInnings = isInnings1 ? store.innings1 : store.innings2;
-                const isHomeBatting = activeInnings?.battingTeamId === 'HOME';
-                const teamName = isHomeBatting ? 'Indian Strikers' : (matchMeta?.opponentName || 'OPPONENT');
-                return `${teamName.toUpperCase()} - INNINGS ${store.currentInnings}`;
-              })()}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/INS%20LOGO.PNG" style={{ width: 28, height: 28, objectFit: 'contain' }} alt="INS" />
+            <span style={{ fontWeight: 900, fontSize: '15px', letterSpacing: '1px', color: '#FFFFFF' }}>STRIKERS PULSE</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+            <span style={{ fontSize: '9px', fontWeight: 800, opacity: 0.6, background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+              INNINGS {store.currentInnings}
             </span>
             {store.toss.winnerId && (
-              <span style={{ fontSize: '10px', fontWeight: 700, opacity: 0.5, textTransform: 'uppercase', marginTop: 2 }}>
-                {(() => {
-                  const winnerName = store.toss.winnerId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'OPPONENT');
-                  const target = store.toss.choice === 'Bat' ? 'BAT' : 'BOWL';
-                  return `${winnerName} WON TOSS & ELECTED TO ${target}`;
-                })()}
+              <span style={{ fontSize: '9px', fontWeight: 700, opacity: 0.5 }}>
+                {store.toss.winnerId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'OPPONENT').toUpperCase()} WON TOSS & ELECTED TO {store.toss.choice?.toUpperCase()}
               </span>
             )}
           </div>
-        </BadgeContainer>
+        </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
           <button title="View Lineups" onClick={() => setShowLineups(true)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><Users size={22} /></button>
@@ -1932,23 +2075,50 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
         </ModalOverlay>
       )}
       {isInningsBreak && (
-        <ModalOverlay>
-          <ModalContent style={{ textAlign: 'center', padding: 40 }}>
-            <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: 12 }}>INNINGS COMPLETED!</h1>
-            <p style={{ opacity: 0.6, marginBottom: 32 }}>
-              {store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'OPPONENT')} finished at {store.innings1?.totalRuns || 0}/{store.innings1?.wickets || 0}
-            </p>
-            <div style={{ background: 'rgba(255,255,255,0.05)', padding: 24, borderRadius: 16, marginBottom: 32 }}>
-              <p style={{ fontSize: '0.8rem', opacity: 0.4, textTransform: 'uppercase', fontWeight: 800, marginBottom: 8 }}>Target</p>
-              <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#FAB005' }}>{(store.innings1?.totalRuns || 0) + 1}</h2>
-              <p style={{ fontSize: '0.7rem', opacity: 0.4, marginTop: 8 }}>from {(store.maxOvers || 20) * 6} balls</p>
+        <InningsBreakModal>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '40px 20px' }}>
+            <div style={{ textAlign: 'center', marginBottom: 40 }}>
+              <img src="/INS%20LOGO.PNG" style={{ width: 60, height: 60, marginBottom: 16 }} alt="INS" />
+              <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#001F3F', margin: 0 }}>INNINGS BREAK</h1>
+              <p style={{ fontWeight: 700, opacity: 0.5, letterSpacing: 1 }}>{matchMeta?.tournament?.toUpperCase() || 'LIVE MATCH'}</p>
             </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 40 }}>
+              <div style={{ background: '#F8F9FA', padding: 24, borderRadius: 24, textAlign: 'center', border: '1px solid #E9ECEF' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>Total Score</p>
+                <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#001F3F', margin: 0 }}>
+                  {store.innings1?.totalRuns}/{store.innings1?.wickets}
+                </h2>
+                <p style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.6 }}>in {store.getOvers(store.innings1?.totalBalls || 0)}.0 Overs</p>
+              </div>
+              <div style={{ background: '#001F3F', padding: 24, borderRadius: 24, textAlign: 'center', color: '#FFFFFF', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Target</p>
+                <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#FAB005', margin: 0 }}>{(store.innings1?.totalRuns || 0) + 1}</h2>
+                <p style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.5 }}>Req. RR {( ((store.innings1?.totalRuns || 0) + 1) / (store.maxOvers || 20) ).toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 40 }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 900, marginBottom: 16, borderLeft: '4px solid #FAB005', paddingLeft: 12 }}>TOP PERFORMERS</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                {calculateTopPerformers().slice(0, 2).map((p, i) => (
+                  <div key={p.id} style={{ background: '#F8F9FA', padding: 16, borderRadius: 16, border: '1px solid #E9ECEF' }}>
+                    <p style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: 4 }}>{p.name}</p>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#FAB005' }}>
+                      {p.runs > 0 ? `${p.runs} (${p.balls})` : `${p.wickets} Wickets`}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ padding: '20px', borderTop: '1px solid #E9ECEF' }}>
             <ActionButton 
               $variant="primary" 
+              style={{ background: '#001F3F', color: '#FFF', height: 64, borderRadius: 16 }}
               onClick={() => {
                 setSetupStep('openers_bat');
-                // The currentInnings will still be 1 until we call startInnings for 2
-                // We'll handle selecting openers for the other team
                 setSelStriker(null);
                 setSelNonStriker(null);
                 setSelBowler(null);
@@ -1956,8 +2126,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
             >
               START 2ND INNINGS
             </ActionButton>
-          </ModalContent>
-        </ModalOverlay>
+          </div>
+        </InningsBreakModal>
       )}
 
       {isMatchComplete && !store.manOfTheMatch && (
@@ -2031,9 +2201,66 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
               <h3 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0 }}>{getPlayerName(store.manOfTheMatch)}</h3>
             </div>
 
-            <ActionButton $variant="primary" onClick={() => navigate('/match-center')}>
-              RETURN TO MATCH CENTER
-            </ActionButton>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <ActionButton 
+                $variant="primary" 
+                onClick={downloadHeroPoster}
+                disabled={isGeneratingPoster}
+              >
+                {isGeneratingPoster ? 'GENERATING POSTER...' : 'DOWNLOAD HERO POSTER'}
+              </ActionButton>
+              
+              <ActionButton 
+                onClick={() => {
+                  handleUpdateMatchStatus('completed');
+                  navigate('/match-center');
+                }}
+              >
+                RETURN TO MATCH CENTER
+              </ActionButton>
+            </div>
+
+            <PosterContainer>
+              <HeroPosterWrapper ref={posterRef}>
+                <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
+                  <img src="/INS%20LOGO.PNG" className="w-16 h-16 object-contain" alt="Logo" />
+                  <div className="text-white">
+                    <p className="text-[10px] font-black italic tracking-widest leading-none">MATCH DAY</p>
+                    <p className="text-2xl font-black italic text-sky-400 leading-none">HERO</p>
+                  </div>
+                </div>
+                
+                <div className="flex-1 flex flex-col items-center justify-center pt-16 px-6">
+                  <User size={120} color="#38bdf8" />
+                  <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#38bdf8', textTransform: 'uppercase', fontStyle: 'italic', textAlign: 'center', lineHeight: 1, marginBottom: 8 }}>
+                    {getPlayerName(store.manOfTheMatch)}
+                  </h2>
+                  <div style={{ height: 4, width: 48, background: 'rgba(255,255,255,0.2)', borderRadius: 2, marginBottom: 16 }}></div>
+                  
+                  {(() => {
+                    const heroStats = calculateTopPerformers().find(p => p.id === store.manOfTheMatch);
+                    return (
+                      <>
+                        <p style={{ color: '#FFF', fontSize: '1.5rem', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase' }}>
+                          {heroStats ? (
+                            heroStats.wickets > 0 ? `${heroStats.wickets}/${heroStats.runsConceded}` : `${heroStats.runs} (${heroStats.balls})`
+                          ) : ''}
+                        </p>
+                        <p style={{ color: '#38bdf8', opacity: 0.5, fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', marginTop: 4 }}>
+                          VS {(matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+                
+                <div style={{ padding: 16, textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <p style={{ fontSize: '8px', color: 'rgba(255,255,255,0.2)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 4 }}>
+                    STRIKERS PULSE OFFICIAL SCORECARD
+                  </p>
+                </div>
+              </HeroPosterWrapper>
+            </PosterContainer>
           </ModalContent>
         </ModalOverlay>
       )}

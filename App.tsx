@@ -205,22 +205,8 @@ const App: React.FC = () => {
       // Recover session role if exists, default to guest if not
       const savedRole = sessionStorage.getItem('userRole') as UserRole;
       if (savedRole) setUserRole(savedRole);
-      // 3. Load Matches directly into the store
-      const loadMatches = async () => {
-        try {
-          const dbMatches = await getMatches();
-          const localMatches = useMatchCenter.getState().matches;
-          
-          // Merge: Database matches are truth, but keep local matches that don't exist in DB yet
-          const dbIds = new Set(dbMatches.map(m => m.id));
-          const unsyncedMatches = localMatches.filter(m => !dbIds.has(m.id));
-          
-          useMatchCenter.getState().setMatches([...dbMatches, ...unsyncedMatches]);
-        } catch (e) {
-          console.error("Match sync fetch failed:", e);
-        }
-      };
-      loadMatches();
+      // 3. Load Matches via cloud sync (utilizes nuclear filters)
+      useMatchCenter.getState().syncWithCloud();
 
       const savedUser = sessionStorage.getItem('currentUser');
       if (savedUser) setCurrentUser(JSON.parse(savedUser));

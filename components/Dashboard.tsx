@@ -211,8 +211,8 @@ export default function Dashboard({ players, userRole = 'guest' }: DashboardProp
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-6 mb-2">
         <div className="flex flex-col">
           <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-900 flex items-center gap-3">
-            <Activity className="text-blue-600 animate-pulse" size={32} /> 
-            <span>Dashboard</span>
+            <img src="/INS%20LOGO.PNG" className="w-10 h-10 object-contain" alt="INS" /> 
+            <span>STRIKERS PULSE</span>
           </h1>
           <div className="flex items-center gap-2 mt-1.5">
             <div className="h-0.5 w-8 bg-blue-600/20 rounded-full"></div>
