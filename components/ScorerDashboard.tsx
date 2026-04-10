@@ -59,17 +59,7 @@ const BadgeContainer = styled.div`
   gap: 8px;
 `;
 
-const SandboxBadge = styled.span`
-  background: #FAB005;
-  color: #000000;
-  font-size: 10px;
-  font-weight: 900;
-  padding: 2px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 10px rgba(250, 176, 5, 0.3);
-`;
+// SandboxBadge removed
 const FreeHitBadge = styled(motion.span)`
   background: #FAB005;
   color: #000;
@@ -815,9 +805,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
         <SetupCard>
           {setupStep === 'preview' ? (
             <>
-              <MatchTitle>{matchMeta?.tournament || 'System Logic Test'}</MatchTitle>
+               <MatchTitle>{matchMeta?.tournament || 'LIVE MATCH'}</MatchTitle>
               <GroundText>
-                <MapPin size={14} /> {matchMeta?.groundId || 'Sandbox Ground'}
+                <MapPin size={14} /> {matchMeta?.groundId || 'Local Ground'}
               </GroundText>
 
               <TeamRow>
@@ -832,7 +822,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                     <Shield size={40} color="rgba(255,255,255,0.3)" />
                   </TeamLogoCircle>
                   <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>
-                    {matchMeta?.opponentName?.toUpperCase() || 'SANDBOX XI'}
+                    {matchMeta?.opponentName?.toUpperCase() || 'OPPONENT'}
                   </span>
                 </TeamBlock>
               </TeamRow>
@@ -1248,20 +1238,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                 const isInnings1 = store.currentInnings === 1;
                 const activeInnings = isInnings1 ? store.innings1 : store.innings2;
                 const isHomeBatting = activeInnings?.battingTeamId === 'HOME';
-                const teamName = isHomeBatting ? 'Indian Strikers' : (matchMeta?.opponentName || 'SANDBOX XI');
+                const teamName = isHomeBatting ? 'Indian Strikers' : (matchMeta?.opponentName || 'OPPONENT');
                 return `${teamName.toUpperCase()} - INNINGS ${store.currentInnings}`;
               })()}
             </span>
             {store.toss.winnerId && (
               <span style={{ fontSize: '10px', fontWeight: 700, opacity: 0.5, textTransform: 'uppercase', marginTop: 2 }}>
                 {(() => {
-                  const winnerName = store.toss.winnerId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'SANDBOX XI');
+                  const winnerName = store.toss.winnerId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'OPPONENT');
                   const target = store.toss.choice === 'Bat' ? 'BAT' : 'BOWL';
                   return `${winnerName} WON TOSS & ELECTED TO ${target}`;
                 })()}
               </span>
             )}
-            {matchMeta?.is_test && <SandboxBadge style={{ marginTop: 4 }}>Test Sandbox</SandboxBadge>}
           </div>
         </BadgeContainer>
 
@@ -1355,7 +1344,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
                   </div>
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '0.8rem', color: '#FAB005', marginBottom: 12, textTransform: 'uppercase' }}>{matchMeta?.opponentName || 'SANDBOX XI'}</h3>
+                  <h3 style={{ fontSize: '0.8rem', color: '#FAB005', marginBottom: 12, textTransform: 'uppercase' }}>{matchMeta?.opponentName || 'OPPONENT'}</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {players
                       .filter(p => awayXI.includes(p.id))
@@ -1387,7 +1376,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: any[] }> = ({ match
       <ScoreSection>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 8 }}>
            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#001F3F', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '1px' }}>
-            {store.innings1?.battingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'SANDBOX XI')} vs {store.innings1?.bowlingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'SANDBOX XI')}
+            {store.innings1?.battingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'OPPONENT')} vs {store.innings1?.bowlingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'OPPONENT')}
           </div>
           <button 
             title="Full Scorecard"

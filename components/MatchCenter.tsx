@@ -744,39 +744,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                             {/* RESTRICTED ADMIN PANEL */}
                             <div className="flex items-center gap-3 border-l border-slate-700 pl-4 ml-2">
                                 <div className="hidden lg:flex flex-col items-end mr-2">
-                                    <span className="text-[9px] font-black text-blue-500 uppercase tracking-tighter">Restricted</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Admin Panel</span>
+                                    <span className="text-[9px] font-black text-blue-500 uppercase tracking-tighter">Live Scorer</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Access</span>
                                 </div>
                                 
-                                <button
-                                    title="Launch system logic test sandbox"
-                                    onClick={async () => {
-                                        if (window.confirm("Initialize a New System Logic Test? This will create a local sandbox environment.")) {
-                                            try {
-                                                const matchId = await createSandboxMatch();
-                                                console.log('Sandbox Created:', matchId);
-                                                
-                                                // Initialize the Scorer Store with this match
-                                                useCricketScorer.getState().initializeMatch({
-                                                    matchId,
-                                                    matchType: 'T20',
-                                                    ground: 'Sandbox Virtual Ground',
-                                                    maxOvers: 20
-                                                });
-
-                                                navigate('/scorer');
-                                            } catch (err: any) {
-                                                alert("Failed to initialize sandbox: " + err.message);
-                                                console.error(err);
-                                            }
-                                        }
-                                    }}
-                                    className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg border border-slate-700 hover:border-sky-500 hover:bg-slate-800 flex items-center gap-2 group"
-                                >
-                                    <Activity size={14} className="text-sky-400 group-hover:scale-110 transition-transform" />
-                                    <span>Launch Test Sandbox</span>
-                                </button>
-
                                 <button
                                     title="Purge All Test Data"
                                     onClick={async () => {
