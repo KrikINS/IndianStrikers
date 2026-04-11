@@ -1,0 +1,12 @@
+node_modules
+dist
+api/node_modules
+.git
+.agents
+*.md
+.dockerignore
+Dockerfile
+cloudbuild.yaml
+strikers_pulse_backup.sql
+api/legacy_stats*
+.env*

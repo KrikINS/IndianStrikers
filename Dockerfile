@@ -1,5 +1,5 @@
 # --- Build Stage for Frontend ---
-FROM node:20-slim AS frontend-builder
+FROM node:22-slim AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # --- Final Production Stage ---
-FROM node:20-slim
+FROM node:22-slim
 WORKDIR /app
 
 # Install production dependencies for the API
