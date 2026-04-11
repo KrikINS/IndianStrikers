@@ -466,7 +466,7 @@ app.delete('/api/tournaments/:id', authGuard(['admin']), async (req, res) => {
 // SETTINGS (Logo)
 app.get('/api/settings/:key', async (req, res) => {
   const { data, error } = await db.getOne('SELECT value FROM app_settings WHERE key = $1', [req.params.key]);
-  if (error) return res.json({ value: null });
+  if (error || !data) return res.json({ value: null });
   res.json(data);
 });
 app.post('/api/settings', authGuard(['admin']), async (req, res) => {
