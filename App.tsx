@@ -190,7 +190,7 @@ const App: React.FC = () => {
       setTeamLogo(l);
     } catch (e: any) {
       console.error('Failed to load data:', e);
-      alert(`Backend Error: ${e.message}. \n\nIf "fetch failed", the Backend cannot reach Supabase. Check your internet or Supabase Project status.`);
+      alert(`Backend Error: ${e.message}. \n\nThe API could not connect to the database. Please check the network connectivity and database configuration.`);
     }
   };
 
