@@ -1,9 +1,9 @@
 steps:
-  # The new way to build: faster and more reliable
   - name: 'gcr.io/kaniko-project/executor'
     args:
+      - --dockerfile=Dockerfile
+      - --context=dir://.
       - --destination=gcr.io/$PROJECT_ID/strikers-app
       - --cache=true
-      - --cache-ttl=24h
 options:
   logging: CLOUD_LOGGING_ONLY
