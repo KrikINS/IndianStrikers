@@ -11,15 +11,13 @@ steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
-      - [
-          'run',
-          'deploy',
-          'strikers-app',
-          '--image=gcr.io/$PROJECT_ID/strikers-app',
-          '--region=us-central1',
-          '--platform=managed',
-          '--allow-unauthenticated'
-        ]
+      - 'run'
+      - 'deploy'
+      - 'strikers-app'
+      - '--image=gcr.io/$PROJECT_ID/strikers-app'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
 
 options:
   logging: CLOUD_LOGGING_ONLY
