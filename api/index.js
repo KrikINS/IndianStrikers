@@ -995,6 +995,8 @@ app.get('/api/tournament-performers', async (req, res) => {
 const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
 // SPA Fallback: Redirect all non-API paths to index.html
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
@@ -1003,8 +1005,6 @@ app.get('*', (req, res) => {
     res.status(404).json({ error: 'API Not Found' });
   }
 });
-
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`);
