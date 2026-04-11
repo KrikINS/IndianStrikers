@@ -1072,207 +1072,215 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className="overflow-x-auto">
                     {activeStatTab === 'batting' ? (
-                      <table className="w-full text-[11px] md:text-xs text-left">
-                        <thead className="bg-[#1e3a8a] text-white font-bold uppercase border-b border-blue-900">
-                          <tr>
-                            <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-10">Details</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Inns</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">NO</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/50">Runs</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Balls</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Ave</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">SR</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">HS</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">100s</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">50s</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">0s</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">4s</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">6s</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {/* Career Total Row */}
-                          <tr 
-                            className="border-b border-slate-100 hover:bg-slate-50 text-slate-700 font-bold cursor-pointer group"
-                            onClick={() => setIsStatsExpanded(!isStatsExpanded)}
-                          >
-                            <td className="p-2 md:p-3 flex items-center gap-2 whitespace-nowrap sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">
-                              <div className={`p-1 rounded-md transition-colors ${isStatsExpanded ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'}`}>
-                                {isStatsExpanded ? <Minus size={14} /> : <Plus size={14} />}
-                              </div>
-                              Career Totals
-                            </td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.matches || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.innings || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.notOuts || '0'}</td>
-                            <td className="p-2 md:p-3 text-center font-black text-blue-700 bg-blue-50/50">{viewingPlayer.battingStats?.runs || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.balls || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.average || '0.00'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.strikeRate || '0.00'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.highestScore || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.hundreds || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.fifties || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.ducks || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.fours || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.sixes || '0'}</td>
-                          </tr>
+                      <div className="relative">
+                        <table className="w-full text-[11px] md:text-xs text-left">
+                          <thead className="bg-[#1e3a8a] text-white font-bold uppercase sticky top-0 z-20">
+                            <tr>
+                              <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-30">Tournament</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Inns</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">NO</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/50">Runs</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Balls</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Ave</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">SR</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">HS</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">100s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">50s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">0w</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">4s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">6s</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {/* Detailed Rows */}
+                            {detailedStats?.legacy && (
+                              <tr className="bg-slate-50/80 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
+                                <td className="p-2 md:p-3 font-bold text-slate-600 italic sticky left-0 bg-slate-50/80 z-10 transition-colors group-hover:bg-slate-100">Legacy Baseline</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.innings}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.not_outs}</td>
+                                <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.runs}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.balls}</td>
+                                <td className="p-2 md:p-3 text-center">-</td>
+                                <td className="p-2 md:p-3 text-center">-</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.highest_score}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.hundreds}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.fifties}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.ducks}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.fours}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.sixes}</td>
+                              </tr>
+                            )}
 
-                          {/* Expanded Rows */}
-                          {isStatsExpanded && (
-                            <>
-                              {/* Legacy Baseline */}
-                              {detailedStats?.legacy && (
-                                <tr className="bg-slate-50/80 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
-                                  <td className="p-2 md:p-3 font-bold text-slate-600 italic pl-8 sticky left-0 bg-slate-50/80 z-10">Legacy Baseline</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.innings}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.not_outs}</td>
-                                  <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.runs}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.balls}</td>
-                                  <td className="p-2 md:p-3 text-center">-</td>
-                                  <td className="p-2 md:p-3 text-center">-</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.highest_score}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.hundreds}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.fifties}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.ducks}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.fours}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.sixes}</td>
-                                </tr>
-                              )}
+                            {detailedStats?.tournaments.map((t, idx) => (
+                              <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-slate-500 border-b border-slate-100 group hover:bg-slate-50">
+                                <td className="p-2 md:p-3 font-bold text-slate-800 sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">{t.tournamentName}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.matches}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.innings}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.notOuts}</td>
+                                <td className="p-2 md:p-3 text-center font-bold text-slate-700">{t.batting.runs}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.balls}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.average}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.strikeRate}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.highestScore}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.hundreds}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.fifties}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.ducks}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.fours}</td>
+                                <td className="p-2 md:p-3 text-center">{t.batting.sixes}</td>
+                              </tr>
+                            ))}
 
-                              {/* Tournament Rows */}
-                              {detailedStats?.tournaments.map((t, idx) => (
-                                <tr key={t.tournamentId || idx} className="bg-slate-50/50 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
-                                  <td className="p-2 md:p-3 font-bold text-slate-600 pl-8 sticky left-0 bg-slate-50/50 z-10">{t.tournamentName}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.matches}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.innings}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.notOuts}</td>
-                                  <td className="p-2 md:p-3 text-center font-bold text-slate-600">{t.batting.runs}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.balls}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.average}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.strikeRate}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.highestScore}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.hundreds}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.fifties}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.ducks}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.fours}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.batting.sixes}</td>
-                                </tr>
-                              ))}
-                              
-                              {(!detailedStats?.tournaments.length && !detailedStats?.legacy) && (
-                                <tr><td colSpan={14} className="p-4 text-center text-slate-400 italic">No detailed records found</td></tr>
-                              )}
-                            </>
-                          )}
-                        </tbody>
-                      </table>
+                            {!detailedStats?.tournaments.length && !detailedStats?.legacy && (
+                              <tr><td colSpan={14} className="p-8 text-center text-slate-400 italic font-medium">No tournament records found for this player.</td></tr>
+                            )}
+                          </tbody>
+                          <tfoot className="sticky bottom-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
+                            <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
+                              <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30">Grand Total</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.matches || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.innings || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.notOuts || '0'}</td>
+                              <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{viewingPlayer.battingStats?.runs || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.balls || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.average || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.strikeRate || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.highestScore || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.hundreds || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.fifties || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.ducks || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.fours || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.sixes || '0'}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
                     ) : (
-                      <table className="w-full text-[11px] md:text-xs text-left">
-                        <thead className="bg-[#1e3a8a] text-white font-bold uppercase border-b border-blue-900">
-                          <tr>
-                            <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-10">Details</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Inns</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Overs</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Mdns</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Runs</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/50">Wkts</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Ave</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">Econ</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">SR</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">BBI</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">4W</th>
-                            <th className="p-2 md:p-3 text-center whitespace-nowrap">5W</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {/* Career Total Row */}
-                          <tr 
-                            className="border-b border-slate-100 hover:bg-slate-50 text-slate-700 font-bold cursor-pointer group"
-                            onClick={() => setIsStatsExpanded(!isStatsExpanded)}
-                          >
-                            <td className="p-2 md:p-3 flex items-center gap-2 whitespace-nowrap sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">
-                              <div className={`p-1 rounded-md transition-colors ${isStatsExpanded ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'}`}>
-                                {isStatsExpanded ? <Minus size={14} /> : <Plus size={14} />}
-                              </div>
-                              Career Totals
-                            </td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.matches || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.innings || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.overs || '0.0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.maidens || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.runs || '0'}</td>
-                            <td className="p-2 md:p-3 text-center font-black text-blue-700 bg-blue-50/50">{viewingPlayer.bowlingStats?.wickets || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.average || '0.00'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.economy || '0.00'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.strikeRate || '0.00'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.bestBowling || '-'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.fourWickets || '0'}</td>
-                            <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.fiveWickets || '0'}</td>
-                          </tr>
+                      <div className="relative">
+                        <table className="w-full text-[11px] md:text-xs text-left">
+                          <thead className="bg-[#1e3a8a] text-white font-bold uppercase sticky top-0 z-20">
+                            <tr>
+                              <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-30">Tournament</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Inns</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Overs</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Mdns</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Runs</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/50">Wkts</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Ave</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Econ</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">SR</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">BBI</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">4W</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">5W</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {detailedStats?.legacy && (
+                              <tr className="bg-slate-50/80 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
+                                <td className="p-2 md:p-3 font-bold text-slate-600 italic sticky left-0 bg-slate-50/80 z-10">Legacy Baseline</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.bowling_innings || detailedStats.legacy.innings}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.overs_bowled}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.maidens}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.runs_conceded}</td>
+                                <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.wickets}</td>
+                                <td className="p-2 md:p-3 text-center">-</td>
+                                <td className="p-2 md:p-3 text-center">-</td>
+                                <td className="p-2 md:p-3 text-center">-</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.best_bowling}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.four_wickets}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.five_wickets}</td>
+                              </tr>
+                            )}
 
-                          {/* Expanded Rows */}
-                          {isStatsExpanded && (
-                            <>
-                              {/* Legacy Baseline */}
-                              {detailedStats?.legacy && (
-                                <tr className="bg-slate-50/80 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
-                                  <td className="p-2 md:p-3 font-bold text-slate-600 italic pl-8 sticky left-0 bg-slate-50/80 z-10">Legacy Baseline</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.bowling_innings || detailedStats.legacy.innings}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.overs_bowled}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.maidens}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.runs_conceded}</td>
-                                  <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.wickets}</td>
-                                  <td className="p-2 md:p-3 text-center">-</td>
-                                  <td className="p-2 md:p-3 text-center">-</td>
-                                  <td className="p-2 md:p-3 text-center">-</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.best_bowling}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.four_wickets}</td>
-                                  <td className="p-2 md:p-3 text-center">{detailedStats.legacy.five_wickets}</td>
-                                </tr>
-                              )}
-
-                              {/* Tournament Rows */}
-                              {detailedStats?.tournaments.map((t, idx) => (
-                                <tr key={t.tournamentId || idx} className="bg-slate-50/50 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
-                                  <td className="p-2 md:p-3 font-bold text-slate-600 pl-8 sticky left-0 bg-slate-50/50 z-10">{t.tournamentName}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.matches}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.innings}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.overs}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.maidens}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.runs}</td>
-                                  <td className="p-2 md:p-3 text-center font-bold text-slate-600">{t.bowling.wickets}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.average}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.economy}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.strikeRate}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.fourWickets}</td>
-                                  <td className="p-2 md:p-3 text-center">{t.bowling.fiveWickets}</td>
-                                </tr>
-                              ))}
-                            </>
-                          )}
-                        </tbody>
-                      </table>
+                            {detailedStats?.tournaments.map((t, idx) => (
+                              <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-slate-500 border-b border-slate-100 group hover:bg-slate-50">
+                                <td className="p-2 md:p-3 font-bold text-slate-800 sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">{t.tournamentName}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.matches}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.innings}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.overs}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.maidens}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.runs}</td>
+                                <td className="p-2 md:p-3 text-center font-bold text-slate-700">{t.bowling.wickets}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.average}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.economy}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.strikeRate}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.fourWickets}</td>
+                                <td className="p-2 md:p-3 text-center">{t.bowling.fiveWickets}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot className="sticky bottom-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
+                            <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
+                              <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30">Grand Total</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.matches || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.innings || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.overs || '0.0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.maidens || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.runs || '0'}</td>
+                              <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{viewingPlayer.bowlingStats?.wickets || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.average || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.economy || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.strikeRate || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.bestBowling || '-'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.fourWickets || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.fiveWickets || '0'}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Basic Info Block */}
-              <div className="bg-slate-50 rounded-2xl p-4 md:p-6 border border-slate-100">
-                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <UserCheck className="text-blue-500" /> Additional Details
-                </h3>
-                <div className="grid grid-cols-1 gap-4 text-sm">
-                  <div className="flex justify-between py-2 border-b border-slate-200">
-                    <span className="text-slate-500">Status</span>
-                    <span className={`font-bold px-2 py-0.5 rounded-md ${viewingPlayer.isAvailable ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
-                      {viewingPlayer.isAvailable ? 'Available' : 'Unavailable'}
-                    </span>
+              {/* Extended Info Block */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-8">
+                <div className="bg-slate-50 rounded-2xl p-4 md:p-6 border border-slate-100 shadow-sm">
+                  <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <Activity className="text-blue-500" size={18} /> Recent Form
+                  </h3>
+                  <div className="flex gap-2 items-center">
+                    {(detailedStats as any)?.recentForm?.length > 0 ? (
+                      (detailedStats as any).recentForm.map((match: any, i: number) => (
+                        <div 
+                          key={i} 
+                          className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-black text-xs md:text-sm shadow-sm transition-transform hover:scale-110 cursor-help ${
+                            match.runs >= 50 ? 'bg-yellow-400 text-yellow-900 ring-2 ring-yellow-200' : 
+                            match.runs >= 30 ? 'bg-sky-500 text-white' : 
+                            match.runs === 0 && !match.isNotOut ? 'bg-slate-800 text-white ring-2 ring-red-400' :
+                            'bg-white text-slate-700 border border-slate-200'
+                          }`}
+                          title={match.isNotOut ? `${match.runs}* (Not Out)` : `${match.runs} Runs`}
+                        >
+                          {match.runs}{match.isNotOut ? '*' : ''}
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-slate-400 italic text-xs">No recent matches played</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase mt-4 tracking-widest">Last 5 Innings (Most Recent Left)</p>
+                </div>
+
+                <div className="bg-slate-50 rounded-2xl p-4 md:p-6 border border-slate-100 shadow-sm">
+                  <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <UserCheck className="text-blue-500" size={18} /> Additional Details
+                  </h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                      <span className="text-slate-500 font-medium">Availability Status</span>
+                      <span className={`font-black uppercase text-[10px] px-3 py-1 rounded-full ${viewingPlayer.isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                        {viewingPlayer.isAvailable ? 'Match Ready' : 'Unavailable'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-slate-200">
+                      <span className="text-slate-500 font-medium">External Reference</span>
+                      <span className="font-mono text-xs font-bold text-slate-400">{viewingPlayer.externalId || 'NOT_SET'}</span>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { createClient } = require('@supabase/supabase-js');
+const db = require('./db');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
@@ -36,10 +36,9 @@ app.use((req, _res, next) => {
 
 app.use(express.json({ limit: '10mb' }));
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-console.log(`[Supabase Config] URL: ${supabaseUrl ? 'Found' : 'MISSING'}, Key: ${supabaseKey ? 'Found' : 'MISSING'}`);
-const supabase = createClient(supabaseUrl, supabaseKey);
+const dbUrl = process.env.DATABASE_URL;
+console.log(`[Database Config] URL: ${dbUrl ? 'Found' : 'MISSING'}`);
+// Supabase is now replaced by 'db' utility using PostgreSQL pool
 cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET });
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -71,7 +70,7 @@ function authGuard(roles = []) {
 app.post('/api/login', async (req, res) => {
   const { mode, username, password } = req.body || {};
   if (mode === 'guest') return res.json({ ok: true, token: signToken({ username: 'guest', role: 'guest' }), role: 'guest' });
-  const { data: row, error } = await supabase.from('app_users').select('id,username,password_hash,role,is_active,avatar_url').eq('username', username).single();
+  const { data: row, error } = await db.getOne('SELECT id,username,password_hash,role,is_active,avatar_url FROM app_users WHERE username = $1', [username]);
   if (error || !row || !row.is_active) return res.status(401).json({ error: 'Invalid user' });
   if (row.role !== mode && row.role !== 'admin') return res.status(403).json({ error: 'Role mismatch' });
   const ok = await bcrypt.compare(password, row.password_hash);
@@ -87,7 +86,7 @@ app.post('/api/login', async (req, res) => {
 // USERS (Admin only)
 app.get('/api/users', authGuard(['admin', 'member']), async (req, res) => {
   console.log(`[GET /api/users] Request received from ${req.user?.username} (${req.user?.role})`);
-  const { data, error } = await supabase.from('app_users').select('id,username,role,avatar_url,player_id,created_at'); // Show all users
+  const { data, error } = await db.query('SELECT id,username,role,avatar_url,player_id,created_at FROM app_users ORDER BY created_at DESC'); // Show all users
   if (error) {
     console.error('[GET /api/users] Database error:', error);
     return res.status(500).json({ error: error.message });
@@ -99,42 +98,41 @@ app.post('/api/users', authGuard(['admin']), async (req, res) => {
   const { username, password, role, name, avatar_url, player_id } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
   const hash = await bcrypt.hash(password, 10);
-  const { data, error } = await supabase.from('app_users').insert([{
-    username,
-    password_hash: hash,
-    role,
-    name,
-    avatar_url,
-    player_id
-  }]).select().single();
+  const { data, error } = await db.getOne(
+    'INSERT INTO app_users (username, password_hash, role, name, avatar_url, player_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [username, hash, role, name, avatar_url, player_id]
+  );
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 app.put('/api/users/:id', authGuard(['admin']), async (req, res) => {
-  const { username, password, role, name, avatar_url, player_id } = req.body;
-  const updates = { username, role, name, avatar_url, player_id, updated_at: new Date() };
+  const { username, role, name, avatar_url, player_id, password } = req.body;
+  let query = 'UPDATE app_users SET username=$1, role=$2, name=$3, avatar_url=$4, player_id=$5, updated_at=NOW()';
+  let params = [username, role, name, avatar_url, player_id];
   
   if (password && password.trim().length > 0) {
-    updates.password_hash = await bcrypt.hash(password, 10);
+    const hash = await bcrypt.hash(password, 10);
+    query += ', password_hash=$6';
+    params.push(hash);
   }
 
-  const { data, error } = await supabase.from('app_users')
-    .update(updates)
-    .eq('id', req.params.id)
-    .select().single();
+  query += ' WHERE id=$' + (params.length + 1) + ' RETURNING *';
+  params.push(req.params.id);
 
+  const { data, error } = await db.getOne(query, params);
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
+
 app.delete('/api/users/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('app_users').delete().eq('id', req.params.id);
+  const { error } = await db.query('DELETE FROM app_users WHERE id = $1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 
 // PLAYERS
 app.get('/api/players', async (_req, res) => {
-  const { data, error } = await supabase.from('players').select('*').order('name');
+  const { data, error } = await db.query('SELECT * FROM players ORDER BY name ASC');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
@@ -148,17 +146,15 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
   };
   console.log('[POST /api/players] Payload:', JSON.stringify(payload));
 
-  const { data, error } = await supabase.from('players').insert([payload]).select().single();
+  const { data, error } = await db.getOne(
+    `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
+    [name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id]
+  );
 
   if (error) {
     console.error('[POST /players error]', error);
     return res.status(400).json({ error: error.message });
-  }
-
-  if (!data) {
-    console.error('[POST /players] DATA IS NULL! Check RLS policies.');
-    // Return a mock object to prevent crash if RLS hides the return
-    return res.status(200).json({ ...payload, id: 'temp-id-' + Date.now() });
   }
 
   console.log('[POST /api/players] Success:', JSON.stringify(data));
@@ -168,9 +164,10 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
 app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => {
   console.log(`[PUT /players/${req.params.id}]`, req.body);
   const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id } = req.body;
-  const { error } = await supabase.from('players').update({
-    name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id
-  }).eq('id', req.params.id);
+  const { error } = await db.query(
+    `UPDATE players SET name=$1, role=$2, batting_style=$3, bowling_style=$4, avatar_url=$5, matches_played=$6, runs_scored=$7, wickets_taken=$8, average=$9, is_captain=$10, is_vice_captain=$11, is_available=$12, batting_stats=$13, bowling_stats=$14, linked_user_id=$15, jersey_number=$16, dob=$17, external_id=$18, updated_at=NOW() WHERE id=$19`,
+    [name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id, req.params.id]
+  );
   if (error) {
     console.error('[PUT /players error]', error);
     return res.status(400).json({ error: error.message });
@@ -179,7 +176,7 @@ app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => 
 });
 
 app.delete('/api/players/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('players').delete().eq('id', req.params.id);
+  const { error } = await db.query('DELETE FROM players WHERE id=$1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
@@ -257,7 +254,7 @@ const mapMatchToDB = (m) => {
     }
   });
 
-  // If ID starts with 'match_', remove it for inserts (let Supabase generate UUID)
+  // If ID starts with 'match_', remove it for inserts (let Database generate UUID)
   if (final.id && String(final.id).startsWith('match_')) {
     delete final.id;
   }
@@ -267,21 +264,33 @@ const mapMatchToDB = (m) => {
 
 // MATCHES
 app.get('/api/matches', async (_req, res) => {
-  const { data, error } = await supabase.from('matches').select('*').order('date', { ascending: false });
+  const { data, error } = await db.query('SELECT * FROM matches ORDER BY date DESC');
   if (error) return res.status(500).json({ error: error.message });
   // Exclude legacy match from generic listing
   const filtered = (data || []).filter(m => m.id !== '00000000-0000-0000-0000-000000000001');
   res.json(filtered);
 });
+
 app.post('/api/matches', authGuard(['admin', 'member']), async (req, res) => {
   const dbMatch = mapMatchToDB(req.body);
-  const { data, error } = await supabase.from('matches').insert([dbMatch]).select().single();
+  const keys = Object.keys(dbMatch);
+  const values = Object.values(dbMatch);
+  const placeholders = keys.map((_, i) => '$' + (i + 1)).join(', ');
+  const query = `INSERT INTO matches (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+  
+  const { data, error } = await db.getOne(query, values);
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
+
 app.put('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => {
   const dbMatch = mapMatchToDB(req.body);
-  const { error } = await supabase.from('matches').update(dbMatch).eq('id', req.params.id);
+  const keys = Object.keys(dbMatch);
+  const values = Object.values(dbMatch);
+  const setClause = keys.map((key, i) => `${key}=$${i + 1}`).join(', ');
+  const query = `UPDATE matches SET ${setClause}, updated_at=NOW() WHERE id=$${keys.length + 1}`;
+  
+  const { error } = await db.query(query, [...values, req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
@@ -294,15 +303,14 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
 
   try {
     // 1. Update match status/data
-    const { error: matchError } = await supabase
-      .from('matches')
-      .upsert([{
-        id: id,
-        status: 'completed',
-        is_hero_synced: !is_test,
-        is_career_synced: !is_test,
-        updated_at: new Date()
-      }], { onConflict: 'id' });
+    const { error: matchError } = await db.query(
+      `INSERT INTO matches (id, status, is_hero_synced, is_career_synced, updated_at) 
+       VALUES ($1, $2, $3, $4, NOW()) 
+       ON CONFLICT (id) DO UPDATE SET 
+         status=EXCLUDED.status, is_hero_synced=EXCLUDED.is_hero_synced, 
+         is_career_synced=EXCLUDED.is_career_synced, updated_at=EXCLUDED.updated_at`,
+      [id, 'completed', !is_test, !is_test]
+    );
 
     if (matchError) throw matchError;
 
@@ -320,14 +328,10 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
       for (let perf of performers) {
         if (!perf.playerId) continue;
         
-        let { data: actualPlayer } = await supabase
-          .from('players')
-          .select('id, name')
-          .eq('id', perf.playerId)
-          .single();
+        let { data: actualPlayer } = await db.getOne('SELECT id, name FROM players WHERE id = $1', [perf.playerId]);
 
         if (!actualPlayer && perf.playerName) {
-          const { data: ps } = await supabase.from('players').select('*');
+          const { data: ps } = await db.query('SELECT * FROM players');
           actualPlayer = ps?.find(p => p.name.trim().toLowerCase() === perf.playerName.trim().toLowerCase());
         }
 
@@ -338,30 +342,29 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
 
         const playerId = actualPlayer.id;
 
-        const { error: upsertErr } = await supabase
-          .from('player_match_stats')
-          .upsert([{
-            match_id: String(id),
-            player_id: playerId,
-            runs: Number(perf.runs || 0),
-            balls: Number(perf.balls || 0),
-            fours: Number(perf.fours || 0),
-            sixes: Number(perf.sixes || 0),
-            status: perf.outHow || (perf.isNotOut ? 'Not Out' : 'Out'),
-            wickets: Number(perf.wickets || 0),
-            runs_conceded: Number(perf.bowlingRuns || 0),
-            overs_bowled: Number(perf.bowlingOvers || 0),
-            maidens: Number(perf.maidens || 0),
-            hundreds: Number(perf.runs) >= 100 ? 1 : 0,
-            fifties: (Number(perf.runs) >= 50 && Number(perf.runs) < 100) ? 1 : 0,
-            ducks: (Number(perf.runs || 0) === 0 && (perf.outHow && !['not out', 'did not bat', 'dnb', 'retired hurt', 'absent'].includes(perf.outHow.toLowerCase()))) ? 1 : 0,
-            four_wickets: Number(perf.wickets) === 4 ? 1 : 0,
-            five_wickets: Number(perf.wickets) >= 5 ? 1 : 0,
-            wides: Number(perf.wides || 0),
-            no_balls: Number(perf.no_balls || 0),
-            is_hero: perf.is_hero || false,
-            updated_at: new Date().toISOString()
-          }], { onConflict: 'match_id, player_id' });
+        const { error: upsertErr } = await db.query(
+          `INSERT INTO player_match_stats (
+            match_id, player_id, runs, balls, fours, sixes, status, wickets, 
+            runs_conceded, overs_bowled, maidens, hundreds, fifties, ducks, 
+            four_wickets, five_wickets, wides, no_balls, is_hero, updated_at
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW())
+           ON CONFLICT (match_id, player_id) DO UPDATE SET
+            runs=EXCLUDED.runs, balls=EXCLUDED.balls, fours=EXCLUDED.fours, sixes=EXCLUDED.sixes, 
+            status=EXCLUDED.status, wickets=EXCLUDED.wickets, runs_conceded=EXCLUDED.runs_conceded, 
+            overs_bowled=EXCLUDED.overs_bowled, maidens=EXCLUDED.maidens, hundreds=EXCLUDED.hundreds, 
+            fifties=EXCLUDED.fifties, ducks=EXCLUDED.ducks, four_wickets=EXCLUDED.four_wickets, 
+            five_wickets=EXCLUDED.five_wickets, wides=EXCLUDED.wides, no_balls=EXCLUDED.no_balls, 
+            is_hero=EXCLUDED.is_hero, updated_at=EXCLUDED.updated_at`,
+          [
+            String(id), playerId, Number(perf.runs || 0), Number(perf.balls || 0), Number(perf.fours || 0), Number(perf.sixes || 0), 
+            perf.outHow || (perf.isNotOut ? 'Not Out' : 'Out'), Number(perf.wickets || 0), 
+            Number(perf.bowlingRuns || 0), Number(perf.bowlingOvers || 0), Number(perf.maidens || 0), 
+            Number(perf.runs) >= 100 ? 1 : 0, (Number(perf.runs) >= 50 && Number(perf.runs) < 100) ? 1 : 0,
+            (Number(perf.runs || 0) === 0 && (perf.outHow && !['not out', 'did not bat', 'dnb', 'retired hurt', 'absent'].includes(perf.outHow.toLowerCase()))) ? 1 : 0,
+            Number(perf.wickets) === 4 ? 1 : 0, Number(perf.wickets) >= 5 ? 1 : 0, 
+            Number(perf.wides || 0), Number(perf.no_balls || 0), perf.is_hero || false
+          ]
+        );
 
         if (upsertErr) {
           console.error(`[Sync] ❌ Ledger upsert error:`, upsertErr.message);
@@ -375,7 +378,7 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
         }
       }
 
-      await supabase.from('matches').update({ performers }).eq('id', id);
+      await db.query('UPDATE matches SET performers = $1 WHERE id = $2', [JSON.stringify(performers), id]);
     }
 
     res.json({ ok: true });
@@ -387,87 +390,88 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
 
 // OPPONENTS
 app.get('/api/opponents', async (_req, res) => {
-  const { data, error } = await supabase.from('opponents').select('*').order('rank');
+  const { data, error } = await db.query('SELECT * FROM opponents ORDER BY rank ASC');
   if (error) {
     console.error('[GET /opponents error]', error);
     return res.status(500).json({ error: error.message });
   }
-  console.log('[GET /opponents] count:', data?.length);
   res.json(data);
 });
 app.post('/api/opponents', authGuard(['admin']), async (req, res) => {
-  console.log('[POST /opponents]', req.body);
-  const { data, error } = await supabase.from('opponents').insert([req.body]).select().single();
-  if (error) {
-    console.error('[POST /opponents error]', error);
-    return res.status(400).json({ error: error.message });
-  }
+  const { name, rank, logo_url } = req.body;
+  const { data, error } = await db.getOne('INSERT INTO opponents (name, rank, logo_url) VALUES ($1, $2, $3) RETURNING *', [name, rank, logo_url]);
+  if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 app.put('/api/opponents/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('opponents').update(req.body).eq('id', req.params.id);
+  const { name, rank, logo_url } = req.body;
+  const { error } = await db.query('UPDATE opponents SET name=$1, rank=$2, logo_url=$3 WHERE id=$4', [name, rank, logo_url, req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 app.delete('/api/opponents/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('opponents').delete().eq('id', req.params.id);
+  const { error } = await db.query('DELETE FROM opponents WHERE id = $1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 
 // GROUNDS
 app.get('/api/grounds', async (_req, res) => {
-  const { data, error } = await supabase.from('grounds').select('*');
+  const { data, error } = await db.query('SELECT * FROM grounds ORDER BY name ASC');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 app.post('/api/grounds', authGuard(['admin']), async (req, res) => {
-  const { data, error } = await supabase.from('grounds').insert([req.body]).select().single();
+  const { name, location } = req.body;
+  const { data, error } = await db.getOne('INSERT INTO grounds (name, location) VALUES ($1, $2) RETURNING *', [name, location]);
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 app.put('/api/grounds/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('grounds').update(req.body).eq('id', req.params.id);
+  const { name, location } = req.body;
+  const { error } = await db.query('UPDATE grounds SET name=$1, location=$2 WHERE id=$3', [name, location, req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 app.delete('/api/grounds/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('grounds').delete().eq('id', req.params.id);
+  const { error } = await db.query('DELETE FROM grounds WHERE id = $1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 
 // TOURNAMENTS
 app.get('/api/tournaments', async (_req, res) => {
-  const { data, error } = await supabase.from('tournaments').select('*');
+  const { data, error } = await db.query('SELECT * FROM tournaments ORDER BY created_at DESC');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 app.post('/api/tournaments', authGuard(['admin']), async (req, res) => {
-  const { data, error } = await supabase.from('tournaments').insert([req.body]).select().single();
+  const { name, status, year, format, winner, is_test } = req.body;
+  const { data, error } = await db.getOne('INSERT INTO tournaments (name, status, year, format, winner, is_test) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *', [name, status, year, format, winner, is_test]);
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 app.put('/api/tournaments/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('tournaments').update(req.body).eq('id', req.params.id);
+  const { name, status, year, format, winner, is_test } = req.body;
+  const { error } = await db.query('UPDATE tournaments SET name=$1, status=$2, year=$3, format=$4, winner=$5, is_test=$6 WHERE id=$7', [name, status, year, format, winner, is_test, req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 app.delete('/api/tournaments/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('tournaments').delete().eq('id', req.params.id);
+  const { error } = await db.query('DELETE FROM tournaments WHERE id = $1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 
 // SETTINGS (Logo)
 app.get('/api/settings/:key', async (req, res) => {
-  const { data, error } = await supabase.from('app_settings').select('value').eq('key', req.params.key).single();
+  const { data, error } = await db.getOne('SELECT value FROM app_settings WHERE key = $1', [req.params.key]);
   if (error) return res.json({ value: null });
   res.json(data);
 });
 app.post('/api/settings', authGuard(['admin']), async (req, res) => {
   const { key, value } = req.body;
-  const { error } = await supabase.from('app_settings').upsert({ key, value });
+  const { error } = await db.query('INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [key, value]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
@@ -475,83 +479,92 @@ app.post('/api/settings', authGuard(['admin']), async (req, res) => {
 // TOURNAMENT TABLE
 app.get('/api/table', async (req, res) => {
   const { tournament } = req.query;
-  let query = supabase.from('tournament_table').select('*');
+  let q = 'SELECT * FROM tournament_table';
+  let params = [];
   
   if (tournament) {
-    query = query.eq('tournament_name', tournament);
+    q += ' WHERE tournament_name = $1';
+    params.push(tournament);
   }
   
-  const { data, error } = await query.order('points', { ascending: false });
-  console.log(`[/api/table] Rows found: ${data?.length}, Error: ${error?.message}`);
+  const { data, error } = await db.query(q + ' ORDER BY points DESC, nrr DESC', params);
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 app.post('/api/table', authGuard(['admin']), async (req, res) => {
   const { id, team_id, team_name, tournament_name, matches, won, lost, nr, points, nrr } = req.body;
-  const { data, error } = await supabase.from('tournament_table').upsert({
-    id, team_id, team_name, tournament_name, matches, won, lost, nr, points, nrr
-  }).select().single();
+  const { data, error } = await db.getOne(
+    `INSERT INTO tournament_table (id, team_id, team_name, tournament_name, matches, won, lost, nr, points, nrr) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+     ON CONFLICT (id) DO UPDATE SET 
+        team_id=EXCLUDED.team_id, team_name=EXCLUDED.team_name, tournament_name=EXCLUDED.tournament_name, 
+        matches=EXCLUDED.matches, won=EXCLUDED.won, lost=EXCLUDED.lost, nr=EXCLUDED.nr, points=EXCLUDED.points, nrr=EXCLUDED.nrr 
+     RETURNING *`,
+    [id, team_id, team_name, tournament_name, matches, won, lost, nr, points, nrr]
+  );
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 app.delete('/api/table/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('tournament_table').delete().eq('id', req.params.id);
+  const { error } = await db.query('DELETE FROM tournament_table WHERE id = $1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 
 // STRATEGIES
 app.get('/api/strategies', async (_req, res) => {
-  const { data, error } = await supabase.from('strategies').select('*');
+  const { data, error } = await db.query('SELECT * FROM strategies');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 app.post('/api/strategies', authGuard(['admin', 'member']), async (req, res) => {
   const { name, batter_hand, match_phase, bowler_id, batter_id, positions } = req.body;
-  const { data, error } = await supabase.from('strategies').insert({
-    name, batter_hand, match_phase, bowler_id, batter_id, positions
-  }).select().single();
+  const { data, error } = await db.getOne(
+    'INSERT INTO strategies (name, batter_hand, match_phase, bowler_id, batter_id, positions) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [name, batter_hand, match_phase, bowler_id, batter_id, positions]
+  );
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 app.delete('/api/strategies/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('strategies').delete().eq('id', req.params.id);
+  const { error } = await db.query('DELETE FROM strategies WHERE id = $1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 
 // MEMBERSHIP REQUESTS
 app.get('/api/membership_requests', authGuard(['admin']), async (req, res) => {
-  const { data, error } = await supabase.from('membership_requests').select('*').order('created_at', { ascending: false });
+  const { data, error } = await db.query('SELECT * FROM membership_requests ORDER BY created_at DESC');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
 app.post('/api/membership_requests', async (req, res) => {
   const { name, email, contact_number, associated_before, association_year, status } = req.body;
-  const { data, error } = await supabase.from('membership_requests').insert([{
-    name, email, contact_number, associated_before, association_year, status: status || 'Pending'
-  }]).select().single();
+  const { data, error } = await db.getOne(
+    'INSERT INTO membership_requests (name, email, contact_number, associated_before, association_year, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [name, email, contact_number, associated_before, association_year, status || 'Pending']
+  );
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 
 app.put('/api/membership_requests/:id', authGuard(['admin']), async (req, res) => {
   const { status } = req.body;
-  const { error } = await supabase.from('membership_requests').update({ status }).eq('id', req.params.id);
+  const { error } = await db.query('UPDATE membership_requests SET status=$1 WHERE id=$2', [status, req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 
 app.delete('/api/membership_requests/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('membership_requests').delete().eq('id', req.params.id);
+  const { error } = await db.query('DELETE FROM membership_requests WHERE id = $1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 
 // MEMORIES
 app.get('/api/memories', async (_req, res) => {
-  const { data, error } = await supabase.from('memories').select('*').order('date', { ascending: false });
+  const { data, error } = await db.query('SELECT * FROM memories ORDER BY date DESC');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
@@ -565,17 +578,15 @@ app.get('/api/memories', async (_req, res) => {
 async function recalculateCareerStats(playerId) {
     console.log(`[SyncEngine] Recalculating career for Player ID: ${playerId}...`);
     
-    const { data: allMatchStats } = await supabase
-        .from('player_match_stats')
-        .select(`
-            *,
-            matches!inner (
-                is_test
-            )
-        `)
-        .eq('player_id', playerId)
-        .eq('matches.is_test', false);
-    const { data: legacyBaseline } = await supabase.from('player_legacy_stats').select('*').eq('player_id', playerId).single();
+    // Join matches to check is_test
+    const { data: allMatchStats } = await db.query(
+        `SELECT pms.* FROM player_match_stats pms 
+         JOIN matches m ON pms.match_id = m.id 
+         WHERE pms.player_id = $1 AND m.is_test = false`,
+        [playerId]
+    );
+
+    const { data: legacyBaseline } = await db.getOne('SELECT * FROM player_legacy_stats WHERE player_id = $1', [playerId]);
     
     const l = legacyBaseline || { 
         runs: 0, balls: 0, fours: 0, sixes: 0, wickets: 0, matches: 0, innings: 0, 
@@ -648,25 +659,33 @@ async function recalculateCareerStats(playerId) {
     const maxScore = Math.max(...m.map(row => Number(row.runs) || 0), Number(l.highest_score) || 0);
 
     // Update the players table profile
-    const { error: upErr } = await supabase.from('players').update({
-        runs_scored: totalRuns,
-        wickets_taken: totalWickets,
-        matches_played: totalMatches,
-        batting_stats: {
-            matches: totalMatches, innings: totalInnings, runs: totalRuns, balls: totalBalls,
-            fours: totalFours, sixes: totalSixes, notOuts: totalNO, highestScore: String(maxScore),
-            average: parseFloat(batAvg.toFixed(2)), strikeRate: parseFloat(batSR.toFixed(2)),
-            hundreds: total100s, fifties: total50s, ducks: totalDucks
-        },
-        bowling_stats: {
-            matches: totalMatches, innings: totalBowlInnings, overs: parseFloat(totalBowlOvers.toFixed(1)), runs: totalBowlRuns, 
-            wickets: totalWickets, maidens: totalMaidens, average: parseFloat(bowlAvg.toFixed(2)),
-            economy: parseFloat(bowlEco.toFixed(2)), strikeRate: parseFloat(bowlSR.toFixed(2)),
-            bestBowling: bestBBI, fourWickets: total4W, fiveWickets: total5W,
-            wides: totalWides, no_balls: totalNoBalls
-        },
-        updated_at: new Date()
-    }).eq('id', playerId);
+    const { error: upErr } = await db.query(
+        `UPDATE players SET 
+            runs_scored=$1, 
+            wickets_taken=$2, 
+            matches_played=$3, 
+            batting_stats=$4, 
+            bowling_stats=$5, 
+            updated_at=NOW() 
+         WHERE id=$6`,
+        [
+            totalRuns, totalWickets, totalMatches,
+            JSON.stringify({
+                matches: totalMatches, innings: totalInnings, runs: totalRuns, balls: totalBalls,
+                fours: totalFours, sixes: totalSixes, notOuts: totalNO, highestScore: String(maxScore),
+                average: parseFloat(batAvg.toFixed(2)), strikeRate: parseFloat(batSR.toFixed(2)),
+                hundreds: total100s, fifties: total50s, ducks: totalDucks
+            }),
+            JSON.stringify({
+                matches: totalMatches, innings: totalBowlInnings, overs: parseFloat(totalBowlOvers.toFixed(1)), runs: totalBowlRuns, 
+                wickets: totalWickets, maidens: totalMaidens, average: parseFloat(bowlAvg.toFixed(2)),
+                economy: parseFloat(bowlEco.toFixed(2)), strikeRate: parseFloat(bowlSR.toFixed(2)),
+                bestBowling: bestBBI, fourWickets: total4W, fiveWickets: total5W,
+                wides: totalWides, no_balls: totalNoBalls
+            }),
+            playerId
+        ]
+    );
 
     if (upErr) throw upErr;
     console.log(`[SyncEngine] ✅ Career recalculated for ${playerId}`);
@@ -674,7 +693,7 @@ async function recalculateCareerStats(playerId) {
 
 // LEGACY STATS MANAGEMENT
 app.get('/api/legacy-stats', authGuard(['admin']), async (req, res) => {
-  const { data, error } = await supabase.from('player_legacy_stats').select('*');
+  const { data, error } = await db.query('SELECT * FROM player_legacy_stats');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
@@ -685,25 +704,17 @@ app.get('/api/players/:id/stats', async (req, res) => {
     
     try {
         // 1. Fetch Legacy Baseline
-        const { data: legacy } = await supabase
-            .from('player_legacy_stats')
-            .select('*')
-            .eq('player_id', playerId)
-            .single();
+        const { data: legacy } = await db.getOne('SELECT * FROM player_legacy_stats WHERE player_id = $1', [playerId]);
 
         // 2. Fetch Tournament/Match Data
-        const { data: matchStats, error: matchError } = await supabase
-            .from('player_match_stats')
-            .select(`
-                *,
-                matches:match_id (
-                    tournament_id,
-                    tournaments:tournament_id (
-                        name
-                    )
-                )
-            `)
-            .eq('player_id', playerId);
+        const { data: matchStats, error: matchError } = await db.query(
+            `SELECT pms.*, m.status, m.is_test, m.tournament_id, m.date, t.name as tournament_name 
+             FROM player_match_stats pms 
+             JOIN matches m ON pms.match_id = m.id 
+             LEFT JOIN tournaments t ON m.tournament_id = t.id 
+             WHERE pms.player_id = $1 AND m.is_test = false AND m.status = 'completed'`,
+            [playerId]
+        );
 
         if (matchError) throw matchError;
 
@@ -711,9 +722,8 @@ app.get('/api/players/:id/stats', async (req, res) => {
         const tournamentGroups = {};
         
         matchStats.forEach(row => {
-            const tournament = row.matches?.tournaments;
-            const tId = row.matches?.tournament_id || 'unknown';
-            const tName = tournament?.name || (tId === 'unknown' ? 'Other Matches' : 'Default Tournament');
+            const tId = row.tournament_id || 'unknown';
+            const tName = row.tournament_name || (tId === 'unknown' ? 'Other Matches' : 'Default Tournament');
 
             if (!tournamentGroups[tId]) {
                 tournamentGroups[tId] = {
@@ -728,8 +738,9 @@ app.get('/api/players/:id/stats', async (req, res) => {
             
             // Batting Aggregation
             group.batting.matches++;
-            if (row.runs > 0 || row.balls > 0) group.batting.innings++;
-            if (row.status === 'Not Out') group.batting.notOuts++;
+            const isDismissed = !['not out', 'retired hurt', 'absent'].includes(row.status?.toLowerCase());
+            if (row.runs > 0 || row.balls > 0 || isDismissed) group.batting.innings++;
+            if (!isDismissed) group.batting.notOuts++;
             group.batting.runs += (Number(row.runs) || 0);
             group.batting.balls += (Number(row.balls) || 0);
             group.batting.fours += (Number(row.fours) || 0);
@@ -737,8 +748,15 @@ app.get('/api/players/:id/stats', async (req, res) => {
             group.batting.hundreds += (Number(row.hundreds) || 0);
             group.batting.fifties += (Number(row.fifties) || 0);
             group.batting.ducks += (Number(row.ducks) || 0);
-            const currentHS = parseInt(group.batting.highestScore) || 0;
-            if (Number(row.runs) > currentHS) group.batting.highestScore = String(row.runs);
+            
+            const runs = Number(row.runs) || 0;
+            const currentHS = parseInt(group.batting.highestScore.replace('*', '')) || 0;
+            if (runs > currentHS) {
+                group.batting.highestScore = `${runs}${!isDismissed ? '*' : ''}`;
+            } else if (runs === currentHS && !isDismissed && !group.batting.highestScore.includes('*')) {
+                // If equal but this one is not out, prefer the not out one
+                group.batting.highestScore = `${runs}*`;
+            }
 
             // Bowling Aggregation
             if (Number(row.overs_bowled) > 0) {
@@ -776,7 +794,15 @@ app.get('/api/players/:id/stats', async (req, res) => {
 
         res.json({
             legacy: legacy || null,
-            tournaments: Object.values(tournamentGroups)
+            tournaments: Object.values(tournamentGroups),
+            recentForm: matchStats
+                .filter(row => row.runs > 0 || row.balls > 0 || !['not out', 'retired hurt', 'absent'].includes(row.status?.toLowerCase()))
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 5)
+                .map(row => ({
+                    runs: row.runs || 0,
+                    isNotOut: ['not out', 'retired hurt', 'absent'].includes(row.status?.toLowerCase())
+                }))
         });
 
     } catch (e) {
@@ -791,9 +817,13 @@ app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) =>
 
   try {
     // 1. Update the legacy table
-    const { error: legacyErr } = await supabase
-      .from('player_legacy_stats')
-      .upsert({ ...stats, player_id: playerId, updated_at: new Date() }, { onConflict: 'player_id' });
+    const keys = Object.keys(stats);
+    const values = Object.values(stats);
+    const setClause = keys.map((key, i) => `${key}=$${i + 1}`).join(', ');
+    const query = `INSERT INTO player_legacy_stats (${keys.join(', ')}, player_id, updated_at) 
+                   VALUES (${keys.map((_, i) => '$' + (i + 1)).join(', ')}, $${keys.length + 1}, NOW()) 
+                   ON CONFLICT (player_id) DO UPDATE SET ${setClause}, updated_at=NOW()`;
+    const { error: legacyErr } = await db.query(query, [...values, playerId]);
 
     if (legacyErr) throw legacyErr;
 
@@ -808,34 +838,46 @@ app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) =>
 });
 
 // MEMORIES
+// MEMORIES
 app.get('/api/memories', async (_req, res) => {
-  const { data, error } = await supabase.from('memories').select('*').order('date', { ascending: false });
+  const { data, error } = await db.query('SELECT * FROM memories ORDER BY date DESC');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
 app.post('/api/memories', authGuard(['admin', 'member']), async (req, res) => {
   const { type, url, caption, date, likes, width } = req.body;
-  const { data, error } = await supabase.from('memories').insert([{
-    type, url, caption, date, likes: likes || 0, width: width || 'col-span-1 row-span-1', comments: []
-  }]).select().single();
+  const { data, error } = await db.getOne('INSERT INTO memories (type, url, caption, date, likes, width, comments) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', [
+    type, url, caption, date, likes || 0, width || 'col-span-1 row-span-1', JSON.stringify([])
+  ]);
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 
 app.delete('/api/memories/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await supabase.from('memories').delete().eq('id', req.params.id);
+  const { error } = await db.query('DELETE FROM memories WHERE id = $1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
 
 app.put('/api/memories/:id', authGuard(['admin', 'member']), async (req, res) => {
   const { comments, likes } = req.body;
-  const updates = {};
-  if (comments !== undefined) updates.comments = comments;
-  if (likes !== undefined) updates.likes = likes;
+  let q = 'UPDATE memories SET updated_at = NOW()';
+  let params = [];
+  
+  if (comments !== undefined) {
+    q += ', comments = $' + (params.length + 1);
+    params.push(JSON.stringify(comments));
+  }
+  if (likes !== undefined) {
+    q += ', likes = $' + (params.length + 1);
+    params.push(likes);
+  }
 
-  const { error } = await supabase.from('memories').update(updates).eq('id', req.params.id);
+  q += ' WHERE id = $' + (params.length + 1);
+  params.push(req.params.id);
+
+  const { error } = await db.query(q, params);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
@@ -857,34 +899,29 @@ app.post('/api/upload', authGuard(['admin', 'member']), upload.single('file'), a
 app.get('/api/tournament-performers', async (req, res) => {
   try {
     // 1. Get tournaments sorted by creation/date to find latest
-    const { data: tournaments, error: tErr } = await supabase
-      .from('tournaments')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data: tournaments, error: tErr } = await db.query('SELECT * FROM tournaments ORDER BY created_at DESC');
 
     if (tErr || !tournaments || tournaments.length === 0) return res.json({ performers: [], isSeasonOpener: true });
 
     const latestTournament = tournaments[0];
-    const previousTournament = tournaments[1];
 
     // Helper to fetch and filter Top 7 Standout Performances
     const getPerformersForTournament = async (tId) => {
-      let query = supabase
-        .from('player_match_stats')
-        .select(`
-          *,
-          matches:match_id!inner ( id, date, status, tournament_id, ground_id, opponent_id, is_test ),
-          players:player_id!inner ( id, name, role, avatar_url )
-        `)
-        .eq('matches.is_test', false);
-
+      let q = `
+        SELECT pms.*, m.id as m_id, m.date as m_date, m.status as m_status, m.tournament_id as m_t_id, m.ground_id as m_g_id, m.opponent_id as m_o_id,
+               p.name as p_name, p.role as p_role, p.avatar_url as p_avatar_url
+        FROM player_match_stats pms
+        JOIN matches m ON pms.match_id = m.id
+        JOIN players p ON pms.player_id = p.id
+        WHERE m.is_test = false AND m.status = 'completed'
+      `;
+      let params = [];
       if (tId) {
-        query = query.eq('matches.tournament_id', tId);
+        q += ' AND m.tournament_id = $1';
+        params.push(tId);
       }
-      
-      query = query.eq('matches.status', 'completed');
 
-      const { data, error } = await query;
+      const { data, error } = await db.query(q, params);
       if (error) return [];
 
       const results = (data || []).filter(row => {
@@ -901,11 +938,8 @@ app.get('/api/tournament-performers', async (req, res) => {
         return (runs >= 40) || (wkts >= 2) || (overs >= 2 && econ <= 7.0) || (runs >= 30 && wkts >= 1);
       })
       .sort((a,b) => {
-        // Priority 1: Manual Hero Picks
         if (a.is_hero && !b.is_hero) return -1;
         if (!a.is_hero && b.is_hero) return 1;
-
-        // Priority 2: Simple Performance Score
         const scoreA = (Number(a.runs || 0)) + (Number(a.wickets || 0) * 35);
         const scoreB = (Number(b.runs || 0)) + (Number(b.wickets || 0) * 35);
         return scoreB - scoreA;
@@ -914,19 +948,19 @@ app.get('/api/tournament-performers', async (req, res) => {
       .map(row => ({
         id: row.id,
         playerId: row.player_id,
-        name: row.players.name,
-        role: row.players.role,
-        avatarUrl: row.players.avatar_url,
+        name: row.p_name,
+        role: row.p_role,
+        avatarUrl: row.p_avatar_url,
         runs: Number(row.runs || 0),
         balls: Number(row.balls || 0),
         wickets: Number(row.wickets || 0),
         bowlingRuns: Number(row.runs_conceded || 0),
         bowlingOvers: Number(row.overs_bowled || 0),
         isHero: !!row.is_hero,
-        matchDate: row.matches.date,
-        matchId: row.matches.id,
-        opponentId: row.matches.opponent_id,
-        groundId: row.matches.ground_id
+        matchDate: row.m_date,
+        matchId: row.m_id,
+        opponentId: row.m_o_id,
+        groundId: row.m_g_id
       }));
 
       return results;
@@ -937,13 +971,7 @@ app.get('/api/tournament-performers', async (req, res) => {
 
     // Fallback: If no performers found in current tournament, pull from most recent match
     if (performers.length === 0) {
-      const { data: recentMatch } = await supabase
-        .from('matches')
-        .select('id, tournament_id')
-        .eq('status', 'completed')
-        .order('date', { ascending: false })
-        .limit(1)
-        .single();
+      const { data: recentMatch } = await db.getOne('SELECT id, tournament_id FROM matches WHERE status = \'completed\' ORDER BY date DESC LIMIT 1');
 
       if (recentMatch) {
          performers = await getPerformersForTournament(recentMatch.tournament_id);
@@ -963,6 +991,19 @@ app.get('/api/tournament-performers', async (req, res) => {
 });
 
 // HEALTH
+// Serve static Frontend files
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
+
+// SPA Fallback: Redirect all non-API paths to index.html
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+    res.status(404).json({ error: 'API Not Found' });
+  }
+});
+
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
