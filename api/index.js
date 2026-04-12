@@ -1002,15 +1002,34 @@ app.get('/api/tournament-performers', async (req, res) => {
       const { data, error } = await db.query(q, params);
       if (error) return [];
 
-      const results = (data || []).filter(row => {
+      const rawData = data || [];
+      
+      // Calculate Super Striker (Highest SR, Min 10 balls)
+      let superStrikerId = null;
+      let maxSR = -1;
+
+      rawData.forEach(row => {
+        const runs = Number(row.runs || 0);
+        const balls = Number(row.balls || 0);
+        if (balls >= 10) {
+          const sr = (runs / balls) * 100;
+          if (sr > maxSR) {
+            maxSR = sr;
+            superStrikerId = row.player_id;
+          }
+        }
+      });
+
+      const results = rawData.filter(row => {
         const isHero = !!row.is_hero;
         const runs = Number(row.runs || 0);
         const wkts = Number(row.wickets || 0);
         const overs = Number(row.overs_bowled || 0);
         const runsC = Number(row.runs_conceded || 0);
         const econ = (overs > 0) ? (runsC / overs) : 99;
+        const isSuperStrikerMatch = row.player_id === superStrikerId;
         
-        if (isHero) return true;
+        if (isHero || isSuperStrikerMatch) return true;
         
         // Auto-Criteria: 40+ runs OR 2+ wickets OR <=7.0 econ (min 2 ov) OR All-rounder (30+ / 1+)
         return (runs >= 40) || (wkts >= 2) || (overs >= 2 && econ <= 7.0) || (runs >= 30 && wkts >= 1);
@@ -1035,6 +1054,7 @@ app.get('/api/tournament-performers', async (req, res) => {
         bowlingRuns: Number(row.runs_conceded || 0),
         bowlingOvers: Number(row.overs_bowled || 0),
         isHero: !!row.is_hero,
+        isSuperStriker: row.player_id === superStrikerId,
         matchDate: row.m_date,
         matchId: row.m_id,
         opponentId: row.m_o_id,

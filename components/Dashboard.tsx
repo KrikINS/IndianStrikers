@@ -14,6 +14,69 @@ interface DashboardProps {
   teamLogo?: string;
 }
 
+const MILESTONE_TAGLINES = {
+  batting: {
+    century: [
+      "Century Mastery: A Masterclass in the Middle.",
+      "Triple Digits, Infinite Impact.",
+      "The 100-Run Landmark: Pure Class in Every Stroke.",
+      "Centurion Status: Commanding the Crease.",
+      "Ton Up. Bat Down."
+    ],
+    halfCentury: [
+      "Fifty & Flourishing: Setting the Tempo.",
+      "Half-Century Grit: The Backbone of the Innings.",
+      "50 Not Out: Lighting Up the Scorecard.",
+      "Half-Century Heroics: Turning the Tide.",
+      "The Fifty Club: Impact Delivered."
+    ]
+  },
+  bowling: {
+    fifer: [
+      "Five-Star Performance: Ripping Through the Lineup.",
+      "Fifer Club: A Rare and Dominant Display.",
+      "The Perfect Five: Bowling at its Finest.",
+      "Five-Wicket Heroics: The Ultimate Match-Winning Spell.",
+      "Five Down. Pure Dominance."
+    ],
+    haul: [
+      "Triple Strike: Breaking the Opposition's Back.",
+      "Clinical Bowling: Three Big Scalps.",
+      "In the Zone: A Triple-Wicket Masterclass.",
+      "3-Wicket Haul: Turning the Game on its Head.",
+      "Triple Threat. Mission Accomplished."
+    ],
+    hatTrick: [
+      "The Hat-Trick: Three Balls, Three Wickets, Absolute Magic.",
+      "The Golden Hat-Trick: A Rare Feat of Bowling Perfection.",
+      "Hat-Trick Heroics: Dismantling the Lineup in Record Time.",
+      "Unstoppable Force: Three-in-a-Row Mastery.",
+      "The Triple Kill. Hat-Trick Achieved."
+    ]
+  }
+};
+
+const getRandomTagline = (type: 'batting' | 'bowling', value: number, isHatTrick: boolean = false) => {
+  if (type === 'bowling' && isHatTrick) {
+    return MILESTONE_TAGLINES.bowling.hatTrick[Math.floor(Math.random() * MILESTONE_TAGLINES.bowling.hatTrick.length)];
+  }
+
+  if (type === 'batting') {
+    if (value >= 100) {
+      return MILESTONE_TAGLINES.batting.century[Math.floor(Math.random() * MILESTONE_TAGLINES.batting.century.length)];
+    } else if (value >= 50) {
+      return MILESTONE_TAGLINES.batting.halfCentury[Math.floor(Math.random() * MILESTONE_TAGLINES.batting.halfCentury.length)];
+    }
+  } else if (type === 'bowling') {
+    if (value >= 5) {
+      return MILESTONE_TAGLINES.bowling.fifer[Math.floor(Math.random() * MILESTONE_TAGLINES.bowling.fifer.length)];
+    } else if (value >= 3) {
+      return MILESTONE_TAGLINES.bowling.haul[Math.floor(Math.random() * MILESTONE_TAGLINES.bowling.haul.length)];
+    }
+  }
+  return null;
+};
+
 // --- Carousel Component for Weekly Performers (Hoisted) ---
 function WeeklyPerformerCarousel({ 
   performers, 
@@ -120,7 +183,8 @@ function WeeklyPerformerCarousel({
                     matchTime: player.matchTime || (player.matchDate ? new Date(player.matchDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined),
                     opponentName: opponents.find((o: any) => o.id === player.opponentId)?.name || player.opponentName || 'TEAM',
                     groundName: player.groundName || grounds.find((g: any) => g.id === player.groundId)?.name || 'CRICKET GROUND',
-                    fullStats: player
+                    fullStats: player,
+                    isSuperStriker: player.isSuperStriker
                   })}
                   className={`bg-[#0f172a] rounded-[3rem] p-8 border ${isActive ? 'border-sky-500/50 shadow-[0_0_50px_rgba(56,189,248,0.3)]' : 'border-white/10'} relative overflow-hidden group transition-all duration-500`}
                 >
@@ -129,8 +193,8 @@ function WeeklyPerformerCarousel({
                     <div className="relative mb-6">
                       <div className={`absolute inset-0 bg-sky-400 blur-[40px] ${isActive ? 'opacity-20' : 'opacity-10'} transition-opacity`}></div>
                       <img src={player.avatarUrl} className="w-32 h-40 rounded-[2rem] object-cover border-2 border-white/20 shadow-2xl relative z-10" alt={player.name} />
-                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-sky-400 text-slate-950 text-[9px] font-black px-5 py-1 rounded-full border-[2px] border-slate-950 uppercase z-20">
-                        {player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer'}
+                      <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 ${player.isSuperStriker ? 'bg-orange-500 text-white' : 'bg-sky-400 text-slate-950'} text-[9px] font-black px-5 py-1 rounded-full border-[2px] border-slate-950 uppercase z-20 whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.3)]`}>
+                        {player.isSuperStriker ? '🚀 Super Striker' : (player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer')}
                       </div>
                     </div>
                     <h4 className="font-black text-2xl uppercase tracking-[0.2rem] italic text-center mb-1 leading-none">{player.name}</h4>
@@ -140,6 +204,17 @@ function WeeklyPerformerCarousel({
                         {player.wickets > 0 ? player.wickets : player.runs}
                         <span className="text-sm font-black text-sky-400/50 ml-1 uppercase">{player.wickets > 0 ? 'Wickets' : 'Runs'}</span>
                       </p>
+                      
+                      {/* Dynamic Milestone Tagline */}
+                      {(player.runs >= 50 || player.wickets >= 3 || player.isHatTrick) && (
+                        <p className="mt-3 text-[10px] font-black text-white/40 uppercase tracking-widest max-w-[200px] leading-relaxed animate-pulse">
+                          {getRandomTagline(
+                            (player.wickets >= 3 || player.isHatTrick) ? 'bowling' : 'batting', 
+                            (player.wickets >= 3 || player.isHatTrick) ? player.wickets : player.runs,
+                            player.isHatTrick
+                          )}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -247,7 +322,9 @@ export default function Dashboard({ players, userRole = 'guest' }: DashboardProp
                       <img src="/INS%20LOGO.PNG" className="w-16 h-16 object-contain" alt="Logo" />
                       <div className="text-white">
                         <p className="text-[10px] font-black italic tracking-widest leading-none">MATCH DAY</p>
-                        <p className="text-2xl font-black italic text-sky-400 leading-none">HERO</p>
+                        <p className={`text-2xl font-black italic ${selectedHero.isSuperStriker ? 'text-orange-500' : 'text-sky-400'} leading-none`}>
+                          {selectedHero.isSuperStriker ? 'SUPER STRIKER' : 'HERO'}
+                        </p>
                       </div>
                    </div>
                    <div className="flex-1 flex flex-col items-center justify-center pt-16 px-6">
@@ -255,7 +332,16 @@ export default function Dashboard({ players, userRole = 'guest' }: DashboardProp
                       <h2 className="text-3xl font-black text-sky-400 uppercase italic tracking-tighter text-center leading-none mb-2">{selectedHero.player.name}</h2>
                       <div className="h-1 w-12 bg-white/20 rounded-full mb-4"></div>
                       <p className="text-white font-black text-lg uppercase italic tracking-widest">{selectedHero.statsValue}</p>
-                      <p className="text-sky-400/50 text-[10px] font-black uppercase mt-1 tracking-[0.2em]">VS {selectedHero.opponentName || 'OPPONENT'}</p>
+                      {(selectedHero.player.runs >= 50 || selectedHero.player.wickets >= 3 || selectedHero.player.isHatTrick) && (
+                        <p className="mt-4 px-10 text-[8px] font-black text-sky-400/60 uppercase tracking-[0.2em] text-center leading-relaxed italic">
+                          {getRandomTagline(
+                             (selectedHero.player.wickets >= 3 || selectedHero.player.isHatTrick) ? 'bowling' : 'batting', 
+                             (selectedHero.player.wickets >= 3 || selectedHero.player.isHatTrick) ? selectedHero.player.wickets : selectedHero.player.runs,
+                             selectedHero.player.isHatTrick
+                           )}
+                        </p>
+                      )}
+                      <p className="text-sky-400/50 text-[10px] font-black uppercase mt-4 tracking-[0.2em]">VS {selectedHero.opponentName || 'OPPONENT'}</p>
                    </div>
                    <div className="p-4 text-center border-t border-white/5">
                       <p className="text-[7px] text-white/20 font-black uppercase tracking-[0.4em]">INDIAN STRIKERS OFFICIAL APP</p>
