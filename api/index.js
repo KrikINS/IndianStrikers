@@ -69,6 +69,7 @@ function authGuard(roles = []) {
 
 // AUTH
 app.post('/api/login', async (req, res) => {
+  console.log('[Login Attempt] Body:', req.body);
   const { mode, username, password } = req.body || {};
   if (mode === 'guest') return res.json({ ok: true, token: signToken({ username: 'guest', role: 'guest' }), role: 'guest' });
   const { data: row, error } = await db.getOne('SELECT id,username,password_hash,role,is_active,avatar_url FROM app_users WHERE username = $1', [username]);
