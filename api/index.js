@@ -91,9 +91,6 @@ app.post('/api/login', async (req, res) => {
     return res.status(403).json({ error: 'Role mismatch' });
   }
   const ok = await bcrypt.compare(password, row.password_hash);
-  console.log(`[Login Debug] Incoming password length: ${password ? password.length : 0}`);
-  console.log(`[Login Debug] Stored hash length: ${row.password_hash ? row.password_hash.length : 0}`);
-  console.log(`[Login Debug] Password match result: ${ok}`);
   
   if (!ok) {
     console.warn(`[Login Error] Invalid password for: ${username}`);

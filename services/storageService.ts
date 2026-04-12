@@ -1,7 +1,8 @@
 /// <reference types="vite/client" />
 import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
+const API_URL = 'https://strikers-app-227875153596.us-central1.run.app/api';
+// const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
 
 const getHeaders = () => {
   const token = sessionStorage.getItem('authToken');
