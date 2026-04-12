@@ -409,7 +409,51 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
   }
 });
 
+
+// LIVE SCORING: Recorded Ball
+app.post('/api/score/ball', authGuard(['admin', 'scorer', 'member']), async (req, res) => {
+  const { 
+    match_id, striker_id, non_striker_id, bowler_id, 
+    over_number, ball_number, runs_scored, extras_runs, 
+    extras_type, event_type, innings_number, is_legal_ball,
+    wicket_type, fielder_id
+  } = req.body;
+
+  const { data, error } = await db.getOne(
+    `INSERT INTO ball_by_ball (
+      match_id, striker_id, non_striker_id, bowler_id, 
+      over_number, ball_number, runs_scored, extras_runs, 
+      extras_type, event_type, innings_number, is_legal_ball,
+      wicket_type, fielder_id
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+    [
+      match_id, striker_id, non_striker_id, bowler_id, 
+      over_number, ball_number, runs_scored || 0, extras_runs || 0, 
+      extras_type, event_type, innings_number || 1, is_legal_ball ?? true,
+      wicket_type, fielder_id
+    ]
+  );
+
+  if (error) {
+    console.error('[POST /api/score/ball] Error:', error);
+    return res.status(400).json({ error: error.message });
+  }
+
+  res.json(data);
+});
+
+// GET Match History (Balls)
+app.get('/api/matches/:id/balls', async (req, res) => {
+  const { data, error } = await db.query(
+    'SELECT * FROM ball_by_ball WHERE match_id = $1 ORDER BY innings_number ASC, over_number ASC, ball_number ASC',
+    [req.params.id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
 // OPPONENTS
+
 app.get('/api/opponents', async (_req, res) => {
   const { data, error } = await db.query('SELECT * FROM opponents ORDER BY rank ASC');
   if (error) {
@@ -633,7 +677,18 @@ async function recalculateCareerStats(playerId) {
     const totalRuns = m.reduce((s, row) => s + (Number(row.runs) || 0), 0) + (Number(l.runs) || 0);
     const totalWickets = m.reduce((s, row) => s + (Number(row.wickets) || 0), 0) + (Number(l.wickets) || 0);
     const totalMatches = m.reduce((s, row) => s + (row.status?.startsWith('HISTORICAL:') ? (parseInt(row.status.split(':')[1]) || 1) : 1), 0) + (Number(l.matches) || 0);
-    const totalInnings = m.filter(row => (Number(row.runs) > 0 || Number(row.balls) > 0 || (row.status && !['not out', 'did not bat', 'dnb', 'absent'].includes(row.status.toLowerCase())))).length + (Number(l.innings) || 0);
+        const totalInnings = m.filter(row => {
+        const status = (row.status || '').toLowerCase();
+        const runs = Number(row.runs) || 0;
+        const balls = Number(row.balls) || 0;
+        // MUST have faced a ball, scored a run, or been out to count as an inning
+        // Exclude DNB, Did Not Bat, Absent, null/empty status
+        if (runs === 0 && balls === 0 && (['did not bat', 'dnb', 'absent', ''].includes(status) || !row.status)) {
+            return false;
+        }
+        return true;
+    }).length + (Number(l.innings) || 0);
+
     const totalNO = m.filter(row => row.is_not_out || row.status === 'Not Out' || row.status === 'not out').length + (Number(l.not_outs) || 0);
     const totalBalls = m.reduce((s, row) => s + (Number(row.balls) || 0), 0) + (Number(l.balls) || 0);
     const totalFours = m.reduce((s, row) => s + (Number(row.fours) || 0), 0) + (Number(l.fours) || 0);
@@ -671,7 +726,9 @@ async function recalculateCareerStats(playerId) {
         bestBBI = allBBI[0];
     }
 
-    const batAvg = (totalInnings - totalNO) > 0 ? (totalRuns / (totalInnings - totalNO)) : totalRuns;
+        const dismissals = totalInnings - totalNO;
+    const batAvg = dismissals > 0 ? (totalRuns / dismissals) : totalRuns;
+
     const batSR = totalBalls > 0 ? (totalRuns / totalBalls) * 100 : 0;
     const bowlAvg = totalWickets > 0 ? totalBowlRuns / totalWickets : 0;
     const bowlEco = totalBallsBowled > 0 ? (totalBowlRuns * 6) / totalBallsBowled : 0;
