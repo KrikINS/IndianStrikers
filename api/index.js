@@ -72,10 +72,28 @@ app.post('/api/login', async (req, res) => {
   const { mode, username, password } = req.body || {};
   if (mode === 'guest') return res.json({ ok: true, token: signToken({ username: 'guest', role: 'guest' }), role: 'guest' });
   const { data: row, error } = await db.getOne('SELECT id,username,password_hash,role,is_active,avatar_url FROM app_users WHERE username = $1', [username]);
-  if (error || !row || !row.is_active) return res.status(401).json({ error: 'Invalid user' });
-  if (row.role !== mode && row.role !== 'admin') return res.status(403).json({ error: 'Role mismatch' });
+  if (error) {
+    console.error(`[Login Error] Database error for user ${username}:`, error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+  if (!row) {
+    console.warn(`[Login Error] User not found: ${username}`);
+    return res.status(401).json({ error: 'Invalid user ID or password' });
+  }
+  if (!row.is_active) {
+    console.warn(`[Login Error] User inactive: ${username}`);
+    return res.status(401).json({ error: 'Account is disabled' });
+  }
+  
+  if (row.role !== mode && row.role !== 'admin') {
+    console.warn(`[Login Error] Role mismatch for ${username}. Expected ${mode}, but user role is ${row.role}`);
+    return res.status(403).json({ error: 'Role mismatch' });
+  }
   const ok = await bcrypt.compare(password, row.password_hash);
-  if (!ok) return res.status(401).json({ error: 'Invalid password' });
+  if (!ok) {
+    console.warn(`[Login Error] Invalid password for: ${username}`);
+    return res.status(401).json({ error: 'Invalid user ID or password' });
+  }
   res.json({
     ok: true,
     token: signToken({ id: row.id, username: row.username, role: row.role }),
