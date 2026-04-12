@@ -5,7 +5,7 @@ import {
   getMembershipRequests, updateMembershipRequestStatus, deleteMembershipRequest,
   getPlayers 
 } from '../services/storageService';
-import { Plus, Trash2, Edit2, Shield, X, Users, UserPlus, Mail, Phone, Info, Layout } from 'lucide-react';
+import { Plus, Trash2, Edit2, Shield, X, Users, UserPlus, Mail, Phone, Info, Layout, Loader2 } from 'lucide-react';
 
 const UserManagement: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'users' | 'requests'>('users');
@@ -15,6 +15,7 @@ const UserManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AppUser | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<Partial<AppUser>>({ name: '', username: '', password: '', role: 'member' });
 
   useEffect(() => {
@@ -62,6 +63,7 @@ const UserManagement: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     try {
       if (editingItem) {
         await updateAppUser(editingItem.id, form);
@@ -72,6 +74,7 @@ const UserManagement: React.FC = () => {
       }
       setIsModalOpen(false);
     } catch (e: any) { alert("Save failed: " + e.message); }
+    finally { setIsSaving(false); }
   };
 
   const handleApproveRequest = (req: MembershipRequest) => {
@@ -233,7 +236,7 @@ const UserManagement: React.FC = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-scale-in">
+          <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-xl overflow-y-auto max-h-[90vh] shadow-2xl animate-scale-in custom-scrollbar">
             <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/20">
               <h3 className="text-[14px] font-black uppercase tracking-widest text-white flex items-center gap-2">
                 {editingItem ? <Shield size={18} className="text-blue-500" /> : <Plus size={18} className="text-blue-500" />}
@@ -282,9 +285,11 @@ const UserManagement: React.FC = () => {
               </div>
               <button 
                 type="submit" 
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-xl shadow-blue-900/40 transition-all active:scale-[0.98] uppercase tracking-widest text-[12px]"
+                disabled={isSaving}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:text-white/50 text-white font-black rounded-xl shadow-xl shadow-blue-900/40 transition-all active:scale-[0.98] uppercase tracking-widest text-[12px] flex items-center justify-center gap-2"
               >
-                {editingItem ? 'SYNC UPDATES' : 'GENERATE ACCESS'}
+                {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
+                {isSaving ? 'SYNCING...' : (editingItem ? 'SYNC UPDATES' : 'GENERATE ACCESS')}
               </button>
             </form>
           </div>

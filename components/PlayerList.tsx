@@ -520,7 +520,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
   );
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12 w-full max-w-7xl mx-auto">
+    <div className="space-y-6 animate-fade-in pb-12 w-full">
       {/* Standardized Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>

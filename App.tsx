@@ -97,7 +97,7 @@ const AppContent: React.FC<{
       />
 
       <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
-        <div className="p-3 md:p-6 lg:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+        <div className="p-3 md:p-6 lg:p-8 w-full pb-24 md:pb-8">
           <Routes>
             <Route path="/home" element={<Dashboard players={players} userRole={userRole} teamLogo={teamLogo} />} />
             <Route

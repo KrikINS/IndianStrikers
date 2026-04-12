@@ -206,7 +206,7 @@ export default function Dashboard({ players, userRole = 'guest' }: DashboardProp
   };
 
   return (
-    <div className="space-y-8 animate-fade-in pb-12 w-full max-w-7xl mx-auto px-4 md:px-0">
+    <div className="space-y-8 animate-fade-in pb-12 w-full px-4 md:px-0">
       {/* Standardized Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-6 mb-2">
         <div className="flex flex-col">
