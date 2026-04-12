@@ -134,17 +134,12 @@ export const useMatchCenter = create<MatchStore>()(
           const unsynced = get().matches.filter(m => !dbIds.has(m.id));
           
           if (unsynced.length > 0) {
-            console.log(`[Sync] Pushing ${unsynced.length} unsynced matches...`);
-            for (const m of unsynced) {
-               await api.addMatch(m);
-            }
-            // Refresh after push
-            const fresh = await api.getMatches();
-            set({ matches: fresh });
-          } else {
-            console.log("[Sync] Pulling latest from cloud...");
-            set({ matches: dbMatches });
+            console.log(`[Sync] Found ${unsynced.length} local-only matches. If this is intentional, they will persist. If these are 'ghost' matches, please use the Wipe Cache tool.`);
+            // No auto-pushing ghost data to cloud anymore to avoid resurrection loops
           }
+          
+          console.log("[Sync] Pulling latest from cloud...");
+          set({ matches: dbMatches });
         } catch (e) {
           console.error("Cloud sync failed:", e);
           throw e;
@@ -211,6 +206,11 @@ export const useMatchCenter = create<MatchStore>()(
           console.error("Purge failed:", e);
           throw e;
         }
+      },
+      
+      wipeLocalMatches: () => {
+        set({ matches: [] });
+        console.log("[Admin] Local match cache wiped.");
       }
     }),
     {

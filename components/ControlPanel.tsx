@@ -46,7 +46,6 @@ const ControlPanel: React.FC<ControlPanelProps> = () => {
       <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
         <div className="flex overflow-x-auto border-b border-slate-800 no-scrollbar">
           {renderTabButton('grounds', 'Grounds', MapPin)}
-          {renderTabButton('tournaments', 'Tournaments', Trophy)}
           {renderTabButton('users', 'Users', Users)}
           {renderTabButton('legacy', 'Club Legacy', Layout)}
         </div>

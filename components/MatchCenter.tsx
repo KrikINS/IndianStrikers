@@ -11,13 +11,14 @@ import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import FullScorecardModal from './FullScorecardModal';
 import ManualScoreModal from './ManualScoreModal';
-import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash } from 'lucide-react';
+import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
 import { useMasterData } from './masterDataStore';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
 import { useCricketScorer } from './matchStore';
 import PointsTable from './PointsTable';
+import TournamentsManager from './TournamentsManager';
 
 // Responsive constants for Carousel handled inside component
 
@@ -42,12 +43,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         finalizeMatch,
         syncWithCloud,
         getSortedMatches,
-        purgeTestData
+        purgeTestData,
+        wipeLocalMatches
     } = useMatchCenter();
     const { grounds, tournaments, syncMasterData } = useMasterData();
 
     // Filters and Search
-    const [activeTab, setActiveTab] = useState<'list' | 'cards' | 'standings'>('list');
+    const [activeTab, setActiveTab] = useState<'list' | 'cards' | 'standings' | 'tournaments'>('list');
     const [searchQuery, setSearchQuery] = useState('');
     const [formatFilter, setFormatFilter] = useState<'All' | 'T20' | 'One Day'>('All');
     const [tournamentFilter, setTournamentFilter] = useState('All');
@@ -721,6 +723,18 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                     {userRole === 'admin' && (
                         <div className="flex items-center gap-2 md:gap-3">
                             <button
+                                onClick={() => {
+                                    if(window.confirm("This will clear all matches from your browser's local cache and re-download from the cloud. Continue?")) {
+                                        wipeLocalMatches();
+                                        handleCloudSync();
+                                    }
+                                }}
+                                className="px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-sm"
+                                title="Fix Ghost Matches"
+                            >
+                                <Trash2 size={16} /> <span className="hidden sm:inline">Wipe Cache</span>
+                            </button>
+                            <button
                                 onClick={handleCloudSync}
                                 disabled={isSyncing}
                                 className={`px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${isSyncing
@@ -791,6 +805,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                             ${activeTab === 'standings' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
                         >
                             <TableProperties size={16} /> Standings
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('tournaments')}
+                            className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
+                            ${activeTab === 'tournaments' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
+                        >
+                            <Trophy size={16} /> Tournaments
                         </button>
                     </div>
 
@@ -981,6 +1002,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                     userRole={userRole} 
                                     opponents={opponents} 
                                 />
+                            </div>
+                        )}
+
+                        {activeTab === 'tournaments' && (
+                            <div className="p-6 md:p-8">
+                                <TournamentsManager />
                             </div>
                         )}
                     </div>

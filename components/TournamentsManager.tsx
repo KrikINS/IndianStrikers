@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
 import { Tournament } from '../types';
 import { useMasterData } from './masterDataStore';
-import { Plus, Trash2, Edit2, Trophy, X } from 'lucide-react';
+import { useMatchCenter } from './matchCenterStore';
+import { Plus, Trash2, Edit2, Trophy, X, ChevronDown, ChevronUp, ExternalLink, Calendar as CalendarIcon, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const TournamentsManager: React.FC = () => {
   const { tournaments, addTournament: addTourneyStore, updateTournament: updateTourneyStore, removeTournament } = useMasterData();
+  const { matches } = useMatchCenter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Tournament | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Tournament>>({ 
     name: '', 
     year: new Date().getFullYear(), 
     status: 'upcoming' 
   });
+
+  const toggleAccordion = (id: string) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
 
   const handleOpenAdd = () => {
     setEditingItem(null);
@@ -67,49 +75,140 @@ const TournamentsManager: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-900/95 border-b border-white/10">
-                <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Tournament Name</th>
-                <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Year</th>
-                <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Status</th>
-                <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {tournaments.map(t => (
-                <tr key={t.id} className="hover:bg-slate-50 transition-colors group">
-                  <td className="px-4 py-2">
-                    <span className="text-[12px] font-bold text-slate-900 leading-tight">{t.name}</span>
-                  </td>
-                  <td className="px-4 py-2 text-slate-500 font-medium text-[12px] font-mono">{t.year}</td>
-                  <td className="px-4 py-2">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border
-                      ${t.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
-                        t.status === 'upcoming' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                      {t.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="flex justify-end gap-1">
-                      <button onClick={() => handleOpenEdit(t)} className="p-1.5 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all" title="Edit Tournament"><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(t.id)} className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete Tournament"><Trash2 size={14} /></button>
+      <div className="space-y-3">
+        {tournaments.length === 0 ? (
+          <div className="bg-white/5 rounded-2xl border border-dashed border-white/10 p-12 text-center">
+            <Trophy size={48} className="text-white/10 mx-auto mb-4" />
+            <p className="text-white/40 font-bold uppercase tracking-widest text-xs">No tournaments scheduled</p>
+          </div>
+        ) : (
+          tournaments.map(t => {
+            const tourneyMatches = matches.filter(m => m.tournamentId === t.id);
+            const isExpanded = expandedId === t.id;
+
+            return (
+              <div key={t.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                {/* Accordion Header */}
+                <div 
+                  onClick={() => toggleAccordion(t.id)}
+                  className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${isExpanded ? 'bg-slate-50' : 'bg-white hover:bg-slate-50'}`}
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className={`p-2 rounded-lg ${t.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                      <Trophy size={18} />
                     </div>
-                  </td>
-                </tr>
-              ))}
-              {tournaments.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-12 text-center text-slate-300 text-[12px] font-bold uppercase tracking-widest">
-                    No tournaments scheduled
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tournament</span>
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                          {t.name || (t as any).tournament_name || 'Unnamed Tournament'}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Season {t.year}</span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border
+                          ${t.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
+                            t.status === 'upcoming' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                          {t.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="hidden md:flex flex-col items-end mr-4">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Matches</span>
+                      <span className="text-sm font-black text-slate-900">{tourneyMatches.length}</span>
+                    </div>
+                    <div className="flex items-center gap-1 border-r border-slate-100 pr-4">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(t); }} 
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        title="Edit Tournament"
+                        aria-label="Edit Tournament"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} 
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        title="Delete Tournament"
+                        aria-label="Delete Tournament"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                    {isExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
+                  </div>
+                </div>
+
+                {/* Accordion Body */}
+                {isExpanded && (
+                  <div className="border-t border-slate-100 bg-slate-50/30 p-4 animate-in slide-in-from-top-2 duration-200">
+                    <div className="space-y-2">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <Shield size={12} className="text-blue-500" /> Linked Match Fixtures
+                      </h4>
+                      
+                      {tourneyMatches.length === 0 ? (
+                        <div className="py-8 text-center bg-white/50 rounded-xl border border-dashed border-slate-200">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No matches linked to this tournament yet</p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-3">
+                          {tourneyMatches.map(match => (
+                            <div key={match.id} className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-blue-200 transition-colors shadow-sm">
+                              <div className="flex items-center gap-4">
+                                <div className="hidden sm:flex flex-col items-center justify-center bg-slate-100 rounded-lg p-2 min-w-[60px]">
+                                  <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(match.date).toLocaleDateString(undefined, { month: 'short' })}</span>
+                                  <span className="text-lg font-black text-slate-900 leading-none">{new Date(match.date).getDate()}</span>
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-black text-slate-900 uppercase tracking-tight">Indian Strikers</span>
+                                    <span className="text-[10px] font-black text-slate-300 italic">VS</span>
+                                    <span className="text-xs font-black text-blue-600 uppercase tracking-tight">{match.opponentName}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                                      <CalendarIcon size={10} /> {new Date(match.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    <span className="text-slate-200">•</span>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase">{match.venue}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-3 justify-end">
+                                {match.status === 'completed' ? (
+                                  <div className="text-right mr-4 hidden sm:block">
+                                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Final Result</p>
+                                    <p className="text-xs font-bold text-slate-600 truncate max-w-[150px]">{match.resultSummary || 'Match Completed'}</p>
+                                  </div>
+                                ) : (
+                                  <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest ${match.status === 'live' ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-blue-50 text-blue-500'}`}>
+                                    {match.status}
+                                  </span>
+                                )}
+                                
+                                <Link 
+                                  to={`/scorecard/${match.id}`}
+                                  className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-blue-600 text-white text-[10px] font-black rounded-lg transition-all uppercase tracking-widest shadow-lg shadow-slate-200"
+                                >
+                                  Full Scorecard <ExternalLink size={12} />
+                                </Link>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {isModalOpen && (
