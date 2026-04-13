@@ -120,7 +120,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         }
                         <button
                             onClick={() => onSelectPlayingXI(match.id, 'home')}
-                            className={`xi-overlay-btn ${match.homeTeamXI?.length ? 'bg-sky-500 border-white ring-4 ring-sky-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
+                            className={`xi-overlay-btn ${match.homeTeamXI?.length ? 'bg-emerald-500 border-white ring-4 ring-emerald-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
                             title="Playing XI"
                         >
                             <Users size={14} className="text-white" />
@@ -151,7 +151,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         }
                         <button
                             onClick={() => onSelectPlayingXI(match.id, 'opponent')}
-                            className={`xi-overlay-btn ${match.opponentTeamXI?.length ? 'bg-sky-500 border-white ring-4 ring-sky-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
+                            className={`xi-overlay-btn ${match.opponentTeamXI?.length ? 'bg-emerald-500 border-white ring-4 ring-emerald-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
                             title="Playing XI"
                         >
                             <Users size={14} className="text-white" />
