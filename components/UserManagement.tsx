@@ -83,6 +83,7 @@ const UserManagement: React.FC = () => {
       setForm({ 
         name: req.name, 
         username: req.email.split('@')[0], 
+        email: req.email,
         password: 'changeme123', 
         role: 'member', 
         playerId: match?.id 
@@ -145,7 +146,7 @@ const UserManagement: React.FC = () => {
                   {activeSubTab === 'users' ? (
                     <>
                       <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">User</th>
-                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Credentials</th>
+                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest text-center">Login/Email</th>
                       <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Role</th>
                       <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest text-right">Actions</th>
                     </>
@@ -173,7 +174,12 @@ const UserManagement: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-indigo-600 font-mono text-[11px]">{u.username}</td>
+                    <td className="px-4 py-2 text-center">
+                      <div className="flex flex-col items-center">
+                        <span className="text-indigo-600 font-mono text-[11px] font-bold">{u.username}</span>
+                        {u.email && <span className="text-slate-400 font-mono text-[9px] lowercase">{u.email}</span>}
+                      </div>
+                    </td>
                     <td className="px-4 py-2">
                       <div className="flex flex-col gap-1">
                         <span className={`w-fit px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border
