@@ -381,7 +381,7 @@ export default function Dashboard({ players, userRole = 'guest', teamLogo, curre
       {/* Top Grid: Logo, Legacy, and Match Alert */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="md:col-span-1 flex items-center justify-center bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-          <img src="/INS%20LOGO.PNG" className="h-44 object-contain drop-shadow-lg" alt="Team Logo" />
+          <img src="/INS%20LOGO.PNG" className="h-44 object-contain drop-shadow-[0_0_25px_rgba(56,189,248,0.5)]" alt="Team Logo" />
         </div>
         
         <div className="md:col-span-2 bg-slate-900 rounded-[2rem] p-8 text-white relative overflow-hidden flex flex-col justify-center border border-slate-800 shadow-xl">
