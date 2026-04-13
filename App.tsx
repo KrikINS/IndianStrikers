@@ -243,9 +243,9 @@ const App: React.FC = () => {
       const newPlayer = await addPlayer(player);
       // Use the verified player from backend (with real ID)
       setPlayers(prev => [newPlayer, ...prev]);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to add player");
+      alert(`Failed to add player: ${e.message || 'Unknown Error'}`);
     }
   };
 
@@ -256,7 +256,7 @@ const App: React.FC = () => {
       setPlayers(prev => prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
     } catch (e: any) {
       console.error(e);
-      alert(`Failed to update player: ${e.message}`);
+      alert(`Failed to update player: ${e.message || 'Unknown Error'}`);
     }
   };
 
@@ -265,9 +265,9 @@ const App: React.FC = () => {
     try {
       await deletePlayer(id);
       setPlayers(prev => prev.filter(p => p.id !== id));
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to delete player");
+      alert(`Failed to delete player: ${e.message || 'Unknown Error'}`);
     }
   };
 
