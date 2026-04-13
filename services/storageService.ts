@@ -83,6 +83,8 @@ export const getAppUsers = async (): Promise<AppUser[]> => {
     id: u.id,
     username: u.username,
     name: u.name || u.username,
+    email: u.email,
+    contactNumber: u.contact_number,
     role: u.role,
     avatarUrl: u.avatar_url,
     playerId: u.player_id,
@@ -97,6 +99,8 @@ export const updateAppUser = async (id: string, user: Partial<AppUser>) => {
     headers: getHeaders(),
     body: JSON.stringify({
       username: user.username,
+      email: user.email,
+      contact_number: user.contactNumber,
       password: user.password,
       role: user.role,
       name: user.name,
@@ -114,6 +118,8 @@ export const addAppUser = async (user: Partial<AppUser>) => {
     headers: getHeaders(),
     body: JSON.stringify({
       username: user.username,
+      email: user.email,
+      contact_number: user.contactNumber,
       password: user.password,
       role: user.role,
       name: user.name,

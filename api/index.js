@@ -107,7 +107,7 @@ app.post('/api/login', async (req, res) => {
 // USERS (Admin only)
 app.get('/api/users', authGuard(['admin', 'member']), async (req, res) => {
   console.log(`[GET /api/users] Request received from ${req.user?.username} (${req.user?.role})`);
-  const { data, error } = await db.query('SELECT id,username,email,role,avatar_url,player_id,can_score,created_at FROM app_users ORDER BY created_at DESC'); // Show all users
+  const { data, error } = await db.query('SELECT id,username,email,contact_number,role,avatar_url,player_id,can_score,created_at FROM app_users ORDER BY created_at DESC'); // Show all users
   if (error) {
     console.error('[GET /api/users] Database error:', error);
     return res.status(500).json({ error: error.message });
@@ -116,20 +116,20 @@ app.get('/api/users', authGuard(['admin', 'member']), async (req, res) => {
   res.json(data);
 });
 app.post('/api/users', authGuard(['admin']), async (req, res) => {
-  const { username, email, password, role, name, avatar_url, player_id, can_score } = req.body;
+  const { username, email, password, role, name, avatar_url, player_id, can_score, contact_number } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
   const hash = await bcrypt.hash(password, 10);
   const { data, error } = await db.getOne(
-    'INSERT INTO app_users (username, email, password_hash, role, name, avatar_url, player_id, can_score) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-    [username, email || null, hash, role, name, avatar_url, player_id, can_score || false]
+    'INSERT INTO app_users (username, email, password_hash, role, name, avatar_url, player_id, can_score, contact_number) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+    [username, email || null, hash, role, name, avatar_url, player_id, can_score || false, contact_number || null]
   );
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 app.put('/api/users/:id', authGuard(['admin']), async (req, res) => {
-  const { username, email, role, name, avatar_url, player_id, password, can_score } = req.body;
-  let query = 'UPDATE app_users SET username=$1, email=$2, role=$3, name=$4, avatar_url=$5, player_id=$6, can_score=$7, updated_at=NOW()';
-  let params = [username, email || null, role, name, avatar_url, player_id, can_score || false];
+  const { username, email, role, name, avatar_url, player_id, password, can_score, contact_number } = req.body;
+  let query = 'UPDATE app_users SET username=$1, email=$2, role=$3, name=$4, avatar_url=$5, player_id=$6, can_score=$7, contact_number=$8, updated_at=NOW()';
+  let params = [username, email || null, role, name, avatar_url, player_id, can_score || false, contact_number || null];
   
   if (password && password.trim().length > 0) {
     const hash = await bcrypt.hash(password, 10);

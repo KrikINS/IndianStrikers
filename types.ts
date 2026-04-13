@@ -27,6 +27,7 @@ export interface AppUser {
   name: string;
   username: string; // The User ID used for login
   email?: string;
+  contactNumber?: string;
   password?: string;
   role: UserRole;
   avatarUrl?: string;

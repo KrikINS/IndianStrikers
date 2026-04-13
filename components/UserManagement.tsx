@@ -82,8 +82,8 @@ const UserManagement: React.FC = () => {
       const match = players.find(p => p.name.toLowerCase() === req.name.toLowerCase());
       setForm({ 
         name: req.name, 
-        username: req.email.split('@')[0], 
         email: req.email,
+        contactNumber: req.contactNumber,
         password: 'changeme123', 
         role: 'member', 
         playerId: match?.id 
@@ -145,10 +145,12 @@ const UserManagement: React.FC = () => {
                 <tr className="bg-slate-900/95 border-b border-white/10">
                   {activeSubTab === 'users' ? (
                     <>
-                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">User</th>
-                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest text-center">Login/Email</th>
-                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest">Role</th>
-                      <th className="px-4 py-3 text-[12px] font-bold text-white/60 uppercase tracking-widest text-right">Actions</th>
+                      <th className="px-4 py-3 text-[11px] font-bold text-white/50 uppercase tracking-widest">User Details</th>
+                      <th className="px-4 py-3 text-[11px] font-bold text-white/50 uppercase tracking-widest">Login ID</th>
+                      <th className="px-4 py-3 text-[11px] font-bold text-white/50 uppercase tracking-widest">Email</th>
+                      <th className="px-4 py-3 text-[11px] font-bold text-white/50 uppercase tracking-widest">Contact</th>
+                      <th className="px-4 py-3 text-[11px] font-bold text-white/50 uppercase tracking-widest">Role</th>
+                      <th className="px-4 py-3 text-[11px] font-bold text-white/50 uppercase tracking-widest text-right">Actions</th>
                     </>
                   ) : (
                     <>
@@ -163,29 +165,33 @@ const UserManagement: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {activeSubTab === 'users' ? users.map(u => (
                   <tr key={u.id} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-900 text-[10px] border border-slate-200 overflow-hidden shadow-inner">
+                        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-900 text-[10px] border border-slate-200 overflow-hidden shadow-inner shrink-0">
                           {u.avatarUrl ? <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" /> : u.name[0]}
                         </div>
-                        <div>
-                          <p className="text-[12px] font-bold text-slate-900 leading-tight">{u.name}</p>
-                          <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{String(u.id).substring(0, 8)}...</p>
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-bold text-slate-900 leading-tight truncate">{u.name}</p>
+                          <p className="text-[9px] text-slate-400 font-mono tracking-tighter uppercase">ID: {String(u.id).substring(0, 8)}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className="text-indigo-600 font-mono text-[11px] font-bold">{u.username}</span>
-                        {u.email && <span className="text-slate-400 font-mono text-[9px] lowercase">{u.email}</span>}
-                      </div>
+                    <td className="px-4 py-3">
+                      <span className="text-indigo-600 font-mono text-[11px] font-bold bg-indigo-50 px-2 py-1 rounded-md">{u.username}</span>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-3 text-[11px] text-slate-600 font-medium">
+                      {u.email || <span className="text-slate-300 italic">Not set</span>}
+                    </td>
+                    <td className="px-4 py-3 text-[11px] text-slate-600 font-medium whitespace-nowrap">
+                      { u.contactNumber || <span className="text-slate-300 italic">Not set</span>}
+                    </td>
+                    <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
-                        <span className={`w-fit px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border
+                        <span className={`w-fit px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border
                         ${u.role === 'admin' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
                           {u.role}
                         </span>
+
                         {u.canScore && (
                           <span className="w-fit px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-purple-50 text-purple-600 border border-purple-100 flex items-center gap-1">
                             <Plus size={10} /> Scorer
@@ -274,10 +280,14 @@ const UserManagement: React.FC = () => {
                   <input required value={form.username} placeholder="jdoe123" onChange={e => setForm({...form, username: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-mono" />
                 </div>
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Email (Optional)</label>
-                <input type="email" value={form.email || ''} placeholder="user@example.com" onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-mono" />
-              </div>
+                <div>
+                  <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Email ID</label>
+                  <input type="email" value={form.email || ''} placeholder="user@example.com" onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-mono" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Contact Number</label>
+                  <input type="tel" value={form.contactNumber || ''} placeholder="+91 00000 00000" onChange={e => setForm({...form, contactNumber: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-mono" />
+                </div>
               <div>
                 <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Password</label>
                 <input required={!editingItem} type="password" value={form.password} placeholder={editingItem ? 'Leave blank to keep same' : '••••••••'} onChange={e => setForm({...form, password: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-mono" />
