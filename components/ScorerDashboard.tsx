@@ -726,6 +726,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   const posterRef = useRef<HTMLDivElement>(null);
   const milestoneRef = useRef<MilestoneOverlayRef>(null);
 
+  // Opponent players fetched separately from the opponents table
+  const [opponentPlayers, setOpponentPlayers] = useState<{id: string; name: string; role?: string}[]>([]);
+
+  // Helper: resolve player name from either squad
+  const getPlayerName = (id: string | null): string => {
+    if (!id) return '—';
+    const homePlayer = players.find(p => p.id === id);
+    if (homePlayer) return homePlayer.name;
+    const awayPlayer = opponentPlayers.find(p => p.id === id);
+    if (awayPlayer) return awayPlayer.name;
+    // awayXI may store names directly for opponent teams without registered IDs
+    return id;
+  };
+
   useEffect(() => {
     if (store.maxOvers) {
       setTempMaxOvers(store.maxOvers);
@@ -821,6 +835,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
     }, 3000),
     [activeMatchId]
   );
+
+  // Fetch opponent players when we know the opponent ID
+  useEffect(() => {
+    const opponentId = matchMeta?.opponentId;
+    if (!opponentId) return;
+    import('../services/storageService').then(({ getOpponents }) => {
+      getOpponents().then(teams => {
+        const team = teams.find(t => String(t.id) === String(opponentId));
+        if (team && team.players && team.players.length > 0) {
+          setOpponentPlayers(team.players.map(p => ({ id: p.id, name: p.name, role: p.role })));
+        }
+      }).catch(console.error);
+    });
+  }, [matchMeta?.opponentId]);
 
   useEffect(() => {
     syncToDatabase(store);
@@ -1115,31 +1143,26 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                   </div>
 
                   <SelectionGrid>
-                    {players
+                    {(setupStep === 'squad_home' ? players : opponentPlayers)
                       .filter(p => roleFilter === 'All' || p.role === roleFilter)
                       .map(p => {
-                        const isSelected = setupStep === 'squad_home' ? homeXI.includes(p.id) : awayXI.includes(p.id);
-                        const isOtherSide = setupStep === 'squad_home' ? awayXI.includes(p.id) : homeXI.includes(p.id);
+                        const currentXI = setupStep === 'squad_home' ? homeXI : awayXI;
+                        const isSelected = currentXI.includes(p.id);
                         
                         return (
                           <PlayerCard 
                             key={p.id}
                             $selected={isSelected}
-                            $disabled={isOtherSide}
                             onClick={() => {
-                              if (isOtherSide) return;
-                              const currentSquad = setupStep === 'squad_home' ? homeXI : awayXI;
-                              const isSelected = currentSquad.includes(p.id);
-                              
+                              const isAlreadySel = currentXI.includes(p.id);
                               let newSquad;
-                              if (isSelected) {
-                                newSquad = currentSquad.filter(id => id !== p.id);
-                              } else if (currentSquad.length < 11) {
-                                newSquad = [...currentSquad, p.id];
+                              if (isAlreadySel) {
+                                newSquad = currentXI.filter(id => id !== p.id);
+                              } else if (currentXI.length < 11) {
+                                newSquad = [...currentXI, p.id];
                               } else {
                                 return;
                               }
-
                               store.updateMatchSettings({
                                 [setupStep === 'squad_home' ? 'homeXI' : 'awayXI']: newSquad
                               });
@@ -1152,21 +1175,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                                 <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>{p.role}</div>
                               </div>
                             </div>
-                            
-                            <StatRibbon>
-                              <StatItem>
-                                <StatLabel>Avg</StatLabel>
-                                <StatVal>{p.battingStats?.average || p.average || '0.0'}</StatVal>
-                              </StatItem>
-                              <StatItem>
-                                <StatLabel>SR</StatLabel>
-                                <StatVal>{p.battingStats?.strikeRate || '0'}</StatVal>
-                              </StatItem>
-                              <StatItem>
-                                <StatLabel>Wkt</StatLabel>
-                                <StatVal>{p.bowlingStats?.wickets || p.wicketsTaken || '0'}</StatVal>
-                              </StatItem>
-                            </StatRibbon>
+                            {setupStep === 'squad_home' && (
+                              <StatRibbon>
+                                <StatItem>
+                                  <StatLabel>Avg</StatLabel>
+                                  <StatVal>{(p as any).battingStats?.average || (p as any).average || '0.0'}</StatVal>
+                                </StatItem>
+                                <StatItem>
+                                  <StatLabel>SR</StatLabel>
+                                  <StatVal>{(p as any).battingStats?.strikeRate || '0'}</StatVal>
+                                </StatItem>
+                                <StatItem>
+                                  <StatLabel>Wkt</StatLabel>
+                                  <StatVal>{(p as any).bowlingStats?.wickets || (p as any).wicketsTaken || '0'}</StatVal>
+                                </StatItem>
+                              </StatRibbon>
+                            )}
                           </PlayerCard>
                         );
                       })}
@@ -1187,7 +1211,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
 
                   <button 
                     onClick={() => {
-                      const pool = players.filter(p => !(setupStep === 'squad_home' ? awayXI.includes(p.id) : homeXI.includes(p.id)));
+                      const pool = setupStep === 'squad_home' ? players : opponentPlayers;
                       const selectedIds = pool.slice(0, 11).map(p => p.id);
                       store.updateMatchSettings({
                         [setupStep === 'squad_home' ? 'homeXI' : 'awayXI']: selectedIds
@@ -1198,7 +1222,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                     Auto-Fill 11 Players
                   </button>
                 </>
-               ) : setupStep === 'openers_bat' ? (
+) : setupStep === 'openers_bat' ? (
                  <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                      <Users size={20} color="#FAB005" />
@@ -1208,15 +1232,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                     {(() => {
                       const firstInningsBatTeamId = (tossWinner === 'home' && tossChoice === 'Bat') || (tossWinner === 'away' && tossChoice === 'Bowl') ? 'HOME' : 'AWAY';
                       const batTeamId = store.innings1 ? (firstInningsBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeamId;
-                      const batSquad = batTeamId === 'HOME' ? homeXI : awayXI;
+                      const batSquadIds = batTeamId === 'HOME' ? homeXI : awayXI;
+                      // Use the correct player pool for name resolution
+                      const batPool = batTeamId === 'HOME'
+                        ? players.filter(p => batSquadIds.includes(p.id))
+                        : opponentPlayers.filter(p => batSquadIds.includes(p.id));
 
                       return (
                         <>
                           <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Striker & Non-Striker ({batTeamId === 'HOME' ? 'Indian Strikers' : (store.opponentName || matchMeta?.opponentName || 'OPPONENT')})</p>
                           <SelectionGrid>
-                            {players
-                              .filter(p => batSquad.includes(p.id))
-                              .map(p => (
+                            {batPool.map(p => (
                               <PlayerCard 
                                 key={p.id}
                                 $selected={selStriker === p.id || selNonStriker === p.id}
@@ -1258,19 +1284,21 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                      <h3 style={{ margin: 0, fontWeight: 900 }}>CHOOSE OPENING BOWLER</h3>
                    </div>
 
-                   {(() => {
+                    {(() => {
                      const firstBatTeamId = (tossWinner === 'home' && tossChoice === 'Bat') || (tossWinner === 'away' && tossChoice === 'Bowl') ? 'HOME' : 'AWAY';
                      const batTeamId = store.innings1 ? (firstBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : firstBatTeamId;
                      const bowlTeamId = batTeamId === 'HOME' ? 'AWAY' : 'HOME';
-                     const bowlSquad = bowlTeamId === 'HOME' ? homeXI : awayXI;
+                     const bowlSquadIds = bowlTeamId === 'HOME' ? homeXI : awayXI;
+                     // Use the correct player pool for name resolution
+                     const bowlPool = bowlTeamId === 'HOME'
+                       ? players.filter(p => bowlSquadIds.includes(p.id))
+                       : opponentPlayers.filter(p => bowlSquadIds.includes(p.id));
 
                      return (
                        <>
                          <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Opening Bowler ({bowlTeamId === 'HOME' ? 'Indian Strikers' : (store.opponentName || matchMeta?.opponentName || 'OPPONENT')})</p>
                          <SelectionGrid>
-                           {players
-                             .filter(p => bowlSquad.includes(p.id))
-                             .map(p => (
+                           {bowlPool.map(p => (
                              <PlayerCard 
                                key={p.id}
                                $selected={selBowler === p.id}
