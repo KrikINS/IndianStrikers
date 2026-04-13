@@ -13,12 +13,28 @@ interface EditMatchModalProps {
 
 const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, allOpponents, isOpen, onClose, onSave }) => {
     const { grounds, tournaments } = useMasterData();
-    const [formData, setFormData] = useState<ScheduledMatch>(match);
-    const [localDate, setLocalDate] = useState(match.date? match.date.slice(0, 16) : '');
+    const formatForInput = (isoString: string) => {
+        if (!isoString) return '';
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return '';
+        
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${mins}`;
+    };
 
+    const [formData, setFormData] = useState<ScheduledMatch>(match);
+    const [localDate, setLocalDate] = useState(formatForInput(match.date));
+
+    // Only re-sync if the match object itself changes (different ID or major refresh)
     useEffect(() => {
-        setFormData(match);
-        setLocalDate(match.date ? match.date.slice(0, 16) : '');
+        if (match.id !== formData.id || match.date !== formData.date) {
+            setFormData(match);
+            setLocalDate(formatForInput(match.date));
+        }
     }, [match]);
 
     if (!isOpen) return null;

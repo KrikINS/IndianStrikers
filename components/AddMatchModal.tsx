@@ -13,9 +13,19 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
     const { grounds, tournaments } = useMasterData();
     const { addMatch } = useMatchCenter();
 
+    const getInitialDate = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${mins}`;
+    };
+
     const [formData, setFormData] = useState({
         opponentId: '',
-        date: new Date().toISOString().slice(0, 16),
+        date: getInitialDate(),
         groundId: '',
         tournamentId: '',
         stage: 'League' as MatchStage,

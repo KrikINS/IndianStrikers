@@ -45,6 +45,8 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     const matchDate = new Date(match.date);
     const dateFormatted = matchDate.toLocaleDateString(undefined, {
         weekday: 'short', month: 'short', day: 'numeric'
+    }) + ' @ ' + matchDate.toLocaleTimeString(undefined, {
+        hour: '2-digit', minute: '2-digit', hour12: true
     });
 
     const getMatchTimeContext = (matchDate: string) => {
