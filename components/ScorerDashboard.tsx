@@ -776,7 +776,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[] }> = ({ ma
           opponentName: resolvedOpponentName,
           maxOvers: matchMeta.maxOvers || 20,
           homeXI: matchMeta.homeTeamXI,
-          awayXI: matchMeta.opponentTeamXI
+          awayXI: matchMeta.opponentTeamXI,
+          liveData: matchMeta.live_data
         });
       }
     }

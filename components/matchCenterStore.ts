@@ -19,6 +19,7 @@ interface MatchStore {
   getSortedMatches: () => ScheduledMatch[];
   resetZombieMatches: () => void;
   purgeTestData: () => Promise<void>;
+  wipeLocalMatches: () => void;
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
 }

@@ -82,6 +82,7 @@ const UserManagement: React.FC = () => {
       const match = players.find(p => p.name.toLowerCase() === req.name.toLowerCase());
       setForm({ 
         name: req.name, 
+        username: req.email.split('@')[0], 
         email: req.email,
         contactNumber: req.contactNumber,
         password: 'changeme123', 
@@ -97,7 +98,7 @@ const UserManagement: React.FC = () => {
 
   return (
     <div className="animate-fade-in space-y-4">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 bg-white/5 rounded-xl border border-white/10 gap-4">
+      <div className="flex flex-row justify-between items-center p-4 bg-white/5 rounded-xl border border-white/10 gap-2 sm:gap-4">
         <div className="flex items-center gap-4">
            <div className="flex bg-black/40 p-1 rounded-xl border border-white/10">
              <button 
@@ -106,7 +107,7 @@ const UserManagement: React.FC = () => {
                aria-label="View User Management"
                className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase transition-all flex items-center gap-2 ${activeSubTab === 'users' ? 'bg-blue-600 text-white shadow-lg' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
              >
-               <Users size={14} /> Manage Users
+               <Users size={14} /> Users
              </button>
              <button 
                onClick={() => setActiveSubTab('requests')}
@@ -126,9 +127,9 @@ const UserManagement: React.FC = () => {
             onClick={handleOpenAdd} 
             title="Create New User"
             aria-label="Create New User"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-lg text-[11px] flex items-center gap-2 shadow-lg shadow-blue-900/20 transition-all active:scale-95 uppercase tracking-widest"
+            className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-lg text-[10px] sm:text-[11px] flex items-center gap-1 sm:gap-2 shadow-lg shadow-blue-900/20 transition-all active:scale-95 uppercase tracking-widest whitespace-nowrap"
           >
-            <Plus size={14} /> CREATE NEW USER
+            <Plus size={14} /> <span className="hidden xs:inline">CREATE</span> NEW USER
           </button>
         )}
       </div>
@@ -166,14 +167,9 @@ const UserManagement: React.FC = () => {
                 {activeSubTab === 'users' ? users.map(u => (
                   <tr key={u.id} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-900 text-[10px] border border-slate-200 overflow-hidden shadow-inner shrink-0">
-                          {u.avatarUrl ? <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" /> : u.name[0]}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[12px] font-bold text-slate-900 leading-tight truncate">{u.name}</p>
-                          <p className="text-[9px] text-slate-400 font-mono tracking-tighter uppercase">ID: {String(u.id).substring(0, 8)}</p>
-                        </div>
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-bold text-slate-900 leading-tight truncate">{u.name}</p>
+                        <p className="text-[9px] text-slate-400 font-mono tracking-tighter uppercase">ID: {String(u.id).substring(0, 8)}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -202,7 +198,6 @@ const UserManagement: React.FC = () => {
                     <td className="px-4 py-2 text-right">
                       <div className="flex justify-end gap-1">
                          <button onClick={() => handleOpenEdit(u)} className="p-1.5 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all" title="Edit User"><Edit2 size={14} /></button>
-                         <button onClick={() => handleDelete(u.id)} className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete User"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -234,7 +229,7 @@ const UserManagement: React.FC = () => {
                                APPROVE
                              </button>
                           )}
-                          <button onClick={() => deleteMembershipRequest(r.id).then(() => loadData())} className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete Request"><Trash2 size={14} /></button>
+
                       </div>
                     </td>
                   </tr>
@@ -330,14 +325,32 @@ const UserManagement: React.FC = () => {
                   <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${form.canScore ? 'left-7' : 'left-1'}`}></div>
                 </button>
               </div>
-              <button 
-                type="submit" 
-                disabled={isSaving}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:text-white/50 text-white font-black rounded-xl shadow-xl shadow-blue-900/40 transition-all active:scale-[0.98] uppercase tracking-widest text-[12px] flex items-center justify-center gap-2"
-              >
-                {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
-                {isSaving ? 'SYNCING...' : (editingItem ? 'SYNC UPDATES' : 'GENERATE ACCESS')}
-              </button>
+              <div className="flex gap-3">
+                {editingItem && (
+                  <button 
+                    type="button"
+                    title="Delete User"
+                    aria-label="Delete User"
+                    onClick={() => {
+                      if (window.confirm("Permanently delete this user? This cannot be undone.")) {
+                        handleDelete(editingItem.id);
+                        setIsModalOpen(false);
+                      }
+                    }}
+                    className="px-4 py-3 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white font-black rounded-xl border border-red-500/20 transition-all active:scale-[0.95] flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+                <button 
+                  type="submit" 
+                  disabled={isSaving}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:text-white/50 text-white font-black rounded-xl shadow-xl shadow-blue-900/40 transition-all active:scale-[0.98] uppercase tracking-widest text-[12px] flex items-center justify-center gap-2"
+                >
+                  {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
+                  {isSaving ? 'SYNCING...' : (editingItem ? 'SYNC UPDATES' : 'GENERATE ACCESS')}
+                </button>
+              </div>
             </form>
           </div>
         </div>

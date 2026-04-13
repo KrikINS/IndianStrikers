@@ -90,6 +90,7 @@ interface ScorerStore extends MatchState {
         maxOvers: number;
         homeXI?: string[];
         awayXI?: string[];
+        liveData?: any;
     }) => void;
     updateMatchSettings: (data: Partial<MatchState>) => void;
     setToss: (winnerId: string | null, choice: 'Bat' | 'Bowl' | null) => void;
@@ -147,6 +148,32 @@ export const useCricketScorer = create<ScorerStore>()(
 
             initializeMatch: (data) => {
                 const current = get();
+
+                // 1. REHYDRATION LOGIC: If server provides liveData, override completely
+                if (data.liveData && Object.keys(data.liveData).length > 0) {
+                    // Try parsing if it's a string from db
+                    let parsedData = data.liveData;
+                    if (typeof data.liveData === 'string') {
+                      try { parsedData = JSON.parse(data.liveData); } catch (e) {}
+                    }
+                    if (parsedData.innings1) {
+                         console.log("[Scorer] Rehydrating perfectly from live_data!");
+                         set({ 
+                             ...INITIAL_STATE,
+                             ...parsedData,
+                             matchId: data.matchId,
+                             matchType: data.matchType,
+                             tournament: data.tournament,
+                             ground: data.ground,
+                             opponentName: data.opponentName,
+                             maxOvers: data.maxOvers,
+                             homeXI: data.homeXI || parsedData.homeXI || [],
+                             awayXI: data.awayXI || parsedData.awayXI || []
+                         });
+                         return;
+                    }
+                }
+
                 // If we're already scoring this match and have data, don't wipe it
                 if (current.matchId === data.matchId && current.innings1) {
                     // Just update metadata if needed

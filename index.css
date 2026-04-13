@@ -1,5 +1,45 @@
-@import url('https://fonts.googleapis.com/css2?family=Graduate&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --color-primary: #0f172a;
+  --color-secondary: #3b82f6;
+  --color-accent: #f97316;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-cursive: "Dancing Script", cursive;
+  --font-neon: "Tilt Neon", sans-serif;
+
+  --animate-fade-in: fadeIn 0.5s ease-out;
+  --animate-zoom-in: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  --animate-spin-circle: spinCircle 5s infinite linear;
+  --animate-shimmer: shimmer 1.5s infinite;
+  --animate-blink: blink 1s step-end infinite;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.5) translate(-50%, -50%); }
+    to { opacity: 1; transform: scale(1) translate(-50%, -50%); }
+  }
+  @keyframes spinCircle {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Graduate&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Dancing+Script:wght@600;700&family=Tilt+Neon&display=swap');
+
 
 .graduate {
   font-family: 'Graduate', serif;
@@ -44,6 +84,41 @@ body {
 .rotate-ins {
   transform-box: fill-box;
   transform-origin: center;
+  animation: spinCircle 5s infinite linear;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+}
+
+/* 3D Text Utilities */
+.text-3d-white {
+  text-shadow:
+    1px 1px 0px #ccc,
+    2px 2px 0px #bbb,
+    3px 3px 0px #aaa,
+    4px 4px 5px rgba(0, 0, 0, 0.3);
+}
+
+.text-3d-blue {
+  text-shadow:
+    1px 1px 0px #1e40af,
+    2px 2px 0px #1e3a8a,
+    3px 3px 0px #172554,
+    4px 4px 5px rgba(0, 0, 0, 0.5);
+}
+
+.perspective-container {
+  perspective: 1000px;
 }
 
 .kirik-logo-filter {

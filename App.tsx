@@ -18,6 +18,7 @@ import GroundsManager from './components/GroundsManager';
 import TournamentsManager from './components/TournamentsManager';
 import UserManagement from './components/UserManagement';
 import { ScorecardPage } from './components/ScorecardPage';
+import LiveScorecardPage from './components/LiveScorecardPage';
 import { Player, UserRole, OpponentTeam } from './types';
 import { getPlayers, addPlayer, updatePlayer, deletePlayer, getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo, getMatches } from './services/storageService';
 import { Menu, Shield, ArrowRight } from 'lucide-react';
@@ -58,12 +59,16 @@ const AppContent: React.FC<{
   onSignOut: () => void,
   teamLogo: string,
   onUpdateLogo: (url: string) => void,
+  isAdminView: boolean,
+  onToggleAdminView: () => void,
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean },
   linkedPlayer?: Player,
   onRefresh: () => Promise<void>
-}> = ({ players, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer, onRefresh }) => {
+}> = ({ players, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onSignOut, teamLogo, onUpdateLogo, isAdminView, onToggleAdminView, currentUser, linkedPlayer, onRefresh }) => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const effectiveRole = userRole === 'admin' ? (isAdminView ? 'admin' : 'member') : userRole;
 
   useEffect(() => {
     const handleBackButton = async () => {
@@ -87,58 +92,62 @@ const AppContent: React.FC<{
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
-      <Sidebar
-        userRole={userRole}
-        onSignOut={onSignOut}
-        teamLogo={teamLogo}
-        onUpdateLogo={onUpdateLogo}
-        currentUser={currentUser}
-        linkedPlayer={linkedPlayer}
-      />
+        <Sidebar
+          userRole={userRole}
+          effectiveRole={effectiveRole}
+          isAdminView={isAdminView}
+          onToggleAdminView={onToggleAdminView}
+          onSignOut={onSignOut}
+          teamLogo={teamLogo}
+          onUpdateLogo={onUpdateLogo}
+          currentUser={currentUser}
+          linkedPlayer={linkedPlayer}
+        />
 
-      <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
-        <div className="p-3 md:p-6 lg:p-8 w-full pb-24 md:pb-8">
-          <Routes>
-            <Route path="/home" element={<Dashboard players={players} userRole={userRole} teamLogo={teamLogo} currentUser={currentUser} />} />
-            <Route
-              path="/roster"
-              element={
-                <PlayerList
-                  players={players}
-                  userRole={userRole}
-                  currentUser={currentUser}
-                  onAddPlayer={onAddPlayer}
-                  onUpdatePlayer={onUpdatePlayer}
-                  onDeletePlayer={onDeletePlayer}
-                />
-              }
-            />
-            <Route path="/fielding" element={<FieldingMap players={players} userRole={userRole} currentUser={currentUser} />} />
-            <Route
-              path="/opponents"
-              element={
-                <OpponentTeams
-                  teams={opponents}
-                  onAddTeam={onAddOpponent}
-                  onUpdateTeam={onUpdateOpponent}
-                  onDeleteTeam={onDeleteOpponent}
-                  userRole={userRole}
-                  currentUser={currentUser}
-                />
-              }
-            />
-            <Route path="/memories" element={<Memories userRole={userRole} currentUser={currentUser} />} />
-            <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={userRole} currentUser={currentUser} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
-            <Route path="/scorer" element={(userRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} /> : <Unauthorized />} />
-            <Route path="/scorer/:id" element={(userRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} /> : <Unauthorized />} />
-            {/* Control Panel Routes - Admin only */}
-            <Route path="/control-panel" element={userRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Unauthorized />}>
-              <Route index element={<Navigate to="grounds" replace />} />
-              <Route path="grounds" element={<GroundsManager />} />
-              <Route path="tournaments" element={<TournamentsManager />} />
-              <Route path="legacy" element={<LegacyEditor players={players} onUpdatePlayer={onUpdatePlayer} />} />
-              <Route path="users" element={<UserManagement />} />
-            </Route>
+        <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
+          <div className="p-3 md:p-6 lg:p-8 w-full pb-24 md:pb-8">
+            <Routes>
+              <Route path="/home" element={<Dashboard players={players} userRole={effectiveRole} teamLogo={teamLogo} currentUser={currentUser} />} />
+              <Route
+                path="/roster"
+                element={
+                  <PlayerList
+                    players={players}
+                    userRole={effectiveRole}
+                    currentUser={currentUser}
+                    onAddPlayer={onAddPlayer}
+                    onUpdatePlayer={onUpdatePlayer}
+                    onDeletePlayer={onDeletePlayer}
+                  />
+                }
+              />
+              <Route path="/fielding" element={<FieldingMap players={players} userRole={effectiveRole} currentUser={currentUser} />} />
+              <Route
+                path="/opponents"
+                element={
+                  <OpponentTeams
+                    teams={opponents}
+                    onAddTeam={onAddOpponent}
+                    onUpdateTeam={onUpdateOpponent}
+                    onDeleteTeam={onDeleteOpponent}
+                    userRole={effectiveRole}
+                    currentUser={currentUser}
+                  />
+                }
+              />
+              <Route path="/memories" element={<Memories userRole={effectiveRole} currentUser={currentUser} />} />
+              <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={effectiveRole} currentUser={currentUser} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
+              <Route path="/scorer" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} /> : <Unauthorized />} />
+              <Route path="/scorer/:id" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} /> : <Unauthorized />} />
+              <Route path="/live/:id" element={<LiveScorecardPage players={players} opponents={opponents} />} />
+              {/* Control Panel Routes - Admin view required */}
+              <Route path="/control-panel" element={effectiveRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Unauthorized />}>
+                <Route index element={<Navigate to="grounds" replace />} />
+                <Route path="grounds" element={<GroundsManager />} />
+                <Route path="tournaments" element={<TournamentsManager />} />
+                <Route path="legacy" element={<LegacyEditor players={players} onUpdatePlayer={onUpdatePlayer} />} />
+                <Route path="users" element={<UserManagement />} />
+              </Route>
             
             <Route path="/scorecard/:id" element={<ScorecardPage players={players} opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />
             
@@ -163,6 +172,7 @@ const App: React.FC = () => {
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [showSplash, setShowSplash] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>('guest');
+  const [isAdminView, setIsAdminView] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }>();
   const [teamLogo, setTeamLogo] = useState<string>('');
   const resetZombieMatches = useMatchCenter(state => state.resetZombieMatches);
@@ -207,6 +217,10 @@ const App: React.FC = () => {
       // Recover session role if exists, default to guest if not
       const savedRole = sessionStorage.getItem('userRole') as UserRole;
       if (savedRole) setUserRole(savedRole);
+      
+      const savedAdminView = sessionStorage.getItem('isAdminView');
+      if (savedAdminView === 'true') setIsAdminView(true);
+
       // 3. Load Matches via cloud sync (utilizes nuclear filters)
       useMatchCenter.getState().syncWithCloud();
 
@@ -219,6 +233,7 @@ const App: React.FC = () => {
 
   const handleLoginComplete = (role: UserRole, user?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }) => {
     setUserRole(role);
+    setIsAdminView(false); // Default to member view on entry
     if (user) {
       setCurrentUser(user);
       sessionStorage.setItem('currentUser', JSON.stringify(user));
@@ -226,15 +241,24 @@ const App: React.FC = () => {
     setShowSplash(false);
     sessionStorage.setItem('hasSeenSplash', 'true');
     sessionStorage.setItem('userRole', role);
+    sessionStorage.setItem('isAdminView', 'false');
+  };
+
+  const handleToggleAdminView = () => {
+    const newVal = !isAdminView;
+    setIsAdminView(newVal);
+    sessionStorage.setItem('isAdminView', String(newVal));
   };
 
   const handleSignOut = () => {
     setUserRole('guest');
+    setIsAdminView(false);
     setCurrentUser(undefined);
     setShowSplash(true);
     sessionStorage.removeItem('hasSeenSplash');
     sessionStorage.removeItem('userRole');
     sessionStorage.removeItem('currentUser');
+    sessionStorage.removeItem('isAdminView');
   };
 
   const handleAddPlayer = async (player: Player) => {
@@ -306,29 +330,31 @@ const App: React.FC = () => {
     await saveTeamLogo(url);
   };
 
-  if (showSplash) {
-    return <SplashScreen onComplete={handleLoginComplete} teamLogo={teamLogo} />;
-  }
-
   return (
     <HashRouter>
-      <AppContent
-        players={players}
-        opponents={opponents}
-        userRole={userRole}
-        onAddPlayer={handleAddPlayer}
-        onUpdatePlayer={handleUpdatePlayer}
-        onDeletePlayer={handleDeletePlayer}
-        onAddOpponent={handleAddOpponent}
-        onUpdateOpponent={handleUpdateOpponent}
-        onDeleteOpponent={handleDeleteOpponent}
-        onSignOut={handleSignOut}
-        teamLogo={teamLogo}
-        onUpdateLogo={handleUpdateLogo}
-        currentUser={currentUser}
-        linkedPlayer={currentUser?.id ? players.find(p => String(p.linkedUserId) === String(currentUser?.id)) : undefined}
-        onRefresh={loadData}
-      />
+      {showSplash ? (
+        <SplashScreen onComplete={handleLoginComplete} teamLogo={teamLogo} />
+      ) : (
+        <AppContent
+          players={players}
+          opponents={opponents}
+          userRole={userRole}
+          isAdminView={isAdminView}
+          onToggleAdminView={handleToggleAdminView}
+          onAddPlayer={handleAddPlayer}
+          onUpdatePlayer={handleUpdatePlayer}
+          onDeletePlayer={handleDeletePlayer}
+          onAddOpponent={handleAddOpponent}
+          onUpdateOpponent={handleUpdateOpponent}
+          onDeleteOpponent={handleDeleteOpponent}
+          onSignOut={handleSignOut}
+          teamLogo={teamLogo}
+          onUpdateLogo={handleUpdateLogo}
+          currentUser={currentUser}
+          linkedPlayer={currentUser?.id ? players.find(p => String(p.linkedUserId) === String(currentUser?.id)) : undefined}
+          onRefresh={loadData}
+        />
+      )}
     </HashRouter>
   );
 };

@@ -33,6 +33,9 @@ import { getMembershipRequests, changePassword } from '../services/storageServic
 
 interface SidebarProps {
   userRole?: UserRole;
+  effectiveRole?: UserRole;
+  isAdminView?: boolean;
+  onToggleAdminView?: () => void;
   onSignOut: () => void;
   teamLogo: string;
   onUpdateLogo: (url: string) => void;
@@ -40,7 +43,7 @@ interface SidebarProps {
   linkedPlayer?: { id?: string; name: string; avatarUrl?: string }; // Minimal player type needed
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer }) => {
+const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = 'guest', isAdminView = false, onToggleAdminView, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer }) => {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
@@ -136,14 +139,16 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
 
   const controlPanelLinks: SidebarLink[] = [];
 
-  mainLinks.push({ to: '/scorer', icon: <ClipboardList size={20} />, label: 'Strikers Pulse' });
+  mainLinks.push({ to: '/scorer', icon: <ClipboardList size={20} />, label: 'Live Scores' });
 
-  controlPanelLinks.push({ 
-    to: '/control-panel/grounds', 
-    icon: <Settings size={20} />, 
-    label: 'Control Panel',
-    badge: (userRole === 'admin' && pendingRequests > 0) ? pendingRequests : undefined
-  });
+  if (effectiveRole === 'admin') {
+    controlPanelLinks.push({ 
+      to: '/control-panel/grounds', 
+      icon: <Settings size={20} />, 
+      label: 'Control Panel',
+      badge: pendingRequests > 0 ? pendingRequests : undefined
+    });
+  }
 
   const effectiveAvatar = linkedPlayer?.avatarUrl || currentUser?.avatarUrl;
 
@@ -211,6 +216,33 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
         </div>
 
         <nav className={`mt-2 px-4 space-y-2 flex-1 overflow-y-auto custom-scrollbar transition-all ${isCollapsed ? 'px-2' : ''}`}>
+          {/* Admin Switcher */}
+          {userRole === 'admin' && (
+            <button 
+              onClick={onToggleAdminView}
+              className={`
+                w-full flex items-center rounded-xl transition-all duration-300 group
+                ${isCollapsed ? 'justify-center p-3' : 'space-x-3 px-4 py-3'}
+                ${isAdminView 
+                  ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                  : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                }
+                hover:scale-[1.02] active:scale-95
+              `}
+              title={isCollapsed ? (isAdminView ? "Switch to Member" : "Switch to Admin") : ""}
+            >
+              <div className="shrink-0">
+                {isAdminView ? <Shield size={20} /> : <User size={20} />}
+              </div>
+              {!isCollapsed && (
+                <div className="flex flex-col items-start leading-none">
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Active View</span>
+                  <span className="font-bold text-[13px]">{isAdminView ? 'ADMIN MODE' : 'MEMBER MODE'}</span>
+                </div>
+              )}
+            </button>
+          )}
+
           {/* Main Links */}
           {mainLinks.map((link) => (
             <NavLink
@@ -312,43 +344,34 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
                 </div>
               )}
             </div>
-            {!isCollapsed && (
-              linkedPlayer?.id ? (
-                <div className="p-1.5 text-slate-500 group-hover/user:text-blue-400">
-                  <ArrowRight size={14} />
-                </div>
-              ) : (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onSignOut(); }}
-                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-all"
-                  title="Sign Out"
-                >
-                  <LogOut size={18} />
-                </button>
-              )
+            {linkedPlayer?.id && (
+              <div className="p-1.5 text-slate-500 group-hover/user:text-blue-400">
+                <ArrowRight size={14} />
+              </div>
             )}
           </div>
 
-          {linkedPlayer?.id && (
-            <div className={`flex ${isCollapsed ? 'gap-1' : 'gap-2'}`}>
+          {/* User Actions */}
+          <div className={`flex ${isCollapsed ? 'flex-col gap-1' : 'gap-2'}`}>
+            {currentUser?.id && (
               <button
                 onClick={() => setShowConfig(true)}
                 title={isCollapsed ? "Change Password" : ""}
-                className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-blue-400 hover:bg-blue-950/20 rounded-lg transition-all border border-transparent hover:border-blue-900/30 ${isCollapsed ? 'p-1.5' : 'py-2 text-xs'}`}
+                className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-blue-400 hover:bg-blue-950/20 rounded-lg transition-all border border-transparent hover:border-blue-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-[10px]'}`}
               >
-                <Key size={isCollapsed ? 14 : 14} />
+                <Key size={isCollapsed ? 18 : 14} />
                 {!isCollapsed && <span>PASSWORD</span>}
               </button>
-              <button
-                onClick={onSignOut}
-                title={isCollapsed ? "Sign Out" : ""}
-                className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-1.5' : 'py-2 text-xs'}`}
-              >
-                <LogOut size={isCollapsed ? 14 : 14} />
-                {!isCollapsed && <span>SIGN OUT</span>}
-              </button>
-            </div>
-          )}
+            )}
+            <button
+              onClick={onSignOut}
+              title={isCollapsed ? "Sign Out" : ""}
+              className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-[10px]'}`}
+            >
+              <LogOut size={isCollapsed ? 18 : 14} />
+              {!isCollapsed && <span>SIGN OUT</span>}
+            </button>
+          </div>
 
           {/* Join Us Button for Guests */}
           {userRole === 'guest' && (

@@ -282,6 +282,32 @@ export const getMatches = async (): Promise<ScheduledMatch[]> => {
   }));
 };
 
+export const getMatch = async (id: string): Promise<ScheduledMatch | null> => {
+  const res = await fetch(`${API_URL}/matches/${id}`);
+  const m = await handleResponse(res);
+  if (!m) return null;
+  return {
+    ...m,
+    homeTeamXI: m.homeTeamXI || m.home_team_xi || [],
+    opponentTeamXI: m.opponentTeamXI || m.opponent_team_xi || [],
+    opponentId: m.opponentId || m.opponent_id,
+    groundId: m.groundId || m.ground_id,
+    isLiveScored: m.isLiveScored ?? m.is_live_scored ?? false,
+    isLocked: m.isLocked ?? m.is_locked ?? false,
+    isHomeBattingFirst: m.isHomeBattingFirst ?? m.is_home_batting_first ?? true,
+    matchFormat: m.matchFormat || m.match_format,
+    opponentName: m.opponentName || m.opponent_name,
+    homeLogo: m.homeLogo || m.home_logo,
+    opponentLogo: m.opponentLogo || m.opponent_logo,
+    resultSummary: m.resultSummary || m.result_summary,
+    resultNote: m.resultNote || m.result_note,
+    resultType: m.resultType || m.result_type,
+    finalScoreHome: m.finalScoreHome || m.final_score_home,
+    finalScoreAway: m.finalScoreAway || m.final_score_away,
+    is_test: m.is_test ?? false
+  };
+};
+
 export const addMatch = async (match: Partial<ScheduledMatch>) => {
   const res = await fetch(`${API_URL}/matches`, {
     method: 'POST',
@@ -384,7 +410,8 @@ export const getStrategies = async (): Promise<FieldingStrategy[]> => {
     batterHand: s.batter_hand,
     matchPhase: s.match_phase,
     bowlerId: s.bowler_id,
-    batterId: s.batter_id
+    batterId: s.batter_id,
+    positions: typeof s.positions === 'string' ? JSON.parse(s.positions) : (s.positions || [])
   }));
 };
 
@@ -393,8 +420,8 @@ export const addStrategy = async (strategy: FieldingStrategy) => {
     name: strategy.name,
     batter_hand: strategy.batterHand,
     match_phase: strategy.matchPhase,
-    bowler_id: strategy.bowlerId,
-    batter_id: strategy.batterId,
+    bowler_id: strategy.bowlerId || null,
+    batter_id: strategy.batterId || null,
     positions: strategy.positions
   };
   const res = await fetch(`${API_URL}/strategies`, {

@@ -273,6 +273,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         const match = matches.find(m => m.id === matchId);
         if (!match) return;
 
+        const isScorerOrAdmin = userRole === 'admin' || currentUser?.canScore;
+
+        if (!isScorerOrAdmin) {
+            navigate(`/live/${matchId}`);
+            return;
+        }
+
         if (match.homeTeamXI.length !== 11) {
             alert("Please select exactly 11 players for Indian Strikers before starting.");
             handleSelectPlayingXI(matchId, 'home');

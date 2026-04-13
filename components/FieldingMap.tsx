@@ -198,9 +198,9 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
       setStrategies(prev => [...prev, strategyWithId]);
       setStrategyName('');
       setActiveStrategyId(strategyWithId.id);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to save strategy");
+      alert(`Failed to save strategy: ${e.message || 'Unknown error'}`);
     }
   };
 
@@ -490,15 +490,13 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
               const isDraggingOut = draggedId === pos.playerId && (pos.left < 0 || pos.left > 100 || pos.top < 0 || pos.top > 100);
 
               return (
-                <button
-                  type="button"
+                <div
                   key={pos.playerId}
-                  className={`player-marker animate-zoom-in ${isDraggingOut ? 'opacity-50 scale-90 grayscale' : 'scale-100'} ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                  className={`player-marker animate-zoom-in ${isDraggingOut ? 'opacity-50 scale-90 grayscale' : 'scale-100'}`}
                   style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
                   onPointerDown={(e) => handlePointerDown(e, pos.playerId)}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
-                  onClick={(e) => handleMarkerClick(e, pos.playerId)}
                 >
                   {isSelected && (
                     <div
@@ -513,7 +511,13 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
                             <p className="text-[10px] text-slate-400">{player.role}</p>
                           </div>
                         </div>
-                        <button onClick={() => setSelectedMarkerId(null)} className="text-slate-300 hover:text-slate-500" aria-label="Close player information"><X size={12} /></button>
+                        <button 
+                          onClick={() => setSelectedMarkerId(null)} 
+                          className="text-slate-300 hover:text-slate-500" 
+                          aria-label="Close player information"
+                        >
+                          <X size={12} />
+                        </button>
                       </div>
 
                       <div className="grid grid-cols-2 gap-1 mb-2">
@@ -536,25 +540,32 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
                         </button>
                       )}
 
-                      {/* Triangle Pointer */}
                       <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] w-3 h-3 bg-white border-b border-r border-slate-200 rotate-45"></div>
                     </div>
                   )}
 
-                  {/* The Marker */}
-                  <div className={`
-                        relative w-8 h-8 rounded-full border-2 shadow-md flex items-center justify-center transition-all duration-200
-                        ${bgColor}
-                        ${isSelected ? 'border-white scale-110 ring-4 ring-white/30 z-40' : 'border-white hover:scale-105'}
-                      `}>
+                  <div 
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => handleMarkerClick(e, pos.playerId)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleMarkerClick(e as any, pos.playerId);
+                      }
+                    }}
+                    className={`
+                      relative w-8 h-8 rounded-full border-2 shadow-md flex items-center justify-center transition-all duration-200
+                      ${bgColor}
+                      ${isSelected ? 'border-white scale-110 ring-4 ring-white/30 z-40' : 'border-white hover:scale-105'}
+                      ${isReadOnly ? 'cursor-default' : 'cursor-pointer'}
+                    `}
+                  >
                     <span className="text-[10px] font-bold text-white tracking-tighter leading-none select-none">
                       {getInitials(player.name)}
                     </span>
-
-                    {/* Outer Glow */}
                     <div className={`absolute inset-0 rounded-full opacity-20 ${isBowler ? 'animate-ping bg-white' : ''}`}></div>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>

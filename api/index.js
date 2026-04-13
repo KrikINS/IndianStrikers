@@ -330,7 +330,8 @@ const mapMatchToDB = (m) => {
     'is_locked', 'toss_winner_id', 'toss_choice', 'toss_details', 
     'max_overs', 'result_summary', 'result_note', 'result_type', 
     'final_score_home', 'final_score_away', 'is_live_scored', 
-    'is_home_batting_first', 'tournament_id', 'performers', 'scorecard', 'is_career_synced', 'is_test'
+    'is_home_batting_first', 'tournament_id', 'performers', 'scorecard', 'is_career_synced', 'is_test',
+    'live_data'
   ];
 
   // 1. First, map camelCase to snake_case
@@ -381,6 +382,13 @@ app.get('/api/matches', async (_req, res) => {
   // Exclude legacy match from generic listing
   const filtered = (data || []).filter(m => m.id !== '00000000-0000-0000-0000-000000000001');
   res.json(filtered);
+});
+
+app.get('/api/matches/:id', async (req, res) => {
+  const { data, error } = await db.getOne('SELECT * FROM matches WHERE id=$1', [req.params.id]);
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: "Match not found" });
+  res.json(data);
 });
 
 app.post('/api/matches', authGuard(['admin', 'member']), async (req, res) => {
@@ -685,12 +693,35 @@ app.get('/api/strategies', async (_req, res) => {
 });
 app.post('/api/strategies', authGuard(['admin', 'member']), async (req, res) => {
   const { name, batter_hand, match_phase, bowler_id, batter_id, positions } = req.body;
+  if (!name || !positions) return res.status(400).json({ error: 'Missing name or positions' });
+  
+  console.log(`[POST /api/strategies] Name: "${name}", Positions Type: ${typeof positions}`);
+  
+  let positionsJson;
+  try {
+    positionsJson = typeof positions === 'string' ? positions : JSON.stringify(positions);
+    if (typeof positions === 'string') JSON.parse(positions);
+  } catch (e) {
+    console.error('[POST /api/strategies] Invalid JSON provided for positions:', e.message);
+    return res.status(400).json({ error: 'Invalid JSON syntax for positions' });
+  }
+
   const { data, error } = await db.getOne(
-    'INSERT INTO strategies (name, batter_hand, match_phase, bowler_id, batter_id, positions) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [name, batter_hand, match_phase, bowler_id, batter_id, positions]
+    'INSERT INTO strategies (name, batter_hand, match_phase, bowler_id, batter_id, positions) VALUES ($1, $2, $3, $4, $5, $6::jsonb) RETURNING *',
+    [
+      name, 
+      batter_hand || 'RHB', 
+      match_phase || 'Powerplay', 
+      bowler_id || null, 
+      batter_id || null, 
+      positionsJson
+    ]
   );
-  if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
+  if (error) {
+    console.error('[POST /api/strategies] DB INSERT Error:', error);
+    return res.status(400).json({ error: error.message || 'Failed to save strategy' });
+  }
+  res.status(201).json(data);
 });
 app.delete('/api/strategies/:id', authGuard(['admin']), async (req, res) => {
   const { error } = await db.query('DELETE FROM strategies WHERE id = $1', [req.params.id]);
