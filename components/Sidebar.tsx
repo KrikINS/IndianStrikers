@@ -152,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
       {/* Sidebar */}
       <aside className={`
         sticky top-0 h-screen bg-slate-900 text-white z-30 transition-all duration-300 ease-in-out flex flex-col shrink-0 shadow-xl border-r border-slate-800
-        ${isCollapsed ? 'w-20' : 'w-60 md:w-64'}
+        ${isCollapsed ? 'w-16' : 'w-60 md:w-64'}
       `}>
         <div className={`pt-4 pb-4 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30 relative transition-all ${isCollapsed ? 'items-center px-2' : ''}`}>
           <button
@@ -274,7 +274,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
           )}
         </nav>
 
-        <div className={`mt-auto border-t border-slate-800 bg-slate-900/80 backdrop-blur-md transition-all ${isCollapsed ? 'p-2' : 'p-6'}`}>
+        <div className={`mt-auto border-t border-slate-800 bg-slate-900/80 backdrop-blur-md transition-all ${isCollapsed ? 'p-1' : 'p-6'}`}>
           {/* User Badge */}
           <div
             onClick={() => {
@@ -283,7 +283,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
               }
             }}
             title={isCollapsed ? (linkedPlayer?.name || currentUser?.name || userRole) : ""}
-            className={`mb-4 flex items-center bg-slate-800 rounded-xl border border-slate-700 transition-all ${isCollapsed ? 'justify-center p-2' : 'justify-between p-3'} ${linkedPlayer?.id ? 'cursor-pointer hover:bg-slate-700/50 group/user' : ''}`}
+            className={`mb-4 flex items-center bg-slate-800 rounded-xl border border-slate-700 transition-all ${isCollapsed ? 'justify-center p-1' : 'justify-between p-3'} ${linkedPlayer?.id ? 'cursor-pointer hover:bg-slate-700/50 group/user' : ''}`}
           >
             <div className={`flex items-center transition-all ${isCollapsed ? 'justify-center' : 'gap-3 overflow-hidden'}`}>
               <div className={`
