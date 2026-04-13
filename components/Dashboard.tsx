@@ -289,8 +289,7 @@ export default function Dashboard({ players, userRole = 'guest', teamLogo, curre
           <h1 className="text-lg md:text-3xl font-black uppercase tracking-tighter text-slate-900 flex items-center gap-3 whitespace-nowrap">
             <span>STRIKERS PULSE</span>
           </h1>
-          <div className="flex items-center gap-2 mt-1">
-            <div className="h-0.5 w-6 bg-blue-600/20 rounded-full"></div>
+          <div className="flex items-center mt-1">
             <p className="text-slate-400 font-bold text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.3em] italic whitespace-nowrap">INS Team Management Portal</p>
           </div>
         </div>
