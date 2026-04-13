@@ -12,7 +12,7 @@ interface FieldingMapProps {
 }
 
 const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, userRole = 'guest', currentUser }) => {
-  const isReadOnly = userRole !== 'admin' && !currentUser?.canScore;
+  const isReadOnly = userRole === 'guest';
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [strategies, setStrategies] = useState<FieldingStrategy[]>([]);
   const [currentPositions, setCurrentPositions] = useState<Map<string, FieldPosition>>(new Map());

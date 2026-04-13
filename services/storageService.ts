@@ -278,6 +278,7 @@ export const getMatches = async (): Promise<ScheduledMatch[]> => {
     resultType: m.resultType || m.result_type,
     finalScoreHome: m.finalScoreHome || m.final_score_home,
     finalScoreAway: m.finalScoreAway || m.final_score_away,
+    tournamentId: m.tournamentId || m.tournament_id,
     is_test: m.is_test ?? false
   }));
 };
@@ -304,6 +305,7 @@ export const getMatch = async (id: string): Promise<ScheduledMatch | null> => {
     resultType: m.resultType || m.result_type,
     finalScoreHome: m.finalScoreHome || m.final_score_home,
     finalScoreAway: m.finalScoreAway || m.final_score_away,
+    tournamentId: m.tournamentId || m.tournament_id,
     is_test: m.is_test ?? false
   };
 };

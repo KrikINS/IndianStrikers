@@ -90,8 +90,8 @@ const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false
         ) : (
           tournaments.map(t => {
             const tourneyMatches = matches.filter(m => 
-              m.tournamentId === t.id || 
-              (m.tournament === t.name && !m.tournamentId)
+              String(m.tournamentId) === String(t.id) || 
+              (m.tournament && t.name && m.tournament.trim().toLowerCase() === t.name.trim().toLowerCase() && !m.tournamentId)
             );
             const isExpanded = expandedId === t.id;
 
