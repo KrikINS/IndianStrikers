@@ -202,17 +202,38 @@ app.get('/api/players', async (_req, res) => {
 app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
   console.log('[POST /api/players] Body:', JSON.stringify(req.body));
   const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id } = req.body || {};
-  if (!name) return res.status(400).json({ error: 'Name is required' });
-
   const payload = {
-    name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id
+    name, 
+    role, 
+    batting_style, 
+    bowling_style, 
+    avatar_url, 
+    matches_played: (matches_played === '' || matches_played === undefined) ? 0 : Number(matches_played),
+    runs_scored: (runs_scored === '' || runs_scored === undefined) ? 0 : Number(runs_scored),
+    wickets_taken: (wickets_taken === '' || wickets_taken === undefined) ? 0 : Number(wickets_taken),
+    average: (average === '' || average === undefined) ? 0 : Number(average),
+    is_captain: !!is_captain, 
+    is_vice_captain: !!is_vice_captain, 
+    is_available: is_available !== false, 
+    batting_stats: batting_stats || {}, 
+    bowling_stats: bowling_stats || {}, 
+    linked_user_id: (linked_user_id === '' || !linked_user_id) ? null : linked_user_id, 
+    jersey_number: (jersey_number === '' || jersey_number === undefined) ? null : Number(jersey_number), 
+    dob: (dob === '' || !dob) ? null : dob, 
+    external_id
   };
-  console.log('[POST /api/players] Payload:', JSON.stringify(payload));
+  console.log('[POST /api/players] Sanitized Payload:', JSON.stringify(payload));
 
   const { data, error } = await db.getOne(
     `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id) 
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
-    [name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id]
+    [
+      payload.name, payload.role, payload.batting_style, payload.bowling_style, payload.avatar_url, 
+      payload.matches_played, payload.runs_scored, payload.wickets_taken, payload.average, 
+      payload.is_captain, payload.is_vice_captain, payload.is_available, 
+      payload.batting_stats, payload.bowling_stats, payload.linked_user_id, 
+      payload.jersey_number, payload.dob, payload.external_id
+    ]
   );
 
   if (error) {
@@ -226,10 +247,38 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
 
 app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => {
   console.log(`[PUT /players/${req.params.id}]`, req.body);
-  const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id } = req.body;
+  const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id } = req.body || {};
+  
+  const payload = {
+    name, 
+    role, 
+    batting_style, 
+    bowling_style, 
+    avatar_url, 
+    matches_played: (matches_played === '' || matches_played === undefined) ? 0 : Number(matches_played),
+    runs_scored: (runs_scored === '' || runs_scored === undefined) ? 0 : Number(runs_scored),
+    wickets_taken: (wickets_taken === '' || wickets_taken === undefined) ? 0 : Number(wickets_taken),
+    average: (average === '' || average === undefined) ? 0 : Number(average),
+    is_captain: !!is_captain, 
+    is_vice_captain: !!is_vice_captain, 
+    is_available: is_available !== false, 
+    batting_stats: batting_stats || {}, 
+    bowling_stats: bowling_stats || {}, 
+    linked_user_id: (linked_user_id === '' || !linked_user_id) ? null : linked_user_id, 
+    jersey_number: (jersey_number === '' || jersey_number === undefined) ? null : Number(jersey_number), 
+    dob: (dob === '' || !dob) ? null : dob, 
+    external_id
+  };
+
   const { error } = await db.query(
     `UPDATE players SET name=$1, role=$2, batting_style=$3, bowling_style=$4, avatar_url=$5, matches_played=$6, runs_scored=$7, wickets_taken=$8, average=$9, is_captain=$10, is_vice_captain=$11, is_available=$12, batting_stats=$13, bowling_stats=$14, linked_user_id=$15, jersey_number=$16, dob=$17, external_id=$18, updated_at=NOW() WHERE id=$19`,
-    [name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id, req.params.id]
+    [
+      payload.name, payload.role, payload.batting_style, payload.bowling_style, payload.avatar_url, 
+      payload.matches_played, payload.runs_scored, payload.wickets_taken, payload.average, 
+      payload.is_captain, payload.is_vice_captain, payload.is_available, 
+      payload.batting_stats, payload.bowling_stats, payload.linked_user_id, 
+      payload.jersey_number, payload.dob, payload.external_id, req.params.id
+    ]
   );
   if (error) {
     console.error('[PUT /players error]', error);

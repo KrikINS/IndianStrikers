@@ -12,6 +12,7 @@ interface DashboardProps {
   players: Player[];
   userRole?: UserRole;
   teamLogo?: string;
+  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
 }
 
 const MILESTONE_TAGLINES = {
