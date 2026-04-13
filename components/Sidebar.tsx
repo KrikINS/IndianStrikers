@@ -330,21 +330,21 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
           </div>
 
           {linkedPlayer?.id && (
-            <div className="flex gap-2">
+            <div className={`flex ${isCollapsed ? 'gap-1' : 'gap-2'}`}>
               <button
                 onClick={() => setShowConfig(true)}
                 title={isCollapsed ? "Change Password" : ""}
-                className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-blue-400 hover:bg-blue-950/20 rounded-lg transition-all border border-transparent hover:border-blue-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-xs'}`}
+                className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-blue-400 hover:bg-blue-950/20 rounded-lg transition-all border border-transparent hover:border-blue-900/30 ${isCollapsed ? 'p-1.5' : 'py-2 text-xs'}`}
               >
-                <Key size={isCollapsed ? 18 : 14} />
+                <Key size={isCollapsed ? 14 : 14} />
                 {!isCollapsed && <span>PASSWORD</span>}
               </button>
               <button
                 onClick={onSignOut}
                 title={isCollapsed ? "Sign Out" : ""}
-                className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-xs'}`}
+                className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-1.5' : 'py-2 text-xs'}`}
               >
-                <LogOut size={isCollapsed ? 18 : 14} />
+                <LogOut size={isCollapsed ? 14 : 14} />
                 {!isCollapsed && <span>SIGN OUT</span>}
               </button>
             </div>
