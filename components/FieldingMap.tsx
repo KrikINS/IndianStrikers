@@ -6,13 +6,14 @@ import { Save, RefreshCcw, Target, GripVertical, Plus, Zap, Flame, Clock, Trash2
 import './FieldingMap.css';
 
 interface FieldingMapProps {
+  players: Player[];
   userRole?: UserRole;
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
 }
 
-const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest', currentUser }) => {
+const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, userRole = 'guest', currentUser }) => {
   const isReadOnly = userRole !== 'admin' && !currentUser?.canScore;
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [strategies, setStrategies] = useState<FieldingStrategy[]>([]);
   const [currentPositions, setCurrentPositions] = useState<Map<string, FieldPosition>>(new Map());
 
@@ -33,11 +34,19 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest', current
   const boardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setPlayers(initialPlayers);
+  }, [initialPlayers]);
+
+  useEffect(() => {
     const load = async () => {
       try {
-        const [p, s] = await Promise.all([getPlayers(), getStrategies()]);
-        setPlayers(p);
+        const s = await getStrategies();
         setStrategies(s);
+        // Fallback for players if needed, but props should be primary
+        if (initialPlayers.length === 0) {
+          const p = await getPlayers();
+          setPlayers(p);
+        }
       } catch (e) { console.error(e); }
     };
     load();
@@ -324,23 +333,50 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest', current
     }
   };
 
-  // Guide Markers: Updated to be more accurate around the pitch
+  // Guide Markers: Extremely comprehensive list of cricket fielding positions
   const baseGuidePositions = [
-    { left: 50, top: 32, label: 'WK' },
-    { left: 56, top: 30, label: 'Slip' },
+    // Close / Inner Circle
+    { left: 50, top: 32, label: 'Wkt Keeper' },
+    { left: 56, top: 30, label: '1st Slip' },
+    { left: 60, top: 31, label: '2nd Slip' },
+    { left: 64, top: 32, label: '3rd Slip' },
+    { left: 58, top: 25, label: 'Fly Slip' },
     { left: 68, top: 34, label: 'Gully' },
-    { left: 75, top: 42, label: 'Point' },
-    { left: 72, top: 55, label: 'Cover' },
+    { left: 75, top: 40, label: 'Backward Point' },
+    { left: 80, top: 48, label: 'Point' },
+    { left: 78, top: 58, label: 'Cover Point' },
+    { left: 72, top: 62, label: 'Cover' },
+    { left: 65, top: 70, label: 'Extra Cover' },
     { left: 58, top: 72, label: 'Mid Off' },
+    { left: 54, top: 62, label: 'Silly Off' },
+    
+    // Bowler area
     { left: 50, top: 65, label: 'Bowler' },
+    
+    // Leg side Inner
+    { left: 46, top: 62, label: 'Silly On' },
     { left: 42, top: 72, label: 'Mid On' },
-    { left: 28, top: 55, label: 'Mid Wkt' },
-    { left: 24, top: 42, label: 'Sq Leg' },
-    { left: 38, top: 28, label: 'Fine Leg' },
-    { left: 15, top: 42, label: 'Deep Sq' },
-    { left: 80, top: 15, label: '3rd Man' },
-    { left: 45, top: 88, label: 'Long On' },
-    { left: 55, top: 88, label: 'Long Off' },
+    { left: 35, top: 70, label: 'Mid Wicket' },
+    { left: 24, top: 60, label: 'Square Leg' },
+    { left: 20, top: 50, label: 'Back. Sq. Leg' },
+    { left: 30, top: 38, label: 'Short Leg' },
+    { left: 38, top: 30, label: 'Leg Slip' },
+    { left: 42, top: 32, label: 'Leg Gully' },
+    { left: 48, top: 30, label: 'Short Fine Leg' },
+
+    // Outfield - Off Side
+    { left: 92, top: 25, label: 'Third Man' },
+    { left: 95, top: 45, label: 'Deep Point' },
+    { left: 90, top: 60, label: 'Deep Cover' },
+    { left: 75, top: 85, label: 'Deep Extra Cover' },
+    { left: 55, top: 92, label: 'Long Off' },
+
+    // Outfield - Leg Side
+    { left: 45, top: 92, label: 'Long On' },
+    { left: 25, top: 85, label: 'Deep Mid Wicket' },
+    { left: 10, top: 65, label: 'Deep Square' },
+    { left: 15, top: 40, label: 'Deep Fine Leg' },
+    { left: 35, top: 15, label: 'Long Leg' },
   ];
 
   // Dynamically mirror for LHB
@@ -414,15 +450,15 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest', current
             {showGuides && guidePositions.map((pos, idx) => (
               <div
                 key={`guide-${idx}`}
-                className="guide-marker"
+                className="guide-marker group"
                 style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
               >
-                <div className="opacity-0 group-hover:opacity-100 absolute -top-5 bg-black/60 backdrop-blur-sm text-white text-[9px] px-2 py-0.5 rounded-full whitespace-nowrap transition-opacity z-10 border border-white/10">
+                <div className="opacity-0 group-hover:opacity-100 absolute -top-5 bg-black/60 backdrop-blur-sm text-white text-[8px] px-2 py-0.5 rounded-full whitespace-nowrap transition-opacity z-50 border border-white/10 pointer-events-none">
                   {pos.label}
                 </div>
                 <div className="relative w-full h-full flex items-center justify-center">
-                  <div className="absolute w-3 h-[1px] bg-white/30"></div>
-                  <div className="absolute w-[1px] h-3 bg-white/30"></div>
+                  <div className="absolute w-2 h-[1px] bg-white/20"></div>
+                  <div className="absolute w-[1px] h-2 bg-white/20"></div>
                 </div>
               </div>
             ))}

@@ -113,7 +113,7 @@ const AppContent: React.FC<{
                 />
               }
             />
-            <Route path="/fielding" element={<FieldingMap userRole={userRole} currentUser={currentUser} />} />
+            <Route path="/fielding" element={<FieldingMap players={players} userRole={userRole} currentUser={currentUser} />} />
             <Route
               path="/opponents"
               element={
