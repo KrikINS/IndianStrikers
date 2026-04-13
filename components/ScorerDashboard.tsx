@@ -1435,7 +1435,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
     }, 1500);
   };
 
-  const getPlayerName = (id: string | null) => players.find(p => p.id === id)?.name || 'Unknown';
+
 
   const calculateTopPerformers = () => {
     const scores: Record<string, { id: string, name: string, score: number, runs: number, balls: number, wickets: number, maidens: number, runsConceded: number }> = {};
