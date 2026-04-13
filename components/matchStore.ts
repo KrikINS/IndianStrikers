@@ -167,8 +167,8 @@ export const useCricketScorer = create<ScorerStore>()(
                              ground: data.ground,
                              opponentName: data.opponentName,
                              maxOvers: data.maxOvers,
-                             homeXI: data.homeXI || parsedData.homeXI || [],
-                             awayXI: data.awayXI || parsedData.awayXI || []
+                             homeXI: Array.isArray(data.homeXI) ? data.homeXI : (Array.isArray(parsedData.homeXI) ? parsedData.homeXI : []),
+                             awayXI: Array.isArray(data.awayXI) ? data.awayXI : (Array.isArray(parsedData.awayXI) ? parsedData.awayXI : [])
                          });
                          return;
                     }
@@ -195,8 +195,8 @@ export const useCricketScorer = create<ScorerStore>()(
                     ground: data.ground,
                     opponentName: data.opponentName,
                     maxOvers: data.maxOvers,
-                    homeXI: data.homeXI || [],
-                    awayXI: data.awayXI || []
+                    homeXI: Array.isArray(data.homeXI) ? data.homeXI : [],
+                    awayXI: Array.isArray(data.awayXI) ? data.awayXI : []
                 });
             },
 

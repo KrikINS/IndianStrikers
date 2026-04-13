@@ -219,7 +219,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
 
         // RETROACTIVE EDIT LOGIC (Data Architect Rule)
         if (match.status === 'completed' && teamType === 'home' && match.performers) {
-            const oldXI = match.homeTeamXI || [];
+            const oldXIRaw = match.homeTeamXI || [];
+            const oldXI = Array.isArray(oldXIRaw) ? oldXIRaw : [];
             const removedPlayers = oldXI.filter(id => !selection.includes(id));
             const addedPlayers = selection.filter(id => !oldXI.includes(id));
 
@@ -1202,7 +1203,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                     
                                     const isOpponent = xiModalConfig.teamType === 'opponent';
                                     const opp = opponents.find(o => o.id === match.opponentId);
-                                    const xiIds = (isOpponent ? match.opponentTeamXI : match.homeTeamXI) || [];
+                                    const xiIdsRaw = (isOpponent ? match.opponentTeamXI : match.homeTeamXI) || [];
+                                    const xiIds = Array.isArray(xiIdsRaw) ? xiIdsRaw : [];
                                     const roster = isOpponent ? (opp?.players || []) : players;
 
                                     return roster
