@@ -33,9 +33,9 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     const [isSaving, setIsSaving] = useState(false);
     const [quickAddName, setQuickAddName] = useState('');
 
-    // Sync state with props if initial selection changes (e.g. data load lag)
+    // Sync state with props if initial selection changes (e.g. data load lag or background sync)
     React.useEffect(() => {
-        if (initialSelection && initialSelection.length > 0) {
+        if (Array.isArray(initialSelection)) {
             setSelectedPlayers(initialSelection.map(id => String(id)));
         }
     }, [rawInitialSelection]);

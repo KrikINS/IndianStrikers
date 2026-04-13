@@ -262,8 +262,8 @@ export const getMatches = async (): Promise<ScheduledMatch[]> => {
   const data = await handleResponse(res);
   return (data || []).map((m: any) => ({
     ...m,
-    homeTeamXI: m.homeTeamXI || m.home_team_xi || [],
-    opponentTeamXI: m.opponentTeamXI || m.opponent_team_xi || [],
+    homeTeamXI: Array.isArray(m.home_team_xi) ? m.home_team_xi : (Array.isArray(m.homeTeamXI) ? m.homeTeamXI : []),
+    opponentTeamXI: Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : (Array.isArray(m.opponentTeamXI) ? m.opponentTeamXI : []),
     opponentId: m.opponentId || m.opponent_id,
     groundId: m.groundId || m.ground_id,
     isLiveScored: m.isLiveScored ?? m.is_live_scored ?? false,
@@ -289,8 +289,8 @@ export const getMatch = async (id: string): Promise<ScheduledMatch | null> => {
   if (!m) return null;
   return {
     ...m,
-    homeTeamXI: m.homeTeamXI || m.home_team_xi || [],
-    opponentTeamXI: m.opponentTeamXI || m.opponent_team_xi || [],
+    homeTeamXI: Array.isArray(m.home_team_xi) ? m.home_team_xi : (Array.isArray(m.homeTeamXI) ? m.homeTeamXI : []),
+    opponentTeamXI: Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : (Array.isArray(m.opponentTeamXI) ? m.opponentTeamXI : []),
     opponentId: m.opponentId || m.opponent_id,
     groundId: m.groundId || m.ground_id,
     isLiveScored: m.isLiveScored ?? m.is_live_scored ?? false,

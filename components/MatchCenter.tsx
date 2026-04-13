@@ -265,9 +265,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             // But the rule says: "their career stats... must be rolled back".
         }
 
-        await setPlayingXI(matchId, teamType, selection);
-        setShowSyncSuccess(true);
-        setTimeout(() => setShowSyncSuccess(false), 3000);
+        try {
+            await setPlayingXI(matchId, teamType, selection);
+            setShowSyncSuccess(true);
+            setTimeout(() => setShowSyncSuccess(false), 3000);
+        } catch (err: any) {
+            console.error('[SaveXI] Failed:', err);
+            alert('Failed to save Playing XI: ' + (err.message || 'Server error'));
+        }
     };
 
     const handleStartScoring = async (matchId: string) => {
@@ -1103,6 +1108,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                             onClose={() => setXiModalConfig({ ...xiModalConfig, isOpen: false })}
                             onSave={handleSaveXI}
                             onShare={(id) => handleSelectPlayingXI(id, 'view')}
+                            onQuickAddPlayer={handleQuickAddOpponentPlayer}
                         />
                     </div>
                 )}
