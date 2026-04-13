@@ -154,7 +154,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
         sticky top-0 h-screen bg-slate-900 text-white z-30 transition-all duration-300 ease-in-out flex flex-col shrink-0 shadow-xl border-r border-slate-800
         ${isCollapsed ? 'w-20' : 'w-60 md:w-64'}
       `}>
-        <div className={`pt-6 pb-5 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30 relative transition-all ${isCollapsed ? 'items-center px-2' : ''}`}>
+        <div className={`pt-4 pb-4 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30 relative transition-all ${isCollapsed ? 'items-center px-2' : ''}`}>
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="flex p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all absolute -right-3 top-8 z-50 border border-slate-700 shadow-xl"
@@ -164,7 +164,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
           </button>
 
           {/* Restored Team Name Section with Upload Capability */}
-          <div className={`flex items-center pt-4 border-t border-slate-800/50 mt-2 transition-all ${isCollapsed ? 'justify-center space-x-0' : 'space-x-3'}`}>
+          <div className={`flex items-center transition-all ${isCollapsed ? 'justify-center space-x-0' : 'space-x-3'}`}>
             <div
               onClick={() => userRole === 'admin' && fileInputRef.current?.click()}
               className={`
