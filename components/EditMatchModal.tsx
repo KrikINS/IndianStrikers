@@ -130,29 +130,15 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, allOpponents, is
                     {/* Date/Time */}
                     <div className="space-y-1.5 group">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Match Date & Time</label>
-                        <div className="relative flex items-center">
+                        <div className="relative">
                             <input 
                                 type="datetime-local"
                                 value={localDate}
                                 onChange={(e) => setLocalDate(e.target.value)}
-                                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-16 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
                                 title="Match Date and Time"
                             />
-                            <button 
-                                type="button"
-                                onClick={(e) => {
-                                    const d = new Date(localDate);
-                                    if (!isNaN(d.getTime())) {
-                                        setFormData({...formData, date: d.toISOString()});
-                                        (e.currentTarget.previousElementSibling as HTMLInputElement)?.blur();
-                                    }
-                                }}
-                                className="absolute right-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-[10px] uppercase tracking-tighter rounded-lg shadow-lg transition-all active:scale-90"
-                            >
-                                Set OK
-                            </button>
                         </div>
-                        <p className="text-[9px] text-slate-600 pl-1 italic">Click 'Set OK' after selecting time to confirm</p>
                     </div>
 
                     {/* Ground & Tournament */}
@@ -175,14 +161,22 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, allOpponents, is
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Tournament</label>
                             <select 
-                                value={formData.tournament}
-                                onChange={(e) => setFormData({...formData, tournament: e.target.value})}
+                                value={formData.tournamentId || ''}
+                                onChange={(e) => {
+                                    const tourId = e.target.value;
+                                    const tour = tournaments.find(t => t.id === tourId);
+                                    setFormData({
+                                        ...formData, 
+                                        tournamentId: tourId,
+                                        tournament: tour ? tour.name : (tourId === 'Other' ? 'Other' : '')
+                                    });
+                                }}
                                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
                                 title="Select Tournament"
                             >
                                 <option value="">Select Tournament...</option>
                                 {tournaments.map(t => (
-                                    <option key={t.id} value={t.name}>{t.name} ({t.year})</option>
+                                    <option key={t.id} value={t.id}>{t.name} ({t.year})</option>
                                 ))}
                                 <option value="Other">Other Tournament</option>
                             </select>

@@ -1017,7 +1017,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
 
                         {activeTab === 'tournaments' && (
                             <div className="p-6 md:p-8">
-                                <TournamentsManager />
+                                <TournamentsManager isAdmin={userRole === 'admin'} />
                             </div>
                         )}
                     </div>

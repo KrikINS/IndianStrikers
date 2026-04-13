@@ -144,7 +144,7 @@ const AppContent: React.FC<{
               <Route path="/control-panel" element={effectiveRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Unauthorized />}>
                 <Route index element={<Navigate to="grounds" replace />} />
                 <Route path="grounds" element={<GroundsManager />} />
-                <Route path="tournaments" element={<TournamentsManager />} />
+                <Route path="tournaments" element={<TournamentsManager isAdmin={true} />} />
                 <Route path="legacy" element={<LegacyEditor players={players} onUpdatePlayer={onUpdatePlayer} />} />
                 <Route path="users" element={<UserManagement />} />
               </Route>

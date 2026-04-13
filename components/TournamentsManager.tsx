@@ -5,7 +5,11 @@ import { useMatchCenter } from './matchCenterStore';
 import { Plus, Trash2, Edit2, Trophy, X, ChevronDown, ChevronUp, ExternalLink, Calendar as CalendarIcon, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const TournamentsManager: React.FC = () => {
+interface TournamentsManagerProps {
+  isAdmin?: boolean;
+}
+
+const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false }) => {
   const { tournaments, addTournament: addTourneyStore, updateTournament: updateTourneyStore, removeTournament } = useMasterData();
   const { matches } = useMatchCenter();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,14 +69,16 @@ const TournamentsManager: React.FC = () => {
             <p className="text-[11px] text-white/40 mt-1 font-medium">Manage club league participation and yearly schedule.</p>
           </div>
         </div>
-        <button 
-          onClick={handleOpenAdd} 
-          title="Create New Tournament"
-          aria-label="Create New Tournament"
-          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-black rounded-lg text-[11px] flex items-center gap-2 shadow-lg shadow-amber-900/20 transition-all active:scale-95 uppercase tracking-widest"
-        >
-          <Plus size={14} /> NEW TOURNAMENT
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={handleOpenAdd} 
+            title="Create New Tournament"
+            aria-label="Create New Tournament"
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-black rounded-lg text-[11px] flex items-center gap-2 shadow-lg shadow-amber-900/20 transition-all active:scale-95 uppercase tracking-widest"
+          >
+            <Plus size={14} /> NEW TOURNAMENT
+          </button>
+        )}
       </div>
 
       <div className="space-y-3">
@@ -83,7 +89,10 @@ const TournamentsManager: React.FC = () => {
           </div>
         ) : (
           tournaments.map(t => {
-            const tourneyMatches = matches.filter(m => m.tournamentId === t.id);
+            const tourneyMatches = matches.filter(m => 
+              m.tournamentId === t.id || 
+              (m.tournament === t.name && !m.tournamentId)
+            );
             const isExpanded = expandedId === t.id;
 
             return (
@@ -120,24 +129,26 @@ const TournamentsManager: React.FC = () => {
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Matches</span>
                       <span className="text-sm font-black text-slate-900">{tourneyMatches.length}</span>
                     </div>
-                    <div className="flex items-center gap-1 border-r border-slate-100 pr-4">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(t); }} 
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                        title="Edit Tournament"
-                        aria-label="Edit Tournament"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} 
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        title="Delete Tournament"
-                        aria-label="Delete Tournament"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                    {isAdmin && (
+                      <div className="flex items-center gap-1 border-r border-slate-100 pr-4">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleOpenEdit(t); }} 
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                          title="Edit Tournament"
+                          aria-label="Edit Tournament"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} 
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          title="Delete Tournament"
+                          aria-label="Delete Tournament"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
                     {isExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
                   </div>
                 </div>
