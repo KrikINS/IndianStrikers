@@ -31,6 +31,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMasterData } from './masterDataStore';
 import _ from 'lodash';
 import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
+import html2canvas from 'html2canvas';
 
 const DashboardContainer = styled.div`
   min-height: 100vh;
@@ -378,17 +379,19 @@ const TeamLogoCircle = styled.div<{ $active?: boolean }>`
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: ${props => props.$active ? '#FAB005' : 'rgba(255,255,255,0.1)'};
+  background: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid ${props => props.$active ? '#FAB005' : 'transparent'};
+  border: 2px solid ${props => props.$active ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)'};
   transition: all 0.3s ease;
-  cursor: pointer;
+  overflow: hidden;
   
-  &:hover {
-    transform: scale(1.05);
-    border-color: #FAB005;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 10px;
   }
 `;
 
@@ -403,8 +406,8 @@ const ActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.2s;
-  background: ${props => props.$variant === 'primary' ? '#FAB005' : 'rgba(255,255,255,0.1)'};
-  color: ${props => props.$variant === 'primary' ? '#000' : '#FFF'};
+  background: ${props => props.$variant === 'primary' ? '#38BDF8' : 'rgba(255,255,255,0.1)'};
+  color: ${props => props.$variant === 'primary' ? '#001F3F' : '#FFF'};
 
   &:disabled {
     opacity: 0.3;
@@ -689,7 +692,7 @@ import {
   OpponentTeam
 } from '../types';
 
-const ScorerDashboard: React.FC<{ matchId?: string, players: Player[] }> = ({ matchId: propMatchId, players }) => {
+const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?: string }> = ({ matchId: propMatchId, players, teamLogo }) => {
   const store = useCricketScorer();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -737,51 +740,78 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[] }> = ({ ma
   }, [store.toss]);
 
   // Get metadata from MatchCenterStore
-  const { matches, syncWithCloud } = useMatchCenter();
+  const { matches, syncWithCloud, updateMatchStatus } = useMatchCenter();
   const { grounds, syncMasterData } = useMasterData();
   const activeMatchId = id || propMatchId || store.matchId;
   
   useEffect(() => {
-    // State Reset: Clear all previous match data on component mount
-    console.log("[Scorer] Component mounted. Resetting store for fresh session...");
-    store.resetStore();
+    // Only reset if we are switching to a DIFFERENT match that isn't already the active one
+    if (activeMatchId && activeMatchId !== store.matchId) {
+      console.log("[Scorer] Different match detected. Preparing fresh session...");
+      // We don't call hardReset() immediately anymore to allow rehydration from liveData
+    }
 
     if (matches.length === 0) {
       syncWithCloud().catch(console.error);
     }
     syncMasterData().catch(console.error);
-  }, []); // Only on mount
+  }, [activeMatchId]); // Re-run if ID changes
 
   const matchMeta = matches.find(m => m.id === activeMatchId);
 
-  // Sync with URL ID: If the URL ID is different from the store's ID, try to load it
+  // Sync with URL ID: Initialize match data into store when navigating from a match card
   useEffect(() => {
-    if (activeMatchId && activeMatchId !== store.matchId) {
+    if (!activeMatchId) return;
+
+    const initFromMeta = (meta: typeof matchMeta) => {
+      if (!meta) return;
+      const resolvedOpponentName = (meta.opponentName === 'Sandbox XI' && !meta.is_test)
+        ? 'OPPONENT' 
+        : (meta.opponentName || 'OPPONENT');
+
+      console.log(`[Scorer] Initializing Match: ${activeMatchId} | Opponent: ${resolvedOpponentName}`);
+      
+      store.initializeMatch({
+        matchId: meta.id,
+        matchType: meta.matchFormat || 'T20',
+        tournament: meta.tournament || 'Live Match',
+        ground: meta.venue || meta.groundId || (grounds.find(g => g.id === meta.groundId)?.name) || 'Local Ground',
+        opponentName: resolvedOpponentName,
+        maxOvers: meta.maxOvers || 20,
+        homeXI: meta.homeTeamXI || [],
+        awayXI: meta.opponentTeamXI || [],
+        homeLogo: teamLogo || '/INS%20LOGO.PNG',
+        awayLogo: meta.opponentLogo || '',
+        liveData: meta.live_data
+      });
+    };
+
+    if (activeMatchId !== store.matchId) {
       if (matchMeta) {
-        // Data Fetching: Ensure opponent is correctly resolved.
-        // Never default to 'Sandbox XI' unless is_test is true.
-        const resolvedOpponentName = (matchMeta.opponentName === 'Sandbox XI' && !matchMeta.is_test)
-          ? 'OPPONENT' 
-          : (matchMeta.opponentName || 'OPPONENT');
-
-        console.log(`[Scorer] Syncing with URL ID: ${activeMatchId}`);
-        // Validation: Source of Truth check
-        console.log(`Scoring initialized for: ${matchMeta.tournament || 'Live Match'} | Opponent: ${resolvedOpponentName}`);
-
-        store.initializeMatch({
-          matchId: matchMeta.id,
-          matchType: matchMeta.matchFormat || 'T20',
-          tournament: matchMeta.tournament || 'Live Match',
-          ground: grounds.length > 0 ? (grounds.find(g => g.id === matchMeta.groundId)?.name || 'Local Ground') : 'Local Ground',
-          opponentName: resolvedOpponentName,
-          maxOvers: matchMeta.maxOvers || 20,
-          homeXI: matchMeta.homeTeamXI,
-          awayXI: matchMeta.opponentTeamXI,
-          liveData: matchMeta.live_data
+        initFromMeta(matchMeta);
+      } else {
+        // matchMeta not in local store yet — fetch directly from API
+        console.log(`[Scorer] matchMeta not found locally, fetching match ${activeMatchId} directly...`);
+        import('../services/storageService').then(({ getMatch }) => {
+          getMatch(activeMatchId).then(freshMeta => {
+            if (freshMeta) {
+              initFromMeta(freshMeta);
+            }
+          }).catch(console.error);
         });
       }
     }
-  }, [activeMatchId, matchMeta, store, grounds]);
+  }, [activeMatchId, matchMeta, store.matchId, grounds, teamLogo]);
+
+  // Sync setupStep when store state changes (Rehydration check)
+  useEffect(() => {
+    if (store.innings1) {
+      setSetupStep(null);
+    } else if (activeMatchId === store.matchId) {
+      // If we have XI but no innings, maybe jump to toss?
+      // For now, keep as per user flow.
+    }
+  }, [!!store.innings1, store.matchId]);
 
   const syncToDatabase = useCallback(
     _.debounce((state: any) => {
@@ -961,21 +991,25 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[] }> = ({ ma
         <SetupCard>
           {setupStep === 'preview' ? (
             <>
-               <MatchTitle>{matchMeta?.tournament || 'LIVE MATCH'}</MatchTitle>
+               <MatchTitle>{store.tournament || matchMeta?.tournament || 'LIVE MATCH'}</MatchTitle>
               <GroundText>
-                <MapPin size={14} /> {matchMeta?.groundId || 'Local Ground'}
+                <MapPin size={14} /> {store.ground || matchMeta?.venue || 'Local Ground'}
               </GroundText>
 
               <TeamRow>
                 <TeamBlock>
                   <TeamLogoCircle $active>
-                    <Shield size={40} color="#FAB005" />
+                    <img src={store.homeLogo || teamLogo || '/INS%20LOGO.PNG'} alt="H" />
                   </TeamLogoCircle>
                   <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>INDIAN STRIKERS</span>
                 </TeamBlock>
                 <TeamBlock>
                   <TeamLogoCircle>
-                    <Shield size={40} color="rgba(255,255,255,0.3)" />
+                    {store.awayLogo || matchMeta?.opponentLogo ? (
+                      <img src={store.awayLogo || matchMeta?.opponentLogo} alt="A" />
+                    ) : (
+                      <Shield size={40} color="rgba(255,255,255,0.3)" />
+                    )}
                   </TeamLogoCircle>
                   <span style={{ fontStyle: 'italic', fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: '#FAB005' }}>
                     {(store.opponentName || matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
@@ -1580,21 +1614,41 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[] }> = ({ ma
       </AnimatePresence>
 
       <ScoreSection>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-           <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#001F3F', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '1px' }}>
-            {store.innings1?.battingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'OPPONENT')} vs {store.innings1?.bowlingTeamId === 'HOME' ? 'Indian Strikers' : (matchMeta?.opponentName || 'OPPONENT')}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <img 
+              src={store.homeLogo || '/INS%20LOGO.PNG'} 
+              style={{ width: 22, height: 22, objectFit: 'contain' }} 
+              alt="H" 
+            />
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#001F3F' }}>INDIAN STRIKERS</div>
           </div>
-          <button 
-            title="Full Scorecard"
-            onClick={() => setShowScorecardModal(true)}
-            style={{ 
-              background: 'rgba(0,31,63,0.05)', border: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', 
-              gap: 4, padding: '4px 8px', color: '#001F3F', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' 
-            }}
-          >
-            <LayoutList size={11} /> FULL SCORECARD
-          </button>
+          <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FAB005' }}>VS</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#001F3F' }}>
+              {store.opponentName || 'OPPONENT'}
+            </div>
+            {store.awayLogo ? (
+              <img 
+                src={store.awayLogo} 
+                style={{ width: 22, height: 22, objectFit: 'contain' }} 
+                alt="A" 
+              />
+            ) : <Shield size={18} color="rgba(0,31,63,0.1)" />}
+          </div>
         </div>
+        <button 
+          title="Full Scorecard"
+          onClick={() => setShowScorecardModal(true)}
+          style={{ 
+            background: 'rgba(0,31,63,0.05)', border: 'none', borderRadius: 6, display: 'flex', alignItems: 'center', 
+            gap: 4, padding: '4px 12px', color: '#001F3F', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer',
+            margin: '0 auto 16px'
+          }}
+        >
+          <LayoutList size={12} /> FULL SCORECARD
+        </button>  
+        
         <MainScore>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</MainScore>
         <OversText>OVERS {store.getOvers(currentInnings?.totalBalls || 0)}</OversText>
         
@@ -2086,9 +2140,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[] }> = ({ ma
         <InningsBreakModal>
           <div style={{ flex: 1, overflowY: 'auto', padding: '40px 20px' }}>
             <div style={{ textAlign: 'center', marginBottom: 40 }}>
-              <img src="/INS%20LOGO.PNG" style={{ width: 60, height: 60, marginBottom: 16 }} alt="INS" />
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 24, marginBottom: 24 }}>
+                <img src={store.homeLogo || '/INS%20LOGO.PNG'} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="H" />
+                <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'rgba(0,0,0,0.1)' }}>VS</span>
+                {store.awayLogo ? (
+                  <img src={store.awayLogo} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="A" />
+                ) : <Shield size={40} color="rgba(0,0,0,0.1)" />}
+              </div>
               <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#001F3F', margin: 0 }}>INNINGS BREAK</h1>
-              <p style={{ fontWeight: 700, opacity: 0.5, letterSpacing: 1 }}>{matchMeta?.tournament?.toUpperCase() || 'LIVE MATCH'}</p>
+              <p style={{ fontWeight: 700, opacity: 0.5, letterSpacing: 1 }}>{store.tournament?.toUpperCase() || 'LIVE MATCH'}</p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 40 }}>

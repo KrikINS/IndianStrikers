@@ -254,12 +254,20 @@ export default function Dashboard({ players, userRole = 'guest', teamLogo, curre
         setOpponents(opp);
         setPerformerData(perf);
 
-        const upcoming = allMatches
-          .filter(m => m.status === 'upcoming' && !m.is_test)
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-        if (upcoming) {
-          const opponent = opp.find(o => o.id === upcoming.opponentId);
-          setNextMatch({ ...upcoming, opponentName: upcoming.opponentName || (opponent ? opponent.name : 'Opponent') });
+        // Prioritize Live matches, then the nearest upcoming match
+        const priorityMatch = allMatches
+          .filter(m => (m.status === 'live' || m.status === 'upcoming') && !m.is_test)
+          .sort((a, b) => {
+            // Live matches always come first
+            if (a.status === 'live' && b.status !== 'live') return -1;
+            if (b.status === 'live' && a.status !== 'live') return 1;
+            // Otherwise, sort by date
+            return new Date(a.date).getTime() - new Date(b.date).getTime();
+          })[0];
+
+        if (priorityMatch) {
+          const opponent = opp.find(o => o.id === priorityMatch.opponentId);
+          setNextMatch({ ...priorityMatch, opponentName: priorityMatch.opponentName || (opponent ? opponent.name : 'Opponent') });
         }
       } catch (e) { console.error(e); }
     };
@@ -410,8 +418,20 @@ export default function Dashboard({ players, userRole = 'guest', teamLogo, curre
         <div className="md:col-span-1 bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Bell size={18} className="text-blue-600" />
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Match Alert</h3>
+              {nextMatch?.status === 'live' ? (
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-red-600">Live Now</h3>
+                </div>
+              ) : (
+                <>
+                  <Bell size={18} className="text-blue-600" />
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Match Alert</h3>
+                </>
+              )}
             </div>
             {nextMatch ? (
               <div className="space-y-4">
@@ -429,9 +449,15 @@ export default function Dashboard({ players, userRole = 'guest', teamLogo, curre
               <div className="py-6"><p className="text-xs font-bold text-slate-400 italic">Exploring new seasons...</p></div>
             )}
           </div>
-          <Link to="/matches" className="text-[10px] font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 uppercase tracking-widest mt-4">
-            Full Schedule <ChevronRight size={12} />
-          </Link>
+          {nextMatch?.status === 'live' ? (
+            <Link to={`/live/${nextMatch.id}`} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black rounded-lg flex items-center justify-center gap-2 uppercase tracking-widest mt-4 transition-all animate-pulse">
+              <Activity size={14} /> View Live Score
+            </Link>
+          ) : (
+            <Link to="/match-center" className="text-[10px] font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 uppercase tracking-widest mt-4">
+              Full Schedule <ChevronRight size={12} />
+            </Link>
+          )}
         </div>
       </div>
 

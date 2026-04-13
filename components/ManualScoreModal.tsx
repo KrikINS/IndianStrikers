@@ -101,7 +101,9 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
   const homeSquad = players.filter(p =>
     Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0 ? match.homeTeamXI.includes(p.id) : true
   );
-  const awaySquad: any[] = opponent?.players || [];
+  const awaySquad = (opponent?.players || []).filter(p =>
+    Array.isArray(match.opponentTeamXI) && match.opponentTeamXI.length > 0 ? match.opponentTeamXI.includes(p.id) : true
+  );
 
   // Batting players for current innings
   const battingSquad = activeInnings === 1

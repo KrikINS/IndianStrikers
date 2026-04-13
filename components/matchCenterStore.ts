@@ -121,9 +121,9 @@ export const useMatchCenter = create<MatchStore>()(
           console.log("[Sync] Starting Cloud Check...");
           const rawDbMatches = await api.getMatches();
           // Filter out Ghost/Dummy data from DB
+          // Automatic cleanup filter for Ghost/Synthetic data from DB
           const dbMatches = rawDbMatches.filter(m => 
             m.tournament !== "Dummy Tournament" && 
-            m.opponentName !== "Unknown" &&
             m.opponentName !== "Sandbox XI" &&
             !m.is_test &&
             !String(m.id).toLowerCase().includes("dummy") &&
@@ -150,9 +150,9 @@ export const useMatchCenter = create<MatchStore>()(
       getSortedMatches: () => {
         const { matches } = get();
         // Automatic cleanup filter for Ghost/Dummy entries
+        // Automatic cleanup filter for Ghost/Synthetic entries
         const cleanMatches = matches.filter(m => 
           m.tournament !== "Dummy Tournament" && 
-          m.opponentName !== "Unknown" &&
           m.opponentName !== "Sandbox XI" &&
           !m.is_test &&
           !String(m.id).toLowerCase().includes("dummy") &&

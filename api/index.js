@@ -384,7 +384,17 @@ const mapMatchToDB = (m) => {
 
 // MATCHES
 app.get('/api/matches', async (_req, res) => {
-  const { data, error } = await db.query('SELECT * FROM matches ORDER BY date DESC');
+  const { data, error } = await db.query(`
+    SELECT 
+      m.*,
+      o.name AS opponent_name,
+      o.logo_url AS opponent_logo,
+      g.name AS ground_name
+    FROM matches m
+    LEFT JOIN opponents o ON o.id::text = m.opponent_id::text
+    LEFT JOIN grounds g ON g.id::text = m.ground_id::text
+    ORDER BY m.date DESC
+  `);
   if (error) return res.status(500).json({ error: error.message });
   // Exclude legacy match from generic listing
   const filtered = (data || []).filter(m => m.id !== '00000000-0000-0000-0000-000000000001');
@@ -392,7 +402,17 @@ app.get('/api/matches', async (_req, res) => {
 });
 
 app.get('/api/matches/:id', async (req, res) => {
-  const { data, error } = await db.getOne('SELECT * FROM matches WHERE id=$1', [req.params.id]);
+  const { data, error } = await db.getOne(`
+    SELECT 
+      m.*,
+      o.name AS opponent_name,
+      o.logo_url AS opponent_logo,
+      g.name AS ground_name
+    FROM matches m
+    LEFT JOIN opponents o ON o.id::text = m.opponent_id::text
+    LEFT JOIN grounds g ON g.id::text = m.ground_id::text
+    WHERE m.id = $1
+  `, [req.params.id]);
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: "Match not found" });
   res.json(data);

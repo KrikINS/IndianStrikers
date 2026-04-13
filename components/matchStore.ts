@@ -33,6 +33,7 @@ export interface BallRecord {
     wicketType?: 'Bowled' | 'Caught' | 'LBW' | 'Run Out' | 'Stumped' | 'Hit Wicket' | 'Retired Hurt' | 'Retired Out' | 'Timed Out' | 'Obstructing the Field';
     batterId: string;
     bowlerId: string;
+    isLegal: boolean;
     commentary: string;
 }
 
@@ -76,6 +77,8 @@ export interface MatchState {
     isFinished: boolean;
     homeXI: string[];
     awayXI: string[];
+    homeLogo?: string;
+    awayLogo?: string;
     historyStack: MatchState[];
     manOfTheMatch: string | null;
 }
@@ -90,6 +93,8 @@ interface ScorerStore extends MatchState {
         maxOvers: number;
         homeXI?: string[];
         awayXI?: string[];
+        homeLogo?: string;
+        awayLogo?: string;
         liveData?: any;
     }) => void;
     updateMatchSettings: (data: Partial<MatchState>) => void;
@@ -134,6 +139,8 @@ const INITIAL_STATE: MatchState = {
     isFinished: false,
     homeXI: [],
     awayXI: [],
+    homeLogo: '',
+    awayLogo: '',
     historyStack: [],
     manOfTheMatch: null,
 };
@@ -174,15 +181,18 @@ export const useCricketScorer = create<ScorerStore>()(
                     }
                 }
 
-                // If we're already scoring this match and have data, don't wipe it
+                // If we're already scoring this match and have innings data, don't wipe it — just update metadata & branding
                 if (current.matchId === data.matchId && current.innings1) {
-                    // Just update metadata if needed
                     set({
                         matchType: data.matchType,
                         tournament: data.tournament,
                         ground: data.ground,
-                        opponentName: data.opponentName,
-                        maxOvers: data.maxOvers
+                        opponentName: data.opponentName || current.opponentName,
+                        maxOvers: data.maxOvers,
+                        homeLogo: data.homeLogo || current.homeLogo,
+                        awayLogo: data.awayLogo || current.awayLogo,
+                        homeXI: (data.homeXI && data.homeXI.length > 0) ? data.homeXI : current.homeXI,
+                        awayXI: (data.awayXI && data.awayXI.length > 0) ? data.awayXI : current.awayXI,
                     });
                     return;
                 }
@@ -196,7 +206,9 @@ export const useCricketScorer = create<ScorerStore>()(
                     opponentName: data.opponentName,
                     maxOvers: data.maxOvers,
                     homeXI: Array.isArray(data.homeXI) ? data.homeXI : [],
-                    awayXI: Array.isArray(data.awayXI) ? data.awayXI : []
+                    awayXI: Array.isArray(data.awayXI) ? data.awayXI : [],
+                    homeLogo: data.homeLogo || '',
+                    awayLogo: data.awayLogo || ''
                 });
             },
 

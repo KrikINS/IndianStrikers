@@ -218,8 +218,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
         if (!match) return;
 
         // RETROACTIVE EDIT LOGIC (Data Architect Rule)
-        if (match.status === 'completed' && teamType === 'home' && match.performers) {
-            const oldXIRaw = match.homeTeamXI || [];
+        // If the match is already completed, we MUST rollback stats for the previous XI 
+        // and sync stats for the new XI to maintain database integrity.
+        if (match.status === 'completed' && (teamType === 'home' || teamType === 'opponent') && match.performers) {
+            const oldXIRaw = teamType === 'home' ? match.homeTeamXI : match.opponentTeamXI;
             const oldXI = Array.isArray(oldXIRaw) ? oldXIRaw : [];
             const removedPlayers = oldXI.filter(id => !selection.includes(id));
             const addedPlayers = selection.filter(id => !oldXI.includes(id));

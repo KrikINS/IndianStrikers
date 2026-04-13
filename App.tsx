@@ -137,8 +137,8 @@ const AppContent: React.FC<{
               />
               <Route path="/memories" element={<Memories userRole={effectiveRole} currentUser={currentUser} />} />
               <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={effectiveRole} currentUser={currentUser} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
-              <Route path="/scorer" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} /> : <Unauthorized />} />
-              <Route path="/scorer/:id" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} /> : <Unauthorized />} />
+              <Route path="/scorer" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} teamLogo={teamLogo} /> : <Unauthorized />} />
+              <Route path="/scorer/:id" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} teamLogo={teamLogo} /> : <Unauthorized />} />
               <Route path="/live/:id" element={<LiveScorecardPage players={players} opponents={opponents} />} />
               {/* Control Panel Routes - Admin view required */}
               <Route path="/control-panel" element={effectiveRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Unauthorized />}>
