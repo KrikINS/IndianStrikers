@@ -558,14 +558,20 @@ app.get('/api/opponents', async (_req, res) => {
   res.json(data);
 });
 app.post('/api/opponents', authGuard(['admin']), async (req, res) => {
-  const { name, rank, logo_url } = req.body;
-  const { data, error } = await db.getOne('INSERT INTO opponents (name, rank, logo_url) VALUES ($1, $2, $3) RETURNING *', [name, rank, logo_url]);
+  const { name, rank, logo_url, strength, weakness, players, color } = req.body;
+  const { data, error } = await db.getOne(
+    'INSERT INTO opponents (name, rank, logo_url, strength, weakness, players, color) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *', 
+    [name, rank, logo_url, strength || '', weakness || '', JSON.stringify(players || []), color || 'bg-slate-500']
+  );
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
-app.put('/api/opponents/:id', authGuard(['admin']), async (req, res) => {
-  const { name, rank, logo_url } = req.body;
-  const { error } = await db.query('UPDATE opponents SET name=$1, rank=$2, logo_url=$3 WHERE id=$4', [name, rank, logo_url, req.params.id]);
+app.put('/api/opponents/:id', authGuard(['admin', 'member']), async (req, res) => {
+  const { name, rank, logo_url, strength, weakness, players, color } = req.body;
+  const { error } = await db.query(
+    'UPDATE opponents SET name=$1, rank=$2, logo_url=$3, strength=$4, weakness=$5, players=$6, color=$7 WHERE id=$8', 
+    [name, rank, logo_url, strength || '', weakness || '', JSON.stringify(players || []), color || 'bg-slate-500', req.params.id]
+  );
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });
