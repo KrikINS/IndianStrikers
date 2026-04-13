@@ -22,12 +22,13 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     opponentTeams, 
     opponentId,
     teamType,
-    initialSelection = [],
+    initialSelection: rawInitialSelection = [],
     onClose,
     onSave,
     onShare,
     onQuickAddPlayer
 }) => {
+    const initialSelection = Array.isArray(rawInitialSelection) ? rawInitialSelection : [];
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>(initialSelection.map(id => String(id)));
     const [isSaving, setIsSaving] = useState(false);
     const [quickAddName, setQuickAddName] = useState('');
@@ -37,7 +38,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
         if (initialSelection && initialSelection.length > 0) {
             setSelectedPlayers(initialSelection.map(id => String(id)));
         }
-    }, [initialSelection]);
+    }, [rawInitialSelection]);
 
     const hasChanged = useMemo(() => {
         if (selectedPlayers.length !== initialSelection.length) return true;

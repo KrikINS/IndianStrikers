@@ -99,7 +99,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
 
   // ─── Players & squads ───────────────────────────────────────────────────────
   const homeSquad = players.filter(p =>
-    match.homeTeamXI && match.homeTeamXI.length > 0 ? match.homeTeamXI.includes(p.id) : true
+    Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0 ? match.homeTeamXI.includes(p.id) : true
   );
   const awaySquad: any[] = opponent?.players || [];
 
@@ -210,7 +210,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
       performerMap.set(b.playerId, { ...ex, wickets: b.wickets, bowlingRuns: b.runsConceded, bowlingOvers: b.overs, maidens: b.maidens, is_hero: ex.is_hero || b.is_hero });
     });
 
-    (match.homeTeamXI || []).forEach(pid => {
+    (Array.isArray(match.homeTeamXI) ? match.homeTeamXI : []).forEach(pid => {
       if (!performerMap.has(pid)) {
         const p = players.find(pl => pl.id === pid);
         performerMap.set(pid, { playerId: pid, playerName: p?.name || '', runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, is_manual_hero: false, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0 });
