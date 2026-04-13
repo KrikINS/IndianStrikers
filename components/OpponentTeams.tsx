@@ -130,6 +130,17 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
     }
   };
 
+  const handleRemovePlayer = (teamId: string, playerId: string) => {
+    const team = teams.find(t => t.id === teamId);
+    if (team) {
+      const updatedTeam = {
+        ...team,
+        players: team.players.filter(p => p.id !== playerId)
+      };
+      onUpdateTeam(updatedTeam);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name.slice(0, 3).toUpperCase();
   };
@@ -270,8 +281,17 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
                         ) : (
                           <div className="flex flex-wrap gap-2">
                             {team.players.map(player => (
-                              <div key={player.id} className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 shadow-sm flex items-center gap-2">
+                              <div key={player.id} className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 shadow-sm flex items-center gap-2 group/player">
                                 {player.name}
+                                {canEdit && (
+                                  <button 
+                                    onClick={() => handleRemovePlayer(team.id, player.id)}
+                                    className="text-slate-300 hover:text-red-500 transition-colors"
+                                    title="Remove Player"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                )}
                               </div>
                             ))}
                           </div>
