@@ -1445,7 +1445,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[] }> = ({ ma
         
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src="/INS%20LOGO.PNG" style={{ width: 28, height: 28, objectFit: 'contain' }} alt="INS" />
             <span style={{ fontWeight: 900, fontSize: '15px', letterSpacing: '1px', color: '#FFFFFF' }}>STRIKERS PULSE</span>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>

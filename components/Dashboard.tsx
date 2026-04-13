@@ -284,20 +284,19 @@ export default function Dashboard({ players, userRole = 'guest', teamLogo, curre
   return (
     <div className="space-y-8 animate-fade-in pb-12 w-full px-4 md:px-0">
       {/* Standardized Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-6 mb-2">
+      <div className="flex flex-row justify-between items-center gap-4 border-b border-slate-200 pb-6 mb-2">
         <div className="flex flex-col">
-          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-slate-900 flex items-center gap-3">
-            <img src="/INS%20LOGO.PNG" className="w-10 h-10 object-contain" alt="INS" /> 
+          <h1 className="text-lg md:text-3xl font-black uppercase tracking-tighter text-slate-900 flex items-center gap-3 whitespace-nowrap">
             <span>STRIKERS PULSE</span>
           </h1>
-          <div className="flex items-center gap-2 mt-1.5">
-            <div className="h-0.5 w-8 bg-blue-600/20 rounded-full"></div>
-            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em] italic">Indian Strikers Official</p>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="h-0.5 w-6 bg-blue-600/20 rounded-full"></div>
+            <p className="text-slate-400 font-bold text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.3em] italic whitespace-nowrap">INS Team Management Portal</p>
           </div>
         </div>
         
-        <div className="bg-[#0f172a] text-white px-6 py-2 rounded-full font-black italic uppercase tracking-widest text-sm shadow-xl border border-sky-400/20">
-          ONE TEAM <span className="mx-2 text-sky-400/40">•</span> ONE DREAM
+        <div className="bg-[#0f172a] text-white px-3 md:px-6 py-1.5 md:py-2 rounded-full font-black italic uppercase tracking-tighter md:tracking-widest text-[9px] md:text-sm shadow-xl border border-sky-400/20 whitespace-nowrap shrink-0">
+          ONE TEAM <span className="mx-1 md:mx-2 text-sky-400/40">•</span> ONE DREAM
         </div>
       </div>
 
