@@ -361,9 +361,16 @@ const mapMatchToDB = (m) => {
 
   // 4. Final cleaning: keep ONLY valid columns and remove null IDs
   const final = {};
+  const jsonColumns = ['home_team_xi', 'opponent_team_xi', 'performers', 'scorecard', 'final_score_home', 'final_score_away', 'live_data'];
+  
   validColumns.forEach(col => {
     if (col in dbReady) {
-      final[col] = dbReady[col];
+      let val = dbReady[col];
+      // Stringify JSON columns for Postgres
+      if (jsonColumns.includes(col) && val !== null && typeof val === 'object') {
+        val = JSON.stringify(val);
+      }
+      final[col] = val;
     }
   });
 
