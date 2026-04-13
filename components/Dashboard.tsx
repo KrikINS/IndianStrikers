@@ -233,7 +233,7 @@ function WeeklyPerformerCarousel({
 }
 
 // --- Main Dashboard Component ---
-export default function Dashboard({ players, userRole = 'guest' }: DashboardProps) {
+export default function Dashboard({ players, userRole = 'guest', teamLogo, currentUser }: DashboardProps) {
   const { legacy, tournaments, grounds } = useMasterData();
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [selectedHero, setSelectedHero] = useState<any | null>(null);

@@ -27,12 +27,13 @@ interface MatchCenterProps {
     opponents: OpponentTeam[];
     userRole: UserRole;
     teamLogo?: string;
+    currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
     onUpdatePlayer: (p: Player) => void;
     onUpdateOpponent: (t: OpponentTeam) => void;
     onRefresh?: () => Promise<void>;
 }
 
-const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole, teamLogo, onUpdatePlayer, onUpdateOpponent, onRefresh }) => {
+const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole, teamLogo, currentUser, onUpdatePlayer, onUpdateOpponent, onRefresh }) => {
     const navigate = useNavigate();
     const {
         matches,
@@ -981,6 +982,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                             opponents={opponents}
                                             grounds={grounds}
                                             userRole={userRole}
+                                            canScore={currentUser?.canScore}
                                             onSelectPlayingXI={handleSelectPlayingXI}
                                             onEditMatch={(m: ScheduledMatch) => setEditingMatch(m)}
                                             onStartScoring={handleStartScoring}
@@ -1000,6 +1002,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                 <PointsTable 
                                     tournaments={tournaments} 
                                     userRole={userRole} 
+                                    currentUser={currentUser}
                                     opponents={opponents} 
                                 />
                             </div>
@@ -1283,6 +1286,7 @@ const MatchCardCarousel = ({
     opponents, 
     grounds, 
     userRole, 
+    canScore,
     onSelectPlayingXI, 
     onEditMatch, 
     onStartScoring, 
@@ -1412,6 +1416,7 @@ const MatchCardCarousel = ({
                                     onDeleteMatch={onDeleteMatch}
                                     userRole={userRole}
                                     isAdmin={userRole === 'admin'}
+                                    canScore={canScore}
                                     grounds={grounds}
                                     isCarouselActive={isActive}
                                 />

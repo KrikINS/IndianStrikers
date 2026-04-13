@@ -58,7 +58,7 @@ const AppContent: React.FC<{
   onSignOut: () => void,
   teamLogo: string,
   onUpdateLogo: (url: string) => void,
-  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string },
+  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean },
   linkedPlayer?: Player,
   onRefresh: () => Promise<void>
 }> = ({ players, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer, onRefresh }) => {
@@ -99,20 +99,21 @@ const AppContent: React.FC<{
       <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
         <div className="p-3 md:p-6 lg:p-8 w-full pb-24 md:pb-8">
           <Routes>
-            <Route path="/home" element={<Dashboard players={players} userRole={userRole} teamLogo={teamLogo} />} />
+            <Route path="/home" element={<Dashboard players={players} userRole={userRole} teamLogo={teamLogo} currentUser={currentUser} />} />
             <Route
               path="/roster"
               element={
                 <PlayerList
                   players={players}
                   userRole={userRole}
+                  currentUser={currentUser}
                   onAddPlayer={onAddPlayer}
                   onUpdatePlayer={onUpdatePlayer}
                   onDeletePlayer={onDeletePlayer}
                 />
               }
             />
-            <Route path="/fielding" element={<FieldingMap userRole={userRole} />} />
+            <Route path="/fielding" element={<FieldingMap userRole={userRole} currentUser={currentUser} />} />
             <Route
               path="/opponents"
               element={
@@ -122,13 +123,14 @@ const AppContent: React.FC<{
                   onUpdateTeam={onUpdateOpponent}
                   onDeleteTeam={onDeleteOpponent}
                   userRole={userRole}
+                  currentUser={currentUser}
                 />
               }
             />
             <Route path="/memories" element={<Memories userRole={userRole} currentUser={currentUser} />} />
-            <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={userRole} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
-            <Route path="/scorer" element={(userRole === 'admin' || userRole === 'scorer') ? <ScorerDashboard players={players} /> : <Unauthorized />} />
-            <Route path="/scorer/:id" element={(userRole === 'admin' || userRole === 'scorer') ? <ScorerDashboard players={players} /> : <Unauthorized />} />
+            <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={userRole} currentUser={currentUser} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
+            <Route path="/scorer" element={(userRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} /> : <Unauthorized />} />
+            <Route path="/scorer/:id" element={(userRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} /> : <Unauthorized />} />
             {/* Control Panel Routes - Admin only */}
             <Route path="/control-panel" element={userRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Unauthorized />}>
               <Route index element={<Navigate to="grounds" replace />} />
@@ -161,7 +163,7 @@ const App: React.FC = () => {
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [showSplash, setShowSplash] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>('guest');
-  const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; username: string; avatarUrl?: string }>();
+  const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }>();
   const [teamLogo, setTeamLogo] = useState<string>('');
   const resetZombieMatches = useMatchCenter(state => state.resetZombieMatches);
 
@@ -215,7 +217,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleLoginComplete = (role: UserRole, user?: { id?: string; name: string; username: string; avatarUrl?: string }) => {
+  const handleLoginComplete = (role: UserRole, user?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }) => {
     setUserRole(role);
     if (user) {
       setCurrentUser(user);

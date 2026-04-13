@@ -16,7 +16,7 @@ const UserManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AppUser | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [form, setForm] = useState<Partial<AppUser>>({ name: '', username: '', password: '', role: 'member' });
+  const [form, setForm] = useState<Partial<AppUser>>({ name: '', username: '', email: '', password: '', role: 'member' });
 
   useEffect(() => {
     loadData();
@@ -175,11 +175,17 @@ const UserManagement: React.FC = () => {
                     </td>
                     <td className="px-4 py-2 text-indigo-600 font-mono text-[11px]">{u.username}</td>
                     <td className="px-4 py-2">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border
-                      ${u.role === 'admin' ? 'bg-red-50 text-red-600 border-red-100' : 
-                        u.role === 'scorer' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                        {u.role}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`w-fit px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border
+                        ${u.role === 'admin' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                          {u.role}
+                        </span>
+                        {u.canScore && (
+                          <span className="w-fit px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-purple-50 text-purple-600 border border-purple-100 flex items-center gap-1">
+                            <Plus size={10} /> Scorer
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex justify-end gap-1">
@@ -263,13 +269,17 @@ const UserManagement: React.FC = () => {
                 </div>
               </div>
               <div>
+                <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Email (Optional)</label>
+                <input type="email" value={form.email || ''} placeholder="user@example.com" onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-mono" />
+              </div>
+              <div>
                 <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Password</label>
                 <input required={!editingItem} type="password" value={form.password} placeholder={editingItem ? 'Leave blank to keep same' : '••••••••'} onChange={e => setForm({...form, password: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-mono" />
               </div>
               <div>
                 <span className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 px-1">Assigned Role</span>
-                <div className="grid grid-cols-4 gap-2">
-                   {['admin', 'scorer', 'member', 'guest'].map(role => (
+                <div className="grid grid-cols-3 gap-2">
+                   {['admin', 'member', 'guest'].map(role => (
                      <button 
                        key={role} type="button" 
                        title={`Set role to ${role}`}
@@ -282,6 +292,27 @@ const UserManagement: React.FC = () => {
                      </button>
                    ))}
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${form.canScore ? 'bg-purple-500/10 text-purple-400' : 'bg-white/5 text-white/20'}`}>
+                    <Layout size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold text-white leading-tight">Scoring Access</p>
+                    <p className="text-[10px] text-white/40 font-medium">Allow this user to record matches</p>
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setForm({...form, canScore: !form.canScore})}
+                  title={form.canScore ? "Revoke Scoring Access" : "Grant Scoring Access"}
+                  aria-label={form.canScore ? "Revoke Scoring Access" : "Grant Scoring Access"}
+                  className={`w-12 h-6 rounded-full transition-all relative ${form.canScore ? 'bg-purple-600' : 'bg-white/10'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${form.canScore ? 'left-7' : 'left-1'}`}></div>
+                </button>
               </div>
               <button 
                 type="submit" 

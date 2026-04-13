@@ -72,7 +72,7 @@ app.post('/api/login', async (req, res) => {
   console.log('[Login Attempt] Body:', req.body);
   const { mode, username, password } = req.body || {};
   if (mode === 'guest') return res.json({ ok: true, token: signToken({ username: 'guest', role: 'guest' }), role: 'guest' });
-  const { data: row, error } = await db.getOne('SELECT id,username,password_hash,role,is_active,avatar_url FROM app_users WHERE username = $1', [username]);
+  const { data: row, error } = await db.getOne('SELECT id,username,email,password_hash,role,is_active,avatar_url,can_score,is_first_login FROM app_users WHERE username = $1 OR email = $1', [username]);
   if (error) {
     console.error(`[Login Error] Database error for user ${username}:`, error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -86,7 +86,7 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({ error: 'Account is disabled' });
   }
   
-  if (row.role !== mode && row.role !== 'admin') {
+  if (mode !== 'auto' && row.role !== mode && row.role !== 'admin') {
     console.warn(`[Login Error] Role mismatch for ${username}. Expected ${mode}, but user role is ${row.role}`);
     return res.status(403).json({ error: 'Role mismatch' });
   }
@@ -98,16 +98,16 @@ app.post('/api/login', async (req, res) => {
   }
   res.json({
     ok: true,
-    token: signToken({ id: row.id, username: row.username, role: row.role }),
+    token: signToken({ id: row.id, username: row.username, role: row.role, canScore: !!row.can_score }),
     role: row.role,
-    user: { id: row.id, username: row.username, name: row.username, avatarUrl: row.avatar_url }
+    user: { id: row.id, username: row.username, email: row.email, name: row.username, avatarUrl: row.avatar_url, canScore: !!row.can_score, isFirstLogin: !!row.is_first_login }
   });
 });
 
 // USERS (Admin only)
 app.get('/api/users', authGuard(['admin', 'member']), async (req, res) => {
   console.log(`[GET /api/users] Request received from ${req.user?.username} (${req.user?.role})`);
-  const { data, error } = await db.query('SELECT id,username,role,avatar_url,player_id,created_at FROM app_users ORDER BY created_at DESC'); // Show all users
+  const { data, error } = await db.query('SELECT id,username,email,role,avatar_url,player_id,can_score,created_at FROM app_users ORDER BY created_at DESC'); // Show all users
   if (error) {
     console.error('[GET /api/users] Database error:', error);
     return res.status(500).json({ error: error.message });
@@ -116,24 +116,24 @@ app.get('/api/users', authGuard(['admin', 'member']), async (req, res) => {
   res.json(data);
 });
 app.post('/api/users', authGuard(['admin']), async (req, res) => {
-  const { username, password, role, name, avatar_url, player_id } = req.body;
+  const { username, email, password, role, name, avatar_url, player_id, can_score } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
   const hash = await bcrypt.hash(password, 10);
   const { data, error } = await db.getOne(
-    'INSERT INTO app_users (username, password_hash, role, name, avatar_url, player_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-    [username, hash, role, name, avatar_url, player_id]
+    'INSERT INTO app_users (username, email, password_hash, role, name, avatar_url, player_id, can_score) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+    [username, email || null, hash, role, name, avatar_url, player_id, can_score || false]
   );
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 app.put('/api/users/:id', authGuard(['admin']), async (req, res) => {
-  const { username, role, name, avatar_url, player_id, password } = req.body;
-  let query = 'UPDATE app_users SET username=$1, role=$2, name=$3, avatar_url=$4, player_id=$5, updated_at=NOW()';
-  let params = [username, role, name, avatar_url, player_id];
+  const { username, email, role, name, avatar_url, player_id, password, can_score } = req.body;
+  let query = 'UPDATE app_users SET username=$1, email=$2, role=$3, name=$4, avatar_url=$5, player_id=$6, can_score=$7, updated_at=NOW()';
+  let params = [username, email || null, role, name, avatar_url, player_id, can_score || false];
   
   if (password && password.trim().length > 0) {
     const hash = await bcrypt.hash(password, 10);
-    query += ', password_hash=$6';
+    query += ', password_hash=$8, is_first_login=true';
     params.push(hash);
   }
 
@@ -148,6 +148,48 @@ app.put('/api/users/:id', authGuard(['admin']), async (req, res) => {
 app.delete('/api/users/:id', authGuard(['admin']), async (req, res) => {
   const { error } = await db.query('DELETE FROM app_users WHERE id = $1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// PASSWORD MANAGEMENT
+app.post('/api/users/change_password', authGuard(['admin', 'member']), async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  const username = req.user.username;
+  const { data: row } = await db.getOne('SELECT password_hash FROM app_users WHERE username = $1', [username]);
+  if (!row) return res.status(404).json({ error: 'User not found' });
+  const ok = await bcrypt.compare(oldPassword, row.password_hash);
+  if (!ok) return res.status(401).json({ error: 'Incorrect old password' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  
+  const hash = await bcrypt.hash(newPassword, 10);
+  await db.query('UPDATE app_users SET password_hash = $1, is_first_login = false, updated_at=NOW() WHERE username = $2', [hash, username]);
+  res.json({ ok: true });
+});
+
+let resetTokens = {};
+app.post('/api/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  const { data: row } = await db.getOne('SELECT id FROM app_users WHERE email = $1', [email]);
+  if (!row) {
+    return res.json({ ok: true, message: 'If the email exists, a reset link has been generated.' });
+  }
+  const token = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit mock code
+  resetTokens[email] = { token, expiry: Date.now() + 15*60*1000 };
+  console.log(`[Mock Email] Password reset code for ${email} is: ${token}`);
+  res.json({ ok: true, mock_token: token }); 
+});
+
+app.post('/api/reset-password', async (req, res) => {
+  const { email, token, newPassword } = req.body;
+  const entry = resetTokens[email];
+  if (!entry || entry.token !== token || entry.expiry < Date.now()) {
+    return res.status(400).json({ error: 'Invalid or expired reset code' });
+  }
+  if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  const hash = await bcrypt.hash(newPassword, 10);
+  await db.query('UPDATE app_users SET password_hash = $1, is_first_login = false, updated_at=NOW() WHERE email = $2', [hash, email]);
+  delete resetTokens[email];
   res.json({ ok: true });
 });
 
@@ -411,7 +453,11 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
 
 
 // LIVE SCORING: Recorded Ball
-app.post('/api/score/ball', authGuard(['admin', 'scorer', 'member']), async (req, res) => {
+app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => {
+  // Manual check for 'can_score' feature if member
+  if (req.user.role === 'member' && !req.user.canScore) {
+    return res.status(403).json({ error: 'Forbidden: Scoring access required' });
+  }
   const { 
     match_id, striker_id, non_striker_id, bowler_id, 
     over_number, ball_number, runs_scored, extras_runs, 

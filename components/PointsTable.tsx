@@ -5,11 +5,12 @@ import { Hash, Loader2, Plus, Trash2 } from 'lucide-react';
 
 interface PointsTableProps {
   userRole?: UserRole;
+  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
   opponents: OpponentTeam[];
   tournaments: any[];
 }
 
-const PointsTable: React.FC<PointsTableProps> = ({ userRole = 'guest', opponents, tournaments }) => {
+const PointsTable: React.FC<PointsTableProps> = ({ userRole = 'guest', currentUser, opponents, tournaments }) => {
   const [tournamentName, setTournamentName] = useState(tournaments.length > 0 ? tournaments[0].name : '');
   const [groupNumber, setGroupNumber] = useState('A');
   const [tableData, setTableData] = useState<TournamentTableEntry[]>([]);
@@ -37,7 +38,7 @@ const PointsTable: React.FC<PointsTableProps> = ({ userRole = 'guest', opponents
     if (tournamentName) load();
   }, [tournamentName, opponents]);
 
-  const canEdit = userRole === 'admin' || userRole === 'scorer';
+  const canEdit = userRole === 'admin' || currentUser?.canScore;
 
   const handleAddRow = () => {
     const newEntry: TournamentTableEntry = {

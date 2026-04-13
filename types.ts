@@ -1,5 +1,5 @@
 
-export type UserRole = 'admin' | 'member' | 'scorer' | 'guest';
+export type UserRole = 'admin' | 'member' | 'guest';
 
 export enum PlayerRole {
   BATSMAN = 'Batsman',
@@ -26,10 +26,13 @@ export interface AppUser {
   id: string;
   name: string;
   username: string; // The User ID used for login
-  password: string;
+  email?: string;
+  password?: string;
   role: UserRole;
   avatarUrl?: string;
   playerId?: string;
+  canScore?: boolean;
+  isFirstLogin?: boolean;
 }
 
 export type MatchStatus = 'upcoming' | 'live' | 'completed';

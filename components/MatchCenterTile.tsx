@@ -15,6 +15,7 @@ interface MatchCenterTileProps {
     onDeleteMatch: (matchId: string) => void;
     userRole: UserRole;
     isAdmin: boolean;
+    canScore?: boolean;
     grounds: Ground[];
     isCarouselActive?: boolean;
 }
@@ -32,10 +33,11 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     onDeleteMatch,
     userRole,
     isAdmin,
+    canScore,
     grounds,
     isCarouselActive
 }) => {
-    const isScorerOrAdmin = userRole === 'admin' || userRole === 'scorer';
+    const isScorerOrAdmin = userRole === 'admin' || canScore;
     const isLive = match.status === 'live';
     const isUpcoming = match.status === 'upcoming';
     const isCompleted = match.status === 'completed';

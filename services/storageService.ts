@@ -1,9 +1,8 @@
 /// <reference types="vite/client" />
 import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats } from '../types';
 
-const API_URL = 'https://strikers-app-227875153596.us-central1.run.app/api';
-// const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
-
+// const API_URL = 'https://strikers-app-227875153596.us-central1.run.app/api';
+const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
 const getHeaders = () => {
   const token = sessionStorage.getItem('authToken');
   return {
@@ -38,7 +37,42 @@ export const login = async (username: string, password: string, mode: string) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password, mode })
   });
-  return handleResponse(res);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Login failed');
+  return data;
+};
+
+export const changePassword = async (oldPassword: string, newPassword: string) => {
+  const res = await fetch(`${API_URL}/users/change_password`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ oldPassword, newPassword })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to change password');
+  return data;
+};
+
+export const forgotPassword = async (email: string) => {
+  const res = await fetch(`${API_URL}/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to request password reset');
+  return data;
+};
+
+export const resetPassword = async (email: string, token: string, newPassword: string) => {
+  const res = await fetch(`${API_URL}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, token, newPassword })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+  return data;
 };
 
 // USERS
@@ -52,6 +86,7 @@ export const getAppUsers = async (): Promise<AppUser[]> => {
     role: u.role,
     avatarUrl: u.avatar_url,
     playerId: u.player_id,
+    canScore: u.can_score,
     password: ''
   }));
 };
@@ -66,7 +101,8 @@ export const updateAppUser = async (id: string, user: Partial<AppUser>) => {
       role: user.role,
       name: user.name,
       avatar_url: user.avatarUrl,
-      player_id: user.playerId
+      player_id: user.playerId,
+      can_score: user.canScore
     })
   });
   return handleResponse(res);
@@ -82,7 +118,8 @@ export const addAppUser = async (user: Partial<AppUser>) => {
       role: user.role,
       name: user.name,
       avatar_url: user.avatarUrl,
-      player_id: user.playerId
+      player_id: user.playerId,
+      can_score: user.canScore
     })
   });
   return handleResponse(res);

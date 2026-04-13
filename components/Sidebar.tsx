@@ -22,18 +22,21 @@ import {
   Trophy,
   MapPin,
   History as HistoryIcon,
-  Calendar
+  Calendar,
+  Key,
+  Lock,
+  Loader2
 } from 'lucide-react';
 import { UserRole, MembershipRequest } from '../types';
 import MembershipRequestForm from './MembershipRequestForm';
-import { getMembershipRequests } from '../services/storageService';
+import { getMembershipRequests, changePassword } from '../services/storageService';
 
 interface SidebarProps {
   userRole?: UserRole;
   onSignOut: () => void;
   teamLogo: string;
   onUpdateLogo: (url: string) => void;
-  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string };
+  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
   linkedPlayer?: { id?: string; name: string; avatarUrl?: string }; // Minimal player type needed
 }
 
@@ -43,6 +46,14 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 1024);
   const [pendingRequests, setPendingRequests] = useState(0);
+  
+  const [showConfig, setShowConfig] = useState(false);
+  const [cpwPassword, setCpwPassword] = useState('');
+  const [cpwNewPassword, setCpwNewPassword] = useState('');
+  const [cpwConfirmPassword, setCpwConfirmPassword] = useState('');
+  const [cpwMessage, setCpwMessage] = useState('');
+  const [cpwSubmitting, setCpwSubmitting] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset error state when prop changes
@@ -66,6 +77,29 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
       return () => clearInterval(interval);
     }
   }, [userRole]);
+
+  const handleCpwSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCpwMessage('');
+    if (cpwNewPassword.length < 6) return setCpwMessage('New password must be at least 6 characters');
+    if (cpwNewPassword !== cpwConfirmPassword) return setCpwMessage('Passwords do not match');
+    setCpwSubmitting(true);
+    try {
+      await changePassword(cpwPassword, cpwNewPassword);
+      setCpwMessage('Password updated successfully!');
+      setTimeout(() => {
+        setShowConfig(false);
+        setCpwPassword('');
+        setCpwNewPassword('');
+        setCpwConfirmPassword('');
+        setCpwMessage('');
+      }, 2000);
+    } catch(err: any) {
+      setCpwMessage(err.message || 'Failed to update');
+    } finally {
+      setCpwSubmitting(false);
+    }
+  };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -257,16 +291,16 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
                   ${isCollapsed ? 'w-8 h-8' : 'w-10 h-10'}
                   ${!effectiveAvatar ? (
                   userRole === 'admin' ? 'bg-blue-600 text-white' :
-                    userRole === 'member' ? 'bg-emerald-600 text-white' :
-                      userRole === 'scorer' ? 'bg-purple-600 text-white' : 'bg-orange-500 text-white'
+                    (currentUser?.canScore) ? 'bg-purple-600 text-white' :
+                      userRole === 'member' ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white'
                 ) : 'bg-slate-900 border border-slate-600'}
                 `}>
                 {effectiveAvatar ? (
                   <img src={effectiveAvatar} alt="Avatar" className="w-full h-full object-cover group-hover/user:scale-110 transition-transform" />
                 ) : (
                   userRole === 'admin' ? <Shield size={18} /> :
-                    userRole === 'member' ? <User size={18} /> :
-                      userRole === 'scorer' ? <ClipboardList size={18} /> : <Ticket size={18} />
+                    (currentUser?.canScore) ? <ClipboardList size={18} /> :
+                      userRole === 'member' ? <User size={18} /> : <Ticket size={18} />
                 )}
               </div>
               {!isCollapsed && (
@@ -296,14 +330,24 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
           </div>
 
           {linkedPlayer?.id && (
-            <button
-              onClick={onSignOut}
-              title={isCollapsed ? "Sign Out" : ""}
-              className={`w-full flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-xs'}`}
-            >
-              <LogOut size={isCollapsed ? 18 : 14} />
-              {!isCollapsed && <span>SIGN OUT</span>}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowConfig(true)}
+                title={isCollapsed ? "Change Password" : ""}
+                className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-blue-400 hover:bg-blue-950/20 rounded-lg transition-all border border-transparent hover:border-blue-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-xs'}`}
+              >
+                <Key size={isCollapsed ? 18 : 14} />
+                {!isCollapsed && <span>PASSWORD</span>}
+              </button>
+              <button
+                onClick={onSignOut}
+                title={isCollapsed ? "Sign Out" : ""}
+                className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-xs'}`}
+              >
+                <LogOut size={isCollapsed ? 18 : 14} />
+                {!isCollapsed && <span>SIGN OUT</span>}
+              </button>
+            </div>
           )}
 
           {/* Join Us Button for Guests */}
@@ -320,6 +364,42 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', onSignOut, teamLo
 
         </div>
       </aside >
+
+      {/* Change Password Modal */}
+      {showConfig && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 relative">
+            <button onClick={() => { setShowConfig(false); setCpwMessage(''); setCpwPassword(''); setCpwNewPassword(''); }} className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 hover:bg-slate-800 rounded-full transition-colors" title="Close" aria-label="Close"><X size={20} /></button>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                <Lock className="text-white" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Change Password</h3>
+              </div>
+            </div>
+            
+            <form onSubmit={handleCpwSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 pl-1">Current Password</label>
+                <input required type="password" value={cpwPassword} onChange={e => setCpwPassword(e.target.value)} placeholder="••••••••" className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 text-white px-4 py-2.5 rounded-xl outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 pl-1">New Password</label>
+                <input required type="password" value={cpwNewPassword} onChange={e => setCpwNewPassword(e.target.value)} placeholder="Min 6 characters" minLength={6} className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 text-white px-4 py-2.5 rounded-xl outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 pl-1">Confirm New Password</label>
+                <input required type="password" value={cpwConfirmPassword} onChange={e => setCpwConfirmPassword(e.target.value)} placeholder="Repeat new password" minLength={6} className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 text-white px-4 py-2.5 rounded-xl outline-none" />
+              </div>
+              {cpwMessage && <div className={`text-sm ${cpwMessage.includes('success') ? 'text-green-400' : 'text-red-400'}`}>{cpwMessage}</div>}
+              <button disabled={cpwSubmitting || cpwNewPassword.length < 6} type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold mt-2">
+                {cpwSubmitting ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'Update Password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Membership Request Modal */}
       {isJoinModalOpen && <MembershipRequestForm onClose={() => setIsJoinModalOpen(false)} />}

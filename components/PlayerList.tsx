@@ -9,6 +9,7 @@ import styles from './PlayerList.module.css';
 interface PlayerListProps {
   players: Player[];
   userRole: UserRole;
+  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
   onAddPlayer: (player: Player) => void;
   onUpdatePlayer: (player: Player) => void;
   onDeletePlayer: (id: string) => void;
@@ -67,7 +68,7 @@ const PasswordConfirmModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean;
   );
 };
 
-const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer }) => {
+const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser, onAddPlayer, onUpdatePlayer, onDeletePlayer }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false); // New State
@@ -137,8 +138,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, onAddPlayer,
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canEdit = userRole === 'admin';
-  const canManagePlayers = userRole === 'admin' || userRole === 'scorer';
-  const canEditProfile = userRole === 'admin' || userRole === 'scorer';
+  const canManagePlayers = userRole === 'admin' || currentUser?.canScore;
+  const canEditProfile = userRole === 'admin' || currentUser?.canScore;
 
   const [formData, setFormData] = useState<Partial<Player>>({
     role: PlayerRole.BATSMAN,

@@ -7,10 +7,11 @@ import './FieldingMap.css';
 
 interface FieldingMapProps {
   userRole?: UserRole;
+  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
 }
 
-const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
-  const isReadOnly = userRole === 'guest';
+const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest', currentUser }) => {
+  const isReadOnly = userRole !== 'admin' && !currentUser?.canScore;
   const [players, setPlayers] = useState<Player[]>([]);
   const [strategies, setStrategies] = useState<FieldingStrategy[]>([]);
   const [currentPositions, setCurrentPositions] = useState<Map<string, FieldPosition>>(new Map());
@@ -603,7 +604,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest' }) => {
         </div>
 
         {/* Card 2: Strategy Tools - Only for Members/Admins */}
-        {userRole !== 'guest' && (
+        {(!isReadOnly) && (
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-3">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <Save size={14} /> Strategy

@@ -9,9 +9,10 @@ interface OpponentTeamsProps {
   onUpdateTeam: (team: OpponentTeam) => void;
   onDeleteTeam: (id: string) => void;
   userRole: UserRole;
+  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
 }
 
-const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdateTeam, onDeleteTeam, userRole }) => {
+const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdateTeam, onDeleteTeam, userRole, currentUser }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -28,7 +29,7 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdat
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const canEdit = userRole === 'admin';
+  const canEdit = userRole === 'admin' || currentUser?.canScore;
 
   const toggleAccordion = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
