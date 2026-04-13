@@ -284,7 +284,7 @@ export default function Dashboard({ players, userRole = 'guest', teamLogo, curre
   return (
     <div className="space-y-8 animate-fade-in pb-12 w-full px-4 md:px-0">
       {/* Standardized Page Header */}
-      <div className="flex flex-row justify-between items-center gap-4 border-b border-slate-200 pb-6 mb-2">
+      <div className="flex flex-row justify-between items-center gap-4 border-b border-slate-200 pb-3 mb-2">
         <div className="flex flex-col">
           <h1 className="text-lg md:text-3xl font-black uppercase tracking-tighter text-slate-900 flex items-center gap-3 whitespace-nowrap">
             <span>STRIKERS PULSE</span>
