@@ -29,25 +29,40 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, allOpponents, is
     const [formData, setFormData] = useState<ScheduledMatch>(match);
     const [localDate, setLocalDate] = useState(formatForInput(match.date));
 
-    // Only re-sync if the match object itself changes (different ID or major refresh)
+    // Only re-sync when the modal is explicitly opened OR the match ID changes.
+    // This prevents background data refreshes from wiping out active user edits.
     useEffect(() => {
-        if (match.id !== formData.id || match.date !== formData.date) {
+        if (isOpen) {
             setFormData(match);
             setLocalDate(formatForInput(match.date));
         }
-    }, [match]);
+    }, [isOpen, match.id]);
 
     if (!isOpen) return null;
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
-        // Final sync of date before saving
-        const d = new Date(localDate);
-        const finalData = { ...formData };
-        if (!isNaN(d.getTime())) {
-            finalData.date = d.toISOString();
+        
+        // Robust manual parsing to ensure local components are preserved
+        let finalIsoDate = formData.date;
+        if (localDate) {
+            const parts = localDate.split('T');
+            if (parts.length === 2) {
+                const [d, t] = parts;
+                const [y, m, day] = d.split('-').map(Number);
+                const [h, min] = t.split(':').map(Number);
+                const dateObj = new Date(y, m - 1, day, h, min);
+                if (!isNaN(dateObj.getTime())) {
+                    finalIsoDate = dateObj.toISOString();
+                }
+            }
         }
 
+        const finalData = { 
+            ...formData,
+            date: finalIsoDate
+        };
+        
         // Ensure metadata is synced
         if (finalData.opponentId) {
             const opp = allOpponents.find(o => o.id === finalData.opponentId);

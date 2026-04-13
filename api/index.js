@@ -404,15 +404,18 @@ app.post('/api/matches', authGuard(['admin', 'member']), async (req, res) => {
 });
 
 app.put('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => {
+  console.log('[PUT matches/:id] Incoming date:', req.body.date);
   const dbMatch = mapMatchToDB(req.body);
+  console.log('[PUT matches/:id] mapped date:', dbMatch.date);
   const keys = Object.keys(dbMatch);
   const values = Object.values(dbMatch);
   const setClause = keys.map((key, i) => `${key}=$${i + 1}`).join(', ');
-  const query = `UPDATE matches SET ${setClause}, updated_at=NOW() WHERE id=$${keys.length + 1}`;
+  const query = `UPDATE matches SET ${setClause}, updated_at=NOW() WHERE id=$${keys.length + 1} RETURNING *`;
   
-  const { error } = await db.query(query, [...values, req.params.id]);
+  const { data, error } = await db.query(query, [...values, req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
-  res.json({ ok: true });
+  console.log('[PUT matches/:id] DB saved date:', data?.[0]?.date);
+  res.json({ ok: true, data: data?.[0] });
 });
 
 // FINALIZE MATCH (Update results and player stats)
