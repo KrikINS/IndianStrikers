@@ -167,8 +167,14 @@ export const useCricketScorer = create<ScorerStore>()(
         (set, get) => ({
             ...INITIAL_STATE,
 
-            hardReset: () => set({ ...INITIAL_STATE }),
-            resetStore: () => set({ ...INITIAL_STATE }),
+            hardReset: () => {
+                sessionStorage.removeItem('ins-cricket-scorer');
+                set({ ...INITIAL_STATE });
+            },
+            resetStore: () => {
+                sessionStorage.removeItem('ins-cricket-scorer');
+                set({ ...INITIAL_STATE });
+            },
 
             initializeMatch: (data) => {
                 const current = get();
@@ -623,6 +629,24 @@ export const useCricketScorer = create<ScorerStore>()(
             },
             getOvers: (balls) => `${Math.floor(balls / 6)}.${balls % 6}`
         }),
-        { name: 'ins-cricket-scorer' }
+        { 
+            name: 'ins-cricket-scorer',
+            storage: {
+                getItem: (name) => {
+                    const str = sessionStorage.getItem(name);
+                    try {
+                        return str ? JSON.parse(str) : null;
+                    } catch (e) {
+                        return null;
+                    }
+                },
+                setItem: (name, value) => {
+                    const state = { ...value.state };
+                    delete (state as any).historyStack;
+                    sessionStorage.setItem(name, JSON.stringify({ state, version: value.version }));
+                },
+                removeItem: (name) => sessionStorage.removeItem(name)
+            }
+        }
     )
 );

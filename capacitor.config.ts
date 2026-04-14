@@ -14,12 +14,6 @@ const config: CapacitorConfig = {
       splashFullScreen: true,
       splashImmersive: true,
     }
-  },
-  android: {
-    screenOrientation: "portrait"
-  },
-  ios: {
-    screenOrientation: "portrait"
   }
 };
 

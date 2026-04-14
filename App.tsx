@@ -93,8 +93,9 @@ const AppContent: React.FC<{
   onToggleAdminView: () => void,
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean },
   linkedPlayer?: Player,
-  onRefresh: () => Promise<void>
-}> = ({ players, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onSignOut, teamLogo, onUpdateLogo, isAdminView, onToggleAdminView, currentUser, linkedPlayer, onRefresh }) => {
+  onRefresh: () => Promise<void>,
+  isOffline?: boolean
+}> = ({ players, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onSignOut, teamLogo, onUpdateLogo, isAdminView, onToggleAdminView, currentUser, linkedPlayer, onRefresh, isOffline }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -132,7 +133,7 @@ const AppContent: React.FC<{
             teamLogo={teamLogo}
             onUpdateLogo={onUpdateLogo}
             currentUser={currentUser}
-            linkedPlayer={linkedPlayer}
+            isOffline={isOffline}
           />
 
           <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
@@ -228,6 +229,7 @@ const App: React.FC = () => {
   const [isAdminView, setIsAdminView] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }>();
   const [teamLogo, setTeamLogo] = useState<string>('');
+  const [isOffline, setIsOffline] = useState(false);
   const resetZombieMatches = useMatchCenter(state => state.resetZombieMatches);
 
   // Auto-reset "Zombie" matches (Live matches from previous days)
@@ -238,24 +240,33 @@ const App: React.FC = () => {
   const loadData = async () => {
     try {
       console.log("Fetching data from backend...");
-      const [p, o, l] = await Promise.all([
+      const results = await Promise.allSettled([
         getPlayers(),
         getOpponents(),
         getTeamLogo(),
-        useMasterData.getState().syncMasterData()
+        useMasterData.getState().syncMasterData(),
+        useMatchCenter.getState().syncWithCloud()
       ]);
-      console.log("Data received:", { players: p.length, opponents: o.length });
 
-      if (p.length === 0) {
-        console.warn("Received empty data. Backend might be connected but empty, or request failed silently.");
+      const failedCount = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && (r.value === null || r.value === undefined))).length;
+      
+      // If majority of critical fetches failed or returned null (handleResponse 500), mark offline
+      if (failedCount >= 2) {
+        setIsOffline(true);
+      } else {
+        setIsOffline(false);
       }
+
+      const p = results[0].status === 'fulfilled' ? (results[0].value as Player[] || []) : [];
+      const o = results[1].status === 'fulfilled' ? (results[1].value as OpponentTeam[] || []) : [];
+      const l = results[2].status === 'fulfilled' ? (results[2].value as string || '') : '';
 
       setPlayers(p);
       setOpponents(o);
       setTeamLogo(l);
     } catch (e: any) {
       console.error('Failed to load data:', e);
-      alert(`Backend Error: ${e.message}. \n\nThe API could not connect to the database. Please check the network connectivity and database configuration.`);
+      setIsOffline(true);
     }
   };
 
@@ -406,6 +417,7 @@ const App: React.FC = () => {
           currentUser={currentUser}
           linkedPlayer={currentUser?.id ? players.find(p => String(p.linkedUserId) === String(currentUser?.id)) : undefined}
           onRefresh={loadData}
+          isOffline={isOffline}
         />
       )}
     </HashRouter>

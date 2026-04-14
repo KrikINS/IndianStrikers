@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { Player, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats } from '../types';
+import { Player, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats } from '../types';
 
 // const API_URL = 'https://strikers-app-227875153596.us-central1.run.app/api';
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
@@ -18,6 +18,13 @@ const handleResponse = async (res: Response) => {
       window.location.reload(); // Force reload to show login screen
       throw new Error("Session expired. Please login again.");
     }
+    
+    // TRAP: Prevent app crash on DB Timeout or Server Error
+    if (res.status >= 500) {
+      console.warn(`[API] Server/DB Error ${res.status}. Falling back to empty/cached results.`);
+      return null; // Return null so callers can handle gracefully
+    }
+
     const text = await res.text();
     console.error(`API Error (${res.status}):`, text);
     try {
@@ -142,32 +149,104 @@ export const deleteAppUser = async (id: string) => {
 export const saveAppUsers = (users: AppUser[]) => console.warn("saveAppUsers is deprecated");
 
 // PLAYERS
-export const getPlayers = async (): Promise<Player[]> => {
-  const res = await fetch(`${API_URL}/players`);
-  const data = await handleResponse(res);
-  console.log('[getPlayers] Raw Data:', data); // Debug log
-  if (!Array.isArray(data)) return [];
+const INITIAL_BATTING_STATS: BattingStats = { matches: 142, innings: 140, notOuts: 15, runs: 24500, balls: 18000, average: 196, strikeRate: 136, highestScore: '185*', hundreds: 7, fifties: 12, ducks: 2, fours: 450, sixes: 120 };
+const INITIAL_BOWLING_STATS: BowlingStats = { matches: 142, innings: 120, overs: 480, maidens: 45, runs: 3200, wickets: 180, average: 17.7, economy: 6.6, strikeRate: 16, bestBowling: '5/12', fourWickets: 8, fiveWickets: 3, wides: 120, no_balls: 45 };
 
-  return data
-    .filter((p: any) => p !== null && p !== undefined) // Filter out nulls
-    .map((p: any) => ({
-      ...p,
-      avatarUrl: p.avatar_url,
-      matchesPlayed: p.matches_played,
-      runsScored: p.runs_scored,
-      wicketsTaken: p.wickets_taken,
-      isCaptain: p.is_captain,
-      isViceCaptain: p.is_vice_captain,
-      isAvailable: p.is_available,
-      battingStats: p.batting_stats,
-      bowlingStats: p.bowling_stats,
-      battingStyle: p.batting_style,
-      bowlingStyle: p.bowling_style,
-      linkedUserId: p.linked_user_id,
-      jerseyNumber: p.jersey_number,
-      dob: p.dob,
-      externalId: p.external_id
-    }));
+// OFFLINE FALLBACK PLAYERS (Used when DB is unreachable)
+const OFFLINE_PLAYERS: Player[] = [
+  { 
+    id: '1', 
+    name: 'Anees Ahad (Offline)', 
+    role: PlayerRole.ALL_ROUNDER, 
+    battingStyle: BattingStyle.RIGHT_HAND, 
+    bowlingStyle: BowlingStyle.RIGHT_ARM_FAST, 
+    avatarUrl: '/INS%20LOGO.PNG', 
+    matchesPlayed: 142, 
+    runsScored: 24500, 
+    wicketsTaken: 0, 
+    average: 0, 
+    isCaptain: true, 
+    isViceCaptain: false, 
+    isAvailable: true, 
+    battingStats: INITIAL_BATTING_STATS, 
+    bowlingStats: INITIAL_BOWLING_STATS, 
+    linkedUserId: '1', 
+    jerseyNumber: 7, 
+    dob: '1990-01-01', 
+    externalId: '1' 
+  },
+  { 
+    id: '2', 
+    name: 'Team Member (Offline)', 
+    role: PlayerRole.BATSMAN, 
+    battingStyle: BattingStyle.RIGHT_HAND, 
+    bowlingStyle: BowlingStyle.RIGHT_ARM_FAST, 
+    avatarUrl: '/INS%20LOGO.PNG', 
+    matchesPlayed: 50, 
+    runsScored: 1200, 
+    wicketsTaken: 0, 
+    average: 0, 
+    isCaptain: false, 
+    isViceCaptain: true, 
+    isAvailable: true, 
+    battingStats: { ...INITIAL_BATTING_STATS, matches: 50, runs: 1200 }, 
+    bowlingStats: { ...INITIAL_BOWLING_STATS, matches: 50 }, 
+    linkedUserId: '2', 
+    jerseyNumber: 10, 
+    dob: '1995-01-01', 
+    externalId: '2' 
+  }
+];
+
+export const getPlayers = async (): Promise<Player[]> => {
+  try {
+    const res = await fetch(`${API_URL}/players`).catch(err => {
+      console.warn("[API] Network error/Timeout during getPlayers:", err);
+      return null;
+    });
+
+    if (!res) throw new Error("Network failure");
+
+    const data = await handleResponse(res);
+    
+    // If handleResponse returned null (500 error), use cache
+    if (!data) {
+      const cached = localStorage.getItem('ins_offline_players');
+      return cached ? JSON.parse(cached) : OFFLINE_PLAYERS;
+    }
+
+    console.log('[getPlayers] Raw Data:', data);
+    if (!Array.isArray(data)) return [];
+
+    const players = data
+      .filter((p: any) => p !== null && p !== undefined)
+      .map((p: any) => ({
+        ...p,
+        avatarUrl: p.avatar_url,
+        matchesPlayed: p.matches_played,
+        runsScored: p.runs_scored,
+        wicketsTaken: p.wickets_taken,
+        isCaptain: p.is_captain,
+        isViceCaptain: p.is_vice_captain,
+        isAvailable: p.is_available,
+        battingStats: p.batting_stats,
+        bowlingStats: p.bowling_stats,
+        battingStyle: p.batting_style,
+        bowlingStyle: p.bowling_style,
+        linkedUserId: p.linked_user_id,
+        jerseyNumber: p.jersey_number,
+        dob: p.dob,
+        externalId: p.external_id
+      }));
+
+    // Update offline cache for next time
+    localStorage.setItem('ins_offline_players', JSON.stringify(players));
+    return players;
+  } catch (e) {
+    console.warn("[API] Falling back to offline mode for players.");
+    const cached = localStorage.getItem('ins_offline_players');
+    return cached ? JSON.parse(cached) : OFFLINE_PLAYERS;
+  }
 };
 
 export const addPlayer = async (player: Partial<Player>) => {

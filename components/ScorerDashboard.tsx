@@ -902,11 +902,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
 
     const initFromMeta = (meta: typeof matchMeta) => {
       if (!meta) return;
+      
+      // FORCE SERVER-SIDE TRUTH: If match is live, prioritize its live_data
+      const isActuallyLive = meta.status === 'live';
       const resolvedOpponentName = (meta.opponentName === 'Sandbox XI' && !meta.is_test)
         ? 'OPPONENT' 
         : (meta.opponentName || 'OPPONENT');
 
-      console.log(`[Scorer] Initializing Match: ${activeMatchId} | Opponent: ${resolvedOpponentName}`);
+      console.log(`[Scorer] Initializing Match: ${activeMatchId} | Live: ${isActuallyLive}`);
       
       store.initializeMatch({
         matchId: meta.id,

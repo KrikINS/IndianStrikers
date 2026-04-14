@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme {
+:root {
   --color-primary: #0f172a;
   --color-secondary: #3b82f6;
   --color-accent: #f97316;
@@ -8,34 +8,8 @@
   --font-sans: "Inter", system-ui, sans-serif;
   --font-cursive: "Dancing Script", cursive;
   --font-neon: "Tilt Neon", sans-serif;
-
-  --animate-fade-in: fadeIn 0.5s ease-out;
-  --animate-zoom-in: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  --animate-spin-circle: spinCircle 5s infinite linear;
-  --animate-shimmer: shimmer 1.5s infinite;
-  --animate-blink: blink 1s step-end infinite;
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes zoomIn {
-    from { opacity: 0; transform: scale(0.5) translate(-50%, -50%); }
-    to { opacity: 1; transform: scale(1) translate(-50%, -50%); }
-  }
-  @keyframes spinCircle {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  @keyframes shimmer {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(100%); }
-  }
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-  }
 }
+
 
 @import url('https://fonts.googleapis.com/css2?family=Graduate&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Dancing+Script:wght@600;700&family=Tilt+Neon&display=swap');

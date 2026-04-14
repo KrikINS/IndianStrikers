@@ -41,9 +41,10 @@ interface SidebarProps {
   onUpdateLogo: (url: string) => void;
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
   linkedPlayer?: { id?: string; name: string; avatarUrl?: string }; // Minimal player type needed
+  isOffline?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = 'guest', isAdminView = false, onToggleAdminView, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer }) => {
+const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = 'guest', isAdminView = false, onToggleAdminView, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer, isOffline }) => {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
@@ -207,10 +208,23 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
               />
             </div>
             {!isCollapsed && (
-              <Link to="/home" className="text-xl font-black tracking-tight leading-none hover:opacity-80 transition-opacity block truncate">
-                <span className="text-white">INDIAN</span><br />
-                <span className="text-[#4169E1]">STRIKERS</span>
-              </Link>
+              <div className="flex flex-col">
+                <Link to="/home" className="text-xl font-black tracking-tight leading-none hover:opacity-80 transition-opacity block truncate">
+                  <span className="text-white">INDIAN</span><br />
+                  <span className="text-[#4169E1]">STRIKERS</span>
+                </Link>
+                {isOffline && (
+                  <div className="flex items-center gap-1.5 mt-1 animate-pulse">
+                    <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
+                    <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Database Offline</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {isCollapsed && isOffline && (
+              <div className="absolute top-0 right-0 -mt-1 -mr-1">
+                <div className="w-3 h-3 rounded-full bg-red-500 border-2 border-slate-900 shadow-lg animate-pulse"></div>
+              </div>
             )}
           </div>
         </div>
