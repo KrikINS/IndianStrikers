@@ -1606,11 +1606,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
 
     // --- Over End Check (ALWAYS run at the end for legal balls) ---
     if (type === 'legal' || type === 'wicket') {
-      const currentBalls = currentInnings?.totalBalls || 0;
-      // We check if the NEW total is a multiple of 6 (and not a wide/no-ball which shouldn't happen here as those aren't 'legal')
+      // Calculate legal balls in the CURRENT over accurately from history
+      const currentOverNumber = Math.floor(innings.totalBalls / 6);
+      const ballsInThisOver = (innings.history || []).filter(b => b.overNumber === currentOverNumber && b.isLegal).length;
+
       // Note: isWicket only counts as a ball if ball_type is 'legal' or similar. 
-      // In our store, recordBall handles legal ball incrementing.
-      if (currentBalls > 0 && currentBalls % 6 === 0 && !isBattingFinishing) {
+      if (ballsInThisOver === 6 && !isBattingFinishing) {
         setIsOverComplete(true);
         setTimeout(() => setShowBowlerModal(true), 1200);
       }
