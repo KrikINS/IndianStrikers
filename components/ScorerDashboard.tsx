@@ -894,7 +894,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
     syncMasterData().catch(console.error);
   }, [activeMatchId]); // Re-run if ID changes
 
-  const matchMeta = matches.find(m => m.id === activeMatchId);
+  const matchMeta = (matches || []).find(m => m.id === activeMatchId);
 
   // Sync with URL ID: Initialize match data into store when navigating from a match card
   useEffect(() => {
@@ -1568,12 +1568,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   }
 
   const handleRecord = (score: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string, zone?: string) => {
-    // If Wagon Wheel enabled, runs scored OFF BAT, and no zone provided yet - trigger picker
-    // Rule: Do not trigger for dots, wides, or no-balls (unless runs off bat)
-    const isOffBat = (type === 'legal' && subType === 'bat');
-    if (store.useWagonWheel && score > 0 && isOffBat && !zone && !isWicket) {
-      setShowWagonWheelModal({ score, type, isWicket, wicketType, subType, outPlayerId, newBatterId });
-      return;
+    // 2. The "7th Ball" Fix: Strict Guard
+    if (isOverComplete && store.isWaitingForBowler) {
+       console.warn("Over complete. Selection required.");
+       toast.error("Finish over selection first", { id: 'bowler-lock' });
+       return; 
     }
 
     const innings = store.currentInnings === 1 ? store.innings1 : store.innings2;

@@ -121,100 +121,102 @@ const AppContent: React.FC<{
   }, [location, navigate]);
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
-        <Sidebar
-          userRole={userRole}
-          effectiveRole={effectiveRole}
-          isAdminView={isAdminView}
-          onToggleAdminView={onToggleAdminView}
-          onSignOut={onSignOut}
-          teamLogo={teamLogo}
-          onUpdateLogo={onUpdateLogo}
-          currentUser={currentUser}
-          linkedPlayer={linkedPlayer}
-        />
+    <>
+      <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
+          <Sidebar
+            userRole={userRole}
+            effectiveRole={effectiveRole}
+            isAdminView={isAdminView}
+            onToggleAdminView={onToggleAdminView}
+            onSignOut={onSignOut}
+            teamLogo={teamLogo}
+            onUpdateLogo={onUpdateLogo}
+            currentUser={currentUser}
+            linkedPlayer={linkedPlayer}
+          />
 
-        <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
-          <div className="p-3 md:p-6 lg:p-8 w-full pb-24 md:pb-8">
-            <Routes>
-              <Route path="/home" element={<Dashboard players={players} userRole={effectiveRole} teamLogo={teamLogo} currentUser={currentUser} />} />
-              <Route
-                path="/roster"
-                element={
-                  <PlayerList
-                    players={players}
-                    userRole={effectiveRole}
-                    currentUser={currentUser}
-                    onAddPlayer={onAddPlayer}
-                    onUpdatePlayer={onUpdatePlayer}
-                    onDeletePlayer={onDeletePlayer}
-                  />
-                }
-              />
-              <Route path="/fielding" element={<FieldingMap players={players} userRole={effectiveRole} currentUser={currentUser} />} />
-              <Route
-                path="/opponents"
-                element={
-                  <OpponentTeams
-                    teams={opponents}
-                    onAddTeam={onAddOpponent}
-                    onUpdateTeam={onUpdateOpponent}
-                    onDeleteTeam={onDeleteOpponent}
-                    userRole={effectiveRole}
-                    currentUser={currentUser}
-                  />
-                }
-              />
-              <Route path="/memories" element={<Memories userRole={effectiveRole} currentUser={currentUser} />} />
-              <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={effectiveRole} currentUser={currentUser} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
-              <Route path="/scorer" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} teamLogo={teamLogo} /> : <Unauthorized />} />
-              <Route path="/scorer/:id" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} teamLogo={teamLogo} /> : <Unauthorized />} />
-              <Route path="/live/:id" element={<LiveScorecardPage players={players} opponents={opponents} />} />
-              {/* Control Panel Routes - Admin view required */}
-              <Route path="/control-panel" element={effectiveRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Unauthorized />}>
-                <Route index element={<Navigate to="grounds" replace />} />
-                <Route path="grounds" element={<GroundsManager />} />
-                <Route path="tournaments" element={<TournamentsManager isAdmin={true} />} />
-                <Route path="legacy" element={<LegacyEditor players={players} onUpdatePlayer={onUpdatePlayer} />} />
-                <Route path="users" element={<UserManagement />} />
-              </Route>
-            
-            <Route path="/scorecard/:id" element={<ScorecardPage players={players} opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />
-            <Route path="/tournaments/:id" element={<TournamentDetailViewPlaceholder />} />
-            
-            <Route path="*" element={<Navigate to="/home" replace />} />
-          </Routes>
-        </div>
-        
-        {/* Persistent Branding Logo - Fixed Bottom Right, 50% Size */}
-        <div className="fixed bottom-4 right-4 z-[9999] pointer-events-none select-none opacity-40 transition-opacity hover:opacity-100 hidden md:block">
-          <div className="scale-50 origin-bottom-right">
-            <KirikINSLogo size="medium" />
+          <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
+            <div className="p-3 md:p-6 lg:p-8 w-full pb-24 md:pb-8">
+              <Routes>
+                <Route path="/home" element={<Dashboard players={players} userRole={effectiveRole} teamLogo={teamLogo} currentUser={currentUser} />} />
+                <Route
+                  path="/roster"
+                  element={
+                    <PlayerList
+                      players={players}
+                      userRole={effectiveRole}
+                      currentUser={currentUser}
+                      onAddPlayer={onAddPlayer}
+                      onUpdatePlayer={onUpdatePlayer}
+                      onDeletePlayer={onDeletePlayer}
+                    />
+                  }
+                />
+                <Route path="/fielding" element={<FieldingMap players={players} userRole={effectiveRole} currentUser={currentUser} />} />
+                <Route
+                  path="/opponents"
+                  element={
+                    <OpponentTeams
+                      teams={opponents}
+                      onAddTeam={onAddOpponent}
+                      onUpdateTeam={onUpdateOpponent}
+                      onDeleteTeam={onDeleteOpponent}
+                      userRole={effectiveRole}
+                      currentUser={currentUser}
+                    />
+                  }
+                />
+                <Route path="/memories" element={<Memories userRole={effectiveRole} currentUser={currentUser} />} />
+                <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={effectiveRole} currentUser={currentUser} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
+                <Route path="/scorer" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} teamLogo={teamLogo} /> : <Unauthorized />} />
+                <Route path="/scorer/:id" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} teamLogo={teamLogo} /> : <Unauthorized />} />
+                <Route path="/live/:id" element={<LiveScorecardPage players={players} opponents={opponents} />} />
+                {/* Control Panel Routes - Admin view required */}
+                <Route path="/control-panel" element={effectiveRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Unauthorized />}>
+                  <Route index element={<Navigate to="grounds" replace />} />
+                  <Route path="grounds" element={<GroundsManager />} />
+                  <Route path="tournaments" element={<TournamentsManager isAdmin={true} />} />
+                  <Route path="legacy" element={<LegacyEditor players={players} onUpdatePlayer={onUpdatePlayer} />} />
+                  <Route path="users" element={<UserManagement />} />
+                </Route>
+              
+              <Route path="/scorecard/:id" element={<ScorecardPage players={players} opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />
+              <Route path="/tournaments/:id" element={<TournamentDetailViewPlaceholder />} />
+              
+              <Route path="*" element={<Navigate to="/home" replace />} />
+            </Routes>
           </div>
-        </div>
+          
+          {/* Persistent Branding Logo - Fixed Bottom Right, 50% Size */}
+          <div className="fixed bottom-4 right-4 z-[9999] pointer-events-none select-none opacity-40 transition-opacity hover:opacity-100 hidden md:block">
+            <div className="scale-50 origin-bottom-right">
+              <KirikINSLogo size="medium" />
+            </div>
+          </div>
 
-      </main>
-    </div>
+        </main>
+      </div>
 
-    {/* Global Toast Notifications */}
-    <Toaster
-      position="bottom-center"
-      toastOptions={{
-        duration: 4000,
-        style: {
-          background: '#1e293b',
-          color: '#f1f5f9',
-          fontFamily: 'Inter, system-ui, sans-serif',
-          fontWeight: 700,
-          fontSize: '0.85rem',
-          borderRadius: '12px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          boxShadow: '0 20px 60px -10px rgba(0,0,0,0.5)',
-        },
-        success: { iconTheme: { primary: '#4ade80', secondary: '#fff' } },
-        error: { iconTheme: { primary: '#f87171', secondary: '#fff' } },
-      }}
-    />
+      {/* Global Toast Notifications */}
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#1e293b',
+            color: '#f1f5f9',
+            fontFamily: 'Inter, system-ui, sans-serif',
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            borderRadius: '12px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 20px 60px -10px rgba(0,0,0,0.5)',
+          },
+          success: { iconTheme: { primary: '#4ade80', secondary: '#fff' } },
+          error: { iconTheme: { primary: '#f87171', secondary: '#fff' } },
+        }}
+      />
+    </>
   );
 };
 
