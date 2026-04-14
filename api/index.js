@@ -195,8 +195,37 @@ app.post('/api/reset-password', async (req, res) => {
 
 // PLAYERS
 app.get('/api/players', async (_req, res) => {
-  const { data, error } = await db.query('SELECT * FROM players ORDER BY name ASC');
-  if (error) return res.status(500).json({ error: error.message });
+  const query = `
+    SELECT 
+      p.*,
+      (COALESCE(pls.runs, 0) + COALESCE(ts.runs, 0))::int as runs_scored,
+      (COALESCE(pls.wickets, 0) + COALESCE(ts.wickets, 0))::int as wickets_taken,
+      (COALESCE(pls.matches, 0) + COALESCE(ts.matches, 0))::int as matches_played,
+      CASE 
+        WHEN ((COALESCE(pls.innings, 0) + COALESCE(ts.innings, 0)) - COALESCE(pls.not_outs, 0)) > 0 
+        THEN ROUND((COALESCE(pls.runs, 0) + COALESCE(ts.runs, 0))::numeric / ((COALESCE(pls.innings, 0) + COALESCE(ts.innings, 0)) - COALESCE(pls.not_outs, 0)), 2)
+        ELSE 0
+      END as average
+    FROM players p
+    LEFT JOIN player_legacy_stats pls ON p.id::text = pls.player_id::text
+    LEFT JOIN (
+      SELECT 
+        player_id,
+        SUM(runs) as runs,
+        SUM(wickets) as wickets,
+        COUNT(DISTINCT match_id) as matches,
+        COUNT(runs) FILTER (WHERE runs IS NOT NULL) as innings,
+        SUM(CASE WHEN is_not_out THEN 1 ELSE 0 END) as not_outs
+      FROM player_match_stats
+      GROUP BY player_id
+    ) ts ON p.id::text = ts.player_id::text
+    ORDER BY p.name ASC
+  `;
+  const { data, error } = await db.query(query);
+  if (error) {
+    console.error('[GET /api/players] Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
   res.json(data);
 });
 app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
