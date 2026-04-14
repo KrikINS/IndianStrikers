@@ -1025,6 +1025,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
             <button title="Back" onClick={() => navigate('/match-center')} className="p-2 hover:bg-slate-100/10 rounded-xl transition-all text-white"><ChevronLeft /></button>
             <span style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '1px' }}>LIVE SCORER</span>
           </div>
+          <button 
+            title="Global Settings" 
+            onClick={() => setShowSettingsDrawer(true)} 
+            className="p-2 hover:bg-slate-100/10 rounded-full transition-all text-white"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Settings size={20} />
+          </button>
         </Header>
         <div style={{ padding: '24px 16px', maxWidth: 500, margin: '0 auto', width: '100%' }}>
           <div style={{ marginBottom: 32, textAlign: 'center' }}>
@@ -1127,19 +1135,29 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
             <button title="Back to Match Center" onClick={() => navigate('/match-center')} className="p-2 hover:bg-slate-100/10 rounded-xl transition-all text-white"><ChevronLeft /></button>
             <span style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '1px' }}>MATCH SETUP</span>
           </div>
-          {store.innings1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button 
-              onClick={() => {
-                if (window.confirm("RESET SCORER? This will permanently clear all recorded balls for THIS session. You will need to re-select toss and openers. Proceed?")) {
-                  store.hardReset();
-                  setSetupStep('preview');
-                }
-              }}
-              style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#ef4444', padding: '6px 12px', borderRadius: 8, fontSize: '10px', fontWeight: 900, cursor: 'pointer' }}
+              title="Match Settings" 
+              onClick={() => setShowSettingsDrawer(true)} 
+              className="p-2 hover:bg-slate-100/10 rounded-full transition-all text-white"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              RESET SCORER
+              <Settings size={20} />
             </button>
-          )}
+            {store.innings1 && (
+              <button 
+                onClick={() => {
+                  if (window.confirm("RESET SCORER? This will permanently clear all recorded balls for THIS session. You will need to re-select toss and openers. Proceed?")) {
+                    store.hardReset();
+                    setSetupStep('preview');
+                  }
+                }}
+                style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#ef4444', padding: '6px 12px', borderRadius: 8, fontSize: '10px', fontWeight: 900, cursor: 'pointer' }}
+              >
+                RESET SCORER
+              </button>
+            )}
+          </div>
         </Header>
 
         <SetupCard>
