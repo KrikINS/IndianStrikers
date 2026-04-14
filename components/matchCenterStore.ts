@@ -63,13 +63,15 @@ export const useMatchCenter = create<MatchStore>()(
           const currentMatch = get().matches.find(m => m.id === id);
           if (!currentMatch) return;
           const merged = { ...currentMatch, ...updates };
-          await api.updateMatch(id, merged);
+          // Return the actual API response so callers can await the fetch result
+          const response = await api.updateMatch(id, merged);
           set((state) => ({
             matches: state.matches.map(m => m.id === id ? merged : m)
           }));
+          return response;
         } catch (e) {
           console.error("Failed to update match:", e);
-          throw e;
+          throw e; // Re-throw so awaiting callers receive the rejection
         }
       },
 
@@ -222,9 +224,14 @@ export const useMatchCenter = create<MatchStore>()(
 
 /**
  * Standalone helper to bridge ScorerDashboard and MatchCenterStore.
- * Returns the underlying promise so callers can await the result.
+ * Returns the underlying fetch promise so callers can await a confirmed 200 OK.
  */
-export const updateMatchInStore = (id: string, updates: Partial<ScheduledMatch>): Promise<void> => {
+export const updateMatchInStore = async (id: string, updates: Partial<ScheduledMatch>): Promise<any> => {
   const store = useMatchCenter.getState();
-  return store.updateMatch(id, updates);
+  try {
+    const response = await store.updateMatch(id, updates);
+    return response;
+  } catch (error) {
+    throw error; // Propagate to UI for error handling
+  }
 };
