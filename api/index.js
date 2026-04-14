@@ -318,7 +318,8 @@ const mapMatchToDB = (m) => {
     'resultType': 'result_type',
     'finalScoreHome': 'final_score_home',
     'finalScoreAway': 'final_score_away',
-    'isCareerSynced': 'is_career_synced'
+    'isCareerSynced': 'is_career_synced',
+    'targetScore': 'target_score'
   };
 
   const dbReady = {};
@@ -331,7 +332,7 @@ const mapMatchToDB = (m) => {
     'max_overs', 'result_summary', 'result_note', 'result_type', 
     'final_score_home', 'final_score_away', 'is_live_scored', 
     'is_home_batting_first', 'tournament_id', 'performers', 'scorecard', 'is_career_synced', 'is_test',
-    'live_data'
+    'live_data', 'target_score'
   ];
 
   // 1. First, map camelCase to snake_case
@@ -496,15 +497,15 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
           `INSERT INTO player_match_stats (
             match_id, player_id, runs, balls, fours, sixes, status, wickets, 
             runs_conceded, overs_bowled, maidens, hundreds, fifties, ducks, 
-            four_wickets, five_wickets, wides, no_balls, is_hero, updated_at
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW())
+            four_wickets, five_wickets, wides, no_balls, is_hero, updated_at, dismissal_type
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), $20)
            ON CONFLICT (match_id, player_id) DO UPDATE SET
             runs=EXCLUDED.runs, balls=EXCLUDED.balls, fours=EXCLUDED.fours, sixes=EXCLUDED.sixes, 
             status=EXCLUDED.status, wickets=EXCLUDED.wickets, runs_conceded=EXCLUDED.runs_conceded, 
             overs_bowled=EXCLUDED.overs_bowled, maidens=EXCLUDED.maidens, hundreds=EXCLUDED.hundreds, 
             fifties=EXCLUDED.fifties, ducks=EXCLUDED.ducks, four_wickets=EXCLUDED.four_wickets, 
             five_wickets=EXCLUDED.five_wickets, wides=EXCLUDED.wides, no_balls=EXCLUDED.no_balls, 
-            is_hero=EXCLUDED.is_hero, updated_at=EXCLUDED.updated_at`,
+            is_hero=EXCLUDED.is_hero, updated_at=EXCLUDED.updated_at, dismissal_type=EXCLUDED.dismissal_type`,
           [
             String(id), playerId, Number(perf.runs || 0), Number(perf.balls || 0), Number(perf.fours || 0), Number(perf.sixes || 0), 
             perf.outHow || (perf.isNotOut ? 'Not Out' : 'Out'), Number(perf.wickets || 0), 
@@ -512,7 +513,8 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
             Number(perf.runs) >= 100 ? 1 : 0, (Number(perf.runs) >= 50 && Number(perf.runs) < 100) ? 1 : 0,
             (Number(perf.runs || 0) === 0 && (perf.outHow && !['not out', 'did not bat', 'dnb', 'retired hurt', 'absent'].includes(perf.outHow.toLowerCase()))) ? 1 : 0,
             Number(perf.wickets) === 4 ? 1 : 0, Number(perf.wickets) >= 5 ? 1 : 0, 
-            Number(perf.wides || 0), Number(perf.no_balls || 0), perf.is_hero || false
+            Number(perf.wides || 0), Number(perf.no_balls || 0), perf.is_hero || false,
+            perf.outHow || null
           ]
         );
 
@@ -549,7 +551,7 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
     match_id, striker_id, non_striker_id, bowler_id, 
     over_number, ball_number, runs_scored, extras_runs, 
     extras_type, event_type, innings_number, is_legal_ball,
-    wicket_type, fielder_id, shot_zone
+    wicket_type, fielder_id, shot_zone, penalty_runs, is_penalty
   } = req.body;
 
   const { data, error } = await db.getOne(
@@ -557,13 +559,13 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
       match_id, striker_id, non_striker_id, bowler_id, 
       over_number, ball_number, runs_scored, extras_runs, 
       extras_type, event_type, innings_number, is_legal_ball,
-      wicket_type, fielder_id, shot_zone
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+      wicket_type, fielder_id, shot_zone, penalty_runs, is_penalty
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
     [
       match_id, striker_id, non_striker_id, bowler_id, 
       over_number, ball_number, runs_scored || 0, extras_runs || 0, 
       extras_type, event_type, innings_number || 1, is_legal_ball ?? true,
-      wicket_type, fielder_id, shot_zone
+      wicket_type, fielder_id, shot_zone, penalty_runs || 0, is_penalty || false
     ]
   );
 

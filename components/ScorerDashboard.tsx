@@ -1514,7 +1514,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
           innings_number: store.currentInnings,
           is_legal_ball: type !== 'wide' && type !== 'no-ball',
           wicket_type: wicketType,
-          shot_zone: zone
+          shot_zone: zone,
+          penalty_runs: 0,
+          is_penalty: false
         })
       }).catch(err => console.error("[Sync] Ball-by-ball sync failed:", err));
     }
@@ -1646,7 +1648,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
         if (store.currentInnings === 1) {
             updatePayload.innings_1_score = totalScore;
             updatePayload.innings_1_wickets = totalWickets;
-            updatePayload.target_score = target;
+            updatePayload.targetScore = target; // Frontend camelCase matches keyMap in api
         } else {
             // End of match calculation
             updatePayload.status = 'completed';
@@ -2379,6 +2381,27 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                       key={reason}
                       onClick={() => {
                         store.recordPenalty('bowling', 5);
+                        // Sync immediately to ball_by_ball stream
+                        if (activeMatchId) {
+                          fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
+                            method: 'POST',
+                            headers: { 
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
+                            },
+                            body: JSON.stringify({
+                              match_id: activeMatchId,
+                              over_number: 0, 
+                              ball_number: 0,
+                              runs_scored: 0,
+                              penalty_runs: 5,
+                              is_penalty: true,
+                              event_type: 'extra',
+                              innings_number: store.currentInnings,
+                              is_legal_ball: false
+                            })
+                          }).catch(err => console.error("[Sync] Penalty sync failed:", err));
+                        }
                         setShowPenaltyModal(false);
                       }}
                       style={{ padding: '12px', textAlign: 'left', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 8, color: '#FFF', fontSize: '0.8rem', cursor: 'pointer', width: '100%' }}
@@ -2394,7 +2417,28 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                   onClick={() => {
                     const r = window.prompt("Penalty runs for Batting Team:", "5");
                     if (r && !isNaN(parseInt(r))) {
-                      store.recordPenalty('batting', parseInt(r));
+                      const runs = parseInt(r);
+                      store.recordPenalty('batting', runs);
+                      if (activeMatchId) {
+                        fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
+                          method: 'POST',
+                          headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
+                          },
+                          body: JSON.stringify({
+                            match_id: activeMatchId,
+                            over_number: 0, 
+                            ball_number: 0,
+                            runs_scored: 0,
+                            penalty_runs: runs,
+                            is_penalty: true,
+                            event_type: 'extra',
+                            innings_number: store.currentInnings,
+                            is_legal_ball: false
+                          })
+                        }).catch(err => console.error("[Sync] Penalty sync failed:", err));
+                      }
                       setShowPenaltyModal(false);
                     }
                   }}
@@ -2405,10 +2449,31 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                 <button
                   onClick={() => {
                     const r = window.prompt("Penalty runs for Fielding Team:", "5");
-                    if (r && !isNaN(parseInt(r))) {
-                      store.recordPenalty('bowling', parseInt(r));
-                      setShowPenaltyModal(false);
-                    }
+                      if (r && !isNaN(parseInt(r))) {
+                        const runs = parseInt(r);
+                        store.recordPenalty('bowling', runs);
+                        if (activeMatchId) {
+                          fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
+                            method: 'POST',
+                            headers: { 
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
+                            },
+                            body: JSON.stringify({
+                              match_id: activeMatchId,
+                              over_number: 0, 
+                              ball_number: 0,
+                              runs_scored: 0,
+                              penalty_runs: runs,
+                              is_penalty: true,
+                              event_type: 'extra',
+                              innings_number: store.currentInnings,
+                              is_legal_ball: false
+                            })
+                          }).catch(err => console.error("[Sync] Penalty sync failed:", err));
+                        }
+                        setShowPenaltyModal(false);
+                      }
                   }}
                   style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#FF4D4D', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer' }}
                 >
