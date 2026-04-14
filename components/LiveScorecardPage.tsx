@@ -23,6 +23,7 @@ const LiveScorecardPage: React.FC<{ players?: Player[]; opponents?: OpponentTeam
             balls: p.balls,
             fours: p.fours,
             sixes: p.sixes,
+            index: p.index,
             outHow: p.status === 'batting' ? 'Not Out' : (p.outHow || 'Out')
         }));
 
@@ -32,7 +33,8 @@ const LiveScorecardPage: React.FC<{ players?: Player[]; opponents?: OpponentTeam
             overs: b.overs,
             maidens: b.maidens,
             runsConceded: b.runs,
-            wickets: b.wickets
+            wickets: b.wickets,
+            index: b.index
         }));
 
         const balls = inn.totalBalls || 0;

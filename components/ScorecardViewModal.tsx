@@ -26,6 +26,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
     const fullScorecardRef = useRef<HTMLDivElement>(null);
     const modalContentRef = useRef<HTMLDivElement>(null);
     const [isExporting, setIsExporting] = useState(false);
+    const [activeTab, setActiveTab] = useState<'scorecard' | 'commentary'>('scorecard');
 
     if (!isOpen || !match.scorecard) return null;
 
@@ -276,7 +277,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
              const hasPlayed = (b.runs || 0) > 0 || (b.balls || 0) > 0 || (b.outHow && b.outHow !== 'Did Not Bat' && b.outHow !== 'Not Out');
              // Also include current 'Not Out' players even if 0(0)
              return hasPlayed || b.outHow === 'Not Out';
-        });
+        }).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
 
         const dnbList = data.batting.filter(b => {
              const hasNotPlayed = (b.runs || 0) === 0 && (b.balls || 0) === 0 && (b.outHow === 'Did Not Bat' || !b.outHow);
@@ -393,7 +394,9 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {data.bowling?.filter(b => b.playerId || b.name).map((b, i) => (
+                                    {data.bowling?.filter(b => b.playerId || b.name)
+                                        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+                                        .map((b, i) => (
                                         <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                             <td className="py-[5px] px-3 font-bold text-slate-900">
                                                 {resolvePlayerName(b.name, b.playerId, isBattingHome ? 'opponent' : 'home')}
@@ -523,13 +526,152 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                         </button>
                     </div>
                 </div>
+
+                {/* Tab Bar */}
+                <div className="max-w-7xl mx-auto w-full px-4 mb-2 flex border-b border-white/5">
+                    {(['scorecard', 'commentary'] as const).map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative ${
+                                activeTab === tab ? 'text-sky-400' : 'text-slate-500 hover:text-slate-300'
+                            }`}
+                        >
+                            {tab === 'scorecard' ? '📋 Scorecard' : '🎙 Commentary'}
+                            {activeTab === tab && (
+                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
+                            )}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Content Body - Pure Data Flow */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-white">
-                <div ref={fullScorecardRef} className="max-w-7xl mx-auto space-y-5 pb-10">
-                    {renderInningsContent(1, inn1Ref)}
-                    {renderInningsContent(2, inn2Ref)}
+            <div className={`flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar ${activeTab === 'scorecard' ? 'bg-white' : 'bg-slate-950'}`}>
+                <div ref={fullScorecardRef} className="max-w-7xl mx-auto pb-10">
+                    {activeTab === 'scorecard' ? (
+                        <div className="space-y-5">
+                            {renderInningsContent(1, inn1Ref)}
+                            {renderInningsContent(2, inn2Ref)}
+                        </div>
+                    ) : (
+                        <div className="space-y-8">
+                            {[1, 2].map(innNum => {
+                                const inn = innNum === 1 ? scorecard.innings1 : scorecard.innings2;
+                                const batTeam = innNum === 1 ? innings1BattingTeam : innings2BattingTeam;
+                                if (!inn.history || inn.history.length === 0) return null;
+
+                                const history = [...inn.history].reverse();
+                                const overGroups: Record<number, any[]> = {};
+                                history.forEach(ball => {
+                                    const ov = ball.overNumber ?? 0;
+                                    if (!overGroups[ov]) overGroups[ov] = [];
+                                    overGroups[ov].push(ball);
+                                });
+
+                                const sortedOvers = Object.keys(overGroups).map(Number).sort((a,b) => b-a);
+
+                                return (
+                                    <div key={innNum}>
+                                        <div className="flex items-center gap-3 mb-6 px-4">
+                                            <div className="h-px flex-1 bg-white/10" />
+                                            <h3 className="text-[11px] font-black text-sky-400 uppercase tracking-[0.3em] italic">
+                                                {batTeam} Innings
+                                            </h3>
+                                            <div className="h-px flex-1 bg-white/10" />
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            {sortedOvers.map(overNum => {
+                                                const balls = overGroups[overNum];
+                                                const overRuns = balls.reduce((s, b) => s + (b.runs || 0) + (!b.isLegal ? 1 : 0), 0);
+                                                const overWkts = balls.filter(b => b.isWicket).length;
+                                                const isMaiden = overRuns === 0 && balls.filter(b => b.isLegal).length === 6;
+                                                const isComplete = balls.filter(b => b.isLegal).length === 6;
+
+                                                return (
+                                                    <div key={overNum}>
+                                                        {/* Over Summary */}
+                                                        <div className={`flex justify-between items-center p-3 rounded-xl border mb-3 ${
+                                                            isMaiden ? 'bg-sky-500/10 border-sky-500/30' : 'bg-white/5 border-white/10'
+                                                        }`}>
+                                                            <div className="flex items-center gap-4">
+                                                                <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest">
+                                                                    OVER {overNum + 1}{!isComplete ? ' (live)' : ''}
+                                                                </span>
+                                                                <div className="flex gap-2">
+                                                                    {[...balls].reverse().map((b, idx) => {
+                                                                        let label = b.isWicket ? 'W' : `${b.runs}`;
+                                                                        if (b.type === 'wide') label = `wd${b.runs > 0 ? `+${b.runs}` : ''}`;
+                                                                        else if (b.type === 'no-ball') label = `nb${b.runs > 0 ? `+${b.runs}` : ''}`;
+                                                                        else if (b.type === 'leg-bye') label = `lb${b.runs}`;
+                                                                        else if (b.type === 'bye') label = `b${b.runs}`;
+                                                                        
+                                                                        return (
+                                                                            <span key={idx} className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-black border ${
+                                                                                b.isWicket ? 'bg-red-500/20 border-red-500/40 text-red-500' :
+                                                                                b.runs >= 4 ? 'bg-sky-500/20 border-sky-500/40 text-sky-400' :
+                                                                                'bg-white/5 border-white/10 text-slate-400'
+                                                                            }`}>
+                                                                                {label}
+                                                                            </span>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <span className="text-sm font-black text-white">{overRuns}</span>
+                                                                <span className="text-[8px] text-slate-500 font-bold uppercase ml-1">Runs</span>
+                                                                {overWkts > 0 && <span className="text-red-500 font-bold text-[10px] ml-3">· {overWkts}W</span>}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Ball rows */}
+                                                        <div className="space-y-1">
+                                                            {balls.map((ball, bIdx) => {
+                                                                const bName = resolvePlayerName(undefined, ball.bowlerId, innNum === 1 ? 'opponent' : 'home');
+                                                                const sName = resolvePlayerName(undefined, ball.strikerId, innNum === 1 ? 'home' : 'opponent');
+                                                                
+                                                                let result = ball.isWicket ? `OUT! ${ball.wicketType || 'Wicket'}` : 
+                                                                             ball.runs === 6 ? 'SIX' : 
+                                                                             ball.runs === 4 ? 'FOUR' : 
+                                                                             ball.type === 'wide' ? 'Wide' : 
+                                                                             ball.type === 'no-ball' ? 'No Ball' : 
+                                                                             ball.runs === 0 ? 'Dot' : `${ball.runs} runs`;
+                                                                
+                                                                return (
+                                                                    <div key={bIdx} className="flex gap-4 px-4 py-2 border-l-2 border-white/5 hover:bg-white/5 transition-colors group">
+                                                                        <span className="text-[9px] font-black text-slate-600 min-w-[30px] pt-0.5">
+                                                                            {overNum}.{ball.ballNumber}
+                                                                        </span>
+                                                                        <div className="flex-1">
+                                                                            <div className={`text-[11px] font-bold ${
+                                                                                ball.isWicket ? 'text-red-500' : ball.runs >= 4 ? 'text-sky-400' : 'text-slate-300'
+                                                                            }`}>
+                                                                                {result} · {sName}
+                                                                            </div>
+                                                                            <div className="text-[9px] text-slate-500 opacity-60">
+                                                                                {bName} to {sName}
+                                                                            </div>
+                                                                        </div>
+                                                                        <span className={`text-sm font-black italic ${
+                                                                            ball.isWicket ? 'text-red-500' : 'text-slate-500'
+                                                                        }`}>
+                                                                            {ball.isWicket ? 'W' : ball.runs}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -543,7 +685,11 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                     </div>
                     <div className="flex gap-4 items-center border-l border-white/10 pl-8">
                         <Trophy size={14} className="text-sky-500" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{(match as any).resultNote || (match as any).resultSummary || 'MATCH COMPLETED'}</span>
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                            {match.status === 'live' ? 'MATCH IN PROGRESS' : 
+                             match.status === 'upcoming' ? 'MATCH SCHEDULED' : 
+                             (match as any).resultNote || (match as any).resultSummary || 'MATCH COMPLETED'}
+                        </span>
                     </div>
                 </div>
 

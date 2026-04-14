@@ -68,6 +68,7 @@ export interface InningsBattingEntry {
   bowlerId?: string;
   fielderId?: string;
   is_hero?: boolean;
+  index?: number;
 }
 
 export interface InningsBowlingEntry {
@@ -80,6 +81,7 @@ export interface InningsBowlingEntry {
   wides?: number;
   no_balls?: number;
   is_hero?: boolean;
+  index?: number;
 }
 
 export interface BallRecord {

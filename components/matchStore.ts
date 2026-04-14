@@ -11,6 +11,7 @@ export interface LivePlayer {
     sixes: number;
     status: 'batting' | 'out' | 'dnb' | 'retired_hurt';
     outHow?: string;
+    index?: number;
 }
 
 export interface LiveBowler {
@@ -20,6 +21,7 @@ export interface LiveBowler {
     maidens: number;
     runs: number;
     wickets: number;
+    index?: number;
 }
 
 export interface BallRecord {
@@ -229,8 +231,13 @@ export const useCricketScorer = create<ScorerStore>()(
                     wickets: 0,
                     totalBalls: 0,
                     extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, penalty: 0 },
-                    battingStats: {},
-                    bowlingStats: {},
+                    battingStats: {
+                        [strId]: { id: strId, name: 'Striker', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: 0 },
+                        [nStrId]: { id: nStrId, name: 'Non-Striker', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: 1 }
+                    },
+                    bowlingStats: {
+                        [bwlId]: { id: bwlId, name: 'Bowler', overs: 0, maidens: 0, runs: 0, wickets: 0, index: 0 }
+                    },
                     fallOfWickets: [],
                     history: []
                 }
@@ -288,7 +295,8 @@ export const useCricketScorer = create<ScorerStore>()(
                 // Update Batsman Stats
                 const sId_active = state.strikerId!;
                 if (!nextInnings.battingStats[sId_active]) {
-                    nextInnings.battingStats[sId_active] = { id: sId_active, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting' };
+                    const currentIndex = Object.keys(nextInnings.battingStats).length;
+                    nextInnings.battingStats[sId_active] = { id: sId_active, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: currentIndex };
                 }
                 const b = nextInnings.battingStats[sId_active];
                 b.runs += batsmenRuns;
@@ -308,7 +316,8 @@ export const useCricketScorer = create<ScorerStore>()(
                 // Update Bowler Stats
                 const bwlId_active = state.currentBowlerId!;
                 if (!nextInnings.bowlingStats[bwlId_active]) {
-                    nextInnings.bowlingStats[bwlId_active] = { id: bwlId_active, name: 'Unknown', overs: 0, maidens: 0, runs: 0, wickets: 0 };
+                    const currentIndex = Object.keys(nextInnings.bowlingStats).length;
+                    nextInnings.bowlingStats[bwlId_active] = { id: bwlId_active, name: 'Unknown', overs: 0, maidens: 0, runs: 0, wickets: 0, index: currentIndex };
                 }
                 const bw = nextInnings.bowlingStats[bwlId_active];
                 // Bowler runs: bat runs + wides + no-balls. Byes/Leg-byes NOT counted for bowler.
@@ -333,7 +342,8 @@ export const useCricketScorer = create<ScorerStore>()(
                     // If a new batter is coming in (whether fresh or returning)
                     if (newBatterId) {
                         if (!nextInnings.battingStats[newBatterId]) {
-                            nextInnings.battingStats[newBatterId] = { id: newBatterId, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting' };
+                            const currentIndex = Object.keys(nextInnings.battingStats).length;
+                            nextInnings.battingStats[newBatterId] = { id: newBatterId, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: currentIndex };
                         } else {
                             // Returning batter (Retired Hurt)
                             nextInnings.battingStats[newBatterId].status = 'batting';
@@ -445,16 +455,34 @@ export const useCricketScorer = create<ScorerStore>()(
             },
 
             setNewBowler: (id) => {
-                // Cricket law: at the start of a new over the non-striker becomes the striker
-                // because both batsmen ran to the other end on the last ball of the previous over
                 const state = get();
+                const currentKey = state.currentInnings === 1 ? 'innings1' : 'innings2';
+                const innings = state[currentKey];
+                
+                if (innings && !innings.bowlingStats[id]) {
+                    const nextInnings = JSON.parse(JSON.stringify(innings));
+                    nextInnings.bowlingStats[id] = { id, name: 'Unknown', overs: 0, maidens: 0, runs: 0, wickets: 0, index: Object.keys(nextInnings.bowlingStats).length };
+                    set({ [currentKey]: nextInnings });
+                }
+
                 set({
                     currentBowlerId: id,
                     strikerId: state.nonStrikerId,
                     nonStrikerId: state.strikerId
                 });
             },
-            changeBowler: (id) => set({ currentBowlerId: id }),
+            changeBowler: (id) => {
+                const state = get();
+                const currentKey = state.currentInnings === 1 ? 'innings1' : 'innings2';
+                const innings = state[currentKey];
+                
+                if (innings && !innings.bowlingStats[id]) {
+                    const nextInnings = JSON.parse(JSON.stringify(innings));
+                    nextInnings.bowlingStats[id] = { id, name: 'Unknown', overs: 0, maidens: 0, runs: 0, wickets: 0, index: Object.keys(nextInnings.bowlingStats).length };
+                    set({ [currentKey]: nextInnings });
+                }
+                set({ currentBowlerId: id });
+            },
             resetMatch: () => set(INITIAL_STATE),
             clearInnings: () => {
                 const state = get();

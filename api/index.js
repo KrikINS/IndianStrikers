@@ -958,10 +958,64 @@ app.get('/api/players/:id/stats', async (req, res) => {
 
         if (matchError) throw matchError;
 
-        // 3. Group by Tournament
+        // 3. Fetch Active (Live) Matches involving this player
+        const { data: liveMatches } = await db.query(
+            `SELECT m.id, m.live_data, m.tournament_id, t.name as tournament_name, m.date
+             FROM matches m
+             LEFT JOIN tournaments t ON m.tournament_id = t.id
+             WHERE m.status = 'live' AND m.is_test = false AND (
+                m.home_team_xi @> $1 OR m.opponent_team_xi @> $1
+             )`,
+            [`["${playerId}"]`]
+        );
+
+        // 4. Merge Live Data into Stats calculation
         const tournamentGroups = {};
-        
-        matchStats.forEach(row => {
+        const allStatsForAggregation = [...matchStats];
+
+        // Parse and process live match data
+        if (liveMatches && liveMatches.length > 0) {
+            liveMatches.forEach(lm => {
+                let liveData;
+                try {
+                    liveData = typeof lm.live_data === 'string' ? JSON.parse(lm.live_data) : lm.live_data;
+                } catch(e) { return; }
+
+                if (!liveData) return;
+
+                const tId = lm.tournament_id || 'active_live';
+                const tName = lm.tournament_name || 'Ongoing Matches';
+
+                // We need to find the player's performance in either innings
+                [liveData.innings1, liveData.innings2].forEach(innings => {
+                    if (!innings) return;
+                    
+                    const bat = (innings.battingStats || {})[playerId];
+                    const bowl = (innings.bowlingStats || {})[playerId];
+
+                    if (bat || bowl) {
+                        // Create a "pseudo" pms record to feed the existing logic
+                        allStatsForAggregation.push({
+                            tournament_id: tId,
+                            tournament_name: tName,
+                            runs: bat?.runs || 0,
+                            balls: bat?.balls || 0,
+                            fours: bat?.fours || 0,
+                            sixes: bat?.sixes || 0,
+                            status: bat?.outHow || (bat?.isNotOut ? 'not out' : (bat?.isOut ? 'out' : null)),
+                            overs_bowled: bowl?.overs || 0,
+                            maidens: bowl?.maidens || 0,
+                            runs_conceded: bowl?.runs || 0,
+                            wickets: bowl?.wickets || 0,
+                            is_live: true,
+                            date: lm.date
+                        });
+                    }
+                });
+            });
+        }
+
+        allStatsForAggregation.forEach(row => {
             const tId = row.tournament_id || 'unknown';
             const tName = row.tournament_name || (tId === 'unknown' ? 'Other Matches' : 'Default Tournament');
 
@@ -977,7 +1031,7 @@ app.get('/api/players/:id/stats', async (req, res) => {
             const group = tournamentGroups[tId];
             
             // Batting Aggregation
-            group.batting.matches++;
+            if (!row.is_live) group.batting.matches++; 
             const isDismissed = !['not out', 'retired hurt', 'absent'].includes(row.status?.toLowerCase());
             if (row.runs > 0 || row.balls > 0 || isDismissed) group.batting.innings++;
             if (!isDismissed) group.batting.notOuts++;
@@ -994,14 +1048,13 @@ app.get('/api/players/:id/stats', async (req, res) => {
             if (runs > currentHS) {
                 group.batting.highestScore = `${runs}${!isDismissed ? '*' : ''}`;
             } else if (runs === currentHS && !isDismissed && !group.batting.highestScore.includes('*')) {
-                // If equal but this one is not out, prefer the not out one
                 group.batting.highestScore = `${runs}*`;
             }
 
             // Bowling Aggregation
             if (Number(row.overs_bowled) > 0) {
-                group.bowling.innings++;
-                group.bowling.matches++; 
+                if (!row.is_live) group.bowling.innings++;
+                if (!row.is_live) group.bowling.matches++; 
                 const currentBalls = (Math.floor(group.bowling.overs) * 6) + Math.round((group.bowling.overs % 1) * 10);
                 const newBallsToAdd = (Math.floor(Number(row.overs_bowled)) * 6) + Math.round((Number(row.overs_bowled) % 1) * 10);
                 const updatedTotalBalls = currentBalls + newBallsToAdd;
@@ -1035,13 +1088,14 @@ app.get('/api/players/:id/stats', async (req, res) => {
         res.json({
             legacy: legacy || null,
             tournaments: Object.values(tournamentGroups),
-            recentForm: matchStats
+            recentForm: allStatsForAggregation
                 .filter(row => row.runs > 0 || row.balls > 0 || !['not out', 'retired hurt', 'absent'].includes(row.status?.toLowerCase()))
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .sort((a, b) => new Date(b.date || Date.now()) - new Date(a.date || Date.now()))
                 .slice(0, 5)
                 .map(row => ({
                     runs: row.runs || 0,
-                    isNotOut: ['not out', 'retired hurt', 'absent'].includes(row.status?.toLowerCase())
+                    isNotOut: ['not out', 'retired hurt', 'absent'].includes(row.status?.toLowerCase()),
+                    isLive: !!row.is_live
                 }))
         });
 

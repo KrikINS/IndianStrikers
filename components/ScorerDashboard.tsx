@@ -2212,7 +2212,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
             </div>
           </div>
 
-          <div style={{ padding: '20px', borderTop: '1px solid #E9ECEF' }}>
+          <div style={{ padding: '20px', borderTop: '1px solid #E9ECEF', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button 
+              onClick={() => { if(window.confirm("Undo last ball and resume 1st Innings?")) store.undoLastBall(); }}
+              style={{ 
+                width: '100%', padding: '12px', borderRadius: 12, border: '1px solid #FAB005', 
+                background: 'transparent', color: '#FAB005', fontWeight: 800, fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              UNDO LAST BALL
+            </button>
             <ActionButton 
               $variant="primary" 
               style={{ background: '#001F3F', color: '#FFF', height: 64, borderRadius: 16 }}
@@ -2515,7 +2525,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                       </tr>
                     </thead>
                     <tbody>
-                      {(Object.entries((currentInnings as any).battingStats) as [string, any][]).map(([id, stat]) => (
+                      {(Object.entries((currentInnings as any).battingStats) as [string, any][])
+                        .sort(([, a], [, b]) => (a.index ?? 0) - (b.index ?? 0))
+                        .map(([id, stat]) => (
                         <tr key={id}>
                           <Td style={{ color: (store.strikerId === id || store.nonStrikerId === id) ? '#FAB005' : '#FFF' }}>
                             {getPlayerName(id)}{(store.strikerId === id || store.nonStrikerId === id) ? '*' : ''}
@@ -2547,7 +2559,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                       </tr>
                     </thead>
                     <tbody>
-                      {(Object.entries((currentInnings as any).bowlingStats) as [string, any][]).map(([id, stat]) => (
+                      {(Object.entries((currentInnings as any).bowlingStats) as [string, any][])
+                        .sort(([, a], [, b]) => (a.index ?? 0) - (b.index ?? 0))
+                        .map(([id, stat]) => (
                         <tr key={id}>
                           <Td style={{ color: store.currentBowlerId === id ? '#FAB005' : '#FFF' }}>
                             {getPlayerName(id)}{store.currentBowlerId === id ? '*' : ''}
@@ -2672,8 +2686,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                               else result = `${ball.runs} run(s)`;
 
                               const ballLabel = ball.isLegal
-                                ? `${overNum + 1}.${ball.ballNumber}`
-                                : `${overNum + 1}.${ball.ballNumber}*`;
+                                ? `${overNum}.${ball.ballNumber}`
+                                : `${overNum}.${ball.ballNumber}*`;
 
                               return (
                                 <div key={i} style={{
