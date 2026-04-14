@@ -940,10 +940,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   // Sync setupStep when store state changes (Rehydration check)
   useEffect(() => {
     if (store.innings1) {
-      setSetupStep(null);
-    } else if (activeMatchId === store.matchId) {
-      // If we have XI but no innings, maybe jump to toss?
-      // For now, keep as per user flow.
+      setSetupStep(null); // Jump straight to scoring if we have innings data
+    } else if (activeMatchId === store.matchId && setupStep === 'preview') {
+      // If we're on preview but have teams selected in store, maybe stay there or jump to toss
     }
   }, [!!store.innings1, store.matchId]);
 
@@ -1539,6 +1538,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
         })
       }).catch(err => console.error("[Sync] Ball-by-ball sync failed:", err));
     }
+
+    // Auto-Save: Trigger immediate state sync to cloud for field rehydration (striker, bowler, etc.)
+    syncToDatabase(store);
 
     // --- Milestone Detection & Animation Bridge ---
     const sId = store.strikerId || '';
@@ -3199,6 +3201,45 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                 <IconButton onClick={() => setShowSettingsDrawer(false)}>
                   <X size={24} />
                 </IconButton>
+              </div>
+
+              {/* Change Scorer Action */}
+              <div style={{ marginTop: 24, marginBottom: 8 }}>
+                <button
+                  onClick={async () => {
+                    if (window.confirm("FORCE SAVE AND EXIT SCORING?\n\nThis will sync the latest state to the cloud and allow another scorer to take over. You will be redirected to the match list.")) {
+                      setSyncStatus('loading');
+                      try {
+                        // Final Sync
+                        await updateMatchInStore(activeMatchId!, { 
+                          live_data: store,
+                          last_updated: new Date().toISOString()
+                        });
+                        
+                        // Clear Local State for this match
+                        localStorage.removeItem('ins-cricket-scorer');
+                        
+                        // Redirect
+                        navigate('/match-center');
+                      } catch (err) {
+                        console.error("Change Scorer failed:", err);
+                        setSyncStatus('error');
+                      }
+                    }
+                  }}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '16px',
+                    background: 'rgba(56, 189, 248, 0.1)', border: '1px solid #38BDF8',
+                    borderRadius: 12, color: '#38BDF8', fontWeight: 800, cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <Repeat size={20} />
+                  <div>
+                    <div style={{ fontSize: '0.9rem' }}>CHANGE SCORER</div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 500 }}>Handoff match to another device</div>
+                  </div>
+                </button>
               </div>
 
               <SettingsGroup>
