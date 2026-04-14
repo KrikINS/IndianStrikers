@@ -444,7 +444,16 @@ export const useCricketScorer = create<ScorerStore>()(
                 });
             },
 
-            setNewBowler: (id) => set({ currentBowlerId: id }),
+            setNewBowler: (id) => {
+                // Cricket law: at the start of a new over the non-striker becomes the striker
+                // because both batsmen ran to the other end on the last ball of the previous over
+                const state = get();
+                set({
+                    currentBowlerId: id,
+                    strikerId: state.nonStrikerId,
+                    nonStrikerId: state.strikerId
+                });
+            },
             changeBowler: (id) => set({ currentBowlerId: id }),
             resetMatch: () => set(INITIAL_STATE),
             clearInnings: () => {

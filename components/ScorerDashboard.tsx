@@ -725,6 +725,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
   const posterRef = useRef<HTMLDivElement>(null);
   const milestoneRef = useRef<MilestoneOverlayRef>(null);
+  const [scorecardTab, setScorecardTab] = useState<'scorecard' | 'commentary'>('scorecard');
 
   // Opponent players fetched separately from the opponents table
   const [opponentPlayers, setOpponentPlayers] = useState<{id: string; name: string; role?: string}[]>([]);
@@ -2453,100 +2454,259 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
           onClick={() => setShowScorecardModal(false)}
         >
           <PremiumModalContent onClick={e => e.stopPropagation()} style={{ paddingBottom: 40 }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 }}>
               <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900 }}>FULL SCORECARD</h2>
               <IconButton onClick={() => setShowScorecardModal(false)}>
                 <X size={24} />
               </IconButton>
             </div>
 
+            {/* Tab Bar */}
+            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '0 20px' }}>
+              {(['scorecard', 'commentary'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setScorecardTab(tab)}
+                  style={{
+                    flex: 1, padding: '12px 0', background: 'none', border: 'none',
+                    borderBottom: scorecardTab === tab ? '2px solid #38BDF8' : '2px solid transparent',
+                    color: scorecardTab === tab ? '#38BDF8' : 'rgba(255,255,255,0.4)',
+                    fontWeight: 900, fontSize: '0.75rem', letterSpacing: '1px',
+                    textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s',
+                    marginBottom: '-1px'
+                  }}
+                >
+                  {tab === 'scorecard' ? '📋 Scorecard' : '🎙 Commentary'}
+                </button>
+              ))}
+            </div>
+
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
-              <ScoreSummaryCard>
-                <div>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 800 }}>TOTAL SCORE</div>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#FAB005' }}>
-                    {(currentInnings as any).totalRuns}/{(currentInnings as any).wickets}
+
+              {/* ───────── SCORECARD TAB ───────── */}
+              {scorecardTab === 'scorecard' && (
+                <>
+                  <ScoreSummaryCard style={{ marginTop: 20 }}>
+                    <div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 800 }}>TOTAL SCORE</div>
+                      <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#FAB005' }}>
+                        {(currentInnings as any).totalRuns}/{(currentInnings as any).wickets}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 800 }}>OVERS</div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>
+                        {store.getOvers((currentInnings as any).totalBalls)} / {store.maxOvers}
+                      </div>
+                    </div>
+                  </ScoreSummaryCard>
+
+                  <h3 style={{ fontSize: '0.8rem', color: '#FAB005', marginBottom: 12, textTransform: 'uppercase', fontWeight: 900 }}>Batting</h3>
+                  <ScoreCardTable>
+                    <thead>
+                      <tr>
+                        <Th>Batter</Th>
+                        <Th>Status</Th>
+                        <Th style={{ textAlign: 'center' }}>R</Th>
+                        <Th style={{ textAlign: 'center' }}>B</Th>
+                        <Th style={{ textAlign: 'center' }}>4s</Th>
+                        <Th style={{ textAlign: 'center' }}>6s</Th>
+                        <Th style={{ textAlign: 'right' }}>SR</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(Object.entries((currentInnings as any).battingStats) as [string, any][]).map(([id, stat]) => (
+                        <tr key={id}>
+                          <Td style={{ color: (store.strikerId === id || store.nonStrikerId === id) ? '#FAB005' : '#FFF' }}>
+                            {getPlayerName(id)}{(store.strikerId === id || store.nonStrikerId === id) ? '*' : ''}
+                            {(store as any).manOfTheMatch === id && <Star size={10} fill="#FAB005" color="#FAB005" style={{ marginLeft: 6 }} />}
+                          </Td>
+                          <Td style={{ fontSize: '0.7rem', opacity: 0.6 }}>{stat.status === 'batting' ? 'not out' : (stat.outHow || 'out')}</Td>
+                          <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
+                          <Td style={{ textAlign: 'center' }}>{stat.balls}</Td>
+                          <Td style={{ textAlign: 'center' }}>{stat.fours}</Td>
+                          <Td style={{ textAlign: 'center' }}>{stat.sixes}</Td>
+                          <Td style={{ textAlign: 'right', opacity: 0.8 }}>
+                            {stat.balls > 0 ? ((stat.runs / stat.balls) * 100).toFixed(1) : '0.0'}
+                          </Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </ScoreCardTable>
+
+                  <h3 style={{ fontSize: '0.8rem', color: '#FAB005', marginBottom: 12, textTransform: 'uppercase', fontWeight: 900 }}>Bowling</h3>
+                  <ScoreCardTable>
+                    <thead>
+                      <tr>
+                        <Th>Bowler</Th>
+                        <Th style={{ textAlign: 'center' }}>O</Th>
+                        <Th style={{ textAlign: 'center' }}>M</Th>
+                        <Th style={{ textAlign: 'center' }}>R</Th>
+                        <Th style={{ textAlign: 'center' }}>W</Th>
+                        <Th style={{ textAlign: 'right' }}>Econ</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(Object.entries((currentInnings as any).bowlingStats) as [string, any][]).map(([id, stat]) => (
+                        <tr key={id}>
+                          <Td style={{ color: store.currentBowlerId === id ? '#FAB005' : '#FFF' }}>
+                            {getPlayerName(id)}{store.currentBowlerId === id ? '*' : ''}
+                            {(store as any).manOfTheMatch === id && <Star size={10} fill="#FAB005" color="#FAB005" style={{ marginLeft: 6 }} />}
+                          </Td>
+                          <Td style={{ textAlign: 'center' }}>{stat.overs}</Td>
+                          <Td style={{ textAlign: 'center' }}>{stat.maidens || 0}</Td>
+                          <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
+                          <Td style={{ textAlign: 'center' }}>{stat.wickets}</Td>
+                          <Td style={{ textAlign: 'right', opacity: 0.8 }}>
+                            {stat.overs > 0 ? (stat.runs / stat.overs).toFixed(2) : '0.00'}
+                          </Td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </ScoreCardTable>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.75rem' }}>
+                    <span style={{ opacity: 0.5, fontWeight: 700 }}>EXTRAS</span>
+                    <span style={{ fontWeight: 900 }}>
+                      {((currentInnings as any)?.extras?.wides || 0) + ((currentInnings as any)?.extras?.noBalls || 0) + ((currentInnings as any)?.extras?.byes || 0) + ((currentInnings as any)?.extras?.legByes || 0) + ((currentInnings as any)?.extras?.penalty || 0)}{' '}
+                      (wd {(currentInnings as any)?.extras?.wides || 0}, nb {(currentInnings as any)?.extras?.noBalls || 0}, b {(currentInnings as any)?.extras?.byes || 0}, lb {(currentInnings as any)?.extras?.legByes || 0}, pen {(currentInnings as any)?.extras?.penalty || 0})
+                    </span>
                   </div>
+                </>
+              )}
+
+              {/* ───────── COMMENTARY TAB ───────── */}
+              {scorecardTab === 'commentary' && (
+                <div style={{ paddingTop: 16 }}>
+                  {(() => {
+                    const history: any[] = [...(currentInnings?.history || [])].reverse();
+                    if (history.length === 0) {
+                      return (
+                        <div style={{ textAlign: 'center', opacity: 0.4, padding: '40px 0', fontSize: '0.9rem' }}>
+                          No balls recorded yet.
+                        </div>
+                      );
+                    }
+
+                    // Group by over — we iterate reversed so latest over is first
+                    const overGroups: Record<number, any[]> = {};
+                    history.forEach(ball => {
+                      const ov = ball.overNumber ?? 0;
+                      if (!overGroups[ov]) overGroups[ov] = [];
+                      overGroups[ov].push(ball);
+                    });
+
+                    const sortedOvers = Object.keys(overGroups)
+                      .map(Number)
+                      .sort((a, b) => b - a); // Latest over first
+
+                    return sortedOvers.map(overNum => {
+                      const balls = overGroups[overNum]; // already reversed (latest ball first)
+                      const overRuns = balls.reduce((s: number, b: any) => s + b.runs + (!b.isLegal ? 1 : 0), 0);
+                      const overWkts = balls.filter((b: any) => b.isWicket).length;
+                      const isMaiden = overRuns === 0 && balls.filter((b: any) => b.isLegal).length === 6;
+                      const isComplete = balls.filter((b: any) => b.isLegal).length === 6;
+
+                      return (
+                        <div key={overNum} style={{ marginBottom: 20 }}>
+                          {/* Over Summary Card */}
+                          <div style={{
+                            background: isMaiden ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${isMaiden ? 'rgba(56,189,248,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                            borderRadius: 10,
+                            padding: '10px 14px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 8
+                          }}>
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                              <span style={{ fontWeight: 900, fontSize: '0.8rem', color: '#38BDF8' }}>
+                                OVER {overNum + 1}{!isComplete ? ' (live)' : ''}
+                              </span>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                {[...balls].reverse().map((b: any, i: number) => {
+                                  let display = b.isWicket ? 'W' : `${b.runs}`;
+                                  if (b.type === 'wide') display = `wd${b.runs > 0 ? `+${b.runs}` : ''}`;
+                                  else if (b.type === 'no-ball') display = `nb${b.runs > 0 ? `+${b.runs}` : ''}`;
+                                  else if (b.type === 'leg-bye') display = `lb${b.runs}`;
+                                  else if (b.type === 'bye') display = `b${b.runs}`;
+                                  const dot = b.isLegal;
+                                  return (
+                                    <span key={i} style={{
+                                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                      minWidth: 22, height: 22, borderRadius: '50%', fontSize: '0.6rem', fontWeight: 900,
+                                      background: b.isWicket ? 'rgba(255,77,77,0.25)' : b.runs === 4 || b.runs === 6 ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.07)',
+                                      color: b.isWicket ? '#FF4D4D' : b.runs === 4 || b.runs === 6 ? '#38BDF8' : 'rgba(255,255,255,0.7)',
+                                      border: `1px solid ${b.isWicket ? 'rgba(255,77,77,0.3)' : 'rgba(255,255,255,0.1)'}`
+                                    }}>{display}</span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ fontWeight: 900, color: '#FAB005', fontSize: '0.9rem' }}>{overRuns}</span>
+                              <span style={{ opacity: 0.4, fontSize: '0.7rem' }}> runs</span>
+                              {overWkts > 0 && <span style={{ color: '#FF4D4D', fontWeight: 900, fontSize: '0.8rem', marginLeft: 6 }}>· {overWkts}W</span>}
+                              {isMaiden && <span style={{ color: '#38BDF8', fontWeight: 900, fontSize: '0.7rem', marginLeft: 6 }}>· M</span>}
+                            </div>
+                          </div>
+
+                          {/* Ball-by-Ball commentary rows */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {balls.map((ball: any, i: number) => {
+                              const bowlerN = getPlayerName(ball.bowlerId);
+                              const strikerN = getPlayerName(ball.strikerId);
+                              let result = '';
+                              let resultColor = 'rgba(255,255,255,0.7)';
+                              if (ball.isWicket) {
+                                result = `OUT! ${ball.wicketType || 'Wicket'} — ${strikerN}`;
+                                resultColor = '#FF4D4D';
+                              } else if (ball.runs === 6) { result = `SIX! ${strikerN} hits it clean`; resultColor = '#38BDF8'; }
+                              else if (ball.runs === 4) { result = `FOUR! ${strikerN} finds the boundary`; resultColor = '#38BDF8'; }
+                              else if (ball.type === 'wide') result = `Wide${ball.runs > 0 ? ` + ${ball.runs} run(s)` : ''}`;
+                              else if (ball.type === 'no-ball') result = `No Ball${ball.runs > 0 ? ` + ${ball.runs} run(s)` : ''}`;
+                              else if (ball.type === 'leg-bye') result = `Leg Bye — ${ball.runs} run(s)`;
+                              else if (ball.type === 'bye') result = `Bye — ${ball.runs} run(s)`;
+                              else if (ball.runs === 0) { result = `Dot ball`; resultColor = 'rgba(255,255,255,0.4)'; }
+                              else result = `${ball.runs} run(s)`;
+
+                              const ballLabel = ball.isLegal
+                                ? `${overNum + 1}.${ball.ballNumber}`
+                                : `${overNum + 1}.${ball.ballNumber}*`;
+
+                              return (
+                                <div key={i} style={{
+                                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                                  padding: '8px 10px', borderRadius: 8,
+                                  background: ball.isWicket ? 'rgba(255,77,77,0.05)' : 'transparent',
+                                  borderLeft: `2px solid ${ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.08)'}`
+                                }}>
+                                  <span style={{ minWidth: 32, fontSize: '0.65rem', fontWeight: 900, color: 'rgba(255,255,255,0.35)', paddingTop: 2 }}>
+                                    {ballLabel}
+                                  </span>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: resultColor }}>{result}</div>
+                                    <div style={{ fontSize: '0.65rem', opacity: 0.4, marginTop: 2 }}>
+                                      {bowlerN} to {strikerN}
+                                    </div>
+                                  </div>
+                                  <span style={{
+                                    fontWeight: 900, fontSize: '0.85rem',
+                                    color: ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.6)'
+                                  }}>
+                                    {ball.isWicket ? 'W' : ball.runs}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 800 }}>OVERS</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>
-                    {store.getOvers((currentInnings as any).totalBalls)} / {store.maxOvers}
-                  </div>
-                </div>
-              </ScoreSummaryCard>
-
-              <h3 style={{ fontSize: '0.8rem', color: '#FAB005', marginBottom: 12, textTransform: 'uppercase', fontWeight: 900 }}>Batting</h3>
-              <ScoreCardTable>
-                <thead>
-                  <tr>
-                    <Th>Batter</Th>
-                    <Th>Status</Th>
-                    <Th style={{ textAlign: 'center' }}>R</Th>
-                    <Th style={{ textAlign: 'center' }}>B</Th>
-                    <Th style={{ textAlign: 'center' }}>4s</Th>
-                    <Th style={{ textAlign: 'center' }}>6s</Th>
-                    <Th style={{ textAlign: 'right' }}>SR</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(Object.entries((currentInnings as any).battingStats) as [string, any][]).map(([id, stat]) => (
-                    <tr key={id}>
-                      <Td style={{ color: (store.strikerId === id || store.nonStrikerId === id) ? '#FAB005' : '#FFF' }}>
-                        {getPlayerName(id)}{(store.strikerId === id || store.nonStrikerId === id) ? '*' : ''}
-                        {(store as any).manOfTheMatch === id && <Star size={10} fill="#FAB005" color="#FAB005" style={{ marginLeft: 6 }} />}
-                      </Td>
-                      <Td style={{ fontSize: '0.7rem', opacity: 0.6 }}>{stat.status === 'batting' ? 'not out' : (stat.outHow || 'out')}</Td>
-                      <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
-                      <Td style={{ textAlign: 'center' }}>{stat.balls}</Td>
-                      <Td style={{ textAlign: 'center' }}>{stat.fours}</Td>
-                      <Td style={{ textAlign: 'center' }}>{stat.sixes}</Td>
-                      <Td style={{ textAlign: 'right', opacity: 0.8 }}>
-                        {stat.balls > 0 ? ((stat.runs / stat.balls) * 100).toFixed(1) : '0.0'}
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </ScoreCardTable>
-
-              <h3 style={{ fontSize: '0.8rem', color: '#FAB005', marginBottom: 12, textTransform: 'uppercase', fontWeight: 900 }}>Bowling</h3>
-              <ScoreCardTable>
-                <thead>
-                  <tr>
-                    <Th>Bowler</Th>
-                    <Th style={{ textAlign: 'center' }}>O</Th>
-                    <Th style={{ textAlign: 'center' }}>M</Th>
-                    <Th style={{ textAlign: 'center' }}>R</Th>
-                    <Th style={{ textAlign: 'center' }}>W</Th>
-                    <Th style={{ textAlign: 'right' }}>Econ</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(Object.entries((currentInnings as any).bowlingStats) as [string, any][]).map(([id, stat]) => (
-                    <tr key={id}>
-                      <Td style={{ color: store.currentBowlerId === id ? '#FAB005' : '#FFF' }}>
-                        {getPlayerName(id)}{store.currentBowlerId === id ? '*' : ''}
-                        {(store as any).manOfTheMatch === id && <Star size={10} fill="#FAB005" color="#FAB005" style={{ marginLeft: 6 }} />}
-                      </Td>
-                      <Td style={{ textAlign: 'center' }}>{stat.overs}</Td>
-                      <Td style={{ textAlign: 'center' }}>{stat.maidens || 0}</Td>
-                      <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
-                      <Td style={{ textAlign: 'center' }}>{stat.wickets}</Td>
-                      <Td style={{ textAlign: 'right', opacity: 0.8 }}>
-                        {stat.overs > 0 ? (stat.runs / stat.overs).toFixed(2) : '0.00'}
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </ScoreCardTable>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.75rem' }}>
-                <span style={{ opacity: 0.5, fontWeight: 700 }}>EXTRAS</span>
-                <span style={{ fontWeight: 900 }}>
-                  {((currentInnings as any)?.extras?.wides || 0) + ((currentInnings as any)?.extras?.noBalls || 0) + ((currentInnings as any)?.extras?.byes || 0) + ((currentInnings as any)?.extras?.legByes || 0) + ((currentInnings as any)?.extras?.penalty || 0)} 
-                  {' '}(wd {(currentInnings as any)?.extras?.wides || 0}, nb {(currentInnings as any)?.extras?.noBalls || 0}, b {(currentInnings as any)?.extras?.byes || 0}, lb {(currentInnings as any)?.extras?.legByes || 0}, pen {(currentInnings as any)?.extras?.penalty || 0})
-                </span>
-              </div>
+              )}
             </div>
 
             <ActionButton 
@@ -2559,6 +2719,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
           </PremiumModalContent>
         </PremiumModalOverlay>
       )}
+
       <MilestoneOverlay ref={milestoneRef} />
       </>
     </DashboardContainer>
