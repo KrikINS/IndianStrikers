@@ -12,6 +12,8 @@ export interface LivePlayer {
     status: 'batting' | 'out' | 'dnb' | 'retired_hurt';
     outHow?: string;
     index?: number;
+    fifty_notified?: boolean;
+    hundred_notified?: boolean;
 }
 
 export interface LiveBowler {
@@ -37,6 +39,7 @@ export interface BallRecord {
     bowlerId: string;
     isLegal: boolean;
     commentary: string;
+    zone?: string;
 }
 
 export interface InningsState {
@@ -83,6 +86,9 @@ export interface MatchState {
     awayLogo?: string;
     historyStack: MatchState[];
     manOfTheMatch: string | null;
+    targetScore?: number;
+    useWagonWheel: boolean;
+    setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
 }
 
 interface ScorerStore extends MatchState {
@@ -110,12 +116,16 @@ interface ScorerStore extends MatchState {
         subType?: 'bat' | 'bye' | 'lb';
         outPlayerId?: string;
         newBatterId?: string;
+        zone?: string;
     }) => void;
     recordPenalty: (team: 'batting' | 'bowling', runs: number) => void;
     undoLastBall: () => void;
     switchStriker: () => void;
     setNewBowler: (id: string) => void;
     changeBowler: (id: string) => void;
+    retireBatter: (id: string) => void;
+    declareInnings: () => void;
+    updateTargetScore: (score: number) => void;
     resetMatch: () => void;
     clearInnings: () => void;
     hardReset: () => void;
@@ -145,6 +155,9 @@ const INITIAL_STATE: MatchState = {
     awayLogo: '',
     historyStack: [],
     manOfTheMatch: null,
+    targetScore: 0,
+    useWagonWheel: false,
+    setMilestoneNotified: () => {}
 };
 
 export const useCricketScorer = create<ScorerStore>()(
@@ -269,7 +282,7 @@ export const useCricketScorer = create<ScorerStore>()(
                     awayXI: state.awayXI
                 }));
 
-                const { runs, type, isWicket, wicketType, subType = 'bat', outPlayerId, newBatterId } = payload;
+                const { runs, type, isWicket, wicketType, subType = 'bat', outPlayerId, newBatterId, zone } = payload;
                 const isWide = type === 'wide';
                 const isNoBall = type === 'no-ball';
                 const isLegal = !isWide && !isNoBall;
@@ -340,11 +353,36 @@ export const useCricketScorer = create<ScorerStore>()(
                     else nsId = newBatterId || null;
 
                     // If a new batter is coming in (whether fresh or returning)
+                    if (!nextInnings.battingStats[sId!]) {
+                        nextInnings.battingStats[sId!] = { 
+                            id: sId!, 
+                            name: 'Unknown', 
+                            runs: 0, 
+                            balls: 0, 
+                            fours: 0, 
+                            sixes: 0, 
+                            status: 'batting', 
+                            index: Object.keys(nextInnings.battingStats).length,
+                            fifty_notified: false,
+                            hundred_notified: false
+                        };
+                    }
+                    if (!nextInnings.battingStats[nsId!]) {
+                        nextInnings.battingStats[nsId!] = { 
+                            id: nsId!, 
+                            name: 'Unknown', 
+                            runs: 0, 
+                            balls: 0, 
+                            fours: 0, 
+                            sixes: 0, 
+                            status: 'batting', 
+                            index: Object.keys(nextInnings.battingStats).length,
+                            fifty_notified: false,
+                            hundred_notified: false
+                        };
+                    }
                     if (newBatterId) {
-                        if (!nextInnings.battingStats[newBatterId]) {
-                            const currentIndex = Object.keys(nextInnings.battingStats).length;
-                            nextInnings.battingStats[newBatterId] = { id: newBatterId, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: currentIndex };
-                        } else {
+                        if (nextInnings.battingStats[newBatterId] && nextInnings.battingStats[newBatterId].status === 'retired_hurt') {
                             // Returning batter (Retired Hurt)
                             nextInnings.battingStats[newBatterId].status = 'batting';
                         }
@@ -365,6 +403,22 @@ export const useCricketScorer = create<ScorerStore>()(
                     overNumber: Math.floor((nextInnings.totalBalls - (isLegal ? 1 : 0)) / 6),
                     ballNumber: ((nextInnings.totalBalls - (isLegal ? 1 : 0)) % 6) + 1,
                     isLegal,
+                    zone,
+                    commentary: (() => {
+                        if (!zone || zone === 'Unknown') return '';
+                        const sName = b.name;
+                        const zoneMap: any = {
+                            'Third Man': runs === 4 ? `Cracking shot! ${sName} steers it past Third Man for four.` : `${sName} guides it towards Third Man for ${runs}.`,
+                            'Point': runs === 4 ? `${sName} slices it through Point for a magnificent boundary!` : `Punched away through Point by ${sName}.`,
+                            'Cover': runs === 4 ? `Shot! That's creamed through the covers for four.` : `${sName} drives it into the covers.`,
+                            'Mid Off': runs === 4 ? `${sName} punches it straight past Mid Off for four.` : `Driven to Mid Off by ${sName}.`,
+                            'Mid On': runs === 4 ? `Beautifully timed past Mid On for four!` : `${sName} clips it towards Mid On.`,
+                            'Mid Wicket': runs === 4 ? `Pulled away through Mid-wicket for a boundary!` : `Ticked away into the leg side for ${runs}.`,
+                            'Square Leg': runs === 4 ? `${sName} flicks it behind Square Leg for four.` : `Tucked away through Square Leg.`,
+                            'Fine Leg': runs === 4 ? `${sName} glances it fine for a boundary.` : `Glanced away to Fine Leg.`
+                        };
+                        return zoneMap[zone] || `${sName} hit it to ${zone} for ${runs}`;
+                    })(),
                     timestamp: new Date().toISOString()
                 };
                 nextInnings.history = [...(nextInnings.history || []), ballRecord];
@@ -387,7 +441,7 @@ export const useCricketScorer = create<ScorerStore>()(
                     nonStrikerId: nsId,
                     isFreeHit: isNoBall || (state.isFreeHit && (isWide || isNoBall)),
                     isFinished: finished,
-                    historyStack: [...state.historyStack, prevState].slice(-20)
+                    historyStack: [...state.historyStack, prevState].slice(-50)
                 });
             },
 
@@ -406,9 +460,19 @@ export const useCricketScorer = create<ScorerStore>()(
                     const nextInnings = JSON.parse(JSON.stringify(targetInnings));
                     nextInnings.totalRuns += runs;
                     nextInnings.extras.penalty += runs;
+
+                    const penaltyRecord: any = {
+                        runs: 0,
+                        penaltyRuns: runs,
+                        type: 'penalty',
+                        commentary: `Penalty Runs Awarded: ${runs} runs added to the ${side} team total.`,
+                        timestamp: new Date().toISOString()
+                    };
+                    nextInnings.history = [...(nextInnings.history || []), penaltyRecord];
+
                     set({ 
                         [targetKey]: nextInnings,
-                        historyStack: [...state.historyStack, prevState].slice(-20)
+                        historyStack: [...state.historyStack, prevState].slice(-50)
                     });
                 } else {
                     const currentInningsState = state[currentKey];
@@ -427,14 +491,38 @@ export const useCricketScorer = create<ScorerStore>()(
                             fallOfWickets: [],
                             history: []
                         },
-                        historyStack: [...state.historyStack, prevState].slice(-20)
+                        historyStack: [...state.historyStack, prevState].slice(-50)
                     });
+
+                    // Append commentary to the newly created innings
+                    const finalState = get();
+                    const newInnings = finalState[targetKey];
+                    if (newInnings) {
+                      const penaltyRecord: any = {
+                          runs: 0,
+                          penaltyRuns: runs,
+                          type: 'penalty',
+                          commentary: `Penalty Runs Awarded: ${runs} runs added to the ${side} team total.`,
+                          timestamp: new Date().toISOString()
+                      };
+                      const nextNewInnings = JSON.parse(JSON.stringify(newInnings));
+                      nextNewInnings.history = [...(nextNewInnings.history || []), penaltyRecord];
+                      set({ [targetKey]: nextNewInnings });
+                    }
                 }
             },
 
             undoLastBall: () => {
-                const { historyStack } = get();
+                const { historyStack, currentInnings, innings2 } = get();
                 if (historyStack.length === 0) return;
+                
+                // Cross-Innings Boundary Protection: 
+                // Cannot undo if in 2nd innings and 2nd innings balls have started
+                if (currentInnings === 2 && innings2 && innings2.history && innings2.history.length > 0) {
+                    console.warn("Undo blocked: Cannot undo across innings once 2nd innings has started.");
+                    return;
+                }
+
                 const prevState = historyStack[historyStack.length - 1];
                 set({
                     ...prevState,
@@ -450,7 +538,7 @@ export const useCricketScorer = create<ScorerStore>()(
                 set({
                     strikerId: state.nonStrikerId,
                     nonStrikerId: state.strikerId,
-                    historyStack: [...state.historyStack, prevState].slice(-20)
+                    historyStack: [...state.historyStack, prevState].slice(-50)
                 });
             },
 
@@ -483,6 +571,27 @@ export const useCricketScorer = create<ScorerStore>()(
                 }
                 set({ currentBowlerId: id });
             },
+            retireBatter: (id) => {
+                const state = get();
+                const key = state.currentInnings === 1 ? 'innings1' : 'innings2';
+                const innings = state[key];
+                if (!innings || !innings.battingStats[id]) return;
+
+                const nextInnings = JSON.parse(JSON.stringify(innings));
+                nextInnings.battingStats[id].status = 'retired_hurt';
+                nextInnings.battingStats[id].outHow = 'Retired Hurt';
+
+                set({
+                    [key]: nextInnings,
+                    strikerId: state.strikerId === id ? null : state.strikerId,
+                    nonStrikerId: state.nonStrikerId === id ? null : state.nonStrikerId
+                });
+            },
+            declareInnings: () => {
+                // Logic handled via UI break modal usually, 
+                // but can be used for state-only termination
+            },
+            updateTargetScore: (score) => set({ targetScore: score }),
             resetMatch: () => set(INITIAL_STATE),
             clearInnings: () => {
                 const state = get();
@@ -494,6 +603,18 @@ export const useCricketScorer = create<ScorerStore>()(
                     maxOvers: state.maxOvers,
                     toss: state.toss
                 });
+            },
+            setMilestoneNotified: (batterId, type) => {
+                const state = get();
+                const key = state.currentInnings === 1 ? 'innings1' : 'innings2';
+                const innings = state[key];
+                if (!innings || !innings.battingStats[batterId]) return;
+
+                const nextInnings = JSON.parse(JSON.stringify(innings));
+                if (type === 'fifty') nextInnings.battingStats[batterId].fifty_notified = true;
+                if (type === 'hundred') nextInnings.battingStats[batterId].hundred_notified = true;
+
+                set({ [key]: nextInnings });
             },
             getOvers: (balls) => `${Math.floor(balls / 6)}.${balls % 6}`
         }),

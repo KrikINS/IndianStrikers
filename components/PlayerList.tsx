@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
-import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import { getAppUsers, getPlayerDetailedStats, PlayerDetailedStats, TournamentStat } from '../services/storageService';
 import styles from './PlayerList.module.css';
 
@@ -1079,18 +1079,14 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
                             <tr>
                               <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-30">Tournament</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Inns</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">NO</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Inn</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden md:table-cell">NO</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/50">Runs</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Balls</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Ave</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">SR</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden md:table-cell">Ave</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden md:table-cell">SR</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap">HS</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">100s</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">50s</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">0w</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">4s</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">6s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden lg:table-cell">100s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden lg:table-cell">50s</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1116,20 +1112,22 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
 
                             {detailedStats?.tournaments.map((t, idx) => (
                               <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-slate-500 border-b border-slate-100 group hover:bg-slate-50">
-                                <td className="p-2 md:p-3 font-bold text-slate-800 sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">{t.tournamentName}</td>
+                                <td className="p-2 md:p-3 font-bold text-sky-600 sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">
+                                  {t.tournamentId && t.tournamentId !== '00000000-0000-0000-0000-000000000000' ? (
+                                    <Link to={`/tournaments/${t.tournamentId}?player=${viewingPlayer.id}`} className="hover:underline flex items-center gap-1">
+                                      {t.tournamentName} <ExternalLink size={10} />
+                                    </Link>
+                                  ) : t.tournamentName}
+                                </td>
                                 <td className="p-2 md:p-3 text-center">{t.batting.matches}</td>
                                 <td className="p-2 md:p-3 text-center">{t.batting.innings}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.notOuts}</td>
+                                <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.notOuts}</td>
                                 <td className="p-2 md:p-3 text-center font-bold text-slate-700">{t.batting.runs}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.balls}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.average}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.strikeRate}</td>
+                                <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.average}</td>
+                                <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.strikeRate}</td>
                                 <td className="p-2 md:p-3 text-center">{t.batting.highestScore}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.hundreds}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.fifties}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.ducks}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.fours}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.sixes}</td>
+                                <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.hundreds}</td>
+                                <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.fifties}</td>
                               </tr>
                             ))}
 
@@ -1164,17 +1162,12 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
                             <tr>
                               <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-30">Tournament</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Inns</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Overs</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Mdns</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Runs</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Inn</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden lg:table-cell">Overs</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/50">Wkts</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Ave</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Econ</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">SR</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">BBI</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">4W</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">5W</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Best</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden md:table-cell">Ave</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden md:table-cell">Econ</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1198,19 +1191,20 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
 
                             {detailedStats?.tournaments.map((t, idx) => (
                               <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-slate-500 border-b border-slate-100 group hover:bg-slate-50">
-                                <td className="p-2 md:p-3 font-bold text-slate-800 sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">{t.tournamentName}</td>
+                                <td className="p-2 md:p-3 font-bold text-sky-600 sticky left-0 bg-white group-hover:bg-slate-50 z-10">
+                                  {t.tournamentId && t.tournamentId !== '00000000-0000-0000-0000-000000000000' ? (
+                                    <Link to={`/tournaments/${t.tournamentId}?player=${viewingPlayer.id}`} className="hover:underline flex items-center gap-1">
+                                      {t.tournamentName} <ExternalLink size={10} />
+                                    </Link>
+                                  ) : t.tournamentName}
+                                </td>
                                 <td className="p-2 md:p-3 text-center">{t.bowling.matches}</td>
                                 <td className="p-2 md:p-3 text-center">{t.bowling.innings}</td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.overs}</td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.maidens}</td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.runs}</td>
+                                <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.bowling.overs}</td>
                                 <td className="p-2 md:p-3 text-center font-bold text-slate-700">{t.bowling.wickets}</td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.average}</td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.economy}</td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.strikeRate}</td>
                                 <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.fourWickets}</td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.fiveWickets}</td>
+                                <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.bowling.average}</td>
+                                <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.bowling.economy}</td>
                               </tr>
                             ))}
                           </tbody>

@@ -46,6 +46,35 @@ const Unauthorized = () => (
   </div>
 );
 
+const TournamentDetailViewPlaceholder = () => {
+  const { id } = useLocation().pathname.split('/').pop()?.split('?')?.[0] ? { id: useLocation().pathname.split('/').pop() } : { id: 'unknown' };
+  const query = new URLSearchParams(useLocation().search);
+  const playerId = query.get('player');
+  
+  return (
+    <div className="p-8 bg-white rounded-[2rem] border border-slate-200 shadow-xl max-w-4xl mx-auto mt-12 text-center">
+      <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+        <Shield size={40} className="text-blue-600" />
+      </div>
+      <h1 className="text-3xl font-black text-slate-800 mb-2 uppercase tracking-tight">Tournament Detail View</h1>
+      <p className="text-slate-500 font-medium mb-8">This view is currently under development.</p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-xs mx-auto mb-10">
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Tournament ID</div>
+          <div className="font-mono text-sm font-bold text-slate-700">{id}</div>
+        </div>
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Focused Player</div>
+          <div className="font-mono text-sm font-bold text-slate-700">{playerId || 'None'}</div>
+        </div>
+      </div>
+      
+      <Link to="/home" className="text-blue-600 font-black uppercase text-xs tracking-widest hover:underline">Return to Dashboard</Link>
+    </div>
+  );
+};
+
 const AppContent: React.FC<{
   players: Player[],
   opponents: OpponentTeam[],
@@ -150,6 +179,7 @@ const AppContent: React.FC<{
               </Route>
             
             <Route path="/scorecard/:id" element={<ScorecardPage players={players} opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />
+            <Route path="/tournaments/:id" element={<TournamentDetailViewPlaceholder />} />
             
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>

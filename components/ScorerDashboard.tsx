@@ -23,7 +23,11 @@ import {
   Repeat,
   LayoutList,
   Star,
-  Zap
+  Zap,
+  Globe,
+  PlusCircle,
+  Edit3,
+  MousePointer2
 } from 'lucide-react';
 import { useCricketScorer } from './matchStore';
 import { useMatchCenter, updateMatchInStore } from './matchCenterStore';
@@ -683,6 +687,107 @@ const ScoreSummaryCard = styled.div`
   align-items: center;
 `;
 
+const DrawerOverlay = styled(motion.div)`
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(8px);
+  z-index: 5000;
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const DrawerContent = styled(motion.div)`
+  width: 100%;
+  max-width: 400px;
+  height: 100%;
+  background: #0d1117; /* Riyadh Nights: Dark Obsidian */
+  border-left: 1px solid rgba(16, 185, 129, 0.2); /* Emerald accent */
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+`;
+
+const SettingsGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const GroupTitle = styled.h3`
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #10b981; /* Riyadh Emerald */
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.2), transparent);
+  }
+`;
+
+const ControlButton = styled.button<{ $variant?: 'emerald' | 'gold' | 'danger' }>`
+  width: 100%;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.03);
+  color: white;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255,255,255,0.08);
+    transform: translateY(-2px);
+    border-color: ${props => props.$variant === 'emerald' ? '#10b981' : (props.$variant === 'gold' ? '#fbbf24' : '#ef4444')};
+  }
+
+  svg {
+    color: ${props => props.$variant === 'emerald' ? '#10b981' : (props.$variant === 'gold' ? '#fbbf24' : '#ef4444')};
+  }
+`;
+
+const SettingsInput = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.03);
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.05);
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.6;
+  }
+
+  input {
+    background: none;
+    border: none;
+    color: #fbbf24; /* Riyadh Gold */
+    font-weight: 900;
+    font-size: 1.2rem;
+    width: 60px;
+    text-align: right;
+    outline: none;
+  }
+`;
+
 import { 
   InningsBattingEntry, 
   InningsBowlingEntry, 
@@ -726,6 +831,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   const posterRef = useRef<HTMLDivElement>(null);
   const milestoneRef = useRef<MilestoneOverlayRef>(null);
   const [scorecardTab, setScorecardTab] = useState<'scorecard' | 'commentary'>('scorecard');
+  const [showInningsReview, setShowInningsReview] = useState(false);
+  const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
+  const [showWagonWheelModal, setShowWagonWheelModal] = useState<any>(null);
+  const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   // Opponent players fetched separately from the opponents table
   const [opponentPlayers, setOpponentPlayers] = useState<{id: string; name: string; role?: string}[]>([]);
@@ -746,6 +856,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
       setTempMaxOvers(store.maxOvers);
     }
   }, [store.maxOvers]);
+
+  // Load Wagon Wheel Preference from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('ins-wagon-wheel-enabled');
+    if (saved !== null) {
+      store.updateMatchSettings({ useWagonWheel: saved === 'true' });
+    }
+  }, []);
 
   useEffect(() => {
     if (store.toss.winnerId) {
@@ -869,6 +987,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   );
   const isMatchComplete = store.isFinished;
   const isInningsBreak = store.currentInnings === 1 && isBattingFinishing && !store.isFinished;
+
+  // Trigger Review Modal when innings condition is met
+  useEffect(() => {
+    if (isBattingFinishing && !showInningsReview && !store.isFinished && !isFinalizingInnings) {
+        setShowInningsReview(true);
+    }
+  }, [isBattingFinishing, store.isFinished, isFinalizingInnings]);
 
   // Trigger Bowler Selection at start of innings or if bowler missing
   React.useEffect(() => {
@@ -1352,22 +1477,58 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
     );
   }
 
-  const handleRecord = (runs: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string) => {
-    store.recordBall({ runs, type, isWicket, wicketType, subType, outPlayerId, newBatterId });
-    
-    // --- Milestone Detection & Animation Bridge ---
+  const handleRecord = (score: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string, zone?: string) => {
+    // If Wagon Wheel enabled, runs scored OFF BAT, and no zone provided yet - trigger picker
+    // Rule: Do not trigger for dots, wides, or no-balls (unless runs off bat)
+    const isOffBat = (type === 'legal' && subType === 'bat');
+    if (store.useWagonWheel && score > 0 && isOffBat && !zone && !isWicket) {
+      setShowWagonWheelModal({ score, type, isWicket, wicketType, subType, outPlayerId, newBatterId });
+      return;
+    }
+
     const innings = store.currentInnings === 1 ? store.innings1 : store.innings2;
     if (!innings) return;
+    const is_test = matchMeta?.is_test ?? false;
+
+    store.recordBall({ runs: score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, zone });
     
+    // --- DB Sync Bridge ---
+    if (activeMatchId && !is_test) {
+      fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          match_id: activeMatchId,
+          striker_id: store.strikerId,
+          non_striker_id: store.nonStrikerId,
+          bowler_id: store.currentBowlerId,
+          over_number: Math.floor(innings.totalBalls / 6),
+          ball_number: (innings.totalBalls % 6) + 1,
+          runs_scored: score,
+          extras_runs: type === 'wide' || type === 'no-ball' ? 1 : 0,
+          extras_type: type === 'legal' ? null : type,
+          event_type: isWicket ? 'wicket' : (type === 'legal' ? 'ball' : 'extra'),
+          innings_number: store.currentInnings,
+          is_legal_ball: type !== 'wide' && type !== 'no-ball',
+          wicket_type: wicketType,
+          shot_zone: zone
+        })
+      }).catch(err => console.error("[Sync] Ball-by-ball sync failed:", err));
+    }
+
+    // --- Milestone Detection & Animation Bridge ---
     const sId = store.strikerId || '';
     const bId = store.currentBowlerId || '';
     const sName = getPlayerName(sId);
     const bName = getPlayerName(bId);
 
     // 1. Boundaries
-    if (runs === 4 && subType === 'bat') {
+    if (score === 4 && subType === 'bat') {
       milestoneRef.current?.trigger({ type: 'FOUR', playerName: sName });
-    } else if (runs === 6 && subType === 'bat') {
+    } else if (score === 6 && subType === 'bat') {
       milestoneRef.current?.trigger({ type: 'SIX', playerName: sName });
     }
 
@@ -1411,16 +1572,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
     // 3. Batting Benchmarks (50/100)
     const strikerStat = innings.battingStats[sId];
     if (strikerStat && subType === 'bat') {
-      if (strikerStat.runs === 50) {
-        milestoneRef.current?.trigger({ type: 'FIFTY', playerName: sName });
-      } else if (strikerStat.runs === 100) {
+      if (strikerStat.runs >= 100 && !strikerStat.hundred_notified) {
         milestoneRef.current?.trigger({ type: 'HUNDRED', playerName: sName });
+        store.setMilestoneNotified(sId, 'hundred');
+      } else if (strikerStat.runs >= 50 && !strikerStat.fifty_notified) {
+        milestoneRef.current?.trigger({ type: 'FIFTY', playerName: sName });
+        store.setMilestoneNotified(sId, 'fifty');
       }
     }
 
-    if (type === 'legal' && !isWicket) {
-      const nextBalls = (innings.totalBalls || 0) + 1;
-      if (nextBalls % 6 === 0) {
+    // --- Over End Check (ALWAYS run at the end for legal balls) ---
+    if (type === 'legal') {
+      const nextBalls = (innings.totalBalls || 0) + (isWicket ? 0 : 0); // Logic handled in store, we just check current count
+      // Actually, store.recordBall already applied the ball. 
+      // We check if the NEW total is a multiple of 6.
+      const currentBalls = currentInnings?.totalBalls || 0;
+      if (currentBalls > 0 && currentBalls % 6 === 0 && !isBattingFinishing) {
         setTimeout(() => setShowBowlerModal(true), 1500);
       }
     }
@@ -1430,13 +1597,105 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
     const victimName = getPlayerName(runOutInvolved?.victimId || store.strikerId);
     milestoneRef.current?.trigger({ type: 'WICKET', playerName: victimName });
     
+    // Safety check for match end
+    if (isBattingFinishing) {
+        setTimeout(() => setShowInningsReview(true), 1500);
+        return;
+    }
+
     // Let animation play for a moment then show next batter selection
     setTimeout(() => {
       setShowBatterSelectModal(true);
     }, 1500);
   };
 
+  const handleConfirmInnings = async () => {
+    if (!activeMatchId || !currentInnings) return;
+    setSyncStatus('loading');
 
+    try {
+        const totalScore = currentInnings.totalRuns;
+        const totalWickets = currentInnings.wickets;
+        const target = (store.innings1?.totalRuns || 0) + 1;
+
+        // 1. Prepare Update Payload
+        const updatePayload: any = {
+            tournament_id: matchMeta?.tournamentId,
+            live_data: {
+                ...store,
+                backup_data: JSON.parse(JSON.stringify(store))
+            }
+        };
+
+        // Prepare Player Stats logic for synchronization
+        // This allows the DB view to distinguish between Mat and Inn
+        const playerStatsUpdate = Object.entries(currentInnings.battingStats).map(([pid, stat]) => ({
+            player_id: pid,
+            match_id: activeMatchId,
+            tournament_id: matchMeta?.tournamentId || null,
+            runs: stat.runs,
+            balls: stat.balls,
+            fours: stat.fours,
+            sixes: stat.sixes,
+            is_not_out: stat.status === 'batting',
+            // Mat: Always in squad (already confirmed by being in battingStats)
+            // Inn: Only if they faced a ball or were out
+            is_batting_innings: stat.balls > 0 || (stat.status !== 'dnb' && stat.status !== 'batting')
+        }));
+
+        if (store.currentInnings === 1) {
+            updatePayload.innings_1_score = totalScore;
+            updatePayload.innings_1_wickets = totalWickets;
+            updatePayload.target_score = target;
+        } else {
+            // End of match calculation
+            updatePayload.status = 'completed';
+            updatePayload.finalScoreHome = store.innings1?.totalRuns;
+            updatePayload.finalScoreAway = store.innings2?.totalRuns;
+            
+            let resultMessage = '';
+            if (totalScore >= target) {
+                resultMessage = `${(store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : store.opponentName).toUpperCase()} WON BY ${10 - totalWickets} WICKETS`;
+            } else if (totalScore === target - 1) {
+                resultMessage = "MATCH TIED";
+            } else {
+                resultMessage = `${(store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : store.opponentName).toUpperCase()} WON BY ${target - 1 - totalScore} RUNS`;
+            }
+            updatePayload.resultSummary = resultMessage;
+        }
+
+        // 2. Sync to DB
+        await updateMatchInStore(activeMatchId, updatePayload);
+        setSyncStatus('success');
+
+        // 3. Post-Sync Action
+        setTimeout(() => {
+            setShowInningsReview(false);
+            setSyncStatus('idle');
+
+            if (store.currentInnings === 1) {
+                setSetupStep('openers_bat');
+                setSelStriker(null);
+                setSelNonStriker(null);
+                setSelBowler(null);
+            } else {
+                navigate('/match-center'); // Navigate to results archive
+            }
+        }, 2000);
+
+    } catch (err) {
+        console.error("Failed to finalize innings:", err);
+        setSyncStatus('error');
+    }
+  };
+
+  const handleDeclareInnings = () => {
+    if (window.confirm("Are you sure you want to DECLARE the current innings?")) {
+      store.declareInnings();
+      setShowSettingsDrawer(false);
+      setShowInningsReview(true);
+    }
+  };
 
   const calculateTopPerformers = () => {
     const scores: Record<string, { id: string, name: string, score: number, runs: number, balls: number, wickets: number, maidens: number, runsConceded: number }> = {};
@@ -2733,6 +2992,316 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
           </PremiumModalContent>
         </PremiumModalOverlay>
       )}
+
+      {/* --- INNINGS REVIEW MODAL --- */}
+      {showInningsReview && (
+          <PremiumModalOverlay
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <PremiumModalContent style={{ padding: '32px 24px', textAlign: 'center' }}>
+              <div style={{ width: 64, height: 64, background: 'rgba(56, 189, 248, 0.1)', borderRadius: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                <Trophy size={32} color="#38BDF8" />
+              </div>
+              
+              <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 900 }}>
+                {store.currentInnings === 1 ? 'INNINGS 1 COMPLETE' : 'MATCH COMPLETE'}
+              </h2>
+              
+              {store.currentInnings === 2 && store.innings1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 16 }}>
+                      <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '9px', fontWeight: 900, opacity: 0.5 }}>TARGET</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38BDF8' }}>{store.innings1.totalRuns + 1}</div>
+                      </div>
+                      <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }} />
+                      <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '9px', fontWeight: 900, opacity: 0.5 }}>SCORE</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FAB005' }}>{currentInnings.totalRuns}/{currentInnings.wickets}</div>
+                      </div>
+                  </div>
+              )}
+
+              <p style={{ opacity: 0.6, fontSize: '0.85rem', marginBottom: 24 }}>Review the final stats before proceeding.</p>
+
+              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 20, marginBottom: 32, border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                      <div>
+                          <div style={{ fontSize: '10px', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', marginBottom: 4 }}>Total Score</div>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 900, color: syncStatus === 'success' ? '#4ADE80' : '#FAB005' }}>{currentInnings.totalRuns}/{currentInnings.wickets}</div>
+                      </div>
+                      <div>
+                          <div style={{ fontSize: '10px', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', marginBottom: 4 }}>Overs Bowled</div>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>{store.getOvers(currentInnings.totalBalls)}</div>
+                      </div>
+                  </div>
+              </div>
+
+              {syncStatus === 'error' && (
+                  <div style={{ background: 'rgba(255,77,77,0.1)', color: '#FF4D4D', padding: '12px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 600, marginBottom: 20 }}>
+                      Network Error: Could not finalize match data.
+                  </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <ActionButton 
+                    $variant="primary" 
+                    onClick={handleConfirmInnings}
+                    disabled={syncStatus === 'loading' || syncStatus === 'success'}
+                    style={{ background: syncStatus === 'success' ? '#4ADE80' : undefined }}
+                >
+                    {syncStatus === 'loading' ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                            <div className="animate-spin" style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', borderRadius: '50%' }} />
+                            FINALIZING...
+                        </div>
+                    ) : syncStatus === 'success' ? 'SUCCESS! ✅' : (
+                        syncStatus === 'error' ? 'RETRY SYNC' : (store.currentInnings === 1 ? 'CONFIRM & START 2ND INNINGS' : 'CONFIRM & FINISH MATCH')
+                    )}
+                </ActionButton>
+                
+                {syncStatus !== 'success' && (
+                  <button 
+                    onClick={() => {
+                        store.undoLastBall();
+                        setShowInningsReview(false);
+                    }}
+                    disabled={syncStatus === 'loading'}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', border: 'none', color: '#FFF', padding: '16px', borderRadius: 12, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    <Undo size={18} />
+                    UNDO LAST BALL
+                  </button>
+                )}
+              </div>
+            </PremiumModalContent>
+          </PremiumModalOverlay>
+      )}
+
+      <AnimatePresence>
+        {showSettingsDrawer && (
+          <DrawerOverlay
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowSettingsDrawer(false)}
+          >
+            <DrawerContent
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fbbf24', fontStyle: 'italic', margin: 0 }}>MATCH SETTINGS</h2>
+                <IconButton onClick={() => setShowSettingsDrawer(false)}>
+                  <X size={24} />
+                </IconButton>
+              </div>
+
+              <SettingsGroup>
+                <GroupTitle>Match Controls</GroupTitle>
+                <SettingsInput>
+                  <label htmlFor="total-overs-input">Total Overs</label>
+                  <input 
+                    id="total-overs-input"
+                    title="Edit Match Overs"
+                    type="number" 
+                    value={store.maxOvers || 20} 
+                    onChange={(e) => store.updateMatchSettings({ maxOvers: parseInt(e.target.value) || 20 })}
+                  />
+                </SettingsInput>
+                <SettingsInput>
+                  <label htmlFor="wagon-wheel-toggle">Wagon Wheel</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: store.useWagonWheel ? 0.3 : 1 }}>
+                      <Zap size={14} color="#FAB005" fill="#FAB005" />
+                      <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FAB005' }}>SPEED MODE</span>
+                    </div>
+                    <button
+                      id="wagon-wheel-toggle"
+                      onClick={() => {
+                        const next = !store.useWagonWheel;
+                        store.updateMatchSettings({ useWagonWheel: next });
+                        localStorage.setItem('ins-wagon-wheel-enabled', String(next));
+                      }}
+                      style={{
+                        background: store.useWagonWheel ? '#10b981' : 'rgba(255,255,255,0.05)',
+                        border: 'none',
+                        padding: '4px 12px',
+                        borderRadius: 12,
+                        color: store.useWagonWheel ? '#000' : 'rgba(255,255,255,0.4)',
+                        fontSize: '0.7rem',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {store.useWagonWheel ? 'ENABLED' : 'DISABLED'}
+                    </button>
+                  </div>
+                </SettingsInput>
+                {store.currentInnings === 2 && (
+                  <SettingsInput>
+                    <label htmlFor="target-score-input">Target Score</label>
+                    <input 
+                      id="target-score-input"
+                      title="Override Target Score"
+                      type="number" 
+                      value={store.targetScore || ((store.innings1?.totalRuns || 0) + 1)} 
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val)) store.updateTargetScore(val);
+                      }}
+                      style={{ color: store.targetScore ? '#10b981' : '#fbbf24' }}
+                    />
+                  </SettingsInput>
+                )}
+              </SettingsGroup>
+
+              <SettingsGroup>
+                <GroupTitle>Active Player Controls</GroupTitle>
+                <ControlButton $variant="emerald" onClick={() => { store.switchStriker(); setShowSettingsDrawer(false); }}>
+                  <span>Swap Strike</span>
+                  <Repeat size={18} />
+                </ControlButton>
+                <ControlButton $variant="gold" onClick={() => { 
+                  if (store.strikerId && window.confirm(`Retire ${getPlayerName(store.strikerId)}?`)) {
+                    store.retireBatter(store.strikerId);
+                    setShowSettingsDrawer(false);
+                  }
+                }}>
+                  <span>Retire Striker</span>
+                  <User size={18} />
+                </ControlButton>
+              </SettingsGroup>
+
+              <SettingsGroup>
+                <GroupTitle>Administrative</GroupTitle>
+                <ControlButton $variant="danger" onClick={handleDeclareInnings}>
+                  <span>Declare Innings</span>
+                  <Zap size={18} />
+                </ControlButton>
+              </SettingsGroup>
+
+              <SettingsGroup>
+                <GroupTitle>Fielding Penalties</GroupTitle>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <ControlButton 
+                    $variant="gold" 
+                    style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}
+                    onClick={() => {
+                      store.recordPenalty('batting', 5);
+                      setShowSettingsDrawer(false);
+                    }}
+                  >
+                    <span>+5 Penalty</span>
+                    <PlusCircle size={18} style={{ color: '#f59e0b' }} />
+                  </ControlButton>
+                  <ControlButton 
+                    $variant="gold" 
+                    style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}
+                    onClick={() => {
+                      const r = window.prompt("Enter Penalty Runs for Batting Team:", "5");
+                      if (r && !isNaN(parseInt(r))) {
+                        store.recordPenalty('batting', parseInt(r));
+                        setShowSettingsDrawer(false);
+                      }
+                    }}
+                  >
+                    <span>Custom</span>
+                    <Edit3 size={18} style={{ color: '#f59e0b' }} />
+                  </ControlButton>
+                </div>
+              </SettingsGroup>
+
+              <div style={{ marginTop: 'auto' }}>
+                <p style={{ fontSize: '0.65rem', opacity: 0.3, textAlign: 'center', letterSpacing: '1px' }}>
+                  RIYADH NIGHTS EDITION • STRIKERS PULSE v2.5
+                </p>
+              </div>
+            </DrawerContent>
+          </DrawerOverlay>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showWagonWheelModal && (
+          <ModalOverlay onClick={() => setShowWagonWheelModal(null)}>
+            <ModalContent onClick={e => e.stopPropagation()} style={{ background: '#081c15', maxWidth: 400 }}>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10b981', margin: 0 }}>SELECT SHOT ZONE</h2>
+                <p style={{ fontSize: '0.7rem', opacity: 0.6 }}>Tap the field where the ball was hit</p>
+                {(() => {
+                  const sId = store.strikerId;
+                  const striker = (players.find(p => p.id === sId) || opponentPlayers.find(p => p.id === sId)) as any;
+                  const isLH = striker?.battingStyle === 'Left Handed';
+                  if (isLH) return <p style={{ fontSize: '0.6rem', color: '#FAB005', fontWeight: 900, marginTop: 4, letterSpacing: 1 }}>BATTING: LEFT-HANDED VIEW</p>;
+                  return null;
+                })()}
+              </div>
+
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '1', background: '#1b4332', borderRadius: '50%', border: '4px solid #2d6a4f', overflow: 'hidden' }}>
+                {/* 8 Zones with LH/RH Detection */}
+                {(() => {
+                  const sId = store.strikerId;
+                  const striker = (players.find(p => p.id === sId) || opponentPlayers.find(p => p.id === sId)) as any;
+                  const isLH = striker?.battingStyle === 'Left Handed';
+                  
+                  const zones = [
+                    { name: 'Third Man', top: '15%', left: isLH ? '85%' : '15%' },
+                    { name: 'Point', top: '50%', left: isLH ? '95%' : '5%' },
+                    { name: 'Cover', top: '80%', left: isLH ? '85%' : '15%' },
+                    { name: 'Mid Off', top: '92%', left: '50%' },
+                    { name: 'Mid On', top: '80%', left: isLH ? '15%' : '85%' },
+                    { name: 'Mid Wicket', top: '50%', left: isLH ? '5%' : '95%' },
+                    { name: 'Square Leg', top: '15%', left: isLH ? '15%' : '85%' },
+                    { name: 'Fine Leg', top: '8%', left: '50%' }
+                  ];
+
+                  return zones.map(zone => (
+                    <button
+                      key={zone.name}
+                      onClick={() => {
+                        const p = showWagonWheelModal;
+                        handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name);
+                        setShowWagonWheelModal(null);
+                      }}
+                      style={{
+                        position: 'absolute', top: zone.top, left: zone.left, transform: 'translate(-50%, -50%)',
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: 20, padding: '4px 10px', color: '#fff', fontSize: '0.6rem', fontWeight: 800,
+                        cursor: 'pointer', whiteSpace: 'nowrap', zIndex: 10
+                      }}
+                    >
+                      {zone.name}
+                    </button>
+                  ));
+                })()}
+                {/* Pitch */}
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '15%', height: '40%', background: '#b79d71', borderRadius: 4 }}></div>
+                {/* Field Markings */}
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90%', height: '90%', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                <button
+                  onClick={() => {
+                    const p = showWagonWheelModal;
+                    handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, 'Unknown');
+                    setShowWagonWheelModal(null);
+                  }}
+                  style={{ flex: 1, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: 'none', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  SKIP
+                </button>
+              </div>
+            </ModalContent>
+          </ModalOverlay>
+        )}
+      </AnimatePresence>
 
       <MilestoneOverlay ref={milestoneRef} />
       </>

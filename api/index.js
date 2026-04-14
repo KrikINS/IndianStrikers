@@ -549,7 +549,7 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
     match_id, striker_id, non_striker_id, bowler_id, 
     over_number, ball_number, runs_scored, extras_runs, 
     extras_type, event_type, innings_number, is_legal_ball,
-    wicket_type, fielder_id
+    wicket_type, fielder_id, shot_zone
   } = req.body;
 
   const { data, error } = await db.getOne(
@@ -557,13 +557,13 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
       match_id, striker_id, non_striker_id, bowler_id, 
       over_number, ball_number, runs_scored, extras_runs, 
       extras_type, event_type, innings_number, is_legal_ball,
-      wicket_type, fielder_id
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+      wicket_type, fielder_id, shot_zone
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
     [
       match_id, striker_id, non_striker_id, bowler_id, 
       over_number, ball_number, runs_scored || 0, extras_runs || 0, 
       extras_type, event_type, innings_number || 1, is_legal_ball ?? true,
-      wicket_type, fielder_id
+      wicket_type, fielder_id, shot_zone
     ]
   );
 
