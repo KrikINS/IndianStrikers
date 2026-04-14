@@ -941,10 +941,30 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   useEffect(() => {
     if (store.innings1) {
       setSetupStep(null); // Jump straight to scoring if we have innings data
-    } else if (activeMatchId === store.matchId && setupStep === 'preview') {
-      // If we're on preview but have teams selected in store, maybe stay there or jump to toss
+    } else if (activeMatchId === store.matchId && matchMeta?.status === 'live' && matchMeta?.live_data) {
+      // --- RESUME LOGIC (Device B): Match is live in DB but local store is empty ---
+      // Rehydrate from live_data and skip toss
+      console.log('[Scorer] Match is live in DB. Rehydrating store from live_data...');
+      const ld = matchMeta.live_data as any;
+      if (ld && ld.innings1) {
+        // live_data has innings - reinitialize the full store state
+        store.initializeMatch({
+          matchId: matchMeta.id,
+          matchType: matchMeta.matchFormat || 'T20',
+          tournament: matchMeta.tournament || 'Live Match',
+          ground: matchMeta.venue || 'Local Ground',
+          opponentName: matchMeta.opponentName || 'OPPONENT',
+          maxOvers: matchMeta.maxOvers || ld.maxOvers || 20,
+          homeXI: matchMeta.homeTeamXI || [],
+          awayXI: matchMeta.opponentTeamXI || [],
+          homeLogo: teamLogo || '/INS%20LOGO.PNG',
+          awayLogo: matchMeta.opponentLogo || '',
+          liveData: ld
+        });
+        // setSetupStep(null) will fire on next render when store.innings1 is set
+      }
     }
-  }, [!!store.innings1, store.matchId]);
+  }, [!!store.innings1, store.matchId, matchMeta?.status, matchMeta?.live_data]);
 
   const syncToDatabase = useCallback(
     _.debounce((state: any) => {
@@ -3207,39 +3227,68 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
               {/* Change Scorer Action */}
               <div style={{ marginTop: 24, marginBottom: 8 }}>
                 <button
+                  disabled={syncStatus === 'loading'}
                   onClick={async () => {
                     if (window.confirm("FORCE SAVE AND EXIT SCORING?\n\nThis will sync the latest state to the cloud and allow another scorer to take over. You will be redirected to the match list.")) {
                       setSyncStatus('loading');
                       try {
-                        // Final Sync
+                        // Hard Sync: persist full live_state + live_data atomically
                         await updateMatchInStore(activeMatchId!, { 
-                          live_data: store,
+                          live_data: {
+                            ...store,
+                            strikerId: store.strikerId,
+                            nonStrikerId: store.nonStrikerId,
+                            currentBowlerId: store.currentBowlerId,
+                            currentInnings: store.currentInnings,
+                          },
+                          live_state: {
+                            striker_id: store.strikerId,
+                            non_striker_id: store.nonStrikerId,
+                            bowler_id: store.currentBowlerId,
+                            current_innings: store.currentInnings,
+                          } as any,
                           last_updated: new Date().toISOString()
                         });
-                        
+
                         // Clear Local State for this match
                         localStorage.removeItem('ins-cricket-scorer');
+                        localStorage.removeItem('active_match_id');
                         
-                        // Redirect
+                        setSyncStatus('idle');
+                        // Redirect only after confirmed sync
                         navigate('/match-center');
                       } catch (err) {
-                        console.error("Change Scorer failed:", err);
+                        console.error("Change Scorer sync failed:", err);
                         setSyncStatus('error');
+                        alert("Sync Failed! Please check internet connection and try again.");
                       }
                     }
                   }}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '16px',
-                    background: 'rgba(56, 189, 248, 0.1)', border: '1px solid #38BDF8',
-                    borderRadius: 12, color: '#38BDF8', fontWeight: 800, cursor: 'pointer',
-                    textAlign: 'left'
+                    background: syncStatus === 'loading' ? 'rgba(56, 189, 248, 0.05)' : 'rgba(56, 189, 248, 0.1)',
+                    border: '1px solid #38BDF8',
+                    borderRadius: 12, color: '#38BDF8', fontWeight: 800, cursor: syncStatus === 'loading' ? 'not-allowed' : 'pointer',
+                    textAlign: 'left', opacity: syncStatus === 'loading' ? 0.7 : 1
                   }}
                 >
-                  <Repeat size={20} />
-                  <div>
-                    <div style={{ fontSize: '0.9rem' }}>CHANGE SCORER</div>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 500 }}>Handoff match to another device</div>
-                  </div>
+                  {syncStatus === 'loading' ? (
+                    <>
+                      <div style={{ width: 20, height: 20, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38BDF8', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: '0.9rem' }}>SYNCING...</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 500 }}>Please wait, saving to cloud</div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Repeat size={20} />
+                      <div>
+                        <div style={{ fontSize: '0.9rem' }}>CHANGE SCORER</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 500 }}>Handoff match to another device</div>
+                      </div>
+                    </>
+                  )}
                 </button>
               </div>
 

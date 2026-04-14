@@ -221,9 +221,10 @@ export const useMatchCenter = create<MatchStore>()(
 );
 
 /**
- * Standalone helper to bridge ScorerDashboard and MatchCenterStore
+ * Standalone helper to bridge ScorerDashboard and MatchCenterStore.
+ * Returns the underlying promise so callers can await the result.
  */
-export const updateMatchInStore = (id: string, updates: Partial<ScheduledMatch>) => {
+export const updateMatchInStore = (id: string, updates: Partial<ScheduledMatch>): Promise<void> => {
   const store = useMatchCenter.getState();
-  store.updateMatch(id, updates);
+  return store.updateMatch(id, updates);
 };
