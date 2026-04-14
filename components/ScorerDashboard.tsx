@@ -1787,7 +1787,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
         <div style={{ display: 'flex', gap: 12 }}>
           <button title="View Lineups" onClick={() => setShowLineups(true)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><Users size={22} /></button>
           <button title="Reset Match" onClick={() => setShowPurgeConfirm(true)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><RotateCcw size={20} /></button>
-          <Settings size={22} />
+          <button 
+            title="Match Settings" 
+            onClick={() => setShowSettingsDrawer(true)} 
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Settings size={22} />
+          </button>
         </div>
       </Header>
 
