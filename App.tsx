@@ -23,6 +23,7 @@ import { Player, UserRole, OpponentTeam } from './types';
 import { getPlayers, addPlayer, updatePlayer, deletePlayer, getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo, getMatches } from './services/storageService';
 import { Menu, Shield, ArrowRight } from 'lucide-react';
 import KirikINSLogo from './components/KirikINSLogo';
+import { Toaster } from 'react-hot-toast';
 
 declare global {
   interface Window {
@@ -194,6 +195,26 @@ const AppContent: React.FC<{
 
       </main>
     </div>
+
+    {/* Global Toast Notifications */}
+    <Toaster
+      position="bottom-center"
+      toastOptions={{
+        duration: 4000,
+        style: {
+          background: '#1e293b',
+          color: '#f1f5f9',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          borderRadius: '12px',
+          border: '1px solid rgba(255,255,255,0.1)',
+          boxShadow: '0 20px 60px -10px rgba(0,0,0,0.5)',
+        },
+        success: { iconTheme: { primary: '#4ade80', secondary: '#fff' } },
+        error: { iconTheme: { primary: '#f87171', secondary: '#fff' } },
+      }}
+    />
   );
 };
 

@@ -233,6 +233,7 @@ export interface ScheduledMatch {
   venue?: string;
   isCareerSynced?: boolean;
   live_data?: any;
+  live_state?: any;
   last_updated?: string;
 }
 

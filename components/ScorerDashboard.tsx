@@ -36,6 +36,7 @@ import { useMasterData } from './masterDataStore';
 import _ from 'lodash';
 import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
 import html2canvas from 'html2canvas';
+import toast from 'react-hot-toast';
 
 const DashboardContainer = styled.div`
   min-height: 100vh;
@@ -996,6 +997,55 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   const handleUpdateMatchStatus = async (status: MatchStatus) => {
     if (activeMatchId) {
       await updateMatchStatus(activeMatchId, status);
+    }
+  };
+
+  const handleChangeScorer = async () => {
+    if (!activeMatchId) return;
+    
+    const confirmMessage = "FORCE SAVE AND EXIT SCORING?\n\nThis will sync the latest state to the cloud and allow another scorer to take over. You will be redirected to the match list.";
+    if (!window.confirm(confirmMessage)) return;
+
+    setSyncStatus('loading');
+    try {
+      // 1. Force a final atomic sync and AWAIT the result
+      // We send full live_data (store) and summarized live_state
+      await updateMatchInStore(activeMatchId, { 
+        live_data: {
+          ...store,
+          strikerId: store.strikerId,
+          nonStrikerId: store.nonStrikerId,
+          currentBowlerId: store.currentBowlerId,
+          currentInnings: store.currentInnings,
+        },
+        live_state: {
+          striker_id: store.strikerId,
+          non_striker_id: store.nonStrikerId,
+          bowler_id: store.currentBowlerId,
+          current_innings: store.currentInnings,
+        } as any,
+        last_updated: new Date().toISOString(),
+        status: 'live' // Ensure status is explicitly live
+      });
+
+      // 2. Clear match-specific local keys (prevents re-opening stale match)
+      // Keep user logged in (sessionStorage)
+      localStorage.removeItem('ins-cricket-scorer');
+      localStorage.removeItem('active_match_id');
+      
+      // 3. Success Feedback
+      setSyncStatus('idle');
+      toast.success("Match synced. Safe to hand over!", {
+        duration: 5000,
+        icon: '🤝'
+      });
+
+      // 4. Clean exit
+      navigate('/match-center');
+    } catch (error) {
+      console.error("Change Scorer sync failed:", error);
+      setSyncStatus('error');
+      toast.error("Sync Failed! Please check internet and try again.");
     }
   };
 
@@ -3228,42 +3278,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
               <div style={{ marginTop: 24, marginBottom: 8 }}>
                 <button
                   disabled={syncStatus === 'loading'}
-                  onClick={async () => {
-                    if (window.confirm("FORCE SAVE AND EXIT SCORING?\n\nThis will sync the latest state to the cloud and allow another scorer to take over. You will be redirected to the match list.")) {
-                      setSyncStatus('loading');
-                      try {
-                        // Hard Sync: persist full live_state + live_data atomically
-                        await updateMatchInStore(activeMatchId!, { 
-                          live_data: {
-                            ...store,
-                            strikerId: store.strikerId,
-                            nonStrikerId: store.nonStrikerId,
-                            currentBowlerId: store.currentBowlerId,
-                            currentInnings: store.currentInnings,
-                          },
-                          live_state: {
-                            striker_id: store.strikerId,
-                            non_striker_id: store.nonStrikerId,
-                            bowler_id: store.currentBowlerId,
-                            current_innings: store.currentInnings,
-                          } as any,
-                          last_updated: new Date().toISOString()
-                        });
-
-                        // Clear Local State for this match
-                        localStorage.removeItem('ins-cricket-scorer');
-                        localStorage.removeItem('active_match_id');
-                        
-                        setSyncStatus('idle');
-                        // Redirect only after confirmed sync
-                        navigate('/match-center');
-                      } catch (err) {
-                        console.error("Change Scorer sync failed:", err);
-                        setSyncStatus('error');
-                        alert("Sync Failed! Please check internet connection and try again.");
-                      }
-                    }
-                  }}
+                  onClick={handleChangeScorer}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '16px',
                     background: syncStatus === 'loading' ? 'rgba(56, 189, 248, 0.05)' : 'rgba(56, 189, 248, 0.1)',
