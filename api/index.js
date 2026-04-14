@@ -332,7 +332,7 @@ const mapMatchToDB = (m) => {
     'max_overs', 'result_summary', 'result_note', 'result_type', 
     'final_score_home', 'final_score_away', 'is_live_scored', 
     'is_home_batting_first', 'tournament_id', 'performers', 'scorecard', 'is_career_synced', 'is_test',
-    'live_data', 'target_score'
+    'live_data', 'target_score', 'live_state', 'total_runs', 'total_wickets', 'total_balls'
   ];
 
   // 1. First, map camelCase to snake_case
@@ -572,6 +572,21 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
   if (error) {
     console.error('[POST /api/score/ball] Error:', error);
     return res.status(400).json({ error: error.message });
+  }
+
+  // Atomically update live_state in matches table for handoff consistency
+  if (match_id) {
+    const liveState = {
+      striker_id,
+      non_striker_id,
+      bowler_id,
+      current_innings: innings_number || 1
+    };
+    
+    await db.query(
+      'UPDATE matches SET live_state = $1 WHERE id = $2',
+      [JSON.stringify(liveState), match_id]
+    ).catch(err => console.error('[POST /api/score/ball] Match live_state update failed:', err));
   }
 
   res.json(data);
