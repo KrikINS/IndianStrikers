@@ -946,75 +946,34 @@ app.get('/api/players/:id/stats', async (req, res) => {
         // 1. Fetch Legacy Baseline
         const { data: legacy } = await db.getOne('SELECT * FROM player_legacy_stats WHERE player_id = $1', [playerId]);
 
-        // 2. Fetch Tournament/Match Data
-        const { data: matchStats, error: matchError } = await db.query(
-            `SELECT pms.*, m.status as match_full_status, m.is_test, m.tournament_id, m.date, t.name as tournament_name 
-             FROM player_match_stats pms 
-             JOIN matches m ON pms.match_id = m.id 
-             LEFT JOIN tournaments t ON m.tournament_id = t.id 
-             WHERE pms.player_id = $1::BIGINT AND (m.is_test IS NOT TRUE)
-             ORDER BY m.date DESC`,
-            [playerId]
-        );
-
-        if (matchError) throw matchError;
-
-        // 3. Fetch Active (Live) Matches involving this player
-        const { data: liveMatches } = await db.query(
-            `SELECT m.id, m.live_data, m.tournament_id, t.name as tournament_name, m.date
+        // 2. Max-Inclusion Query: Find ALL matches via performance record OR squad participation
+        // We use numeric array for JSONB search as IDs are stored as Numbers.
+        const { data: participationStats, error: partError } = await db.query(
+            `SELECT 
+                m.id as match_id, m.status as match_status, m.is_test, m.tournament_id, m.date, m.live_data,
+                t.name as tournament_name,
+                pms.runs, pms.balls, pms.fours, pms.sixes, pms.status as player_record_status,
+                pms.wickets, pms.runs_conceded, pms.overs_bowled, pms.maidens,
+                pms.wides, pms.no_balls
              FROM matches m
              LEFT JOIN tournaments t ON m.tournament_id = t.id
-             WHERE m.status = 'live' AND (m.is_test IS NOT TRUE) AND (
-                m.home_team_xi @> $1::JSONB OR m.opponent_team_xi @> $1::JSONB
-             )`,
-            [`["${playerId}"]`]
+             LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1::BIGINT)
+             WHERE (
+                pms.player_id IS NOT NULL 
+                OR m.home_team_xi @> $2::JSONB 
+                OR m.opponent_team_xi @> $2::JSONB
+             )
+             AND (m.is_test IS NOT TRUE)
+             AND (m.status != 'upcoming' AND m.status != 'Upcoming')
+             ORDER BY m.date DESC`,
+            [playerId, `[${playerId}]`]
         );
 
-        // 4. Merge Live Data into Stats calculation
+        if (partError) throw partError;
+
         const tournamentGroups = {};
-        const allStatsForAggregation = [...matchStats];
 
-        // Parse and process live match data
-        if (liveMatches && liveMatches.length > 0) {
-            liveMatches.forEach(lm => {
-                let liveData;
-                try {
-                    liveData = typeof lm.live_data === 'string' ? JSON.parse(lm.live_data) : lm.live_data;
-                } catch(e) { return; }
-
-                if (!liveData) return;
-
-                const tId = lm.tournament_id || 'active_live';
-                const tName = lm.tournament_name || 'Ongoing Matches';
-
-                // Check participation in squads
-                const isParticipating = (liveData.home_team_xi || []).includes(playerId) || (liveData.opponent_team_xi || []).includes(playerId);
-                
-                if (isParticipating) {
-                    const bat = (liveData.innings1?.battingStats || {})[playerId] || (liveData.innings2?.battingStats || {})[playerId];
-                    const bowl = (liveData.innings1?.bowlingStats || {})[playerId] || (liveData.innings2?.bowlingStats || {})[playerId];
-
-                    allStatsForAggregation.push({
-                        tournament_id: tId,
-                        tournament_name: tName,
-                        runs: bat?.runs || 0,
-                        balls: bat?.balls || 0,
-                        fours: bat?.fours || 0,
-                        sixes: bat?.sixes || 0,
-                        status: bat?.outHow || (bat?.isNotOut ? 'not out' : (bat?.isOut ? 'out' : null)),
-                        overs_bowled: bowl?.overs || 0,
-                        maidens: bowl?.maidens || 0,
-                        runs_conceded: bowl?.runs || 0,
-                        wickets: bowl?.wickets || 0,
-                        is_live: true,
-                        is_participating: true,
-                        date: lm.date
-                    });
-                }
-            });
-        }
-
-        allStatsForAggregation.forEach(row => {
+        participationStats.forEach(row => {
             const tId = row.tournament_id || 'unknown';
             const tName = row.tournament_name || (tId === 'unknown' ? 'Other Matches' : 'Default Tournament');
 
@@ -1029,24 +988,59 @@ app.get('/api/players/:id/stats', async (req, res) => {
 
             const group = tournamentGroups[tId];
             
-            // Matches count (If record exists, they participated)
+            // Matches count: If they are in the query result, they were in the XI.
             group.batting.matches++;
             group.bowling.matches++;
 
+            // Data source priority: Live Data > Database Performance Row
+            let runs = Number(row.runs) || 0;
+            let balls = Number(row.balls) || 0;
+            let fours = Number(row.fours) || 0;
+            let sixes = Number(row.sixes) || 0;
+            let pStatus = row.player_record_status?.toString().toLowerCase() || '';
+            let bOvers = Number(row.overs_bowled) || 0;
+            let bMaidens = Number(row.maidens) || 0;
+            let bRuns = Number(row.runs_conceded) || 0;
+            let bWickets = Number(row.wickets) || 0;
+            let bWides = Number(row.wides) || 0;
+            let bNB = Number(row.no_balls) || 0;
+
+            if (row.match_status === 'live' && row.live_data) {
+                try {
+                    const ld = typeof row.live_data === 'string' ? JSON.parse(row.live_data) : row.live_data;
+                    const bat = (ld.innings1?.battingStats || {})[playerId] || (ld.innings2?.battingStats || {})[playerId];
+                    const bowl = (ld.innings1?.bowlingStats || {})[playerId] || (ld.innings2?.bowlingStats || {})[playerId];
+                    
+                    if (bat) {
+                        runs = Number(bat.runs) || 0;
+                        balls = Number(bat.balls) || 0;
+                        fours = Number(bat.fours) || 0;
+                        sixes = Number(bat.sixes) || 0;
+                        pStatus = bat.outHow || (bat.isNotOut ? 'not out' : (bat.isOut ? 'out' : 'batting'));
+                    }
+                    if (bowl) {
+                        bOvers = Number(bowl.overs) || 0;
+                        bMaidens = Number(bowl.maidens) || 0;
+                        bRuns = Number(bowl.runs) || 0;
+                        bWickets = Number(bowl.wickets) || 0;
+                        bWides = Number(bowl.wides) || 0;
+                        bNB = Number(bowl.no_balls) || 0;
+                    }
+                } catch(e) {}
+            }
+
             // Batting Aggregation
-            const runs = (Number(row.runs) || 0);
-            const status = row.status?.toString().toLowerCase() || '';
-            const isDismissed = status && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(status);
-            const isDNB = ['dnb', 'did not bat'].includes(status);
-            const hasActuallyBatted = !isDNB && (runs > 0 || Number(row.balls) > 0 || isDismissed);
+            const isDismissed = pStatus && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(pStatus);
+            const isDNB = ['dnb', 'did not bat'].includes(pStatus);
+            const hasActuallyBatted = !isDNB && (runs > 0 || balls > 0 || isDismissed);
             
             if (hasActuallyBatted) {
                 group.batting.innings++;
-                if (!isDismissed && status !== 'batting' && status !== 'dnb') group.batting.notOuts++;
+                if (!isDismissed && pStatus !== 'batting' && pStatus !== 'dnb') group.batting.notOuts++;
                 group.batting.runs += runs;
-                group.batting.balls += (Number(row.balls) || 0);
-                group.batting.fours += (Number(row.fours) || 0);
-                group.batting.sixes += (Number(row.sixes) || 0);
+                group.batting.balls += balls;
+                group.batting.fours += fours;
+                group.batting.sixes += sixes;
                 
                 // Dynamic Milestones
                 if (runs >= 100) group.batting.hundreds++;
@@ -1056,30 +1050,32 @@ app.get('/api/players/:id/stats', async (req, res) => {
             
             const currentHS = parseInt(group.batting.highestScore.replace('*', '')) || 0;
             if (runs > currentHS) {
-                group.batting.highestScore = `${runs}${!isDismissed ? '*' : ''}`;
-            } else if (runs === currentHS && !isDismissed && !group.batting.highestScore.includes('*')) {
+                group.batting.highestScore = `${runs}${!isDismissed && pStatus !== 'dnb' ? '*' : ''}`;
+            } else if (runs === currentHS && !isDismissed && pStatus !== 'dnb' && !group.batting.highestScore.includes('*')) {
                 group.batting.highestScore = `${runs}*`;
             }
 
             // Bowling Aggregation
-            if (Number(row.overs_bowled) > 0) {
+            if (bOvers > 0) {
                 group.bowling.innings++;
                 const currentBalls = (Math.floor(group.bowling.overs) * 6) + Math.round((group.bowling.overs % 1) * 10);
-                const newBallsToAdd = (Math.floor(Number(row.overs_bowled)) * 6) + Math.round((Number(row.overs_bowled) % 1) * 10);
+                const newBallsToAdd = (Math.floor(bOvers) * 6) + Math.round((bOvers % 1) * 10);
                 const updatedTotalBalls = currentBalls + newBallsToAdd;
                 group.bowling.overs = Math.floor(updatedTotalBalls / 6) + ((updatedTotalBalls % 6) / 10);
-                group.bowling.maidens += (Number(row.maidens) || 0);
-                group.bowling.runs += (Number(row.runs_conceded) || 0);
-                group.bowling.wickets += (Number(row.wickets) || 0);
-                group.bowling.fourWickets += (Number(row.four_wickets) || 0);
-                group.bowling.fiveWickets += (Number(row.five_wickets) || 0);
-                group.bowling.wides += (Number(row.wides) || 0);
-                group.bowling.no_balls += (Number(row.no_balls) || 0);
+                group.bowling.maidens += bMaidens;
+                group.bowling.runs += bRuns;
+                group.bowling.wickets += bWickets;
+                // Note: we'd benefit from four_wickets and five_wickets columns in player_match_stats if they exist,
+                // but for now we prioritize bWickets.
+                if (bWickets === 4) group.bowling.fourWickets++;
+                if (bWickets >= 5) group.bowling.fiveWickets++;
+                group.bowling.wides += bWides;
+                group.bowling.no_balls += bNB;
                 
                 const currentBBI = group.bowling.bestBowling;
                 const [curW, curR] = currentBBI.split('/').map(Number);
-                if (row.wickets > curW || (row.wickets === curW && row.runs_conceded < curR)) {
-                    group.bowling.bestBowling = `${row.wickets}/${row.runs_conceded}`;
+                if (bWickets > curW || (bWickets === curW && bRuns < curR)) {
+                    group.bowling.bestBowling = `${bWickets}/${bRuns}`;
                 }
             }
         });
@@ -1175,14 +1171,14 @@ app.get('/api/players/:id/stats', async (req, res) => {
             legacy: legacy || null,
             tournaments: Object.values(tournamentGroups),
             total: grandTotal,
-            recentForm: allStatsForAggregation
-                .filter(row => row.runs > 0 || row.balls > 0 || (row.status && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(row.status?.toLowerCase())))
+            recentForm: participationStats
+                .filter(row => (Number(row.runs) > 0 || Number(row.balls) > 0 || (row.player_record_status && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(row.player_record_status?.toLowerCase()))))
                 .sort((a, b) => new Date(b.date || Date.now()) - new Date(a.date || Date.now()))
                 .slice(0, 5)
                 .map(row => ({
                     runs: row.runs || 0,
-                    isNotOut: row.status && ['not out', 'retired hurt', 'absent', 'batting'].includes(row.status?.toLowerCase()),
-                    isLive: !!row.is_live
+                    isNotOut: row.player_record_status && ['not out', 'retired hurt', 'absent', 'batting'].includes(row.player_record_status?.toLowerCase()),
+                    isLive: row.match_status === 'live'
                 }))
         });
 
