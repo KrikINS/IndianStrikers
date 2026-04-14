@@ -1614,7 +1614,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                 <div>
                   <h3 style={{ fontSize: '0.8rem', color: '#FAB005', marginBottom: 12, textTransform: 'uppercase' }}>{matchMeta?.opponentName || 'OPPONENT'}</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {players
+                    {opponentPlayers
                       .filter(p => awayXI.includes(p.id))
                       .map(p => (
                       <div key={p.id} style={{ 
@@ -1823,38 +1823,38 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
             <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Choose the bowler for the next over</p>
             
             <SelectionGrid style={{ maxHeight: '50vh' }}>
-              {players
-                .filter(p => {
-                  const fieldingTeamId = currentInnings.bowlingTeamId;
-                  const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
-                  const isInCategory = fieldingTeamXI.includes(p.id);
-                  const isPrevBowler = p.id === store.currentBowlerId;
-                  
-                  // Rule: Max overs per bowler (usually match overs / 5)
-                  const maxOversPerB = Math.ceil((store.maxOvers || 20) / 5);
-                  const stats = currentInnings.bowlingStats[p.id] || { overs: 0 };
-                  const hasReachedLimit = stats.overs >= maxOversPerB;
-
-                  return isInCategory && !isPrevBowler && !hasReachedLimit;
-                })
-                .map(p => {
-                  const bStats = currentInnings.bowlingStats[p.id] || { overs: 0, runs: 0, wickets: 0 };
-                  return (
-                    <PlayerCard 
-                      key={p.id} 
-                      onClick={() => {
-                        store.setNewBowler(p.id);
-                        setShowBowlerModal(false);
-                      }}
-                    >
-                      <User size={16} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
-                        <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{bStats.wickets}-{bStats.runs} ({bStats.overs})</div>
-                      </div>
-                    </PlayerCard>
-                  )
-                })}
+              {(() => {
+                const fieldingTeamId = currentInnings.bowlingTeamId;
+                const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
+                const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
+                const maxOversPerB = Math.ceil((store.maxOvers || 20) / 5);
+                return fieldingPool
+                  .filter(p => {
+                    const isInXI = fieldingTeamXI.includes(p.id);
+                    const isPrevBowler = p.id === store.currentBowlerId;
+                    const stats = currentInnings.bowlingStats[p.id] || { overs: 0 };
+                    const hasReachedLimit = stats.overs >= maxOversPerB;
+                    return isInXI && !isPrevBowler && !hasReachedLimit;
+                  })
+                  .map(p => {
+                    const bStats = currentInnings.bowlingStats[p.id] || { overs: 0, runs: 0, wickets: 0 };
+                    return (
+                      <PlayerCard 
+                        key={p.id} 
+                        onClick={() => {
+                          store.setNewBowler(p.id);
+                          setShowBowlerModal(false);
+                        }}
+                      >
+                        <User size={16} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
+                          <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{bStats.wickets}-{bStats.runs} ({bStats.overs})</div>
+                        </div>
+                      </PlayerCard>
+                    );
+                  });
+              })()}
             </SelectionGrid>
 
             <button 
@@ -1983,21 +1983,23 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
             <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Who made the {pendingWicketType === 'Caught' ? 'catch' : 'stumping'}?</p>
             
             <SelectionGrid style={{ maxHeight: '50vh' }}>
-              {players
-                .filter(p => {
-                  const fieldingTeamXI = currentInnings.bowlingTeamId === 'HOME' ? homeXI : awayXI;
-                  return fieldingTeamXI.includes(p.id);
-                })
-                .map(p => (
-                  <PlayerCard key={p.id} onClick={() => {
-                    setPendingFielderId(p.id);
-                    setShowFielderModal(false);
-                    triggerWicketSplash(pendingWicketType);
-                  }}>
-                    <User size={16} />
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
-                  </PlayerCard>
-                ))}
+              {(() => {
+                const fieldingTeamId = currentInnings.bowlingTeamId;
+                const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
+                const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
+                return fieldingPool
+                  .filter(p => fieldingTeamXI.includes(p.id))
+                  .map(p => (
+                    <PlayerCard key={p.id} onClick={() => {
+                      setPendingFielderId(p.id);
+                      setShowFielderModal(false);
+                      triggerWicketSplash(pendingWicketType);
+                    }}>
+                      <User size={16} />
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
+                    </PlayerCard>
+                  ));
+              })()}
             </SelectionGrid>
             <button 
               onClick={() => setShowFielderModal(false)}
@@ -2367,60 +2369,71 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
             <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Choose player from the bench</p>
             
             <SelectionGrid style={{ maxHeight: '50vh' }}>
-              {players
-                .filter(p => {
-                  const battingTeamXI = store.currentInnings === 1 ? homeXI : awayXI;
-                  const isInCategory = battingTeamXI.includes(p.id);
-                  const isAlreadyBatting = p.id === store.strikerId || p.id === store.nonStrikerId;
-                  const status = currentInnings.battingStats[p.id]?.status;
-                  const alreadyOut = status === 'out';
-                  return isInCategory && !isAlreadyBatting && !alreadyOut;
-                })
-                .map(p => (
-                <PlayerCard 
-                  key={p.id} 
-                  onClick={() => {
-                    if (runOutInvolved) {
-                      handleRecord(
-                        runOutInvolved.runs, 
-                        runOutInvolved.ballType || 'legal', 
-                        true, 
-                        'Run Out', 
-                        runOutInvolved.subType || 'bat', 
-                        runOutInvolved.victimId, 
-                        p.id
-                      );
-                      setRunOutInvolved(null);
-                    } else {
-                      // Include fielder name in dismissal string if pending
-                      let dismissal = pendingWicketType;
-                      if (pendingFielderId && (pendingWicketType === 'Caught' || pendingWicketType === 'Stumped')) {
-                        const fielder = players.find(fp => fp.id === pendingFielderId);
-                        dismissal = `${pendingWicketType === 'Caught' ? 'c' : 'st'} ${fielder?.name || 'Fielder'}`;
-                      }
-                      handleRecord(0, 'legal', true, dismissal, 'bat', undefined, p.id);
-                    }
-                    setShowBatterSelectModal(false);
-                    setShowWicketModal(false);
-                    setPendingWicketType(null);
-                    setPendingFielderId(null);
-                  }}
-                >
-                  <User size={16} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>
-                      {currentInnings.battingStats[p.id]?.status === 'retired_hurt' ? 'RETIRED HURT' : (p.role || 'Player')}
-                    </div>
-                  </div>
-                </PlayerCard>
-              ))}
-              {players.filter(p => {
-                const bId = store.currentInnings === 1 ? homeXI : awayXI;
-                return bId.includes(p.id) && p.id !== store.strikerId && p.id !== store.nonStrikerId && currentInnings.battingStats[p.id]?.status !== 'out';
-              }).length === 0 && (
-                <div style={{ textAlign: 'center', opacity: 0.4, padding: 20 }}>No more players available.</div>
-              )}
+              {(() => {
+                const battingTeamId = currentInnings.battingTeamId;
+                const battingTeamXI = battingTeamId === 'HOME' ? homeXI : awayXI;
+                const battingPool = battingTeamId === 'HOME' ? players : opponentPlayers;
+                return battingPool
+                  .filter(p => {
+                    const isInXI = battingTeamXI.includes(p.id);
+                    const isAlreadyBatting = p.id === store.strikerId || p.id === store.nonStrikerId;
+                    const status = currentInnings.battingStats[p.id]?.status;
+                    const alreadyOut = status === 'out';
+                    return isInXI && !isAlreadyBatting && !alreadyOut;
+                  })
+                  .map(p => (
+                    <PlayerCard 
+                      key={p.id} 
+                      onClick={() => {
+                        if (runOutInvolved) {
+                          handleRecord(
+                            runOutInvolved.runs, 
+                            runOutInvolved.ballType || 'legal', 
+                            true, 
+                            'Run Out', 
+                            runOutInvolved.subType || 'bat', 
+                            runOutInvolved.victimId, 
+                            p.id
+                          );
+                          setRunOutInvolved(null);
+                        } else {
+                          let dismissal = pendingWicketType;
+                          if (pendingFielderId && (pendingWicketType === 'Caught' || pendingWicketType === 'Stumped')) {
+                            const fielder = [...players, ...opponentPlayers].find(fp => fp.id === pendingFielderId);
+                            dismissal = `${pendingWicketType === 'Caught' ? 'c' : 'st'} ${fielder?.name || 'Fielder'}`;
+                          }
+                          handleRecord(0, 'legal', true, dismissal, 'bat', undefined, p.id);
+                        }
+                        setShowBatterSelectModal(false);
+                        setShowWicketModal(false);
+                        setPendingWicketType(null);
+                        setPendingFielderId(null);
+                      }}
+                    >
+                      <User size={16} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>
+                          {currentInnings.battingStats[p.id]?.status === 'retired_hurt' ? 'RETIRED HURT' : (p.role || 'Player')}
+                        </div>
+                      </div>
+                    </PlayerCard>
+                  ));
+              })()}
+              {(() => {
+                const battingTeamId = currentInnings.battingTeamId;
+                const battingXI = battingTeamId === 'HOME' ? homeXI : awayXI;
+                const battingPool = battingTeamId === 'HOME' ? players : opponentPlayers;
+                const available = battingPool.filter(p =>
+                  battingXI.includes(p.id) &&
+                  p.id !== store.strikerId &&
+                  p.id !== store.nonStrikerId &&
+                  currentInnings.battingStats[p.id]?.status !== 'out'
+                );
+                return available.length === 0 ? (
+                  <div style={{ textAlign: 'center', opacity: 0.4, padding: 20 }}>No more players available.</div>
+                ) : null;
+              })()}
             </SelectionGrid>
 
             <button 
