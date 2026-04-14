@@ -836,6 +836,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   const [showWagonWheelModal, setShowWagonWheelModal] = useState<any>(null);
   const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [isOverComplete, setIsOverComplete] = useState(false);
 
   // Opponent players fetched separately from the opponents table
   const [opponentPlayers, setOpponentPlayers] = useState<{id: string; name: string; role?: string}[]>([]);
@@ -1602,13 +1603,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
     }
 
     // --- Over End Check (ALWAYS run at the end for legal balls) ---
-    if (type === 'legal') {
-      const nextBalls = (innings.totalBalls || 0) + (isWicket ? 0 : 0); // Logic handled in store, we just check current count
-      // Actually, store.recordBall already applied the ball. 
-      // We check if the NEW total is a multiple of 6.
+    if (type === 'legal' || type === 'wicket') {
       const currentBalls = currentInnings?.totalBalls || 0;
+      // We check if the NEW total is a multiple of 6 (and not a wide/no-ball which shouldn't happen here as those aren't 'legal')
+      // Note: isWicket only counts as a ball if ball_type is 'legal' or similar. 
+      // In our store, recordBall handles legal ball incrementing.
       if (currentBalls > 0 && currentBalls % 6 === 0 && !isBattingFinishing) {
-        setTimeout(() => setShowBowlerModal(true), 1500);
+        setIsOverComplete(true);
+        setTimeout(() => setShowBowlerModal(true), 1200);
       }
     }
   };
@@ -2030,9 +2032,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                 <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase' }}>This Over</div>
                 <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#001F3F' }}>
                   {(() => {
-                    const currentOver = Math.floor((currentInnings?.totalBalls || 0) / 6);
+                    // Logic: If the over was just completed, show the score of the JUST finished over.
+                    // Otherwise show the score of the current (incomplete) over.
+                    const ballsCount = currentInnings?.totalBalls || 0;
+                    const displayOver = (isOverComplete && ballsCount % 6 === 0) 
+                      ? Math.floor(ballsCount / 6) - 1 
+                      : Math.floor(ballsCount / 6);
+                    
                     return (currentInnings?.history || [])
-                      .filter(b => b.overNumber === currentOver)
+                      .filter(b => b.overNumber === displayOver)
                       .reduce((sum, b) => sum + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
                   })()}
                 </div>
@@ -2068,7 +2076,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
             else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
             else if (ball.type === 'bye') display = `B${ball.runs}`;
 
-            const isLastBallOfOver = ball.ballNumber === 6 && ball.isLegal;
+            const ballInOverNum = ball.ballNumber;
+            const isLastBallOfOver = ballInOverNum === 6 && ball.isLegal;
             const showSeparator = isLastBallOfOver && idx < last30.length - 1;
 
             return (
@@ -2131,6 +2140,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                         onClick={() => {
                           store.setNewBowler(p.id);
                           setShowBowlerModal(false);
+                          setIsOverComplete(false);
                         }}
                       >
                         <User size={16} />
