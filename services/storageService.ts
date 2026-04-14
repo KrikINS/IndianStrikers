@@ -694,8 +694,12 @@ export interface TournamentStat {
 }
 
 export interface PlayerDetailedStats {
-  legacy: PlayerLegacyStats | null;
+  legacy: any | null; // Changed to any to support enriched rates
   tournaments: TournamentStat[];
+  total: {
+    batting: BattingStats;
+    bowling: BowlingStats;
+  };
 }
 
 export const getPlayerDetailedStats = async (playerId: string): Promise<PlayerDetailedStats> => {

@@ -1103,14 +1103,14 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
                                 <td className="p-2 md:p-3 text-center">{detailedStats.legacy.not_outs}</td>
                                 <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.runs}</td>
                                 <td className="p-2 md:p-3 text-center">{detailedStats.legacy.balls}</td>
-                                <td className="p-2 md:p-3 text-center">-</td>
-                                <td className="p-2 md:p-3 text-center">-</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.highest_score}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.hundreds}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.fifties}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.ducks}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.fours}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.sixes}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.average}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.strikeRate}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.highest_score}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.hundreds}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.fifties}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.ducks}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.fours}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.sixes}</td>
                               </tr>
                             )}
 
@@ -1140,19 +1140,19 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
                           <tfoot className="sticky bottom-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
                             <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
                               <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30">Grand Total</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.matches || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.innings || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.notOuts || '0'}</td>
-                              <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{viewingPlayer.battingStats?.runs || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.balls || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.average || '0.00'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.strikeRate || '0.00'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.highestScore || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.hundreds || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.fifties || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.ducks || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.fours || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.battingStats?.sixes || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.matches || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.innings || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.notOuts || '0'}</td>
+                              <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{detailedStats?.total?.batting.runs || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.balls || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.average || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.strikeRate || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.highestScore || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.hundreds || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.fifties || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.ducks || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.fours || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.sixes || '0'}</td>
                             </tr>
                           </tfoot>
                         </table>
@@ -1187,12 +1187,12 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
                                 <td className="p-2 md:p-3 text-center">{detailedStats.legacy.maidens}</td>
                                 <td className="p-2 md:p-3 text-center">{detailedStats.legacy.runs_conceded}</td>
                                 <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.wickets}</td>
-                                <td className="p-2 md:p-3 text-center">-</td>
-                                <td className="p-2 md:p-3 text-center">-</td>
-                                <td className="p-2 md:p-3 text-center">-</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.best_bowling}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.four_wickets}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.five_wickets}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_average || '-'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.economy || '-'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_strikeRate || '-'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.four_wickets}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.five_wickets}</td>
                               </tr>
                             )}
 
@@ -1217,18 +1217,18 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
                           <tfoot className="sticky bottom-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
                             <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
                               <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30">Grand Total</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.matches || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.innings || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.overs || '0.0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.maidens || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.runs || '0'}</td>
-                              <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{viewingPlayer.bowlingStats?.wickets || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.average || '0.00'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.economy || '0.00'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.strikeRate || '0.00'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.bestBowling || '-'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.fourWickets || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{viewingPlayer.bowlingStats?.fiveWickets || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.matches || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.innings || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.overs || '0.0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.maidens || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.runs || '0'}</td>
+                              <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{detailedStats?.total?.bowling.wickets || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.average || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.economy || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.strikeRate || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.bestBowling || '-'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.fourWickets || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.fiveWickets || '0'}</td>
                             </tr>
                           </tfoot>
                         </table>
