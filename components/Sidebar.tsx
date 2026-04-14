@@ -344,11 +344,6 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
                 </div>
               )}
             </div>
-            {linkedPlayer?.id && (
-              <div className="p-1.5 text-slate-500 group-hover/user:text-blue-400">
-                <ArrowRight size={14} />
-              </div>
-            )}
           </div>
 
           {/* User Actions */}
