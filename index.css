@@ -240,3 +240,26 @@ body {
 .scorecard-table td:first-child {
   text-align: left;
 }
+
+/* Force Portrait Mode CSS Overlay for Mobile */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+  body::after {
+    content: "Please rotate your device to portrait mode for the best experience.";
+    position: fixed;
+    inset: 0;
+    background: #001f3f;
+    color: white;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 30px;
+    font-weight: 800;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.5px;
+  }
+  #root {
+    display: none;
+  }
+}
