@@ -1352,7 +1352,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
     );
   }
 
-  const handleRecord = (runs: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string, showSplash: boolean = true) => {
+  const handleRecord = (runs: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string) => {
     store.recordBall({ runs, type, isWicket, wicketType, subType, outPlayerId, newBatterId });
     
     // --- Milestone Detection & Animation Bridge ---
@@ -1377,16 +1377,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
       const victimName = getPlayerName(victimId);
       const bStat = innings.battingStats[victimId];
       
-      if (showSplash) {
-        if (bStat && bStat.runs === 0) {
-          if (bStat.balls === 1) {
-            milestoneRef.current?.trigger({ type: 'GOLDEN_DUCK', playerName: victimName });
-          } else {
-            milestoneRef.current?.trigger({ type: 'DUCK', playerName: victimName });
-          }
+      if (bStat && bStat.runs === 0) {
+        if (bStat.balls === 1) {
+          milestoneRef.current?.trigger({ type: 'GOLDEN_DUCK', playerName: victimName });
         } else {
-          milestoneRef.current?.trigger({ type: 'WICKET', playerName: victimName });
+          milestoneRef.current?.trigger({ type: 'DUCK', playerName: victimName });
         }
+      } else {
+        milestoneRef.current?.trigger({ type: 'WICKET', playerName: victimName });
       }
 
       // Check Bowler Hat-trick
@@ -2406,8 +2404,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                             'Run Out', 
                             runOutInvolved.subType || 'bat', 
                             runOutInvolved.victimId, 
-                            p.id,
-                            false
+                            p.id
                           );
                           setRunOutInvolved(null);
                         } else {
@@ -2416,7 +2413,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                             const fielder = [...players, ...opponentPlayers].find(fp => fp.id === pendingFielderId);
                             dismissal = `${pendingWicketType === 'Caught' ? 'c' : 'st'} ${fielder?.name || 'Fielder'}`;
                           }
-                          handleRecord(0, 'legal', true, dismissal, 'bat', undefined, p.id, false);
+                          handleRecord(0, 'legal', true, dismissal, 'bat', undefined, p.id);
                         }
                         setShowBatterSelectModal(false);
                         setShowWicketModal(false);

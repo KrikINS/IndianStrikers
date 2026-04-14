@@ -195,53 +195,8 @@ app.post('/api/reset-password', async (req, res) => {
 
 // PLAYERS
 app.get('/api/players', async (_req, res) => {
-  const query = `
-    SELECT 
-      p.*,
-      (COALESCE(pls.runs, 0) + COALESCE(ts.runs, 0))::int as runs_scored,
-      (COALESCE(pls.wickets, 0) + COALESCE(ts.wickets, 0))::int as wickets_taken,
-      -- Matches played: combine legacy + actual participation (stats row OR in XI)
-      (COALESCE(pls.matches, 0) + COALESCE(m_counts.match_count, 0))::int as matches_played,
-      CASE 
-        WHEN ((COALESCE(pls.innings, 0) + COALESCE(ts.innings, 0)) - COALESCE(pls.not_outs, 0)) > 0 
-        THEN ROUND((COALESCE(pls.runs, 0) + COALESCE(ts.runs, 0))::numeric / ((COALESCE(pls.innings, 0) + COALESCE(ts.innings, 0)) - COALESCE(pls.not_outs, 0)), 2)
-        ELSE 0
-      END as average
-    FROM players p
-    LEFT JOIN player_legacy_stats pls ON p.id::text = pls.player_id::text
-    LEFT JOIN (
-      SELECT 
-        player_id,
-        SUM(runs) as runs,
-        SUM(wickets) as wickets,
-        COUNT(runs) FILTER (WHERE runs IS NOT NULL) as innings,
-        SUM(CASE WHEN is_not_out THEN 1 ELSE 0 END) as not_outs
-      FROM player_match_stats
-      GROUP BY player_id
-    ) ts ON p.id::text = ts.player_id::text
-    LEFT JOIN (
-      -- Comprehensive Match Participant Count (Handling String/Number JSONB)
-      SELECT 
-        p_inner.id as player_id,
-        COUNT(m.id) as match_count
-      FROM players p_inner
-      JOIN matches m ON (
-        EXISTS (SELECT 1 FROM player_match_stats pms WHERE pms.match_id = m.id AND pms.player_id = p_inner.id)
-        OR m.home_team_xi @> jsonb_build_array(p_inner.id)
-        OR m.home_team_xi ? p_inner.id::text
-        OR m.opponent_team_xi @> jsonb_build_array(p_inner.id)
-        OR m.opponent_team_xi ? p_inner.id::text
-      )
-      WHERE m.status != 'upcoming' AND m.is_test IS NOT TRUE
-      GROUP BY p_inner.id
-    ) m_counts ON p.id::text = m_counts.player_id::text
-    ORDER BY p.name ASC
-  `;
-  const { data, error } = await db.query(query);
-  if (error) {
-    console.error('[GET /api/players] Error:', error);
-    return res.status(500).json({ error: error.message });
-  }
+  const { data, error } = await db.query('SELECT * FROM players ORDER BY name ASC');
+  if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
@@ -851,20 +806,10 @@ async function recalculateCareerStats(playerId) {
     console.log(`[SyncEngine] Recalculating career for Player ID: ${playerId}...`);
     
     // Join matches to check is_test
-    // Join matches to check is_test and handle Max-Inclusion participation
     const { data: allMatchStats } = await db.query(
-        `SELECT pms.*, m.id as match_id, m.status as m_status 
-         FROM matches m
-         LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1)
-         WHERE (
-            pms.player_id IS NOT NULL 
-            OR m.home_team_xi @> jsonb_build_array($1::BIGINT)
-            OR m.home_team_xi ? $1::text
-            OR m.opponent_team_xi @> jsonb_build_array($1::BIGINT)
-            OR m.opponent_team_xi ? $1::text
-         )
-         AND m.is_test = false 
-         AND m.status != 'upcoming'`,
+        `SELECT pms.* FROM player_match_stats pms 
+         JOIN matches m ON pms.match_id = m.id 
+         WHERE pms.player_id = $1 AND m.is_test = false`,
         [playerId]
     );
 
@@ -1012,13 +957,13 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 pms.wides, pms.no_balls
              FROM matches m
              LEFT JOIN tournaments t ON m.tournament_id = t.id
-             LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1)
+             LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1::BIGINT)
              WHERE (
                 pms.player_id IS NOT NULL 
-                OR m.home_team_xi @> jsonb_build_array($1::BIGINT)
-                OR m.home_team_xi ? $1::text
-                OR m.opponent_team_xi @> jsonb_build_array($1::BIGINT)
-                OR m.opponent_team_xi ? $1::text
+                OR m.home_team_xi @> jsonb_build_array($1::text)
+                OR m.home_team_xi @> jsonb_build_array($1::int)
+                OR m.opponent_team_xi @> jsonb_build_array($1::text)
+                OR m.opponent_team_xi @> jsonb_build_array($1::int)
              )
              AND (m.is_test IS NOT TRUE)
              AND (m.status != 'upcoming' AND m.status != 'Upcoming')
@@ -1089,10 +1034,11 @@ app.get('/api/players/:id/stats', async (req, res) => {
             // Batting Aggregation
             const isDismissed = pStatus && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(pStatus);
             const isDNB = ['dnb', 'did not bat'].includes(pStatus);
-            const hasActuallyBatted = !isDNB && (runs > 0 || balls > 0 || isDismissed);
+            const hasActuallyBatted = !isDNB && (runs > 0 || balls > 0 || isDismissed || pStatus === 'batting');
             
             if (hasActuallyBatted) {
                 group.batting.innings++;
+                // A player is 'Not Out' if they are not dismissed AND not currently batting (because live batting is an active state, not a finished not-out record)
                 if (!isDismissed && pStatus !== 'batting' && pStatus !== 'dnb') group.batting.notOuts++;
                 group.batting.runs += runs;
                 group.batting.balls += balls;
