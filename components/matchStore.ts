@@ -89,6 +89,7 @@ export interface MatchState {
     targetScore?: number;
     useWagonWheel: boolean;
     setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
+    isWaitingForBowler: boolean;
 }
 
 interface ScorerStore extends MatchState {
@@ -157,7 +158,8 @@ const INITIAL_STATE: MatchState = {
     manOfTheMatch: null,
     targetScore: 0,
     useWagonWheel: false,
-    setMilestoneNotified: () => {}
+    setMilestoneNotified: () => {},
+    isWaitingForBowler: false
 };
 
 export const useCricketScorer = create<ScorerStore>()(
@@ -190,7 +192,8 @@ export const useCricketScorer = create<ScorerStore>()(
                              opponentName: data.opponentName,
                              maxOvers: data.maxOvers,
                              homeXI: Array.isArray(data.homeXI) ? data.homeXI : (Array.isArray(parsedData.homeXI) ? parsedData.homeXI : []),
-                             awayXI: Array.isArray(data.awayXI) ? data.awayXI : (Array.isArray(parsedData.awayXI) ? parsedData.awayXI : [])
+                             awayXI: Array.isArray(data.awayXI) ? data.awayXI : (Array.isArray(parsedData.awayXI) ? parsedData.awayXI : []),
+                             isWaitingForBowler: !!parsedData.isWaitingForBowler
                          });
                          return;
                     }
@@ -279,7 +282,8 @@ export const useCricketScorer = create<ScorerStore>()(
                     isFreeHit: state.isFreeHit,
                     isFinished: state.isFinished,
                     homeXI: state.homeXI,
-                    awayXI: state.awayXI
+                    awayXI: state.awayXI,
+                    isWaitingForBowler: state.isWaitingForBowler
                 }));
 
                 const { runs, type, isWicket, wicketType, subType = 'bat', outPlayerId, newBatterId, zone } = payload;
@@ -526,7 +530,8 @@ export const useCricketScorer = create<ScorerStore>()(
                 const prevState = historyStack[historyStack.length - 1];
                 set({
                     ...prevState,
-                    historyStack: historyStack.slice(0, -1)
+                    historyStack: historyStack.slice(0, -1),
+                    isWaitingForBowler: !!prevState.isWaitingForBowler
                 });
             },
 
@@ -555,8 +560,8 @@ export const useCricketScorer = create<ScorerStore>()(
 
                 set({
                     currentBowlerId: id,
-                    strikerId: state.nonStrikerId,
-                    nonStrikerId: state.strikerId
+                    nonStrikerId: state.strikerId,
+                    isWaitingForBowler: false
                 });
             },
             changeBowler: (id) => {

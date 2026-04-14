@@ -551,7 +551,8 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
     match_id, striker_id, non_striker_id, bowler_id, 
     over_number, ball_number, runs_scored, extras_runs, 
     extras_type, event_type, innings_number, is_legal_ball,
-    wicket_type, fielder_id, shot_zone, penalty_runs, is_penalty
+    wicket_type, fielder_id, shot_zone, penalty_runs, is_penalty,
+    is_not_out, fifty_notified, tournament_id
   } = req.body;
 
   const { data, error } = await db.getOne(
@@ -577,9 +578,9 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
   // Atomically update live_state in matches table for handoff consistency
   if (match_id) {
     const liveState = {
-      striker_id,
-      non_striker_id,
-      bowler_id,
+      striker_id: striker_id || null,
+      non_striker_id: non_striker_id || null,
+      bowler_id: bowler_id || null,
       current_innings: innings_number || 1
     };
     

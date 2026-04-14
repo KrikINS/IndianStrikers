@@ -797,6 +797,7 @@ import {
   MatchStatus,
   OpponentTeam
 } from '../types';
+import MatchSummaryModal from './MatchSummaryModal';
 
 const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?: string }> = ({ matchId: propMatchId, players, teamLogo }) => {
   const store = useCricketScorer();
@@ -831,11 +832,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
   const posterRef = useRef<HTMLDivElement>(null);
   const milestoneRef = useRef<MilestoneOverlayRef>(null);
+  const [showWagonWheelModal, setShowWagonWheelModal] = useState<any>(null);
   const [scorecardTab, setScorecardTab] = useState<'scorecard' | 'commentary'>('scorecard');
   const [showInningsReview, setShowInningsReview] = useState(false);
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
-  const [showWagonWheelModal, setShowWagonWheelModal] = useState<any>(null);
   const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
+  const [showMatchSummaryModal, setShowMatchSummaryModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [isOverComplete, setIsOverComplete] = useState(false);
 
@@ -1581,33 +1583,61 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
     store.recordBall({ runs: score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, zone });
     
     // --- DB Sync Bridge ---
-    if (activeMatchId && !is_test) {
-      fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
-        },
-        body: JSON.stringify({
-          match_id: activeMatchId,
-          striker_id: store.strikerId,
-          non_striker_id: store.nonStrikerId,
-          bowler_id: store.currentBowlerId,
-          over_number: Math.floor(innings.totalBalls / 6),
-          ball_number: (innings.totalBalls % 6) + 1,
-          runs_scored: score,
-          extras_runs: type === 'wide' || type === 'no-ball' ? 1 : 0,
-          extras_type: type === 'legal' ? null : type,
-          event_type: isWicket ? 'wicket' : (type === 'legal' ? 'ball' : 'extra'),
-          innings_number: store.currentInnings,
-          is_legal_ball: type !== 'wide' && type !== 'no-ball',
-          wicket_type: wicketType,
-          shot_zone: zone,
-          penalty_runs: 0,
-          is_penalty: false
-        })
-      }).catch(err => console.error("[Sync] Ball-by-ball sync failed:", err));
-    }
+    const syncBallToCloud = async (isRetry = false) => {
+      if (!activeMatchId || is_test) return;
+
+      const baseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
+      
+      // Standard Payload
+      const payload: any = {
+        match_id: activeMatchId,
+        striker_id: store.strikerId,
+        non_striker_id: store.nonStrikerId,
+        bowler_id: store.currentBowlerId,
+        over_number: Math.floor(innings.totalBalls / 6),
+        ball_number: (innings.totalBalls % 6) + 1,
+        runs_scored: score,
+        extras_runs: type === 'wide' || type === 'no-ball' ? 1 : 0,
+        extras_type: type === 'legal' ? null : type,
+        event_type: isWicket ? 'wicket' : (type === 'legal' ? 'ball' : 'extra'),
+        innings_number: store.currentInnings,
+        is_legal_ball: type !== 'wide' && type !== 'no-ball',
+        wicket_type: wicketType,
+        is_penalty: false
+      };
+
+      // Add New Fields Only if NOT a retry (the interceptor might be blocking these)
+      if (!isRetry) {
+        payload.shot_zone = zone;
+        payload.is_not_out = !isWicket;
+        payload.fifty_notified = store.innings1?.battingStats[store.strikerId || '']?.fifty_notified ?? false;
+        payload.tournament_id = matchMeta?.tournamentId || null;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/score/ball`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          if (response.status === 400 && !isRetry) {
+            console.warn("[Sync] Interceptor conflict detected. Ball saved using minimalist fallback.");
+            return syncBallToCloud(true); // Retry without new fields
+          }
+          const errorText = await response.text();
+          throw new Error(`Sync Error (${response.status}): ${errorText}`);
+        }
+      } catch (err) {
+        console.error("[Sync] Ball-by-ball sync failed:", err);
+      }
+    };
+
+    syncBallToCloud();
 
     // Auto-Save: Trigger immediate state sync to cloud for field rehydration (striker, bowler, etc.)
     syncToDatabase(store);
@@ -1683,6 +1713,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
       // Note: isWicket only counts as a ball if ball_type is 'legal' or similar. 
       if (ballsInThisOver === 6 && !isBattingFinishing) {
         setIsOverComplete(true);
+        store.updateMatchSettings({ isWaitingForBowler: true }); // SET THE LOCK
         setTimeout(() => setShowBowlerModal(true), 1200);
       }
     }
@@ -1774,9 +1805,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
                 setSelNonStriker(null);
                 setSelBowler(null);
             } else {
-                navigate('/match-center'); // Navigate to results archive
+                setShowMatchSummaryModal(true);
             }
-        }, 2000);
+        }, 1500);
 
     } catch (err) {
         console.error("Failed to finalize innings:", err);
@@ -1793,12 +1824,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
   };
 
   const calculateTopPerformers = () => {
-    const scores: Record<string, { id: string, name: string, score: number, runs: number, balls: number, wickets: number, maidens: number, runsConceded: number }> = {};
+    const scores: Record<string, { id: string, name: string, score: number, runs: number, balls: number, wickets: number, maidens: number, runsConceded: number, overs: number }> = {};
     
     [store.innings1, store.innings2].forEach(inn => {
       if (!inn) return;
       Object.entries(inn.battingStats || {}).forEach(([id, s]: [string, any]) => {
-        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, balls: 0, wickets: 0, maidens: 0, runsConceded: 0 };
+        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, balls: 0, wickets: 0, maidens: 0, runsConceded: 0, overs: 0 };
         scores[id].runs += s.runs;
         scores[id].balls += s.balls;
         scores[id].score += s.runs + (s.fours * 2) + (s.sixes * 4);
@@ -1806,9 +1837,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
         if (s.runs >= 100) scores[id].score += 100;
       });
       Object.entries(inn.bowlingStats || {}).forEach(([id, s]: [string, any]) => {
-        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, balls: 0, wickets: 0, maidens: 0, runsConceded: 0 };
+        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, balls: 0, wickets: 0, maidens: 0, runsConceded: 0, overs: 0 };
         scores[id].wickets += s.wickets;
         scores[id].runsConceded += s.runs;
+        scores[id].overs += s.overs || 0;
         scores[id].maidens += s.maidens || 0;
         scores[id].score += (s.wickets * 25) + ((s.maidens || 0) * 10);
       });
@@ -2170,7 +2202,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
         )}
       </TimelineContainer>
 
-      <ControlsGrid>
+      <ControlsGrid style={{ opacity: store.isWaitingForBowler ? 0.6 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', position: 'relative' }}>
+        {store.isWaitingForBowler && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', borderRadius: 16 }}>
+             <button 
+               onClick={() => setShowBowlerModal(true)}
+               style={{ background: '#FAB005', color: '#000', border: 'none', padding: '12px 24px', borderRadius: 12, fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
+             >
+               SELECT NEXT BOWLER
+             </button>
+          </div>
+        )}
         <ScoringBtn onClick={() => handleRecord(0, 'legal')}>0</ScoringBtn>
         <ScoringBtn onClick={() => handleRecord(1, 'legal')}>1</ScoringBtn>
         <ScoringBtn onClick={() => handleRecord(2, 'legal')}>2</ScoringBtn>
@@ -3508,6 +3550,55 @@ const ScorerDashboard: React.FC<{ matchId?: string, players: Player[], teamLogo?
           </ModalOverlay>
         )}
       </AnimatePresence>
+
+      {showMatchSummaryModal && matchMeta && (
+        <MatchSummaryModal
+          match={matchMeta}
+          opponentName={matchMeta.opponentName || 'Opponent'}
+          onClose={() => setShowMatchSummaryModal(false)}
+          onSave={async (summary) => {
+            setSyncStatus('loading');
+            try {
+              // Prepare performer data for career update
+              const performers = calculateTopPerformers().map(p => ({
+                playerId: p.id,
+                playerName: p.name,
+                runs: p.runs,
+                balls: p.balls,
+                fours: 0, // Simplified for this sync
+                sixes: 0,
+                wickets: p.wickets,
+                bowlingRuns: p.runsConceded,
+                bowlingOvers: p.overs || 0,
+                maidens: p.maidens,
+                isNotOut: true // Summary view fallback
+              }));
+
+              await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/matches/${activeMatchId}/finalize`, {
+                method: 'POST',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
+                },
+                body: JSON.stringify({ 
+                  matchData: { ...summary, performers },
+                  updatedPlayers: performers
+                })
+              });
+
+              toast.success("Match Finalized & Career Stats Updated!");
+              localStorage.removeItem('ins-cricket-scorer');
+              localStorage.removeItem('active_match_id');
+              navigate('/match-center');
+            } catch (err) {
+              console.error("Finalization failed:", err);
+              toast.error("Finalization failed. Please check connection.");
+            } finally {
+              setSyncStatus('idle');
+            }
+          }}
+        />
+      )}
 
       <MilestoneOverlay ref={milestoneRef} />
       </>
