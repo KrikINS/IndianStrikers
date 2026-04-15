@@ -244,7 +244,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     window.refreshAppData = loadData;
-    loadData();
+    
+    // Ensure store is rehydrated before first data fetch
+    const initApp = async () => {
+      await usePlayerStore.persist.rehydrate();
+      loadData();
+    };
+    initApp();
 
     const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
     if (hasSeenSplash) {

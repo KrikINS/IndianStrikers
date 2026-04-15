@@ -84,8 +84,3 @@ export const usePlayerStore = create<PlayerState>()(
         }
     )
 );
-
-// Add this at the bottom of playerStore.ts
-if (typeof window !== 'undefined') {
-    (window as any).usePlayerStore = usePlayerStore;
-}
