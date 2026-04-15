@@ -29,15 +29,15 @@ export const usePlayerStore = create<PlayerState>()(
                 set({ loading: true, error: null });
                 try {
                     const players = await api.getPlayers();
-                    set({ 
-                        players: players || [], 
-                        loading: false 
+                    set({
+                        players: players || [],
+                        loading: false
                     });
                 } catch (err: any) {
                     console.error("[playerStore] Failed to fetch players:", err);
-                    set({ 
-                        error: err.message || 'Failed to fetch players', 
-                        loading: false 
+                    set({
+                        error: err.message || 'Failed to fetch players',
+                        loading: false
                     });
                 }
             },
@@ -45,8 +45,8 @@ export const usePlayerStore = create<PlayerState>()(
             addPlayer: async (player) => {
                 try {
                     const newPlayer = await api.addPlayer(player);
-                    set((state) => ({ 
-                        players: [newPlayer, ...state.players] 
+                    set((state) => ({
+                        players: [newPlayer, ...state.players]
                     }));
                 } catch (err: any) {
                     console.error("[playerStore] Failed to add player:", err);
@@ -84,3 +84,8 @@ export const usePlayerStore = create<PlayerState>()(
         }
     )
 );
+
+// Add this at the bottom of playerStore.ts
+if (typeof window !== 'undefined') {
+    (window as any).usePlayerStore = usePlayerStore;
+}
