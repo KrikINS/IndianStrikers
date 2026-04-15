@@ -9,7 +9,7 @@ interface OpponentTeamsProps {
 }
 
 const OpponentTeams: React.FC<OpponentTeamsProps> = ({ userRole, currentUser }) => {
-  const { opponents: teams, addOpponent: onAddTeam, updateOpponent: onUpdateTeam, deleteOpponent: onDeleteTeam } = useOpponentStore();
+  const { opponents: teams, loading, addOpponent: onAddTeam, updateOpponent: onUpdateTeam, deleteOpponent: onDeleteTeam } = useOpponentStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -175,154 +175,165 @@ const OpponentTeams: React.FC<OpponentTeamsProps> = ({ userRole, currentUser }) 
       </div>
 
       <div className="space-y-4">
-        {teams.map((team) => {
-          const isExpanded = expandedId === team.id;
-          const avatarColor = team.logoUrl ? '' : getAvatarColor(team.name);
+        {loading ? (
+             <div className="p-24 text-center">
+             <div className="w-16 h-16 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin mx-auto mb-4"></div>
+             <p className="text-slate-400 font-bold animate-pulse">Analyzing Rival Data...</p>
+           </div>
+        ) : teams.length > 0 ? (
+          teams.map((team) => {
+            const isExpanded = expandedId === team.id;
+            const avatarColor = team.logoUrl ? '' : getAvatarColor(team.name);
 
-          return (
-            <div key={team.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-all duration-300">
-              {/* Accordion Header */}
-              <button
-                type="button"
-                onClick={() => toggleAccordion(team.id)}
-                className={`
-                  w-full text-left p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors group
-                  ${isExpanded ? 'bg-slate-50 border-b border-slate-100' : ''}
-                `}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`
-                    w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white shadow-md text-sm shrink-0 overflow-hidden
-                    ${avatarColor}
-                  `}>
-                    {team.logoUrl ? (
-                      <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover" />
-                    ) : (
-                      getInitials(team.name)
+            return (
+              <div key={team.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden transition-all duration-300">
+                {/* Accordion Header */}
+                <button
+                  type="button"
+                  onClick={() => toggleAccordion(team.id)}
+                  className={`
+                    w-full text-left p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors group
+                    ${isExpanded ? 'bg-slate-50 border-b border-slate-100' : ''}
+                  `}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`
+                      w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white shadow-md text-sm shrink-0 overflow-hidden
+                      ${avatarColor}
+                    `}>
+                      {team.logoUrl ? (
+                        <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover" />
+                      ) : (
+                        getInitials(team.name)
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800">{team.name}</h3>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <span>{team.players.length} Players</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Star size={10} className="text-yellow-500 fill-yellow-500" />
+                          Rank #{team.rank}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {canEdit && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => handleOpenEdit(team, e)}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                          title="Edit Team"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={(e) => handleDelete(team.id, team.name, e)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                          title="Delete Team"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     )}
+                    <div className="w-px h-6 bg-slate-200 mx-2"></div>
+                    {isExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800">{team.name}</h3>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <span>{team.players.length} Players</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Star size={10} className="text-yellow-500 fill-yellow-500" />
-                        Rank #{team.rank}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                </button>
 
-                <div className="flex items-center gap-3">
-                  {canEdit && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => handleOpenEdit(team, e)}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                        title="Edit Team"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        onClick={(e) => handleDelete(team.id, team.name, e)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                        title="Delete Team"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  )}
-                  <div className="w-px h-6 bg-slate-200 mx-2"></div>
-                  {isExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
-                </div>
-              </button>
+                {/* Accordion Body */}
+                <div className={`
+                  grid transition-[grid-template-rows] duration-300 ease-out
+                  ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}
+                `}>
+                  <div className="overflow-hidden">
+                    <div className="p-6 border-t border-slate-100 grid md:grid-cols-3 gap-8">
 
-              {/* Accordion Body */}
-              <div className={`
-                grid transition-[grid-template-rows] duration-300 ease-out
-                ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}
-              `}>
-                <div className="overflow-hidden">
-                  <div className="p-6 border-t border-slate-100 grid md:grid-cols-3 gap-8">
-
-                    {/* Stats Column */}
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tactical Analysis</h4>
-                      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                        <div className="flex items-center gap-2 text-blue-800 mb-1">
-                          <TrendingUp size={16} />
-                          <span className="font-bold text-sm">Key Strength</span>
+                      {/* Stats Column */}
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tactical Analysis</h4>
+                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                          <div className="flex items-center gap-2 text-blue-800 mb-1">
+                            <TrendingUp size={16} />
+                            <span className="font-bold text-sm">Key Strength</span>
+                          </div>
+                          <p className="text-slate-700">{team.strength}</p>
                         </div>
-                        <p className="text-slate-700">{team.strength}</p>
-                      </div>
-                      <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                        <div className="flex items-center gap-2 text-orange-800 mb-1">
-                          <AlertCircle size={16} />
-                          <span className="font-bold text-sm">Key Weakness</span>
+                        <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                          <div className="flex items-center gap-2 text-orange-800 mb-1">
+                            <AlertCircle size={16} />
+                            <span className="font-bold text-sm">Key Weakness</span>
+                          </div>
+                          <p className="text-slate-700">{team.weakness}</p>
                         </div>
-                        <p className="text-slate-700">{team.weakness}</p>
                       </div>
-                    </div>
 
-                    {/* Roster Column */}
-                    <div className="md:col-span-2 space-y-4">
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                        Squad List
-                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{team.players.length}</span>
-                      </h4>
+                      {/* Roster Column */}
+                      <div className="md:col-span-2 space-y-4">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex justify-between items-center">
+                          Squad List
+                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{team.players.length}</span>
+                        </h4>
 
-                      <div className="bg-slate-50 rounded-xl p-4 min-h-[150px] max-h-[300px] overflow-y-auto">
-                        {team.players.length === 0 ? (
-                          <p className="text-slate-400 text-sm text-center py-4">No players listed yet.</p>
-                        ) : (
-                          <div className="flex flex-wrap gap-2">
-                            {team.players.map(player => (
-                              <div key={player.id} className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 shadow-sm flex items-center gap-2 group/player">
-                                {player.name}
-                                {canEdit && (
-                                  <button 
-                                    onClick={() => handleRemovePlayer(team.id, player.id)}
-                                    className="text-slate-300 hover:text-red-500 transition-colors"
-                                    title="Remove Player"
-                                  >
-                                    <X size={14} />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
+                        <div className="bg-slate-50 rounded-xl p-4 min-h-[150px] max-h-[300px] overflow-y-auto">
+                          {team.players.length === 0 ? (
+                            <p className="text-slate-400 text-sm text-center py-4">No players listed yet.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {team.players.map(player => (
+                                <div key={player.id} className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 shadow-sm flex items-center gap-2 group/player">
+                                  {player.name}
+                                  {canEdit && (
+                                    <button 
+                                      onClick={() => handleRemovePlayer(team.id, player.id)}
+                                      className="text-slate-300 hover:text-red-500 transition-colors"
+                                      title="Remove Player"
+                                    >
+                                      <X size={14} />
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {canEdit && (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="Add player name..."
+                              value={newPlayerName}
+                              onChange={(e) => setNewPlayerName(e.target.value)}
+                              className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleAddPlayer(team.id); }}
+                            />
+                            <button
+                              onClick={() => handleAddPlayer(team.id)}
+                              disabled={!newPlayerName.trim()}
+                              className="bg-slate-800 hover:bg-slate-900 text-white px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              title="Add Player"
+                            >
+                              <UserPlus size={18} />
+                            </button>
                           </div>
                         )}
                       </div>
 
-                      {canEdit && (
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="Add player name..."
-                            value={newPlayerName}
-                            onChange={(e) => setNewPlayerName(e.target.value)}
-                            className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleAddPlayer(team.id); }}
-                          />
-                          <button
-                            onClick={() => handleAddPlayer(team.id)}
-                            disabled={!newPlayerName.trim()}
-                            className="bg-slate-800 hover:bg-slate-900 text-white px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            title="Add Player"
-                          >
-                            <UserPlus size={18} />
-                          </button>
-                        </div>
-                      )}
                     </div>
-
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        ) : (
+          <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">
+            No opponents found.
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Team Modal */}

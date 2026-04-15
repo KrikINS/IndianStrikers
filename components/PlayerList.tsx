@@ -617,7 +617,12 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
               Current Squad
               <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{displayedPlayers.length}</span>
             </h3>
-            {displayedPlayers.length > 0 ? (
+            {loading ? (
+              <div className="p-24 text-center">
+                <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-slate-400 font-bold animate-pulse">Recruiting Squad Data...</p>
+              </div>
+            ) : displayedPlayers.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {displayedPlayers?.map(renderPlayerCard)}
               </div>

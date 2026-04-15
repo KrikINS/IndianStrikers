@@ -155,9 +155,10 @@ const INITIAL_BOWLING_STATS: BowlingStats = { matches: 142, innings: 120, overs:
 
 export const getPlayers = async (): Promise<Player[]> => {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased to 60s for 5MB+ payloads
 
   try {
+    console.log(`[storageService] Fetching players from ${API_URL}/players...`);
     const res = await fetch(`${API_URL}/players`, { 
       signal: controller.signal 
     });
@@ -191,6 +192,7 @@ export const getPlayers = async (): Promise<Player[]> => {
         wicketsTaken: p.wickets_taken,
         isCaptain: p.is_captain,
         isViceCaptain: p.is_vice_captain,
+        isActive: p.is_active ?? true, // Explicitly map is_active
         isAvailable: p.is_available,
         battingStats: p.batting_stats,
         bowlingStats: p.bowling_stats,
@@ -201,6 +203,10 @@ export const getPlayers = async (): Promise<Player[]> => {
         dob: p.dob,
         externalId: p.external_id
       }));
+
+    if (players.length > 0) {
+        console.table(players.slice(0, 5).map(p => ({ id: p.id, name: p.name, isActive: p.isActive })));
+    }
 
     // Update offline cache for next time
     localStorage.setItem('ins_offline_players', JSON.stringify(players));
