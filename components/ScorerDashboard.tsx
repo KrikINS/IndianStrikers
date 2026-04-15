@@ -46,6 +46,7 @@ const DashboardContainer = styled.div`
   font-family: 'Inter', system-ui, sans-serif;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom);
 `;
@@ -123,19 +124,20 @@ const OverSeparator = styled.div`
 
 const ScoreSection = styled.div`
   background: #F8F9FA;
-  padding: 12px 16px;
+  padding: 8px 16px;
   border-bottom: 1px solid #E9ECEF;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
   flex-shrink: 0;
 `;
 
 const MainScore = styled.h1`
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 800;
   margin: 0;
+  line-height: 1.1;
   color: #001F3F;
 `;
 
@@ -146,7 +148,7 @@ const OversText = styled.div`
 `;
 
 const ActiveParticipants = styled.div`
-  padding: 6px 12px;
+  padding: 4px 12px;
   background: #FFFFFF;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -155,19 +157,20 @@ const ActiveParticipants = styled.div`
   flex-shrink: 0;
 
   @media (min-width: 768px) {
-    padding: 12px;
+    padding: 8px 12px;
     gap: 12px;
   }
 `;
 
 const ParticipantCard = styled.div<{ $active?: boolean }>`
-  padding: 12px;
+  padding: 8px 12px;
   border-radius: 8px;
   background: ${props => props.$active ? '#E7F5FF' : '#F8F9FA'};
   border: 1px solid ${props => props.$active ? '#339AF0' : '#E9ECEF'};
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow: hidden;
 `;
 
 const CardHeader = styled.div`
@@ -178,22 +181,23 @@ const CardHeader = styled.div`
 `;
 
 const NameLabel = styled.span`
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 800;
   color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 70%;
+  opacity: 0.6;
 `;
 
 const StatValue = styled.span`
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 800;
   color: #212529;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 `;
 
 const TimelineContainer = styled.div`
@@ -236,34 +240,59 @@ const BallCircle = styled.div<{ $type: string }>`
   }};
 `;
 
-const ControlsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  padding: 8px 12px;
-  flex: 1;
-  min-height: 0;
-
-  @media (min-width: 400px) {
-    gap: 8px;
-    padding: 12px;
+const ScoringInterface = styled.div`
+  padding: 8px 12px 12px;
+  background: #ffffff;
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  border-top: 1px solid #f1f3f5;
+  @media (min-height: 800px) {
+    padding: 12px 16px 20px;
   }
 `;
 
+const RunGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 8px;
+  flex: 1;
+`;
+
+const ExtraStack = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(4, 1fr);
+  gap: 4px;
+  width: 58px;
+`;
+
 const ScoringBtn = styled.button<{ $variant?: 'run' | 'wicket' | 'extra' | 'undo' }>`
-  aspect-ratio: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
   border-radius: 12px;
   border: none;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  transition: all 0.1s;
+  
+  &:active {
+    transform: scale(0.92);
+    opacity: 0.8;
+  }
   
   ${props => {
     switch(props.$variant) {
-      case 'wicket': return 'background: #FFE3E3; color: #E03131;';
-      case 'extra': return 'background: #FFF4E6; color: #D9480F;';
+      case 'wicket': return 'background: #FFE3E3; color: #E03131; border: 1px solid #FFA8A8;';
+      case 'extra': return 'background: #FFF4E6; color: #D9480F; border: 1px solid #FFD8A8; font-size: 0.75rem;';
       case 'undo': return 'background: #F1F3F5; color: #495057;';
-      default: return 'background: #E7F5FF; color: #1971C2;';
+      default: return 'background: #E7F5FF; color: #1971C2; border: 1px solid #A5D8FF;';
     }
   }}
 `;
@@ -2256,7 +2285,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         )}
       </TimelineContainer>
 
-      <ControlsGrid style={{ opacity: store.isWaitingForBowler ? 0.6 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', position: 'relative' }}>
+      <ScoringInterface style={{ opacity: store.isWaitingForBowler ? 0.6 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', position: 'relative' }}>
         {store.isWaitingForBowler && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', borderRadius: 16 }}>
              <button 
@@ -2267,19 +2296,25 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
              </button>
           </div>
         )}
-        <ScoringBtn onClick={() => handleRecord(0, 'legal')}>0</ScoringBtn>
-        <ScoringBtn onClick={() => handleRecord(1, 'legal')}>1</ScoringBtn>
-        <ScoringBtn onClick={() => handleRecord(2, 'legal')}>2</ScoringBtn>
-        <ScoringBtn onClick={() => handleRecord(3, 'legal')}>3</ScoringBtn>
-        <ScoringBtn onClick={() => handleRecord(4, 'legal')}>4</ScoringBtn>
-        <ScoringBtn onClick={() => handleRecord(6, 'legal')}>6</ScoringBtn>
-        <ScoringBtn $variant="extra" onClick={() => { setExtraType('wd'); setShowNBModal(true); }}>WD</ScoringBtn>
-        <ScoringBtn $variant="extra" onClick={() => { setExtraType('nb'); setShowNBModal(true); }}>NB</ScoringBtn>
-        <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
-        <ScoringBtn $variant="extra" onClick={() => { setExtraType('byes'); setShowNBModal(true); }}>B</ScoringBtn>
-        <ScoringBtn $variant="wicket" onClick={() => setShowWicketModal(true)}>W</ScoringBtn>
-        <ScoringBtn $variant="extra" style={{ background: 'rgba(255, 77, 77, 0.1)', color: '#FF4D4D', border: '1px solid rgba(255, 77, 77, 0.2)' }} onClick={() => setShowPenaltyModal(true)}>PEN</ScoringBtn>
-      </ControlsGrid>
+        
+        <RunGrid>
+          <ScoringBtn onClick={() => handleRecord(0, 'legal')}>0</ScoringBtn>
+          <ScoringBtn onClick={() => handleRecord(1, 'legal')}>1</ScoringBtn>
+          <ScoringBtn onClick={() => handleRecord(2, 'legal')}>2</ScoringBtn>
+          <ScoringBtn onClick={() => handleRecord(3, 'legal')}>3</ScoringBtn>
+          <ScoringBtn onClick={() => handleRecord(4, 'legal')}>4</ScoringBtn>
+          <ScoringBtn onClick={() => handleRecord(5, 'legal')}>5</ScoringBtn>
+          <ScoringBtn onClick={() => handleRecord(6, 'legal')}>6</ScoringBtn>
+          <ScoringBtn $variant="wicket" style={{ background: '#FF4D4D', color: '#FFF' }} onClick={() => setShowWicketModal(true)}>WKT</ScoringBtn>
+        </RunGrid>
+
+        <ExtraStack>
+          <ScoringBtn $variant="extra" onClick={() => { setExtraType('wd'); setShowNBModal(true); }}>WD</ScoringBtn>
+          <ScoringBtn $variant="extra" onClick={() => { setExtraType('nb'); setShowNBModal(true); }}>NB</ScoringBtn>
+          <ScoringBtn $variant="extra" onClick={() => { setExtraType('byes'); setShowNBModal(true); }}>B</ScoringBtn>
+          <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
+        </ExtraStack>
+      </ScoringInterface>
 
       {showBowlerModal && (
         <ModalOverlay onClick={() => setShowBowlerModal(false)}>
