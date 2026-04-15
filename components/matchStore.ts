@@ -527,13 +527,15 @@ export const useCricketScorer = create<ScorerStore>()(
                 if (historyStack.length === 0) return;
                 
                 // Cross-Innings Boundary Protection: 
-                // Cannot undo if in 2nd innings and 2nd innings balls have started
-                if (currentInnings === 2 && innings2 && innings2.history && innings2.history.length > 0) {
-                    console.warn("Undo blocked: Cannot undo across innings once 2nd innings has started.");
+                // Only block if we are trying to undo the very first action of the 2nd innings 
+                // which would revert the match to 1st innings state (potentially dangerous).
+                const prevState = historyStack[historyStack.length - 1];
+                if (currentInnings === 2 && prevState.currentInnings === 1) {
+                    console.warn("Undo blocked: Cannot undo across innings boundary.");
                     return;
                 }
 
-                const prevState = historyStack[historyStack.length - 1];
+
                 set({
                     ...prevState,
                     historyStack: historyStack.slice(0, -1),

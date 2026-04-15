@@ -40,25 +40,27 @@ import html2canvas from 'html2canvas';
 import toast from 'react-hot-toast';
 
 const DashboardContainer = styled.div`
-  min-height: 100vh;
+  height: 100dvh;
   background-color: #FFFFFF;
   color: #1A1A1A;
   font-family: 'Inter', system-ui, sans-serif;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
 `;
 
 const Header = styled.header`
   background-color: #001F3F;
   color: #FFFFFF;
-  padding: 12px 16px;
+  padding: 8px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 100;
   border-bottom: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
 `;
 
 const BadgeContainer = styled.div`
@@ -121,35 +123,40 @@ const OverSeparator = styled.div`
 
 const ScoreSection = styled.div`
   background: #F8F9FA;
-  padding: 24px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid #E9ECEF;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-shrink: 0;
 `;
 
 const MainScore = styled.h1`
-  font-size: clamp(2.5rem, 12vw, 3.5rem);
+  font-size: 1.8rem;
   font-weight: 800;
   margin: 0;
   color: #001F3F;
 `;
 
 const OversText = styled.div`
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #6C757D;
 `;
 
 const ActiveParticipants = styled.div`
-  padding: 12px;
+  padding: 6px 12px;
   background: #FFFFFF;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
   border-bottom: 1px solid #F1F3F5;
+  flex-shrink: 0;
 
   @media (min-width: 768px) {
-    padding: 16px;
-    gap: 16px;
+    padding: 12px;
+    gap: 12px;
   }
 `;
 
@@ -171,21 +178,28 @@ const CardHeader = styled.div`
 `;
 
 const NameLabel = styled.span`
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #495057;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
 `;
 
 const StatValue = styled.span`
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #212529;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const TimelineContainer = styled.div`
-  margin: 0 16px 12px; /* Align with other containers */
-  padding: 10px 12px;
-  background: #001f3f; /* Deep navy broadcast theme */
+  margin: 4px 12px;
+  padding: 6px 10px;
+  background: #001f3f;
   border-radius: 8px;
   overflow-x: auto;
   white-space: nowrap;
@@ -195,6 +209,7 @@ const TimelineContainer = styled.div`
   box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
   scrollbar-width: none;
   border: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
   &::-webkit-scrollbar { display: none; }
 `;
 
@@ -224,12 +239,14 @@ const BallCircle = styled.div<{ $type: string }>`
 const ControlsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding: 12px;
+  gap: 6px;
+  padding: 8px 12px;
+  flex: 1;
+  min-height: 0;
 
   @media (min-width: 400px) {
-    gap: 12px;
-    padding: 20px;
+    gap: 8px;
+    padding: 12px;
   }
 `;
 
@@ -2184,7 +2201,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </div>
               <button 
                 title="Undo last ball"
-                onClick={() => { if(window.confirm("Undo last ball?")) store.undoLastBall(); }}
+                onClick={() => { 
+                  if(window.confirm("Undo last ball?")) {
+                    store.undoLastBall();
+                    setIsOverComplete(false);
+                  }
+                }}
                 style={{ background: 'rgba(0,0,0,0.05)', color: '#001F3F', border: 'none', borderRadius: '50%', padding: '4px', cursor: 'pointer' }}
               >
                 <Undo size={14} />
@@ -2720,7 +2742,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
           <div style={{ padding: '20px', borderTop: '1px solid #E9ECEF', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <button 
-              onClick={() => { if(window.confirm("Undo last ball and resume 1st Innings?")) store.undoLastBall(); }}
+              onClick={() => { 
+                if(window.confirm("Undo last ball and resume 1st Innings?")) {
+                  store.undoLastBall();
+                  setIsOverComplete(false);
+                }
+              }}
               style={{ 
                 width: '100%', padding: '12px', borderRadius: 12, border: '1px solid #FAB005', 
                 background: 'transparent', color: '#FAB005', fontWeight: 800, fontSize: '0.8rem',
@@ -3312,6 +3339,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   <button 
                     onClick={() => {
                         store.undoLastBall();
+                        setIsOverComplete(false);
                         setShowInningsReview(false);
                     }}
                     disabled={syncStatus === 'loading'}
