@@ -176,12 +176,14 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
   // Subscribe to the rosterTab for filtering (active vs inactive)
   const displayedPlayers = (searchingPlayers || []).filter((p: Player) => {
-    // If we are on the active tab, show everyone who isn't explicitly marked inactive
+    // Determine active status accurately
+    const isActuallyActive = p.isActive && p.status !== 'inactive';
+
     if (rosterTab === 'active') {
-      return p.isActive !== false && p.status !== 'inactive';
+      return isActuallyActive;
     }
-    // Otherwise, show the ones we know are inactive
-    return p.isActive === false || p.status === 'inactive';
+    // Inactive tab shows everyone else
+    return !isActuallyActive;
   });
 
   // TEMP DEBUG: Log this to see if players exist but are filtered out

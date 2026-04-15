@@ -192,7 +192,7 @@ export const getPlayers = async (): Promise<Player[]> => {
         wicketsTaken: p.wickets_taken,
         isCaptain: p.is_captain,
         isViceCaptain: p.is_vice_captain,
-        isActive: p.is_active ?? true, // Explicitly map is_active
+        isActive: (p.is_active !== false && p.is_active !== 0 && p.is_active !== 'false') && p.status !== 'inactive',
         isAvailable: p.is_available,
         battingStats: p.batting_stats,
         bowlingStats: p.bowling_stats,
@@ -208,14 +208,27 @@ export const getPlayers = async (): Promise<Player[]> => {
         console.table(players.slice(0, 5).map(p => ({ id: p.id, name: p.name, isActive: p.isActive })));
     }
 
-    // Update offline cache for next time
-    localStorage.setItem('ins_offline_players', JSON.stringify(players));
+    // Update offline cache safely to prevent QuotaExceededError on large payloads
+    try {
+        localStorage.setItem('ins_offline_players', JSON.stringify(players));
+    } catch (cacheError) {
+        console.warn("[storageService] Local storage is full. Players will not be available offline.");
+        // Try clearing old cache to make room for new data if needed
+        try { localStorage.removeItem('ins_offline_players'); } catch(e) {}
+    }
+
     return players;
   } catch (e: any) {
     clearTimeout(timeoutId);
-    console.warn("[storageService] Tunnel is slow, but waiting for data...");
-    const cached = localStorage.getItem('ins_offline_players');
-    return cached ? JSON.parse(cached) : []; 
+    console.error(`[storageService] Error fetching players:`, e);
+    console.warn("[storageService] Tunnel is slow or API failed, attempting to use cache...");
+    
+    try {
+        const cached = localStorage.getItem('ins_offline_players');
+        return cached ? JSON.parse(cached) : []; 
+    } catch (parseError) {
+        return [];
+    }
   }
 };
 
