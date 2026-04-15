@@ -835,14 +835,18 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                     </div>
                   </div>
 
-                  <div className="flex gap-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="flex flex-wrap gap-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" name="isCaptain" checked={formData.isCaptain} onChange={handleInputChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                      <span className="text-sm font-semibold text-slate-700">Team Captain</span>
+                      <span className="text-sm font-semibold text-slate-700">Captain</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" name="isViceCaptain" checked={formData.isViceCaptain} onChange={handleInputChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                      <span className="text-sm font-semibold text-slate-700">Vice Captain</span>
+                      <span className="text-sm font-semibold text-slate-700">Vice Capt</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer border-l border-slate-200 pl-6">
+                      <input type="checkbox" name="isActive" checked={formData.isActive !== false} onChange={handleInputChange} className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" />
+                      <span className="text-sm font-semibold text-emerald-700">Active Squad member</span>
                     </label>
                   </div>
 

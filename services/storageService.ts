@@ -251,7 +251,9 @@ export const addPlayer = async (player: Partial<Player>) => {
     linked_user_id: player.linkedUserId,
     jersey_number: player.jerseyNumber,
     dob: player.dob || null,
-    external_id: player.externalId
+    external_id: player.externalId,
+    is_active: player.isActive,
+    status: player.status
   };
   const res = await fetch(`${API_URL}/players`, {
     method: 'POST',
@@ -299,7 +301,9 @@ export const updatePlayer = async (player: Player) => {
     linked_user_id: player.linkedUserId,
     jersey_number: player.jerseyNumber,
     dob: player.dob || null,
-    external_id: player.externalId
+    external_id: player.externalId,
+    is_active: player.isActive,
+    status: player.status
   };
   const res = await fetch(`${API_URL}/players/${player.id}`, {
     method: 'PUT',
