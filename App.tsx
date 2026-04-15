@@ -14,16 +14,18 @@ import MatchCenter from './components/MatchCenter';
 import ControlPanel from './components/ControlPanel';
 import { useMatchCenter } from './components/matchCenterStore';
 import { useMasterData } from './components/masterDataStore';
+import { usePlayerStore } from './store/playerStore';
+import { useOpponentStore } from './store/opponentStore';
 import GroundsManager from './components/GroundsManager';
 import TournamentsManager from './components/TournamentsManager';
 import UserManagement from './components/UserManagement';
 import { ScorecardPage } from './components/ScorecardPage';
 import LiveScorecardPage from './components/LiveScorecardPage';
 import { Player, UserRole, OpponentTeam } from './types';
-import { getPlayers, addPlayer, updatePlayer, deletePlayer, getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo, getMatches } from './services/storageService';
+import { getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo, getMatches } from './services/storageService';
 import { Menu, Shield, ArrowRight } from 'lucide-react';
 import KirikINSLogo from './components/KirikINSLogo';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 
 declare global {
   interface Window {
@@ -77,12 +79,8 @@ const TournamentDetailViewPlaceholder = () => {
 };
 
 const AppContent: React.FC<{
-  players: Player[],
   opponents: OpponentTeam[],
   userRole: UserRole,
-  onAddPlayer: (p: Player) => void,
-  onUpdatePlayer: (p: Player) => void,
-  onDeletePlayer: (id: string) => void,
   onAddOpponent: (t: OpponentTeam) => void,
   onUpdateOpponent: (t: OpponentTeam) => void,
   onDeleteOpponent: (id: string) => void,
@@ -95,7 +93,7 @@ const AppContent: React.FC<{
   linkedPlayer?: Player,
   onRefresh: () => Promise<void>,
   isOffline?: boolean
-}> = ({ players, opponents, userRole, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onSignOut, teamLogo, onUpdateLogo, isAdminView, onToggleAdminView, currentUser, linkedPlayer, onRefresh, isOffline }) => {
+}> = ({ opponents, userRole, onAddOpponent, onUpdateOpponent, onDeleteOpponent, onSignOut, teamLogo, onUpdateLogo, isAdminView, onToggleAdminView, currentUser, linkedPlayer, onRefresh, isOffline }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -103,19 +101,15 @@ const AppContent: React.FC<{
 
   useEffect(() => {
     const handleBackButton = async () => {
-      // If on home screen, exit app
       if (location.pathname === '/home' || location.pathname === '/') {
         await CapacitorApp.exitApp();
       } else {
-        // Otherwise go back in history
         navigate(-1);
       }
     };
 
-    // Add listener
     const listener = CapacitorApp.addListener('backButton', handleBackButton);
 
-    // Cleanup
     return () => {
       listener.then(l => l.remove());
     };
@@ -139,56 +133,46 @@ const AppContent: React.FC<{
           <main className="flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto">
             <div className="p-3 md:p-6 lg:p-8 w-full pb-24 md:pb-8">
               <Routes>
-                <Route path="/home" element={<Dashboard players={players} userRole={effectiveRole} teamLogo={teamLogo} currentUser={currentUser} />} />
+                <Route path="/home" element={<Dashboard userRole={effectiveRole} teamLogo={teamLogo} currentUser={currentUser} />} />
                 <Route
                   path="/roster"
                   element={
                     <PlayerList
-                      players={players}
                       userRole={effectiveRole}
                       currentUser={currentUser}
-                      onAddPlayer={onAddPlayer}
-                      onUpdatePlayer={onUpdatePlayer}
-                      onDeletePlayer={onDeletePlayer}
                     />
                   }
                 />
-                <Route path="/fielding" element={<FieldingMap players={players} userRole={effectiveRole} currentUser={currentUser} />} />
+                <Route path="/fielding" element={<FieldingMap userRole={effectiveRole} currentUser={currentUser} />} />
                 <Route
                   path="/opponents"
                   element={
                     <OpponentTeams
-                      teams={opponents}
-                      onAddTeam={onAddOpponent}
-                      onUpdateTeam={onUpdateOpponent}
-                      onDeleteTeam={onDeleteOpponent}
                       userRole={effectiveRole}
                       currentUser={currentUser}
                     />
                   }
                 />
                 <Route path="/memories" element={<Memories userRole={effectiveRole} currentUser={currentUser} />} />
-                <Route path="/match-center" element={<MatchCenter players={players} opponents={opponents} userRole={effectiveRole} currentUser={currentUser} teamLogo={teamLogo} onUpdatePlayer={onUpdatePlayer} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
-                <Route path="/scorer" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} teamLogo={teamLogo} /> : <Unauthorized />} />
-                <Route path="/scorer/:id" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard players={players} teamLogo={teamLogo} /> : <Unauthorized />} />
-                <Route path="/live/:id" element={<LiveScorecardPage players={players} opponents={opponents} />} />
-                {/* Control Panel Routes - Admin view required */}
-                <Route path="/control-panel" element={effectiveRole === 'admin' ? <ControlPanel players={players} onUpdatePlayer={onUpdatePlayer} /> : <Unauthorized />}>
+                <Route path="/match-center" element={<MatchCenter opponents={opponents} userRole={effectiveRole} currentUser={currentUser} teamLogo={teamLogo} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
+                <Route path="/scorer" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard teamLogo={teamLogo} /> : <Unauthorized />} />
+                <Route path="/scorer/:id" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard teamLogo={teamLogo} /> : <Unauthorized />} />
+                <Route path="/live/:id" element={<LiveScorecardPage opponents={opponents} />} />
+                <Route path="/control-panel" element={effectiveRole === 'admin' ? <ControlPanel /> : <Unauthorized />}>
                   <Route index element={<Navigate to="grounds" replace />} />
                   <Route path="grounds" element={<GroundsManager />} />
                   <Route path="tournaments" element={<TournamentsManager isAdmin={true} />} />
-                  <Route path="legacy" element={<LegacyEditor players={players} onUpdatePlayer={onUpdatePlayer} />} />
+                  <Route path="legacy" element={<LegacyEditor />} />
                   <Route path="users" element={<UserManagement />} />
                 </Route>
               
-              <Route path="/scorecard/:id" element={<ScorecardPage players={players} opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />
+              <Route path="/scorecard/:id" element={<ScorecardPage opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />
               <Route path="/tournaments/:id" element={<TournamentDetailViewPlaceholder />} />
               
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           </div>
           
-          {/* Persistent Branding Logo - Fixed Bottom Right, 50% Size */}
           <div className="fixed bottom-4 right-4 z-[9999] pointer-events-none select-none opacity-40 transition-opacity hover:opacity-100 hidden md:block">
             <div className="scale-50 origin-bottom-right">
               <KirikINSLogo size="medium" />
@@ -198,7 +182,6 @@ const AppContent: React.FC<{
         </main>
       </div>
 
-      {/* Global Toast Notifications */}
       <Toaster
         position="bottom-center"
         toastOptions={{
@@ -222,8 +205,8 @@ const AppContent: React.FC<{
 };
 
 const App: React.FC = () => {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
+  const { players, fetchPlayers, addPlayer: storeAddPlayer, updatePlayer: storeUpdatePlayer, deletePlayer: storeDeletePlayer } = usePlayerStore();
+  const { opponents, fetchOpponents, addOpponent: handleAddOpponent, updateOpponent: handleUpdateOpponent, deleteOpponent: handleDeleteOpponent } = useOpponentStore();
   const [showSplash, setShowSplash] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>('guest');
   const [isAdminView, setIsAdminView] = useState(false);
@@ -231,8 +214,9 @@ const App: React.FC = () => {
   const [teamLogo, setTeamLogo] = useState<string>('');
   const [isOffline, setIsOffline] = useState(false);
   const resetZombieMatches = useMatchCenter(state => state.resetZombieMatches);
+  const isOfflineStore = useMasterData(state => state.isOffline);
+  const setOfflineStore = useMasterData(state => state.setOffline);
 
-  // Auto-reset "Zombie" matches (Live matches from previous days)
   useEffect(() => {
     resetZombieMatches();
   }, [resetZombieMatches]);
@@ -240,52 +224,36 @@ const App: React.FC = () => {
   const loadData = async () => {
     try {
       console.log("Fetching data from backend...");
-      const results = await Promise.allSettled([
-        getPlayers(),
-        getOpponents(),
-        getTeamLogo(),
+      // Fetch data via stores
+      await Promise.allSettled([
+        fetchPlayers(),
+        fetchOpponents(),
         useMasterData.getState().syncMasterData(),
-        useMatchCenter.getState().syncWithCloud()
+        useMatchCenter.getState().syncWithCloud(),
+        getTeamLogo().then(l => setTeamLogo(l || ''))
       ]);
 
-      const failedCount = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && (r.value === null || r.value === undefined))).length;
-      
-      // If majority of critical fetches failed or returned null (handleResponse 500), mark offline
-      if (failedCount >= 2) {
-        setIsOffline(true);
-      } else {
-        setIsOffline(false);
-      }
-
-      const p = results[0].status === 'fulfilled' ? (results[0].value as Player[] || []) : [];
-      const o = results[1].status === 'fulfilled' ? (results[1].value as OpponentTeam[] || []) : [];
-      const l = results[2].status === 'fulfilled' ? (results[2].value as string || '') : '';
-
-      setPlayers(p);
-      setOpponents(o);
-      setTeamLogo(l);
-    } catch (e: any) {
-      console.error('Failed to load data:', e);
+      setIsOffline(false);
+      setOfflineStore(false);
+    } catch (error) {
+      console.error("Failed to load data:", error);
       setIsOffline(true);
+      setOfflineStore(true);
     }
   };
 
   useEffect(() => {
-    // Expose loadData as refreshData
     window.refreshAppData = loadData;
     loadData();
 
-    // Check if splash has been seen this session
     const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
     if (hasSeenSplash) {
-      // Recover session role if exists, default to guest if not
       const savedRole = sessionStorage.getItem('userRole') as UserRole;
       if (savedRole) setUserRole(savedRole);
       
       const savedAdminView = sessionStorage.getItem('isAdminView');
       if (savedAdminView === 'true') setIsAdminView(true);
 
-      // 3. Load Matches via cloud sync (utilizes nuclear filters)
       useMatchCenter.getState().syncWithCloud();
 
       const savedUser = sessionStorage.getItem('currentUser');
@@ -297,7 +265,7 @@ const App: React.FC = () => {
 
   const handleLoginComplete = (role: UserRole, user?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }) => {
     setUserRole(role);
-    setIsAdminView(false); // Default to member view on entry
+    setIsAdminView(false);
     if (user) {
       setCurrentUser(user);
       sessionStorage.setItem('currentUser', JSON.stringify(user));
@@ -328,9 +296,7 @@ const App: React.FC = () => {
   const handleAddPlayer = async (player: Player) => {
     if (userRole !== 'admin') return;
     try {
-      const newPlayer = await addPlayer(player);
-      // Use the verified player from backend (with real ID)
-      setPlayers(prev => [newPlayer, ...prev]);
+      await storeAddPlayer(player);
     } catch (e: any) {
       console.error(e);
       alert(`Failed to add player: ${e.message || 'Unknown Error'}`);
@@ -340,8 +306,7 @@ const App: React.FC = () => {
   const handleUpdatePlayer = async (updatedPlayer: Player) => {
     if (userRole !== 'admin') return;
     try {
-      await updatePlayer(updatedPlayer);
-      setPlayers(prev => prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
+      await storeUpdatePlayer(updatedPlayer);
     } catch (e: any) {
       console.error(e);
       alert(`Failed to update player: ${e.message || 'Unknown Error'}`);
@@ -351,41 +316,12 @@ const App: React.FC = () => {
   const handleDeletePlayer = async (id: string) => {
     if (userRole !== 'admin') return;
     try {
-      await deletePlayer(id);
-      setPlayers(prev => prev.filter(p => p.id !== id));
+      await storeDeletePlayer(id);
     } catch (e: any) {
       console.error(e);
       alert(`Failed to delete player: ${e.message || 'Unknown Error'}`);
     }
   };
-
-  const handleAddOpponent = async (team: OpponentTeam) => {
-    if (userRole !== 'admin') return;
-    try {
-      const savedTeam = await addOpponent(team);
-      setOpponents(prev => [...prev, savedTeam]);
-    } catch (e) {
-      console.error(e);
-      alert("Failed to add opponent team");
-    }
-  };
-
-  const handleUpdateOpponent = async (updatedTeam: OpponentTeam) => {
-    if (userRole !== 'admin') return;
-    try {
-      await updateOpponent(updatedTeam);
-      setOpponents(prev => prev.map(t => t.id === updatedTeam.id ? updatedTeam : t));
-    } catch (e) { console.error(e); }
-  };
-
-  const handleDeleteOpponent = async (id: string) => {
-    if (userRole !== 'admin') return;
-    try {
-      await deleteOpponent(id);
-      setOpponents(prev => prev.filter(t => t.id !== id));
-    } catch (e) { console.error(e); }
-  };
-
 
 
   const handleUpdateLogo = async (url: string) => {
@@ -400,14 +336,10 @@ const App: React.FC = () => {
         <SplashScreen onComplete={handleLoginComplete} teamLogo={teamLogo} />
       ) : (
         <AppContent
-          players={players}
           opponents={opponents}
           userRole={userRole}
           isAdminView={isAdminView}
           onToggleAdminView={handleToggleAdminView}
-          onAddPlayer={handleAddPlayer}
-          onUpdatePlayer={handleUpdatePlayer}
-          onDeletePlayer={handleDeletePlayer}
           onAddOpponent={handleAddOpponent}
           onUpdateOpponent={handleUpdateOpponent}
           onDeleteOpponent={handleDeleteOpponent}

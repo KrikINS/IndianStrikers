@@ -4,9 +4,11 @@ import { getMatch } from '../services/storageService';
 import { ScheduledMatch, Player, OpponentTeam } from '../types';
 import ScorecardViewModal from './ScorecardViewModal';
 import { useMasterData } from './masterDataStore';
+import { usePlayerStore } from '../store/playerStore';
 import { Loader2 } from 'lucide-react';
 
-const LiveScorecardPage: React.FC<{ players?: Player[]; opponents?: OpponentTeam[] }> = ({ players = [], opponents = [] }) => {
+const LiveScorecardPage: React.FC<{ opponents?: OpponentTeam[] }> = ({ opponents = [] }) => {
+    const { players } = usePlayerStore();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [match, setMatch] = useState<ScheduledMatch | null>(null);

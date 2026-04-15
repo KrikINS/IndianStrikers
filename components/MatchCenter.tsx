@@ -17,23 +17,23 @@ import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/
 import { useMasterData } from './masterDataStore';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
 import { useCricketScorer } from './matchStore';
+import { usePlayerStore } from '../store/playerStore';
 import PointsTable from './PointsTable';
 import TournamentsManager from './TournamentsManager';
 
 // Responsive constants for Carousel handled inside component
 
 interface MatchCenterProps {
-    players: Player[];
     opponents: OpponentTeam[];
     userRole: UserRole;
     teamLogo?: string;
     currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
-    onUpdatePlayer: (p: Player) => void;
     onUpdateOpponent: (t: OpponentTeam) => void;
     onRefresh?: () => Promise<void>;
 }
 
-const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole, teamLogo, currentUser, onUpdatePlayer, onUpdateOpponent, onRefresh }) => {
+const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo, currentUser, onUpdateOpponent, onRefresh }) => {
+    const { players, updatePlayer: onUpdatePlayer } = usePlayerStore();
     const navigate = useNavigate();
     const {
         matches,
@@ -58,7 +58,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
 
     // Available years from matches
     const availableYears = useMemo(() => {
-        const years = matches.map(m => new Date(m.date).getFullYear());
+        const years = (matches || []).map(m => new Date(m.date).getFullYear());
         return Array.from(new Set(years)).sort((a, b) => b - a); // Newest first
     }, [matches]);
 
@@ -70,7 +70,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
 
     // Default tournament selection to active one
     React.useEffect(() => {
-        if (tournamentFilter === 'All' && tournaments.length > 0) {
+        if (tournamentFilter === 'All' && tournaments?.length > 0) {
             const active = tournaments.find(t => t.status === 'active');
             if (active) setTournamentFilter(active.name);
         }
@@ -230,7 +230,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
             removedPlayers.forEach(pid => {
                 const perf = match.performers?.find(p => p.playerId === pid);
                 if (perf) {
-                    const player = players.find(p => p.id === pid);
+                    const player = players.find((p: Player) => p.id === pid);
                     if (player) {
                         console.log(`[Rollback] Removing match stats from ${player.name}...`);
                         const rolledBackPlayer = {
@@ -854,7 +854,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                 title="Filter by tournament"
                             >
                                 <option value="All">All Tournaments</option>
-                                {tournaments.map(t => (
+                                {tournaments?.map(t => (
                                     <option key={t.id} value={t.name}>{t.name}</option>
                                 ))}
                             </select>
@@ -866,7 +866,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                 title="Filter by year"
                             >
                                 <option value="All">All Years</option>
-                                {availableYears.map(year => (
+                                {availableYears?.map(year => (
                                     <option key={year} value={year.toString()}>{year}</option>
                                 ))}
                             </select>
@@ -908,7 +908,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {filteredMatches.map(m => {
+                                                {filteredMatches?.map(m => {
                                                     const opp = opponents.find(o => o.id === m.opponentId);
                                                     return (
                                                         <tr key={m.id} onClick={() => setActiveTab('cards')}>
@@ -1096,7 +1096,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
                     <div id="team-sheet-container">
                         <PlayingXIModal
                             matchId={xiModalConfig.matchId}
-                            homePlayers={players.filter(p => p.isActive !== false && p.isAvailable !== false)}
+                            homePlayers={players.filter((p: Player) => p.isActive !== false && p.isAvailable !== false)}
                             opponentTeams={opponents}
                             opponentId={xiModalConfig.opponentId}
                             teamType={xiModalConfig.teamType}
@@ -1217,7 +1217,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ players, opponents, userRole,
 
                                     return roster
                                         .filter((p: any) => xiIds.includes(String(p.id || p.name)))
-                                        .map((player: any, idx: number) => (
+                                        ?.map((player: any, idx: number) => (
                                             <div key={player.id || player.name} className="flex items-center gap-10 group">
                                                 <div className="relative shrink-0">
                                                     {/* Round Profile Picture - Reduced size by approx 25% from original rect container area */}
@@ -1465,7 +1465,7 @@ const MatchCardCarousel = ({
             
             {/* Pagination Dots */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                {matches.map((_: any, i: number) => {
+                {matches?.map((_: any, i: number) => {
                     const activeIdx = ((index % matches.length) + matches.length) % matches.length;
                     return (
                         <div 

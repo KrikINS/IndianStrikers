@@ -121,7 +121,7 @@ export const useMatchCenter = create<MatchStore>()(
       syncWithCloud: async () => {
         try {
           console.log("[Sync] Starting Cloud Check...");
-          const rawDbMatches = await api.getMatches();
+          const rawDbMatches = (await api.getMatches()) || [];
           // Filter out Ghost/Dummy data from DB
           // Automatic cleanup filter for Ghost/Synthetic data from DB
           const dbMatches = rawDbMatches.filter(m => 

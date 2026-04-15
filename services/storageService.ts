@@ -86,7 +86,7 @@ export const resetPassword = async (email: string, token: string, newPassword: s
 export const getAppUsers = async (): Promise<AppUser[]> => {
   const res = await fetch(`${API_URL}/users`, { headers: getHeaders() });
   const data = await handleResponse(res);
-  return data.map((u: any) => ({
+  return (data || []).map((u: any) => ({
     id: u.id,
     username: u.username,
     name: u.name || u.username,
@@ -152,73 +152,36 @@ export const saveAppUsers = (users: AppUser[]) => console.warn("saveAppUsers is 
 const INITIAL_BATTING_STATS: BattingStats = { matches: 142, innings: 140, notOuts: 15, runs: 24500, balls: 18000, average: 196, strikeRate: 136, highestScore: '185*', hundreds: 7, fifties: 12, ducks: 2, fours: 450, sixes: 120 };
 const INITIAL_BOWLING_STATS: BowlingStats = { matches: 142, innings: 120, overs: 480, maidens: 45, runs: 3200, wickets: 180, average: 17.7, economy: 6.6, strikeRate: 16, bestBowling: '5/12', fourWickets: 8, fiveWickets: 3, wides: 120, no_balls: 45 };
 
-// OFFLINE FALLBACK PLAYERS (Used when DB is unreachable)
-const OFFLINE_PLAYERS: Player[] = [
-  { 
-    id: '1', 
-    name: 'Anees Ahad (Offline)', 
-    role: PlayerRole.ALL_ROUNDER, 
-    battingStyle: BattingStyle.RIGHT_HAND, 
-    bowlingStyle: BowlingStyle.RIGHT_ARM_FAST, 
-    avatarUrl: '/INS%20LOGO.PNG', 
-    matchesPlayed: 142, 
-    runsScored: 24500, 
-    wicketsTaken: 0, 
-    average: 0, 
-    isCaptain: true, 
-    isViceCaptain: false, 
-    isAvailable: true, 
-    battingStats: INITIAL_BATTING_STATS, 
-    bowlingStats: INITIAL_BOWLING_STATS, 
-    linkedUserId: '1', 
-    jerseyNumber: 7, 
-    dob: '1990-01-01', 
-    externalId: '1' 
-  },
-  { 
-    id: '2', 
-    name: 'Team Member (Offline)', 
-    role: PlayerRole.BATSMAN, 
-    battingStyle: BattingStyle.RIGHT_HAND, 
-    bowlingStyle: BowlingStyle.RIGHT_ARM_FAST, 
-    avatarUrl: '/INS%20LOGO.PNG', 
-    matchesPlayed: 50, 
-    runsScored: 1200, 
-    wicketsTaken: 0, 
-    average: 0, 
-    isCaptain: false, 
-    isViceCaptain: true, 
-    isAvailable: true, 
-    battingStats: { ...INITIAL_BATTING_STATS, matches: 50, runs: 1200 }, 
-    bowlingStats: { ...INITIAL_BOWLING_STATS, matches: 50 }, 
-    linkedUserId: '2', 
-    jerseyNumber: 10, 
-    dob: '1995-01-01', 
-    externalId: '2' 
-  }
-];
 
 export const getPlayers = async (): Promise<Player[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
   try {
-    const res = await fetch(`${API_URL}/players`).catch(err => {
-      console.warn("[API] Network error/Timeout during getPlayers:", err);
-      return null;
+    const res = await fetch(`${API_URL}/players`, { 
+      signal: controller.signal 
     });
 
-    if (!res) throw new Error("Network failure");
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+        console.warn(`[storageService] API returned status ${res.status}`);
+        return [];
+    }
 
     const data = await handleResponse(res);
     
     // If handleResponse returned null (500 error), use cache
     if (!data) {
       const cached = localStorage.getItem('ins_offline_players');
-      return cached ? JSON.parse(cached) : OFFLINE_PLAYERS;
+      return cached ? JSON.parse(cached) : [];
     }
 
-    console.log('[getPlayers] Raw Data:', data);
-    if (!Array.isArray(data)) return [];
+    if (Array.isArray(data)) {
+      console.log(`[storageService] Success! Received ${data.length} players.`);
+    }
 
-    const players = data
+    const players = (Array.isArray(data) ? data : [])
       .filter((p: any) => p !== null && p !== undefined)
       .map((p: any) => ({
         ...p,
@@ -242,10 +205,11 @@ export const getPlayers = async (): Promise<Player[]> => {
     // Update offline cache for next time
     localStorage.setItem('ins_offline_players', JSON.stringify(players));
     return players;
-  } catch (e) {
-    console.warn("[API] Falling back to offline mode for players.");
+  } catch (e: any) {
+    clearTimeout(timeoutId);
+    console.warn("[storageService] Tunnel is slow, but waiting for data...");
     const cached = localStorage.getItem('ins_offline_players');
-    return cached ? JSON.parse(cached) : OFFLINE_PLAYERS;
+    return cached ? JSON.parse(cached) : []; 
   }
 };
 
@@ -439,7 +403,7 @@ export const deleteMatch = async (id: string) => {
 export const getOpponents = async (): Promise<OpponentTeam[]> => {
   const res = await fetch(`${API_URL}/opponents`);
   const data = await handleResponse(res);
-  return data.map((t: any) => ({
+  return (data || []).map((t: any) => ({
     ...t,
     logoUrl: t.logo_url,
     players: t.players || []
@@ -488,7 +452,7 @@ export const deleteOpponent = async (id: string) => {
 export const getStrategies = async (): Promise<FieldingStrategy[]> => {
   const res = await fetch(`${API_URL}/strategies`);
   const data = await handleResponse(res);
-  return data.map((s: any) => ({
+  return (data || []).map((s: any) => ({
     ...s,
     batterHand: s.batter_hand,
     matchPhase: s.match_phase,
@@ -548,7 +512,7 @@ export const getTournamentTable = async (tournament?: string): Promise<Tournamen
   const url = tournament ? `${API_URL}/table?tournament=${encodeURIComponent(tournament)}` : `${API_URL}/table`;
   const res = await fetch(url);
   const data = await handleResponse(res);
-  return data.map((t: any) => ({
+  return (data || []).map((t: any) => ({
     id: t.id,
     teamId: t.team_id,
     teamName: t.team_name,
@@ -597,7 +561,7 @@ export const saveTournamentTable = (table: TournamentTableEntry[]) => console.wa
 export const getMembershipRequests = async (): Promise<MembershipRequest[]> => {
   const res = await fetch(`${API_URL}/membership_requests`, { headers: getHeaders() });
   const data = await handleResponse(res);
-  return data.map((r: any) => ({
+  return (data || []).map((r: any) => ({
     id: r.id,
     name: r.name,
     email: r.email,
@@ -661,7 +625,7 @@ export interface Memory {
 
 export const getMemories = async (): Promise<Memory[]> => {
   const res = await fetch(`${API_URL}/memories`, { headers: getHeaders() });
-  return handleResponse(res);
+  return (await handleResponse(res)) || [];
 };
 
 export const addMemory = async (memory: Partial<Memory>) => {
@@ -698,7 +662,7 @@ export const updateMemory = async (id: string, updates: Partial<Memory>): Promis
 // GROUNDS
 export const getGrounds = async (): Promise<Ground[]> => {
   const res = await fetch(`${API_URL}/grounds`);
-  return handleResponse(res);
+  return (await handleResponse(res)) || [];
 };
 
 export const addGround = async (ground: Partial<Ground>) => {
@@ -730,7 +694,7 @@ export const deleteGround = async (id: string) => {
 // TOURNAMENTS
 export const getTournaments = async (): Promise<Tournament[]> => {
   const res = await fetch(`${API_URL}/tournaments`);
-  return handleResponse(res);
+  return (await handleResponse(res)) || [];
 };
 
 export const addTournament = async (tournament: Partial<Tournament>) => {
@@ -762,7 +726,7 @@ export const deleteTournament = async (id: string) => {
 // LEGACY STATS
 export const getLegacyStats = async (): Promise<PlayerLegacyStats[]> => {
   const res = await fetch(`${API_URL}/legacy-stats`, { headers: getHeaders() });
-  return handleResponse(res);
+  return (await handleResponse(res)) || [];
 };
 
 export interface TournamentStat {

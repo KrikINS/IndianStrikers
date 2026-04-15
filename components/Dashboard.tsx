@@ -6,10 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { useMasterData } from './masterDataStore';
+import { usePlayerStore } from '../store/playerStore';
 import './Dashboard.css';
 
 interface DashboardProps {
-  players: Player[];
   userRole?: UserRole;
   teamLogo?: string;
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
@@ -234,7 +234,8 @@ function WeeklyPerformerCarousel({
 }
 
 // --- Main Dashboard Component ---
-export default function Dashboard({ players, userRole = 'guest', teamLogo, currentUser }: DashboardProps) {
+export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }: DashboardProps) {
+  const { players, loading } = usePlayerStore();
   const { legacy, tournaments, grounds } = useMasterData();
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [selectedHero, setSelectedHero] = useState<any | null>(null);

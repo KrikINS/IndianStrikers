@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Player, PlayerLegacyStats } from '../types';
 import { getPlayers, getLegacyStats, updateLegacyStats } from '../services/storageService';
+import { usePlayerStore } from '../store/playerStore';
 import { Save, AlertCircle, CheckCircle2, Search, Filter, User } from 'lucide-react';
 
-interface LegacyEditorProps {
-  players: Player[];
-  onUpdatePlayer: (p: Player) => void;
-}
+interface LegacyEditorProps {}
 
-const LegacyEditor: React.FC<LegacyEditorProps> = ({ players: initialPlayers, onUpdatePlayer }) => {
+const LegacyEditor: React.FC<LegacyEditorProps> = () => {
+  const { players: initialPlayers, updatePlayer: onUpdatePlayer } = usePlayerStore();
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [legacyStats, setLegacyStats] = useState<Record<string, PlayerLegacyStats>>({});
   const [loading, setLoading] = useState(true);
@@ -18,6 +17,18 @@ const LegacyEditor: React.FC<LegacyEditorProps> = ({ players: initialPlayers, on
 
   useEffect(() => {
     setPlayers([...initialPlayers].sort((a, b) => a.name.localeCompare(b.name)));
+    
+    // Force re-fetch if we are stuck in mock data (length < 5)
+    if (initialPlayers.length > 0 && initialPlayers.length < 5) {
+      console.warn("[LegacyEditor] Detected mock/low player count. Forcing re-sync...");
+      if (window.refreshAppData) {
+        window.refreshAppData();
+      }
+    }
+    // Cleanup offline cache if we have real data
+    if (initialPlayers.length > 2) {
+      localStorage.removeItem('ins_offline_players');
+    }
   }, [initialPlayers]);
 
   useEffect(() => {
@@ -32,7 +43,7 @@ const LegacyEditor: React.FC<LegacyEditorProps> = ({ players: initialPlayers, on
       ]);
 
       const legacyMap: Record<string, PlayerLegacyStats> = {};
-      allLegacy.forEach((stat) => {
+      allLegacy?.forEach((stat) => {
         legacyMap[stat.player_id] = stat;
       });
 
@@ -95,7 +106,7 @@ const LegacyEditor: React.FC<LegacyEditorProps> = ({ players: initialPlayers, on
     }
   };
 
-  const filteredPlayers = players.filter(p => 
+  const filteredPlayers = (players || []).filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -172,7 +183,7 @@ const LegacyEditor: React.FC<LegacyEditorProps> = ({ players: initialPlayers, on
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredPlayers.map((player) => {
+              {filteredPlayers?.map((player) => {
                 const row = legacyStats[player.id] || {
                    player_id: player.id, runs: 0, balls: 0, fours: 0, sixes: 0, hundreds: 0, fifties: 0, ducks: 0,
                    matches: 0, innings: 0, not_outs: 0, highest_score: 0, bowling_innings: 0, overs_bowled: 0, runs_conceded: 0,

@@ -1,18 +1,15 @@
-
 import React, { useState, useRef } from 'react';
 import { Swords, Star, TrendingUp, AlertCircle, ChevronDown, ChevronUp, Plus, Upload, UserPlus, X, Edit2, Trash2 } from 'lucide-react';
 import { OpponentTeam, UserRole } from '../types';
+import { useOpponentStore } from '../store/opponentStore';
 
 interface OpponentTeamsProps {
-  teams: OpponentTeam[];
-  onAddTeam: (team: OpponentTeam) => void;
-  onUpdateTeam: (team: OpponentTeam) => void;
-  onDeleteTeam: (id: string) => void;
   userRole: UserRole;
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
 }
 
-const OpponentTeams: React.FC<OpponentTeamsProps> = ({ teams, onAddTeam, onUpdateTeam, onDeleteTeam, userRole, currentUser }) => {
+const OpponentTeams: React.FC<OpponentTeamsProps> = ({ userRole, currentUser }) => {
+  const { opponents: teams, addOpponent: onAddTeam, updateOpponent: onUpdateTeam, deleteOpponent: onDeleteTeam } = useOpponentStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

@@ -1,19 +1,18 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Player, FieldingStrategy, PlayerRole, FieldPosition, UserRole } from '../types';
 import { getPlayers, getStrategies, addStrategy, deleteStrategy } from '../services/storageService';
+import { usePlayerStore } from '../store/playerStore';
 import { Save, RefreshCcw, Target, GripVertical, Plus, Zap, Flame, Clock, Trash2, Users, ChevronRight, CornerUpLeft, Activity, X } from 'lucide-react';
 import './FieldingMap.css';
 
 interface FieldingMapProps {
-  players: Player[];
   userRole?: UserRole;
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
 }
 
-const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, userRole = 'guest', currentUser }) => {
+const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest', currentUser }) => {
+  const { players } = usePlayerStore();
   const isReadOnly = userRole === 'guest';
-  const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [strategies, setStrategies] = useState<FieldingStrategy[]>([]);
   const [currentPositions, setCurrentPositions] = useState<Map<string, FieldPosition>>(new Map());
 
@@ -34,19 +33,10 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
   const boardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setPlayers(initialPlayers);
-  }, [initialPlayers]);
-
-  useEffect(() => {
     const load = async () => {
       try {
         const s = await getStrategies();
         setStrategies(s);
-        // Fallback for players if needed, but props should be primary
-        if (initialPlayers.length === 0) {
-          const p = await getPlayers();
-          setPlayers(p);
-        }
       } catch (e) { console.error(e); }
     };
     load();
@@ -220,7 +210,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
       // Or just leave it empty. The user didn't ask to save Keeper ID, just place them.
       // But if we want color, we need selectedKeeperId.
       // I'll leave it for now or check if any player at 50,32 is a keeper.
-      const keeperPos = strategy.positions.find(p => Math.abs(p.left - 50) < 2 && Math.abs(p.top - 32) < 2);
+      const keeperPos = strategy.positions.find((p: FieldPosition) => Math.abs(p.left - 50) < 2 && Math.abs(p.top - 32) < 2);
       if (keeperPos) setSelectedKeeperId(keeperPos.playerId);
 
       setActiveStrategyId(strategy.id);
@@ -232,7 +222,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
     if (window.confirm('Delete this strategy?')) {
       try {
         await deleteStrategy(id);
-        setStrategies(prev => prev.filter(s => s.id !== id));
+        setStrategies(prev => prev.filter((s: FieldingStrategy) => s.id !== id));
         if (activeStrategyId === id) setActiveStrategyId(null);
       } catch (e) {
         console.error(e);
@@ -246,12 +236,12 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
   const handleAutoDeploy = () => {
     if (isReadOnly) return;
     const newMap = new Map<string, FieldPosition>();
-    const availablePlayers = [...players].filter(p => p.isAvailable).slice(0, 11);
+    const availablePlayers = [...players].filter((p: Player) => p.isAvailable).slice(0, 11);
 
     // 1. Wicket Keeper: Behind Striker (Top)
     let wkIdToUse = selectedKeeperId;
     if (!wkIdToUse) {
-      const wk = availablePlayers.find(p => p.role === PlayerRole.WICKET_KEEPER) || availablePlayers[0];
+      const wk = availablePlayers.find((p: Player) => p.role === PlayerRole.WICKET_KEEPER) || availablePlayers[0];
       wkIdToUse = wk ? wk.id : '';
     }
 
@@ -263,7 +253,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
     // 2. Bowler
     let bowlerIdToUse = selectedBowlerId;
     if (!bowlerIdToUse) {
-      const autoBowler = availablePlayers.find(p => p.role === PlayerRole.BOWLER && p.id !== wkIdToUse);
+      const autoBowler = availablePlayers.find((p: Player) => p.role === PlayerRole.BOWLER && p.id !== wkIdToUse);
       bowlerIdToUse = autoBowler ? autoBowler.id : '';
     }
 
@@ -273,7 +263,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
     } // Removed extra brace that was ending the if block early
 
     // 3. Fielders
-    const fielders = availablePlayers.filter(p => p.id !== wkIdToUse && p.id !== bowlerIdToUse);
+    const fielders = availablePlayers.filter((p: Player) => p.id !== wkIdToUse && p.id !== bowlerIdToUse);
 
     // Standard Field (RHB default coordinates)
     // Inner Circle Radius is ~28% from 50,50.
@@ -291,7 +281,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
 
     const isLHB = batterHand === 'LHB';
 
-    fielders.forEach((p, i) => {
+    fielders.forEach((p: Player, i: number) => {
       if (positions[i]) {
         let { l, t } = positions[i];
         // REVERSED: User requested flipping. Now RHB gets '100-l' (Left) and LHB gets 'l' (Right).
@@ -474,7 +464,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
             {/* Note: Inline styles are used below for CSS custom properties (--marker-left, --marker-top) 
                 which enable dynamic positioning while keeping styling logic in external CSS */}
             {Array.from(currentPositions.values()).map((pos: FieldPosition) => {
-              const player = players.find(p => String(p.id) === String(pos.playerId));
+              const player = players.find((p: Player) => String(p.id) === String(pos.playerId));
               if (!player) return null;
 
               const isInner = isInnerCircle(pos.left, pos.top);
@@ -616,7 +606,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
                 className={`w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <option value="">Select Keeper...</option>
-                {players.map(p => (
+                {players.map((p: Player) => (
                   <option key={p.id} value={p.id}>{p.name} ({p.role})</option>
                 ))}
               </select>
@@ -632,7 +622,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
                 className={`w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <option value="">Select Bowler...</option>
-                {players.map(p => (
+                {players.map((p: Player) => (
                   <option key={p.id} value={p.id}>{p.name} ({p.role})</option>
                 ))}
               </select>
@@ -716,7 +706,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
             </span>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
-            {players.filter(p => !currentPositions.has(String(p.id)) && p.isAvailable).map(player => (
+            {players.filter((p: Player) => !currentPositions.has(String(p.id)) && p.isAvailable).map((player: Player) => (
               <div
                 key={player.id}
                 draggable={!isReadOnly}
@@ -737,7 +727,7 @@ const FieldingBoard: React.FC<FieldingMapProps> = ({ players: initialPlayers, us
                 {!isReadOnly && <GripVertical size={16} className="text-slate-700 group-hover:text-blue-500 transition-colors" />}
               </div>
             ))}
-            {players.filter(p => !currentPositions.has(p.id) && p.isAvailable).length === 0 && (
+            {players.filter((p: Player) => !currentPositions.has(p.id) && p.isAvailable).length === 0 && (
               <div className="p-4 text-center text-slate-500 text-xs flex flex-col items-center gap-2 mt-8">
                 <Users size={24} className="opacity-30" />
                 All players fielded

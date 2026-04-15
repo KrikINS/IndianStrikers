@@ -172,6 +172,7 @@ export interface Player {
   dob?: string;
   externalId?: string;
   jerseyNumber?: number;
+  status?: string;
   battingStats?: BattingStats;
   bowlingStats?: BowlingStats;
   linkedUserId?: string;

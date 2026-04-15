@@ -8,10 +8,7 @@ import {
 
 type ControlTab = 'grounds' | 'tournaments' | 'users' | 'requests' | 'legacy';
 
-interface ControlPanelProps {
-  players: Player[];
-  onUpdatePlayer: (p: Player) => void | Promise<void>;
-}
+interface ControlPanelProps {}
 
 const ControlPanel: React.FC<ControlPanelProps> = () => {
   const { pathname } = useLocation();

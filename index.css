@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Graduate&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Dancing+Script:wght@600;700&family=Tilt+Neon&display=swap');
 
 :root {
   --color-primary: #0f172a;
@@ -9,10 +11,6 @@
   --font-cursive: "Dancing Script", cursive;
   --font-neon: "Tilt Neon", sans-serif;
 }
-
-
-@import url('https://fonts.googleapis.com/css2?family=Graduate&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Dancing+Script:wght@600;700&family=Tilt+Neon&display=swap');
 
 
 .graduate {

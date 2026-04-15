@@ -4,15 +4,12 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
 import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import { getAppUsers, getPlayerDetailedStats, PlayerDetailedStats, TournamentStat } from '../services/storageService';
+import { usePlayerStore } from '../store/playerStore';
 import styles from './PlayerList.module.css';
 
 interface PlayerListProps {
-  players: Player[];
   userRole: UserRole;
   currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
-  onAddPlayer: (player: Player) => void;
-  onUpdatePlayer: (player: Player) => void;
-  onDeletePlayer: (id: string) => void;
 }
 
 const defaultBattingStats: BattingStats = {
@@ -68,7 +65,8 @@ const PasswordConfirmModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean;
   );
 };
 
-const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser, onAddPlayer, onUpdatePlayer, onDeletePlayer }) => {
+const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
+  const { players, loading, addPlayer: onAddPlayer, updatePlayer: onUpdatePlayer, deletePlayer: onDeletePlayer } = usePlayerStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false); // New State
@@ -92,7 +90,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
   useEffect(() => {
     const playerId = searchParams.get('id');
     if (playerId && players.length > 0) {
-      const player = players.find(p => p.id === playerId);
+      const player = players.find((p: Player) => p.id === playerId);
       if (player) {
         setViewingPlayer(player);
         setActiveStatTab('batting');
@@ -103,6 +101,20 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
       }
     }
   }, [searchParams, players, setSearchParams]);
+
+  // Force re-fetch if we are stuck in mock data (length < 5)
+  useEffect(() => {
+    if (players.length > 0 && players.length < 5) {
+      console.warn("[PlayerList] Detected mock/low player count. Forcing re-sync...");
+      if (window.refreshAppData) {
+        window.refreshAppData();
+      }
+    }
+    // Cleanup offline cache if we have real data
+    if (players.length > 2) {
+      localStorage.removeItem('ins_offline_players');
+    }
+  }, [players.length]);
 
   // Fetch detailed stats when viewing a player
   useEffect(() => {
@@ -157,14 +169,25 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
   });
 
 
-  const filteredPlayers = players.filter(p =>
+  // Filter by search query first
+  const searchingPlayers = players.filter((p: Player) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Active players = marked Active AND NOT Away
-  const activePlayers = filteredPlayers.filter(p => p.isActive !== false && p.isAvailable !== false);
-  // Inactive players = marked Inactive OR Away
-  const inactivePlayers = filteredPlayers.filter(p => p.isActive === false || p.isAvailable === false);
+  // Subscribe to the rosterTab for filtering (active vs inactive)
+  const displayedPlayers = (searchingPlayers || []).filter((p: Player) => {
+    // If we are on the active tab, show everyone who isn't explicitly marked inactive
+    if (rosterTab === 'active') {
+      return p.isActive !== false && p.status !== 'inactive';
+    }
+    // Otherwise, show the ones we know are inactive
+    return p.isActive === false || p.status === 'inactive';
+  });
+
+  // TEMP DEBUG: Log this to see if players exist but are filtered out
+  console.log("[PlayerList] Total in Store:", players.length);
+  console.log("[PlayerList] Filtered for UI:", displayedPlayers.length);
+  console.log("[PlayerList] Current Tab:", rosterTab);
 
   const handleOpenAdd = () => {
     setEditingPlayer(null);
@@ -376,7 +399,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
     ];
 
 
-    const rows = players.map(p => {
+    const rows = (players || []).map((p: Player) => {
       const b = p.battingStats || defaultBattingStats;
       const w = p.bowlingStats || defaultBowlingStats;
       return [
@@ -396,9 +419,9 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
       <body>
         <table border="1">
           <tr style="background-color: #1e293b; color: #ffffff; font-weight: bold;">
-            ${headers.map(h => `<th>${h}</th>`).join('')}
+            ${(headers || []).map(h => `<th>${h}</th>`).join('')}
           </tr>
-          ${rows.map(row => `
+          ${(rows || []).map(row => `
             <tr>
               ${row.map(val => `<td>${val}</td>`).join('')}
             </tr>
@@ -592,11 +615,11 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
             <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
               <span className="w-1.5 h-6 bg-blue-600 rounded-full"></span>
               Current Squad
-              <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{activePlayers.length}</span>
+              <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{displayedPlayers.length}</span>
             </h3>
-            {activePlayers.length > 0 ? (
+            {displayedPlayers.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                {activePlayers.map(renderPlayerCard)}
+                {displayedPlayers?.map(renderPlayerCard)}
               </div>
             ) : (
               <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">
@@ -610,11 +633,11 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
             <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
               <span className="w-1.5 h-6 bg-red-600 rounded-full"></span>
               Inactive / Retired Players
-              <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{inactivePlayers.length}</span>
+              <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{displayedPlayers.length}</span>
             </h3>
-            {inactivePlayers.length > 0 ? (
+            {displayedPlayers.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                {inactivePlayers.map(renderPlayerCard)}
+                {displayedPlayers?.map(renderPlayerCard)}
               </div>
             ) : (
               <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">
@@ -851,7 +874,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
                         className="w-full p-2.5 bg-white border border-slate-200 text-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">-- No Linked Account --</option>
-                        {users.map(u => (
+                        {(users || []).map(u => (
                           <option key={u.id} value={u.id}>
                             {u.name} ({u.username}) - {u.role}
                           </option>
@@ -1240,7 +1263,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ players, userRole, currentUser,
                   </h3>
                   <div className="flex gap-2 items-center">
                     {(detailedStats as any)?.recentForm?.length > 0 ? (
-                      (detailedStats as any).recentForm.map((match: any, i: number) => (
+                      (detailedStats as any)?.recentForm?.map((match: any, i: number) => (
                         <div 
                           key={i} 
                           className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-black text-xs md:text-sm shadow-sm transition-transform hover:scale-110 cursor-help ${

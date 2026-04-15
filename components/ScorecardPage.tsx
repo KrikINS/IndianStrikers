@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMatchCenter } from './matchCenterStore';
 import { useMasterData } from './masterDataStore';
+import { usePlayerStore } from '../store/playerStore';
 import { FullScorecard } from './FullScorecard';
 import { ArrowLeft, Share2, Download } from 'lucide-react';
 import { OpponentTeam, ScheduledMatch, Ground, Player } from '../types';
@@ -9,10 +10,10 @@ import { OpponentTeam, ScheduledMatch, Ground, Player } from '../types';
 interface ScorecardPageProps {
     opponents: OpponentTeam[];
     homeTeamName: string;
-    players: Player[];
 }
 
-export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTeamName, players }) => {
+export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTeamName }) => {
+    const { players } = usePlayerStore();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const matches = useMatchCenter(state => state.matches);
