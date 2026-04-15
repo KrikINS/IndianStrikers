@@ -566,6 +566,7 @@ export const useCricketScorer = create<ScorerStore>()(
 
                 set({
                     currentBowlerId: id,
+                    strikerId: state.nonStrikerId,
                     nonStrikerId: state.strikerId,
                     isWaitingForBowler: false
                 });

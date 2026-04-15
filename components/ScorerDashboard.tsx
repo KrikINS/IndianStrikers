@@ -832,7 +832,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
+  const [isOverComplete, setIsOverComplete] = useState(false);
   const posterRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
   const milestoneRef = useRef<MilestoneOverlayRef>(null);
   const [showWagonWheelModal, setShowWagonWheelModal] = useState<any>(null);
   const [scorecardTab, setScorecardTab] = useState<'scorecard' | 'commentary'>('scorecard');
@@ -841,7 +843,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
   const [showMatchSummaryModal, setShowMatchSummaryModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [isOverComplete, setIsOverComplete] = useState(false);
 
   // Opponent players fetched separately from the opponents table
   const [opponentPlayers, setOpponentPlayers] = useState<{id: string; name: string; role?: string}[]>([]);
@@ -1053,10 +1054,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       console.error("Change Scorer sync failed:", error);
       setSyncStatus('error');
       toast.error("Sync Failed! Please check internet and try again.");
+    } finally {
+        setSyncStatus('idle');
     }
   };
 
   const currentInnings = store.currentInnings === 1 ? store.innings1 : store.innings2;
+
+  // Auto-scroll timeline to the end when a new ball is added
+  useEffect(() => {
+    if (timelineRef.current) {
+      timelineRef.current.scrollTo({
+        left: timelineRef.current.scrollWidth,
+        behavior: 'smooth'
+      });
+    }
+  }, [currentInnings?.history?.length]);
   const isBattingFinishing = currentInnings && (
     currentInnings.wickets === 10 || 
     currentInnings.totalBalls >= (store.maxOvers || 20) * 6 ||
@@ -1584,6 +1597,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     if (!innings) return;
     const is_test = matchMeta?.is_test ?? false;
 
+    // 1. Capture IDs locally to avoid race conditions with state resets (e.g. at end of over)
+    const currentStrikerId = store.strikerId;
+    const currentNonStrikerId = store.nonStrikerId;
+    const currentBowlerId = store.currentBowlerId;
+
     store.recordBall({ runs: score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, zone });
     
     // --- DB Sync Bridge ---
@@ -1595,9 +1613,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       // Standard Payload
       const payload: any = {
         match_id: activeMatchId,
-        striker_id: store.strikerId,
-        non_striker_id: store.nonStrikerId,
-        bowler_id: store.currentBowlerId,
+        striker_id: currentStrikerId,
+        non_striker_id: currentNonStrikerId,
+        bowler_id: currentBowlerId,
         over_number: Math.floor(innings.totalBalls / 6),
         ball_number: (innings.totalBalls % 6) + 1,
         runs_scored: score,
@@ -1709,15 +1727,25 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     }
 
     // --- Over End Check (ALWAYS run at the end for legal balls) ---
-    if (type === 'legal' || type === 'wicket') {
-      // Calculate legal balls in the CURRENT over accurately from history
-      const currentOverNumber = Math.floor(innings.totalBalls / 6);
-      const ballsInThisOver = (innings.history || []).filter(b => b.overNumber === currentOverNumber && b.isLegal).length;
+    const isLegalBall = type !== 'wide' && type !== 'no-ball';
+    if (isLegalBall) {
+      const updatedTotalBalls = innings.totalBalls + 1;
+      
+      // Calculate if innings will finish to avoid showing bowler modal at innings end
+      const willInningsFinish = 
+        (innings.wickets + (isWicket && wicketType !== 'Retired Hurt' ? 1 : 0) === 10) || 
+        (updatedTotalBalls >= (store.maxOvers || 20) * 6) ||
+        (store.currentInnings === 2 && (innings.totalRuns + score) > (store.innings1?.totalRuns || 0));
 
-      // Note: isWicket only counts as a ball if ball_type is 'legal' or similar. 
-      if (ballsInThisOver === 6 && !isBattingFinishing) {
+      if (updatedTotalBalls % 6 === 0 && updatedTotalBalls > 0 && !willInningsFinish) {
         setIsOverComplete(true);
-        store.updateMatchSettings({ isWaitingForBowler: true }); // SET THE LOCK
+        // Reset currentBowlerId so the UI knows we need a new one
+        store.updateMatchSettings({ 
+          isWaitingForBowler: true,
+          currentBowlerId: null 
+        }); 
+        
+        // Show modal after a brief delay for animations
         setTimeout(() => setShowBowlerModal(true), 1200);
       }
     }
@@ -2168,7 +2196,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         </ParticipantCard>
       </ActiveParticipants>
 
-      <TimelineContainer id="match-timeline">
+      <TimelineContainer ref={timelineRef} id="match-timeline">
         {(() => {
           const balls = currentInnings?.history || [];
           const last30 = balls.slice(-30);

@@ -80,7 +80,9 @@ export const usePlayerStore = create<PlayerState>()(
         }),
         {
             name: 'ins-player-storage',
-            partialize: (state) => ({ players: state.players }),
+            // We no longer persist the full players list to localStorage to avoid QuotaExceededError (5MB limit)
+            // Players are fetched fresh via fetchPlayers() on app load
+            partialize: (state) => ({}),
         }
     )
 );
