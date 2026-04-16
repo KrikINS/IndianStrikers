@@ -170,7 +170,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
 
   // Filter by search query first
-  const searchingPlayers = players.filter((p: Player) =>
+  const searchingPlayers = (players || []).filter((p: Player) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -1292,7 +1292,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                     <td className="p-2 md:p-3 text-center">{t.bowling.innings}</td>
                                     <td className="p-2 md:p-3 text-center">{t.bowling.overs}</td>
                                     <td className="p-2 md:p-3 text-center">{t.bowling.maidens || '0'}</td>
-                                    <td className="p-2 md:p-3 text-center font-bold text-black">{t.bowling.runsConceded || t.bowling.runs || '0'}</td>
+                                    <td className="p-2 md:p-3 text-center font-bold text-black">{t.bowling.runs || '0'}</td>
                                     <td className="p-2 md:p-3 text-center font-bold text-slate-700 whitespace-nowrap">{t.bowling.wickets}</td>
                                     <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
                                     <td className="p-2 md:p-3 text-center">{t.bowling.average}</td>

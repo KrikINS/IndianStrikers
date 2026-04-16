@@ -260,14 +260,14 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
         
         // Finalize current strikers and partnership
         // Note: For a live view, we identify non-out batsmen
-        const activeBatters = inn.batting.filter((b: any) => b.outHow === 'Not Out');
+        const activeBatters = (inn.batting || []).filter((b: any) => b.outHow === 'Not Out');
         const lastBall = history[history.length - 1];
         const strikerId = lastBall?.strikerId;
 
         // Calculate Run Rates
-        const totalRuns = inn.batting.reduce((s: number, b: any) => s + (b.runs || 0), 0) + 
+        const totalRuns = (inn.batting || []).reduce((s: number, b: any) => s + (b.runs || 0), 0) + 
                          (inn.extras?.total || 0);
-        const totalBalls = history.filter(b => b.isLegal).length;
+        const totalBalls = (history || []).filter(b => b.isLegal).length;
         const crr = totalBalls > 0 ? ((totalRuns / totalBalls) * 6).toFixed(2) : '0.00';
         
         let rrr = null;

@@ -89,7 +89,7 @@ const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false
           </div>
         ) : (
           tournaments.map(t => {
-            const tourneyMatches = matches.filter(m => 
+            const tourneyMatches = (matches || []).filter(m => 
               String(m.tournamentId) === String(t.id) || 
               (m.tournament && t.name && m.tournament.trim().toLowerCase() === t.name.trim().toLowerCase() && !m.tournamentId)
             );

@@ -264,7 +264,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         setPerformerData(perf);
 
         // Prioritize Live matches, then the nearest upcoming match
-        const priorityMatch = allMatches
+        const priorityMatch = (allMatches || [])
           .filter(m => (m.status === 'live' || m.status === 'upcoming') && !m.is_test)
           .sort((a, b) => {
             // Live matches always come first
@@ -283,23 +283,23 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     load();
   }, []);
 
-  const topRunScorers = [...players]
+  const topRunScorers = [...(players || [])]
     .sort((a, b) => ((b.battingStats?.runs || b.runsScored) || 0) - ((a.battingStats?.runs || a.runsScored) || 0))
     .slice(0, 5);
-  const topWicketTakers = [...players]
+  const topWicketTakers = [...(players || [])]
     .sort((a, b) => ((b.bowlingStats?.wickets || b.wicketsTaken) || 0) - ((a.bowlingStats?.wickets || a.wicketsTaken) || 0))
     .slice(0, 5);
 
-  const topInningsRuns = [...players]
+  const topInningsRuns = [...(players || [])]
     .filter(p => p.battingStats?.highestScore && p.battingStats.highestScore !== '0')
     .sort((a, b) => {
-      const valA = parseInt(a.battingStats.highestScore.replace('*', '')) || 0;
-      const valB = parseInt(b.battingStats.highestScore.replace('*', '')) || 0;
+      const valA = parseInt((a.battingStats?.highestScore || '0').replace('*', '')) || 0;
+      const valB = parseInt((b.battingStats?.highestScore || '0').replace('*', '')) || 0;
       return valB - valA;
     })
     .slice(0, 5);
 
-  const topInningsWickets = [...players]
+  const topInningsWickets = [...(players || [])]
     .filter(p => p.bowlingStats?.bestBowling && p.bowlingStats.bestBowling !== '0/0')
     .sort((a, b) => {
       const [wA, rA] = (a.bowlingStats?.bestBowling || '0/0').split('/').map(Number);

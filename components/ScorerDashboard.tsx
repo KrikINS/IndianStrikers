@@ -23,7 +23,8 @@ import {
   Edit3,
   Share2,
   MessageSquare,
-  Mic
+  Mic,
+  RotateCcw
 } from 'lucide-react';
 import { useCricketScorer } from './matchStore';
 import { useMatchCenter, updateMatchInStore } from './matchCenterStore';
@@ -44,8 +45,10 @@ const DashboardContainer = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  overflow: hidden;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: 300px; // Space for fixed scoring interface
+  overflow-y: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 `;
 
 const Header = styled.header`
@@ -158,11 +161,12 @@ const PartnershipRow = styled.div`
   border-bottom: 1px solid #F1F3F5;
   padding: 4px 12px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   flex-shrink: 0;
-  gap: 1px;
+  height: 24px;
+  gap: 8px;
 `;
 
 const PartnershipMain = styled.div`
@@ -242,7 +246,7 @@ const TimelineContainer = styled.div`
   gap: 3px;
   box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
   scrollbar-width: none;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: none;
   flex-shrink: 0;
   &::-webkit-scrollbar { display: none; }
 `;
@@ -274,9 +278,16 @@ const ScoringInterface = styled.div`
   padding: 8px 10px 10px;
   background: #001F3F;
   display: flex;
+  flex-direction: column;
   gap: 8px;
   flex-shrink: 0;
   border-top: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
 `;
 
 const RunGrid = styled.div`
@@ -289,10 +300,9 @@ const RunGrid = styled.div`
 
 const ExtraStack = styled.div`
   display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: repeat(4, 1fr);
-  gap: 4px;
-  width: 58px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
 `;
 
 const ScoringBtn = styled.button<{ $variant?: 'run' | 'wicket' | 'extra' | 'undo' }>`
@@ -301,7 +311,7 @@ const ScoringBtn = styled.button<{ $variant?: 'run' | 'wicket' | 'extra' | 'undo
   min-height: 44px;
   border-radius: 12px;
   border: none;
-  font-size: 1.rem;
+  font-size: 1.1rem;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -778,10 +788,11 @@ const DrawerContent = styled(motion.div)`
   height: 100%;
   background: #0d1117; /* Riyadh Nights: Dark Obsidian */
   border-left: 1px solid rgba(16, 185, 129, 0.2); /* Emerald accent */
-  padding: 32px 24px;
+  padding: 8px 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 16px;
+  overflow-y: auto;
   box-shadow: -10px 0 30px rgba(0,0,0,0.5);
 `;
 
@@ -792,11 +803,11 @@ const SettingsGroup = styled.div`
 `;
 
 const GroupTitle = styled.h3`
-  font-size: 0.7rem;
+  font-size: 0.45rem;
   font-weight: 900;
   color: #10b981; /* Riyadh Emerald */
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   margin: 0;
   display: flex;
   align-items: center;
@@ -812,13 +823,13 @@ const GroupTitle = styled.h3`
 
 const ControlButton = styled.button<{ $variant?: 'emerald' | 'gold' | 'danger' }>`
   width: 100%;
-  padding: 16px;
-  border-radius: 16px;
+  padding: 8px 12px;
+  border-radius: 8px;
   border: 1px solid rgba(255,255,255,0.05);
   background: rgba(255,255,255,0.03);
   color: white;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -841,23 +852,23 @@ const SettingsInput = styled.div`
   align-items: center;
   justify-content: space-between;
   background: rgba(255,255,255,0.03);
-  padding: 12px 16px;
-  border-radius: 16px;
+  padding: 6px 10px;
+  border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.05);
 
   label {
-    font-size: 0.8rem;
+    font-size: 0.5rem;
     font-weight: 600;
-    opacity: 0.6;
+    color: #FFF;
   }
 
   input {
     background: none;
     border: none;
-    color: #fbbf24; /* Riyadh Gold */
+    color: #FFF;
     font-weight: 900;
-    font-size: 1.2rem;
-    width: 60px;
+    font-size: 0.8rem;
+    width: 45px;
     text-align: right;
     outline: none;
   }
@@ -917,8 +928,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
   const [showMatchSummaryModal, setShowMatchSummaryModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [customCommentary, setCustomCommentary] = useState('');
-  const [showCommentaryInput, setShowCommentaryInput] = useState(false);
+
   const [allOpponents, setAllOpponents] = useState<any[]>([]);
   const [commentaryTemplates, setCommentaryTemplates] = useState<CommentaryTemplate[]>([]);
   const [nextCommentarySuggestions, setNextCommentarySuggestions] = useState<Record<CommentaryEventType, string[]>>({
@@ -1247,9 +1257,96 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     }
   }, [activeMatchId, matchMeta, navigate]);
 
+  const partnershipData = useMemo(() => {
+    const balls = currentInnings?.history || [];
+    let pruns = 0;
+    let plegalBalls = 0;
+    let pextras = 0;
+
+    let lastWicketIdx = -1;
+    for (let i = balls.length - 1; i >= 0; i--) {
+      const b = balls[i] as any;
+      if (b.isWicket && !['Retired Hurt'].includes(b.wicketType || '')) {
+        lastWicketIdx = i;
+        break;
+      }
+    }
+
+    const currentStandBalls = lastWicketIdx === -1 ? balls : balls.slice(lastWicketIdx + 1);
+
+    const sId = store.strikerId;
+    const nsId = store.nonStrikerId;
+    let sPRuns = 0; let sPBalls = 0;
+    let nsPRuns = 0; let nsPBalls = 0;
+
+    currentStandBalls.forEach((b: any) => {
+      pruns += b.runs;
+      if (b.isLegal) plegalBalls++;
+
+      if (b.type !== 'legal') {
+        if (b.type === 'wide' || b.type === 'no-ball') {
+          pruns += 1;
+          pextras += 1 + b.runs;
+        } else {
+          pextras += b.runs;
+        }
+      }
+
+      // Individual contributions in this stand
+      if (b.strikerId === sId) {
+        if (b.subType === 'bat') sPRuns += b.runs;
+        if (b.isLegal) sPBalls++;
+      } else if (b.strikerId === nsId) {
+        if (b.subType === 'bat') nsPRuns += b.runs;
+        if (b.isLegal) nsPBalls++;
+      }
+    });
+
+    return {
+      totalRuns: pruns,
+      totalBalls: plegalBalls,
+      s: { name: getPlayerName(sId || null).split(' ')[0], runs: sPRuns, balls: sPBalls },
+      ns: { name: getPlayerName(nsId || null).split(' ')[0], runs: nsPRuns, balls: nsPBalls },
+      extras: pextras
+    };
+  }, [currentInnings?.history, store.strikerId, store.nonStrikerId]);
+
+  const lastWicketData = useMemo(() => {
+    const balls = currentInnings?.history || [];
+    let lastBall = null;
+    let totalRunsAtW = 0;
+    let wicketsAtW = 0;
+
+    let cRuns = 0;
+    let cWickets = 0;
+
+    for (let i = 0; i < balls.length; i++) {
+      const b = balls[i] as any;
+      cRuns += b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0);
+      if (b.isWicket && !['Retired Hurt'].includes(b.wicketType || '')) {
+        cWickets++;
+        lastBall = b;
+        totalRunsAtW = cRuns;
+        wicketsAtW = cWickets;
+      }
+    }
+
+    if (!lastBall) return null;
+    const victimId = lastBall.outPlayerId || lastBall.strikerId;
+    const victimName = getPlayerName(victimId).split(' ')[0];
+    const bStat = currentInnings?.battingStats[victimId];
+
+    return {
+      name: victimName,
+      runs: bStat?.runs || 0,
+      balls: bStat?.balls || 0,
+      score: `${totalRunsAtW}/${wicketsAtW}`
+    };
+  }, [currentInnings?.history, currentInnings?.battingStats]);
+
   // INITIAL STATE: If no ID is provided, show upcoming matches list
   if (!activeMatchId) {
-    const upcoming = matches.filter(m => m.status !== 'completed');
+    const upcoming = (matches || []).filter(m => m.status !== 'completed');
     return (
       <DashboardContainer>
         <Header>
@@ -1519,21 +1616,21 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </div>
 
               <SelectionGrid>
-                {(setupStep === 'squad_home' ? players : opponentPlayers)
+                {((setupStep === 'squad_home' ? (players || []) : (opponentPlayers || [])) as any[])
                   .filter((p: any) => roleFilter === 'All' || p.role === roleFilter)
                   .map((p: any) => {
                     const currentXI = setupStep === 'squad_home' ? homeXI : awayXI;
-                    const isSelected = currentXI.includes(p.id);
+                    const isSelected = (currentXI || []).includes(p.id);
 
                     return (
                       <PlayerCard
                         key={p.id}
                         $selected={isSelected}
                         onClick={() => {
-                          const isAlreadySel = currentXI.includes(p.id);
+                          const isAlreadySel = (currentXI || []).includes(p.id);
                           let newSquad;
                           if (isAlreadySel) {
-                            newSquad = currentXI.filter(id => id !== p.id);
+                            newSquad = (currentXI || []).filter(id => id !== p.id);
                           } else if (currentXI.length < 11) {
                             newSquad = [...currentXI, p.id];
                           } else {
@@ -1609,10 +1706,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 const firstInningsBatTeamId = (tossWinner === 'home' && tossChoice === 'Bat') || (tossWinner === 'away' && tossChoice === 'Bowl') ? 'HOME' : 'AWAY';
                 const batTeamId = store.innings1 ? (firstInningsBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeamId;
                 const batSquadIds = batTeamId === 'HOME' ? homeXI : awayXI;
-                // Use the correct player pool for name resolution
                 const batPool = batTeamId === 'HOME'
-                  ? players.filter((p: Player) => batSquadIds.includes(p.id))
-                  : opponentPlayers.filter((p: any) => batSquadIds.includes(p.id));
+                  ? (players || []).filter((p: any) => (batSquadIds || []).includes(p.id))
+                  : (opponentPlayers || []).filter((p: any) => (batSquadIds || []).includes(p.id));
 
                 return (
                   <>
@@ -1665,10 +1761,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 const batTeamId = store.innings1 ? (firstBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : firstBatTeamId;
                 const bowlTeamId = batTeamId === 'HOME' ? 'AWAY' : 'HOME';
                 const bowlSquadIds = bowlTeamId === 'HOME' ? homeXI : awayXI;
-                // Use the correct player pool for name resolution
                 const bowlPool = bowlTeamId === 'HOME'
-                  ? players.filter((p: Player) => bowlSquadIds.includes(p.id))
-                  : opponentPlayers.filter((p: any) => bowlSquadIds.includes(p.id));
+                  ? (players || []).filter((p: any) => (bowlSquadIds || []).includes(p.id))
+                  : (opponentPlayers || []).filter((p: any) => (bowlSquadIds || []).includes(p.id));
 
                 return (
                   <>
@@ -1728,7 +1823,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }
 
   const handleRecord = (score: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string, zone?: string, commentary?: string) => {
-    // 2. The "7th Ball" Fix: Strict Guard
     if (isOverComplete && store.isWaitingForBowler) {
       console.warn("Over complete. Selection required.");
       toast.error("Finish over selection first", { id: 'bowler-lock' });
@@ -1740,20 +1834,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     const is_test = matchMeta?.is_test ?? false;
     const isLegal = type !== 'wide' && type !== 'no-ball';
 
-    // 1. Capture IDs locally to avoid race conditions with state resets (e.g. at end of over)
     const currentStrikerId = store.strikerId;
     const currentNonStrikerId = store.nonStrikerId;
     const currentBowlerId = store.currentBowlerId;
 
     store.recordBall({ runs: score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, zone, commentary });
 
-    // --- DB Sync Bridge ---
     const syncBallToCloud = async (isRetry = false) => {
       if (!activeMatchId || is_test) return;
 
       const baseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
 
-      // Standard Payload
       const payload: any = {
         match_id: activeMatchId,
         striker_id: currentStrikerId,
@@ -1773,7 +1864,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         commentary: commentary || ''
       };
 
-      // Add New Fields Only if NOT a retry (the interceptor might be blocking these)
       if (!isRetry) {
         payload.shot_zone = zone;
         payload.is_not_out = !isWicket;
@@ -1794,7 +1884,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         if (!response.ok) {
           if (response.status === 400 && !isRetry) {
             console.warn("[Sync] Interceptor conflict detected. Ball saved using minimalist fallback.");
-            return syncBallToCloud(true); // Retry without new fields
+            return syncBallToCloud(true);
           }
           const errorText = await response.text();
           throw new Error(`Sync Error (${response.status}): ${errorText}`);
@@ -1806,23 +1896,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
     syncBallToCloud();
 
-    // Auto-Save: Trigger immediate state sync to cloud for field rehydration (striker, bowler, etc.)
     syncToDatabase(store);
 
-    // --- Milestone Detection & Animation Bridge ---
     const sId = store.strikerId || '';
     const bId = store.currentBowlerId || '';
     const sName = getPlayerName(sId);
     const bName = getPlayerName(bId);
 
-    // 1. Boundaries
     if (score === 4 && subType === 'bat') {
       milestoneRef.current?.trigger({ type: 'FOUR', playerName: sName });
     } else if (score === 6 && subType === 'bat') {
       milestoneRef.current?.trigger({ type: 'SIX', playerName: sName });
     }
 
-    // 2. Wickets & Ducks
     if (isWicket) {
       const victimId = outPlayerId || sId;
       const victimName = getPlayerName(victimId);
@@ -1838,7 +1924,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         milestoneRef.current?.trigger({ type: 'WICKET', playerName: victimName });
       }
 
-      // Check Bowler Hat-trick
       const bowlerBalls = (innings.history || []).filter(b => b.bowlerId === bId && b.isLegal);
       if (bowlerBalls.length >= 3) {
         const last3 = bowlerBalls.slice(-3);
@@ -1848,7 +1933,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         }
       }
 
-      // Check 4w/5w Hauls
       const bwStat = innings.bowlingStats[bId];
       if (bwStat) {
         if (bwStat.wickets === 5) {
@@ -1859,7 +1943,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       }
     }
 
-    // 3. Batting Benchmarks (50/100)
     const strikerStat = innings.battingStats[sId];
     if (strikerStat && subType === 'bat') {
       if (strikerStat.runs >= 100 && !strikerStat.hundred_notified) {
@@ -1871,12 +1954,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       }
     }
 
-    // --- Over End Check (ALWAYS run at the end for legal balls) ---
     const isLegalBall = type !== 'wide' && type !== 'no-ball';
     if (isLegalBall) {
       const updatedTotalBalls = innings.totalBalls + 1;
 
-      // Calculate if innings will finish to avoid showing bowler modal at innings end
       const willInningsFinish =
         (innings.wickets + (isWicket && wicketType !== 'Retired Hurt' ? 1 : 0) === 10) ||
         (updatedTotalBalls >= (store.maxOvers || 20) * 6) ||
@@ -1884,54 +1965,35 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
       if (updatedTotalBalls % 6 === 0 && updatedTotalBalls > 0 && !willInningsFinish) {
         setIsOverComplete(true);
-        // Reset currentBowlerId so the UI knows we need a new one
         store.updateMatchSettings({
           isWaitingForBowler: true,
           currentBowlerId: null
         });
 
-        // Show modal after a brief delay for animations
         setTimeout(() => setShowBowlerModal(true), 1200);
       }
     }
   };
 
-  /**
-   * INTERCEPTOR: Checks if Wagon Wheel is enabled before finalizing ball record.
-   * If enabled and ball is off-bat (not wide/bye/lb), triggers the modal first.
-   */
   const attemptRecord = (score: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string) => {
-    // Generate Random Commentary if not custom
-    let comm = customCommentary;
+    let comm = "";
+    if (isWicket) comm = currentPreviews.WICKET;
+    else if (score === 6 && subType === 'bat') comm = currentPreviews.SIX;
+    else if (score === 4 && subType === 'bat') comm = currentPreviews.FOUR;
+    else if (score === 0 && subType === 'bat') comm = currentPreviews.DOT;
+
     if (!comm) {
-      if (isWicket) comm = currentPreviews.WICKET;
-      else if (score === 6 && subType === 'bat') comm = currentPreviews.SIX;
-      else if (score === 4 && subType === 'bat') comm = currentPreviews.FOUR;
-      else if (score === 0 && subType === 'bat') comm = currentPreviews.DOT;
-      
-      // Fallback if no templates or specific type selected
-      if (!comm) {
-        if (isWicket) comm = getRandomCommentary('WICKET');
-        else if (score === 6 && subType === 'bat') comm = getRandomCommentary('SIX');
-        else if (score === 4 && subType === 'bat') comm = getRandomCommentary('FOUR');
-        else if (score === 0 && subType === 'bat') comm = getRandomCommentary('DOT');
-      }
+      if (isWicket) comm = getRandomCommentary('WICKET');
+      else if (score === 6 && subType === 'bat') comm = getRandomCommentary('SIX');
+      else if (score === 4 && subType === 'bat') comm = getRandomCommentary('FOUR');
+      else if (score === 0 && subType === 'bat') comm = getRandomCommentary('DOT');
     }
 
-    // After picking, shuffle the previews for the next ball
     if (isWicket) shufflePreview('WICKET');
     else if (score === 6 && subType === 'bat') shufflePreview('SIX');
     else if (score === 4 && subType === 'bat') shufflePreview('FOUR');
     else if (score === 0 && subType === 'bat') shufflePreview('DOT');
 
-    // Reset custom commentary after use
-    setCustomCommentary('');
-    setShowCommentaryInput(false);
-
-    // We trigger Wagon Wheel if:
-    // 1. It is enabled in settings
-    // 2. The ball is off-bat (subType 'bat')
-    // 3. There are runs scored off the bat OR it's a wicket (to show dismissal zone)
     if (store.useWagonWheel && subType === 'bat' && (score > 0 || isWicket)) {
       setShowWagonWheelModal({ score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, commentary: comm });
     } else {
@@ -1943,13 +2005,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     const victimName = getPlayerName(runOutInvolved?.victimId || store.strikerId);
     milestoneRef.current?.trigger({ type: 'WICKET', playerName: victimName });
 
-    // Safety check for match end
     if (isBattingFinishing) {
       setTimeout(() => setShowInningsReview(true), 1500);
       return;
     }
 
-    // Let animation play for a moment then show next batter selection
     setTimeout(() => {
       setShowBatterSelectModal(true);
     }, 1500);
@@ -1964,7 +2024,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const totalWickets = currentInnings.wickets;
       const target = (store.innings1?.totalRuns || 0) + 1;
 
-      // 1. Prepare Update Payload
       const updatePayload: any = {
         tournament_id: matchMeta?.tournamentId,
         live_data: {
@@ -1973,8 +2032,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         }
       };
 
-      // Prepare Player Stats logic for synchronization
-      // This allows the DB view to distinguish between Mat and Inn
       const playerStatsUpdate = Object.entries(currentInnings.battingStats).map(([pid, stat]) => ({
         player_id: pid,
         match_id: activeMatchId,
@@ -1984,17 +2041,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         fours: stat.fours,
         sixes: stat.sixes,
         is_not_out: stat.status === 'batting',
-        // Mat: Always in squad (already confirmed by being in battingStats)
-        // Inn: Only if they faced a ball or were out
         is_batting_innings: stat.balls > 0 || (stat.status !== 'dnb' && stat.status !== 'batting')
       }));
 
       if (store.currentInnings === 1) {
         updatePayload.innings_1_score = totalScore;
         updatePayload.innings_1_wickets = totalWickets;
-        updatePayload.targetScore = target; // Frontend camelCase matches keyMap in api
+        updatePayload.targetScore = target;
       } else {
-        // End of match calculation
         updatePayload.status = 'completed';
         updatePayload.finalScoreHome = store.innings1?.totalRuns;
         updatePayload.finalScoreAway = store.innings2?.totalRuns;
@@ -2010,11 +2064,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         updatePayload.resultSummary = resultMessage;
       }
 
-      // 2. Sync to DB
       await updateMatchInStore(activeMatchId, updatePayload);
       setSyncStatus('success');
 
-      // 3. Post-Sync Action
       setTimeout(() => {
         setShowInningsReview(false);
         setSyncStatus('idle');
@@ -2075,7 +2127,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     if (!posterRef.current || isGeneratingPoster) return;
     setIsGeneratingPoster(true);
     try {
-      // Small delay to ensure render
       await new Promise(resolve => setTimeout(resolve, 500));
       const canvas = await html2canvas(posterRef.current, {
         backgroundColor: '#0c1222',
@@ -2095,99 +2146,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   };
 
 
-  // Guard for main dashboard rendering
   if (!currentInnings) return null;
 
-  const strikerStats = currentInnings.battingStats[store.strikerId || ''] || { runs: 0, balls: 0 };
-  const nonStrikerStats = currentInnings.battingStats[store.nonStrikerId || ''] || { runs: 0, balls: 0 };
-  const bowlerStats = currentInnings.bowlingStats[store.currentBowlerId || ''] || { overs: 0, runs: 0, wickets: 0 };
-
-  const partnershipData = useMemo(() => {
-    const balls = currentInnings?.history || [];
-    let pruns = 0;
-    let plegalBalls = 0;
-    let pextras = 0;
-    
-    let lastWicketIdx = -1;
-    for (let i = balls.length - 1; i >= 0; i--) {
-      const b = balls[i] as any;
-      if (b.isWicket && !['Retired Hurt'].includes(b.wicketType || '')) {
-        lastWicketIdx = i;
-        break;
-      }
-    }
-
-    const currentStandBalls = lastWicketIdx === -1 ? balls : balls.slice(lastWicketIdx + 1);
-
-    const sId = store.strikerId;
-    const nsId = store.nonStrikerId;
-    let sPRuns = 0; let sPBalls = 0;
-    let nsPRuns = 0; let nsPBalls = 0;
-
-    currentStandBalls.forEach((b: any) => {
-      pruns += b.runs;
-      if (b.isLegal) plegalBalls++;
-      
-      if (b.type !== 'legal') {
-        if (b.type === 'wide' || b.type === 'no-ball') {
-          pruns += 1;
-          pextras += 1 + b.runs;
-        } else {
-          pextras += b.runs;
-        }
-      }
-
-      // Individual contributions in this stand
-      if (b.strikerId === sId) {
-        if (b.subType === 'bat') sPRuns += b.runs;
-        if (b.isLegal) sPBalls++;
-      } else if (b.strikerId === nsId) {
-        if (b.subType === 'bat') nsPRuns += b.runs;
-        if (b.isLegal) nsPBalls++;
-      }
-    });
-
-    return {
-      totalRuns: pruns,
-      totalBalls: plegalBalls,
-      s: { name: getPlayerName(sId || null).split(' ')[0], runs: sPRuns, balls: sPBalls },
-      ns: { name: getPlayerName(nsId || null).split(' ')[0], runs: nsPRuns, balls: nsPBalls },
-      extras: pextras
-    };
-  }, [currentInnings?.history, store.strikerId, store.nonStrikerId]);
-
-  const lastWicketData = useMemo(() => {
-    const balls = currentInnings?.history || [];
-    let lastBall = null;
-    let totalRunsAtW = 0;
-    let wicketsAtW = 0;
-    
-    let cRuns = 0;
-    let cWickets = 0;
-
-    for (let i = 0; i < balls.length; i++) {
-      const b = balls[i] as any;
-      cRuns += b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0);
-      if (b.isWicket && !['Retired Hurt'].includes(b.wicketType || '')) {
-        cWickets++;
-        lastBall = b;
-        totalRunsAtW = cRuns;
-        wicketsAtW = cWickets;
-      }
-    }
-
-    if (!lastBall) return null;
-    const victimId = lastBall.outPlayerId || lastBall.strikerId;
-    const victimName = getPlayerName(victimId).split(' ')[0];
-    const bStat = currentInnings.battingStats[victimId];
-
-    return {
-      name: victimName,
-      runs: bStat?.runs || 0,
-      balls: bStat?.balls || 0,
-      score: `${totalRunsAtW}/${wicketsAtW}`
-    };
-  }, [currentInnings?.history, currentInnings?.battingStats]);
+  const strikerStats = currentInnings?.battingStats[store.strikerId || ''] || { runs: 0, balls: 0 };
+  const nonStrikerStats = currentInnings?.battingStats[store.nonStrikerId || ''] || { runs: 0, balls: 0 };
+  const bowlerStats = currentInnings?.bowlingStats[store.currentBowlerId || ''] || { overs: 0, runs: 0, wickets: 0 };
 
 
   return (
@@ -2267,9 +2230,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <div style={{ flex: 1, overflowY: 'auto', padding: '15px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div>
                     <h3 style={{ fontSize: '1rem', color: 'rgba(84, 147, 202, 1)', marginBottom: 8, textTransform: 'uppercase' }}>Indian Strikers</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {players
-                        .filter((p: Player) => homeXI.includes(p.id))
+                    <SelectionGrid style={{ maxHeight: '50vh' }}>
+                      {(players || [])
+                        .filter((p: Player) => (homeXI || []).includes(p.id))
                         .map((p: Player) => (
                           <div key={p.id} style={{
                             fontSize: '0.6rem',
@@ -2287,13 +2250,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           </div>
                         ))}
                       {homeXI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.55rem' }}>No XI Selected</div>}
-                    </div>
+                    </SelectionGrid>
                   </div>
                   <div>
                     <h3 style={{ fontSize: '1rem', color: '#FAB005', marginBottom: 8, textTransform: 'uppercase' }}>{matchMeta?.opponentName || 'OPPONENT'}</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {opponentPlayers
-                        .filter(p => awayXI.includes(p.id))
+                    <SelectionGrid style={{ maxHeight: '50vh' }}>
+                      {(opponentPlayers || [])
+                        .filter(p => (awayXI || []).includes(p.id))
                         .map(p => (
                           <div key={p.id} style={{
                             fontSize: '0.6rem',
@@ -2311,7 +2274,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           </div>
                         ))}
                       {awayXI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.8rem' }}>No XI Selected</div>}
-                    </div>
+                    </SelectionGrid>
                   </div>
                 </div>
               </PremiumModalContent>
@@ -2404,18 +2367,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           )}
         </ScoreSection>
 
-        <PartnershipRow style={{ background: 'rgba(0, 31, 63, 0.05)', gap: 0, padding: '2px 12px' }}>
-          <PartnershipMain>
+        <PartnershipRow style={{ background: 'rgba(0, 31, 63, 0.05)', padding: '0 12px' }}>
+          <PartnershipMain style={{ fontSize: '10px' }}>
             PARTNERSHIP: <b>{partnershipData.totalRuns}</b> ({partnershipData.totalBalls})
           </PartnershipMain>
-          <PartnershipSub>
-            {partnershipData.s.name} <span>{partnershipData.s.runs}({partnershipData.s.balls})</span> • {partnershipData.ns.name} <span>{partnershipData.ns.runs}({partnershipData.ns.balls})</span> • Extras <span>{partnershipData.extras}</span>
+          <PartnershipSub style={{ fontSize: '10px' }}>
+            {partnershipData.s.name} <span>{partnershipData.s.runs}*</span> | {partnershipData.ns.name} <span>{partnershipData.ns.runs}</span>
           </PartnershipSub>
-          {lastWicketData && (
-            <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(0,31,63,0.4)', marginTop: 1, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-              LAST WKT: <span style={{ color: '#ef4444' }}>{lastWicketData.name} {lastWicketData.runs}({lastWicketData.balls})</span> • {lastWicketData.score}
-            </div>
-          )}
         </PartnershipRow>
 
         <ActiveParticipants style={{ borderBottom: 'none' }}>
@@ -2448,8 +2406,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase' }}>This Over</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#001F3F' }}>
                     {(() => {
-                      // Logic: If the over was just completed, show the score of the JUST finished over.
-                      // Otherwise show the score of the current (incomplete) over.
                       const ballsCount = currentInnings?.totalBalls || 0;
                       const displayOver = (isOverComplete && ballsCount % 6 === 0)
                         ? Math.floor(ballsCount / 6) - 1
@@ -2461,18 +2417,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     })()}
                   </div>
                 </div>
-                <button
-                  title="Undo last ball"
-                  onClick={() => {
-                    if (window.confirm("Undo last ball?")) {
-                      store.undoLastBall();
-                      setIsOverComplete(false);
-                    }
-                  }}
-                  style={{ background: 'rgba(0,0,0,0.05)', color: '#001F3F', border: 'none', borderRadius: '50%', padding: '4px', cursor: 'pointer' }}
-                >
-                  <Undo size={14} />
-                </button>
               </div>
             </CardHeader>
             <StatValue>{getPlayerName(store.currentBowlerId)}</StatValue>
@@ -2480,148 +2424,83 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </ParticipantCard>
         </ActiveParticipants>
 
-        <div style={{
-          background: '#001F3F',
-          margin: '0',
-          borderRadius: 0,
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <TimelineContainer ref={timelineRef} id="match-timeline">
-            {(() => {
-              const balls = currentInnings?.history || [];
-              const last30 = balls.slice(-30);
-
-              return last30.map((ball: any, idx: number) => {
-                let display = ball.runs.toString();
-                if (ball.isWicket) {
-                  const prefix = ball.type === 'no-ball' ? 'NB' : ball.type === 'wide' ? 'WD' : '';
-                  const amount = ball.runs > 0 ? `+${ball.runs}` : '';
-                  display = prefix ? `${prefix}${amount}+W` : 'W';
-                }
-                else if (ball.type === 'wide') display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                else if (ball.type === 'no-ball') display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
-                else if (ball.type === 'bye') display = `B${ball.runs}`;
-
-                const ballInOverNum = ball.ballNumber;
-                const isLastBallOfOver = ballInOverNum === 6 && ball.isLegal;
-                const showSeparator = isLastBallOfOver && idx < last30.length - 1;
-
-                return (
-                  <React.Fragment key={`${idx}-${ball.timestamp}`}>
-                    <BallCircle $type={display}>
-                      {display}
-                    </BallCircle>
-                    {showSeparator && <OverSeparator />}
-                  </React.Fragment>
-                );
-              });
-            })()}
-            {(currentInnings?.history || []).length === 0 && (
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px' }}>
-                WAITING FOR LIVE ACTION...
-              </span>
-            )}
-          </TimelineContainer>
-          <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 34, display: 'flex', alignItems: 'center' }}>
-            <span style={{ color: '#FAB005', fontSize: '10px', fontWeight: 900, marginRight: 8, flexShrink: 0 }}>LIVE</span>
-            <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-              {(() => {
-                const history = currentInnings?.history || [];
-                const lastBall = history[history.length - 1];
-                return lastBall?.commentary || 'Waiting for next ball...';
-              })()}
-            </div>
-          </div>
-        </div>
-
-          <ScoringInterface style={{ opacity: store.isWaitingForBowler ? 0.6 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', position: 'relative' }}>
-            {store.isWaitingForBowler && (
-              <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', borderRadius: 16 }}>
-                <button
-                  onClick={() => setShowBowlerModal(true)}
-                  style={{ background: '#FAB005', color: '#000', border: 'none', padding: '12px 24px', borderRadius: 12, fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
-                >
-                  SELECT NEXT BOWLER
-                </button>
-              </div>
-            )}
-
-            <div style={{ padding: '0 12px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.6 }}>
-                 <MessageSquare size={14} color="#FAB005" />
-                 <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.5px' }}>LIVE COMMENTARY</span>
-               </div>
-               <button 
-                 onClick={() => setShowCommentaryInput(!showCommentaryInput)}
-                 title="Add Custom Note"
-                 style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 8, padding: '4px 8px', color: '#FAB005', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-               >
-                 <Edit3 size={12} />
-                 <span style={{ fontSize: '10px', fontWeight: 700 }}>{showCommentaryInput ? 'HIDE' : 'EDIT NOTE'}</span>
-               </button>
+          <ScoringInterface style={{ position: 'fixed', padding: '0 0 10px' }}>
+            <div style={{ background: '#001F3F', margin: '0 0 8px', borderRadius: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <TimelineContainer ref={timelineRef} id="match-timeline" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                {(() => {
+                  const balls = currentInnings?.history || [];
+                  const last30 = balls.slice(-30);
+                  return last30.map((ball: any, idx: number) => {
+                    let display = ball.runs.toString();
+                    if (ball.isWicket) {
+                      const prefix = ball.type === 'no-ball' ? 'NB' : ball.type === 'wide' ? 'WD' : '';
+                      const amount = ball.runs > 0 ? `+${ball.runs}` : '';
+                      display = prefix ? `${prefix}${amount}+W` : 'W';
+                    }
+                    else if (ball.type === 'wide') display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                    else if (ball.type === 'no-ball') display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                    else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
+                    else if (ball.type === 'bye') display = `B${ball.runs}`;
+                    const ballInOverNum = ball.ballNumber;
+                    const isLastBallOfOver = ballInOverNum === 6 && ball.isLegal;
+                    const showSeparator = isLastBallOfOver && idx < last30.length - 1;
+                    return (
+                      <React.Fragment key={`${idx}-${ball.timestamp}`}>
+                        <BallCircle $type={display}>{display}</BallCircle>
+                        {showSeparator && <OverSeparator />}
+                      </React.Fragment>
+                    );
+                  });
+                })()}
+                {(currentInnings?.history || []).length === 0 && (
+                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px' }}>WAITING...</span>
+                )}
+              </TimelineContainer>
             </div>
 
-            {showCommentaryInput && (
-              <div style={{ padding: '0 12px 12px' }}>
-                <input 
-                  type="text"
-                  placeholder="Type custom ball note here..."
-                  value={customCommentary}
-                  onChange={(e) => setCustomCommentary(e.target.value)}
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '12px', color: '#FFF', fontSize: '0.8rem' }}
-                />
-              </div>
-            )}
+            <div style={{ padding: '0 12px 6px', display: 'flex', justifyContent: 'flex-end', position: 'relative', zIndex: 20 }}>
+              <button 
+                onClick={() => { if(window.confirm("Undo last ball?")) { store.undoLastBall(); setIsOverComplete(false); } }}
+                title="Undo Last Ball"
+                style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: 6, padding: '4px 12px', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <RotateCcw size={12} />
+                <span style={{ fontSize: '11px', fontWeight: 800 }}>UNDO LAST BALL</span>
+              </button>
+            </div>
 
-            {/* Next Commentary Previews */}
-            {!showCommentaryInput && (
-              <div style={{ padding: '0 12px 12px' }}>
-                <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px dashed rgba(255,255,255,0.1)', padding: '10px 12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <span style={{ fontSize: '9px', fontWeight: 900, color: '#FAB005', letterSpacing: '1px' }}>PREVIEW NEXT ACTION</span>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {(['WICKET', 'FOUR', 'SIX', 'DOT'] as const).map(type => (
-                        <button 
-                          key={type}
-                          onClick={() => shufflePreview(type)}
-                          style={{ border: 'none', color: '#FFF', fontSize: '8px', fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.05)', cursor: 'pointer' }}
-                        >
-                          SHUFFLE {type === 'WICKET' ? 'W' : type === 'FOUR' ? '4' : type === 'SIX' ? '6' : '0'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', lineHeight: 1.4 }}>
-                    {(() => {
-                      const active = currentPreviews.DOT && currentPreviews.FOUR && currentPreviews.SIX && currentPreviews.WICKET;
-                      if (!active) return "No templates loaded. Use defaults.";
-                      return `0: ${currentPreviews.DOT.slice(0, 30)}... | 4: ${currentPreviews.FOUR.slice(0, 30)}...`;
-                    })()}
-                  </p>
+            <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {store.isWaitingForBowler && (
+                <div style={{ position: 'absolute', inset: -4, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)', borderRadius: 12 }}>
+                  <button
+                    onClick={() => setShowBowlerModal(true)}
+                    style={{ background: '#FAB005', color: '#000', border: 'none', padding: '10px 20px', borderRadius: 10, fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
+                  >
+                    SELECT NEXT BOWLER
+                  </button>
                 </div>
+              )}
+
+              <div style={{ opacity: store.isWaitingForBowler ? 0.3 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <RunGrid>
+                  <ScoringBtn onClick={() => attemptRecord(0, 'legal')}>0</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(1, 'legal')}>1</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(2, 'legal')}>2</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(3, 'legal')}>3</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(4, 'legal')}>4</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(5, 'legal')}>5</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(6, 'legal')}>6</ScoringBtn>
+                  <ScoringBtn $variant="wicket" style={{ background: '#FF4D4D', color: '#FFF' }} onClick={() => setShowWicketModal(true)}>WKT</ScoringBtn>
+                </RunGrid>
+
+                <ExtraStack>
+                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('wd'); setShowNBModal(true); }}>WD</ScoringBtn>
+                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('nb'); setShowNBModal(true); }}>NB</ScoringBtn>
+                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('byes'); setShowNBModal(true); }}>B</ScoringBtn>
+                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
+                </ExtraStack>
               </div>
-            )}
-
-            <RunGrid>
-              <ScoringBtn onClick={() => attemptRecord(0, 'legal')}>0</ScoringBtn>
-              <ScoringBtn onClick={() => attemptRecord(1, 'legal')}>1</ScoringBtn>
-              <ScoringBtn onClick={() => attemptRecord(2, 'legal')}>2</ScoringBtn>
-              <ScoringBtn onClick={() => attemptRecord(3, 'legal')}>3</ScoringBtn>
-              <ScoringBtn onClick={() => attemptRecord(4, 'legal')}>4</ScoringBtn>
-              <ScoringBtn onClick={() => attemptRecord(5, 'legal')}>5</ScoringBtn>
-              <ScoringBtn onClick={() => attemptRecord(6, 'legal')}>6</ScoringBtn>
-              <ScoringBtn $variant="wicket" style={{ background: '#FF4D4D', color: '#FFF' }} onClick={() => setShowWicketModal(true)}>WKT</ScoringBtn>
-            </RunGrid>
-
-            <ExtraStack>
-              <ScoringBtn $variant="extra" onClick={() => { setExtraType('wd'); setShowNBModal(true); }}>WD</ScoringBtn>
-              <ScoringBtn $variant="extra" onClick={() => { setExtraType('nb'); setShowNBModal(true); }}>NB</ScoringBtn>
-              <ScoringBtn $variant="extra" onClick={() => { setExtraType('byes'); setShowNBModal(true); }}>B</ScoringBtn>
-              <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
-            </ExtraStack>
+            </div>
           </ScoringInterface>
 
         {showBowlerModal && (
@@ -2636,9 +2515,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
                   const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
                   const maxOversPerB = Math.ceil((store.maxOvers || 20) / 5);
-                  return fieldingPool
+                  return (fieldingPool || [])
                     .filter((p: any) => {
-                      const isInXI = fieldingTeamXI.includes(p.id);
+                      const isInXI = (fieldingTeamXI || []).includes(p.id);
                       const isPrevBowler = p.id === store.currentBowlerId;
                       const stats = currentInnings.bowlingStats[p.id] || { overs: 0 };
                       const hasReachedLimit = stats.overs >= maxOversPerB;
@@ -2782,9 +2661,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </ModalOverlay>
         )}
 
-
-        {/* MilestoneOverlay handles everything now */}
-
         {showFielderModal && (
           <ModalOverlay onClick={() => setShowFielderModal(false)}>
             <ModalContent onClick={e => e.stopPropagation()}>
@@ -2796,8 +2672,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   const fieldingTeamId = currentInnings.bowlingTeamId;
                   const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
                   const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
-                  return fieldingPool
-                    .filter((p: any) => fieldingTeamXI.includes(p.id))
+                  return (fieldingPool || [])
+                    .filter((p: any) => (fieldingTeamXI || []).includes(p.id))
                     .map((p: any) => (
                       <PlayerCard key={p.id} onClick={() => {
                         setPendingFielderId(p.id);
@@ -2928,7 +2804,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         key={reason}
                         onClick={() => {
                           store.recordPenalty('bowling', 5);
-                          // Sync immediately to ball_by_ball stream
                           if (activeMatchId) {
                             fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
                               method: 'POST',
@@ -3260,13 +3135,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   const battingTeamId = currentInnings.battingTeamId;
                   const battingTeamXI = battingTeamId === 'HOME' ? homeXI : awayXI;
                   const battingPool = battingTeamId === 'HOME' ? players : opponentPlayers;
-                  return battingPool
+                  const available = (battingPool || []).filter((p: any) =>
+                    battingTeamXI.includes(p.id) &&
+                    !['out', 'batting', 'retired'].includes(currentInnings.battingStats[p.id]?.status || '')
+                  );
+                  return available
                     .filter((p: any) => {
-                      const isInXI = battingTeamXI.includes(p.id);
                       const isAlreadyBatting = p.id === store.strikerId || p.id === store.nonStrikerId;
-                      const status = currentInnings.battingStats[p.id]?.status;
-                      const alreadyOut = status === 'out';
-                      return isInXI && !isAlreadyBatting && !alreadyOut;
+                      const alreadyOut = currentInnings.battingStats[p.id]?.status === 'out';
+                      return !isAlreadyBatting && !alreadyOut;
                     })
                     .map((p: any) => (
                       <PlayerCard
@@ -3311,11 +3188,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   const battingTeamId = currentInnings.battingTeamId;
                   const battingXI = battingTeamId === 'HOME' ? homeXI : awayXI;
                   const battingPool = battingTeamId === 'HOME' ? players : opponentPlayers;
-                  const available = battingPool.filter((p: any) =>
+                  const available = (battingPool || []).filter((p: any) =>
                     battingXI.includes(p.id) &&
-                    p.id !== store.strikerId &&
-                    p.id !== store.nonStrikerId &&
-                    currentInnings.battingStats[p.id]?.status !== 'out'
+                    !['out', 'batting', 'retired'].includes(currentInnings.battingStats[p.id]?.status || '')
                   );
                   return available.length === 0 ? (
                     <div style={{ textAlign: 'center', opacity: 0.4, padding: 20 }}>No more players available.</div>
@@ -3552,19 +3427,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                 if (ball.isWicket) {
                                   if (!result) result = `OUT! ${ball.wicketType || 'Wicket'} — ${strikerN}`;
                                   resultColor = '#FF4D4D';
-                                } else if (ball.runs === 6) { 
-                                  if (!result) result = `SIX! ${strikerN} hits it clean`; 
-                                  resultColor = '#38BDF8'; 
-                                } else if (ball.runs === 4) { 
-                                  if (!result) result = `FOUR! ${strikerN} finds the boundary`; 
-                                  resultColor = '#38BDF8'; 
+                                } else if (ball.runs === 6) {
+                                  if (!result) result = `SIX! ${strikerN} hits it clean`;
+                                  resultColor = '#38BDF8';
+                                } else if (ball.runs === 4) {
+                                  if (!result) result = `FOUR! ${strikerN} finds the boundary`;
+                                  resultColor = '#38BDF8';
                                 } else if (ball.type === 'wide') result = `Wide${ball.runs > 0 ? ` + ${ball.runs} run(s)` : ''}`;
                                 else if (ball.type === 'no-ball') result = `No Ball${ball.runs > 0 ? ` + ${ball.runs} run(s)` : ''}`;
                                 else if (ball.type === 'leg-bye') result = `Leg Bye — ${ball.runs} run(s)`;
                                 else if (ball.type === 'bye') result = `Bye — ${ball.runs} run(s)`;
-                                else if (ball.runs === 0) { 
-                                  if (!result) result = `Dot ball`; 
-                                  resultColor = 'rgba(255,255,255,0.4)'; 
+                                else if (ball.runs === 0) {
+                                  if (!result) result = `Dot ball`;
+                                  resultColor = 'rgba(255,255,255,0.4)';
                                 } else {
                                   if (!result) result = `${ball.runs} run(s)`;
                                 };
@@ -3721,39 +3596,39 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 onClick={e => e.stopPropagation()}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fbbf24', fontStyle: 'italic', margin: 0 }}>MATCH SETTINGS</h2>
-                  <IconButton onClick={() => setShowSettingsDrawer(false)}>
-                    <X size={24} />
+                  <h2 style={{ fontSize: '0.8rem', fontWeight: 900, color: '#FFF', fontStyle: 'italic', margin: 0 }}>MATCH SETTINGS</h2>
+                  <IconButton onClick={() => setShowSettingsDrawer(false)} style={{ color: '#FFF' }}>
+                    <X size={14} />
                   </IconButton>
                 </div>
 
                 {/* Change Scorer Action */}
-                <div style={{ marginTop: 24, marginBottom: 8 }}>
+                <div style={{ marginTop: 12, marginBottom: 4 }}>
                   <button
                     disabled={syncStatus === 'loading'}
                     onClick={handleChangeScorer}
                     style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '16px',
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
                       background: syncStatus === 'loading' ? 'rgba(56, 189, 248, 0.05)' : 'rgba(56, 189, 248, 0.1)',
                       border: '1px solid #38BDF8',
-                      borderRadius: 12, color: '#38BDF8', fontWeight: 800, cursor: syncStatus === 'loading' ? 'not-allowed' : 'pointer',
+                      borderRadius: 8, color: '#38BDF8', fontWeight: 800, cursor: syncStatus === 'loading' ? 'not-allowed' : 'pointer',
                       textAlign: 'left', opacity: syncStatus === 'loading' ? 0.7 : 1
                     }}
                   >
                     {syncStatus === 'loading' ? (
                       <>
-                        <div style={{ width: 20, height: 20, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38BDF8', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                        <div style={{ width: 12, height: 12, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38BDF8', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
                         <div>
-                          <div style={{ fontSize: '0.9rem' }}>SYNCING...</div>
-                          <div style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 500 }}>Please wait, saving to cloud</div>
+                          <div style={{ fontSize: '0.5rem' }}>SYNCING...</div>
+                          <div style={{ fontSize: '0.4rem', opacity: 0.6, fontWeight: 500 }}>Please wait, saving to cloud</div>
                         </div>
                       </>
                     ) : (
                       <>
-                        <Repeat size={20} />
+                        <Repeat size={12} />
                         <div>
-                          <div style={{ fontSize: '0.9rem' }}>CHANGE SCORER</div>
-                          <div style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 500 }}>Handoff match to another device</div>
+                          <div style={{ fontSize: '0.5rem' }}>CHANGE SCORER</div>
+                          <div style={{ fontSize: '0.4rem', opacity: 0.6, fontWeight: 500 }}>Handoff match to another device</div>
                         </div>
                       </>
                     )}
@@ -3762,79 +3637,74 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
                 <SettingsGroup>
                   <GroupTitle>Match Controls</GroupTitle>
-                  <SettingsInput>
-                    <label htmlFor="total-overs-input">Total Overs</label>
-                    <input
-                      id="total-overs-input"
-                      title="Edit Match Overs"
-                      type="number"
-                      value={store.maxOvers || 20}
-                      onChange={(e) => store.updateMatchSettings({ maxOvers: parseInt(e.target.value) || 20 })}
-                    />
-                  </SettingsInput>
-                  <SettingsInput>
-                    <label htmlFor="wagon-wheel-toggle">Wagon Wheel</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: store.useWagonWheel ? 0.3 : 1 }}>
-                        <Zap size={14} color="#FAB005" fill="#FAB005" />
-                        <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#FAB005' }}>SPEED MODE</span>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <ControlButton
+                      $variant="gold"
+                      style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}
+                      onClick={() => {
+                        const val = window.prompt("Edit Max Overs:", String(store.maxOvers || 20));
+                        if (val && !isNaN(parseInt(val))) store.updateMatchSettings({ maxOvers: parseInt(val) });
+                      }}
+                    >
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontSize: '0.4rem', opacity: 0.6, textTransform: 'uppercase' }}>Overs</div>
+                        <div style={{ fontSize: '0.6rem', fontWeight: 900 }}>{store.maxOvers || 20}</div>
                       </div>
-                      <button
-                        id="wagon-wheel-toggle"
-                        onClick={() => {
-                          const next = !store.useWagonWheel;
-                          store.updateMatchSettings({ useWagonWheel: next });
-                          localStorage.setItem('ins-wagon-wheel-enabled', String(next));
-                        }}
-                        style={{
-                          background: store.useWagonWheel ? '#10b981' : 'rgba(255,255,255,0.05)',
-                          border: 'none',
-                          padding: '4px 12px',
-                          borderRadius: 12,
-                          color: store.useWagonWheel ? '#000' : 'rgba(255,255,255,0.4)',
-                          fontSize: '0.7rem',
-                          fontWeight: 900,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {store.useWagonWheel ? 'ENABLED' : 'DISABLED'}
-                      </button>
-                    </div>
-                  </SettingsInput>
+                      <Settings size={12} />
+                    </ControlButton>
+                    <ControlButton
+                      $variant={store.useWagonWheel ? "emerald" : "gold"}
+                      style={{ flex: 1, borderColor: store.useWagonWheel ? '#10b981' : '#f59e0b' }}
+                      onClick={() => {
+                        const next = !store.useWagonWheel;
+                        store.updateMatchSettings({ useWagonWheel: next });
+                        localStorage.setItem('ins-wagon-wheel-enabled', String(next));
+                      }}
+                    >
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontSize: '0.4rem', opacity: 0.6, textTransform: 'uppercase' }}>Wagon Wheel</div>
+                        <div style={{ fontSize: '0.6rem', fontWeight: 900 }}>{store.useWagonWheel ? 'ON' : 'OFF'}</div>
+                      </div>
+                      <Zap size={12} fill={store.useWagonWheel ? '#10b981' : 'none'} />
+                    </ControlButton>
+                  </div>
                   {store.currentInnings === 2 && (
-                    <SettingsInput>
-                      <label htmlFor="target-score-input">Target Score</label>
-                      <input
-                        id="target-score-input"
-                        title="Override Target Score"
-                        type="number"
-                        value={store.targetScore || ((store.innings1?.totalRuns || 0) + 1)}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          if (!isNaN(val)) store.updateTargetScore(val);
-                        }}
-                        style={{ color: store.targetScore ? '#10b981' : '#fbbf24' }}
-                      />
-                    </SettingsInput>
+                    <ControlButton
+                      $variant="emerald"
+                      style={{ marginTop: 4 }}
+                      onClick={() => {
+                        const val = window.prompt("Override Target Score:", String(store.targetScore || ((store.innings1?.totalRuns || 0) + 1)));
+                        if (val && !isNaN(parseInt(val))) store.updateTargetScore(parseInt(val));
+                      }}
+                    >
+                      <div style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Trophy size={14} />
+                        <div>
+                          <div style={{ fontSize: '0.4rem', opacity: 0.6, textTransform: 'uppercase' }}>Target Score</div>
+                          <div style={{ fontSize: '0.6rem', fontWeight: 900 }}>{store.targetScore || ((store.innings1?.totalRuns || 0) + 1)}</div>
+                        </div>
+                      </div>
+                    </ControlButton>
                   )}
                 </SettingsGroup>
 
                 <SettingsGroup>
                   <GroupTitle>Active Player Controls</GroupTitle>
-                  <ControlButton $variant="emerald" onClick={() => { store.switchStriker(); setShowSettingsDrawer(false); }}>
-                    <span>Swap Strike</span>
-                    <Repeat size={18} />
-                  </ControlButton>
-                  <ControlButton $variant="gold" onClick={() => {
-                    if (store.strikerId && window.confirm(`Retire ${getPlayerName(store.strikerId)}?`)) {
-                      store.retireBatter(store.strikerId);
-                      setShowSettingsDrawer(false);
-                    }
-                  }}>
-                    <span>Retire Striker</span>
-                    <User size={18} />
-                  </ControlButton>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <ControlButton $variant="emerald" style={{ flex: 1 }} onClick={() => { store.switchStriker(); setShowSettingsDrawer(false); }}>
+                      <span>Swap Strike</span>
+                      <Repeat size={14} />
+                    </ControlButton>
+                    <ControlButton $variant="gold" style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }} onClick={() => {
+                      if (store.strikerId && window.confirm(`Retire ${getPlayerName(store.strikerId)}?`)) {
+                        store.retireBatter(store.strikerId);
+                        setShowSettingsDrawer(false);
+                      }
+                    }}>
+                      <span>Retire</span>
+                      <User size={14} />
+                    </ControlButton>
+                  </div>
                 </SettingsGroup>
 
                 <SettingsGroup>
@@ -3876,17 +3746,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   </div>
                 </SettingsGroup>
 
-                <div style={{ marginTop: 'auto', padding: '16px 0' }}>
-                  <button
-                    onClick={() => setShowSettingsDrawer(false)}
-                    style={{
-                      width: '100%', padding: '16px', borderRadius: 12, background: '#fbbf24',
-                      border: 'none', color: '#000', fontWeight: 900, cursor: 'pointer', marginBottom: 12
-                    }}
-                  >
-                    CLOSE SETTINGS
-                  </button>
-                  <p style={{ fontSize: '0.65rem', opacity: 0.3, textAlign: 'center', letterSpacing: '1px' }}>
+                <div style={{ marginTop: 'auto', padding: '12px 0' }}>
+                  <p style={{ fontSize: '0.6rem', opacity: 0.3, textAlign: 'center', letterSpacing: '1px' }}>
                     RIYADH NIGHTS EDITION • STRIKERS PULSE v2.5
                   </p>
                 </div>
