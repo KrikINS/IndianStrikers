@@ -2223,7 +2223,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               onClick={() => setShowLineups(false)}
             >
               <PremiumModalContent onClick={e => e.stopPropagation()}>
-                <div style={{ padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ padding: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900 }}>TEAM SQUADS</h2>
                   <button title="Close" onClick={() => setShowLineups(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X size={24} /></button>
                 </div>
@@ -2283,17 +2283,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         </AnimatePresence>
 
         <ScoreSection>
-          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 4 }}>
-            <button
-              title="View Lineups"
-              onClick={() => setShowLineups(true)}
-              style={{
-                background: 'rgba(0,31,63,0.05)', border: 'none', borderRadius: 6, display: 'flex', alignItems: 'center',
-                padding: '4px 8px', color: '#001F3F', cursor: 'pointer'
-              }}
-            >
-              <Users size={12} />
-            </button>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 10 }}>
             <button
               title="Full Scorecard"
               onClick={() => setShowScorecardModal(true)}
@@ -2302,28 +2292,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 gap: 4, padding: '4px 12px', color: 'rgba(247, 247, 248, 1)', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer'
               }}
             >
-              <LayoutList size={12} /> SCORECARD
-            </button>
-            <button
-              title="Share Scorecard"
-              onClick={() => {
-                if (navigator.share) {
-                  navigator.share({
-                    title: 'Match Scorecard',
-                    text: `Check out the score: ${currentInnings?.totalRuns}/${currentInnings?.wickets} in ${store.getOvers(currentInnings?.totalBalls || 0)} overs`,
-                    url: window.location.href
-                  }).catch(console.error);
-                } else {
-                  toast.success("Link copied to clipboard!");
-                  navigator.clipboard.writeText(window.location.href);
-                }
-              }}
-              style={{
-                background: 'rgba(0,31,63,0.05)', border: 'none', borderRadius: 6, display: 'flex', alignItems: 'center',
-                padding: '4px 8px', color: '#001F3F', cursor: 'pointer'
-              }}
-            >
-              <Share2 size={12} />
+              <LayoutList size={12} /> FULL SCORECARD
             </button>
           </div>
 
@@ -2367,14 +2336,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           )}
         </ScoreSection>
 
-        <PartnershipRow style={{ background: 'rgba(0, 31, 63, 0.05)', padding: '0 12px' }}>
-          <PartnershipMain style={{ fontSize: '10px' }}>
-            PARTNERSHIP: <b>{partnershipData.totalRuns}</b> ({partnershipData.totalBalls})
-          </PartnershipMain>
-          <PartnershipSub style={{ fontSize: '10px' }}>
-            {partnershipData.s.name} <span>{partnershipData.s.runs}*</span> | {partnershipData.ns.name} <span>{partnershipData.ns.runs}</span>
-          </PartnershipSub>
-        </PartnershipRow>
+
 
         <ActiveParticipants style={{ borderBottom: 'none' }}>
           <ParticipantCard $active>
@@ -2400,7 +2362,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </ParticipantCard>
           <ParticipantCard style={{ gridColumn: 'span 2' }}>
             <CardHeader>
-              <NameLabel>Bowler</NameLabel>
+              <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bowler</span>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase' }}>This Over</div>
@@ -2424,84 +2386,124 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </ParticipantCard>
         </ActiveParticipants>
 
-          <ScoringInterface style={{ position: 'fixed', padding: '0 0 10px' }}>
-            <div style={{ background: '#001F3F', margin: '0 0 8px', borderRadius: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <TimelineContainer ref={timelineRef} id="match-timeline" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                {(() => {
-                  const balls = currentInnings?.history || [];
-                  const last30 = balls.slice(-30);
-                  return last30.map((ball: any, idx: number) => {
-                    let display = ball.runs.toString();
-                    if (ball.isWicket) {
-                      const prefix = ball.type === 'no-ball' ? 'NB' : ball.type === 'wide' ? 'WD' : '';
-                      const amount = ball.runs > 0 ? `+${ball.runs}` : '';
-                      display = prefix ? `${prefix}${amount}+W` : 'W';
-                    }
-                    else if (ball.type === 'wide') display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                    else if (ball.type === 'no-ball') display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                    else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
-                    else if (ball.type === 'bye') display = `B${ball.runs}`;
-                    const ballInOverNum = ball.ballNumber;
-                    const isLastBallOfOver = ballInOverNum === 6 && ball.isLegal;
-                    const showSeparator = isLastBallOfOver && idx < last30.length - 1;
-                    return (
-                      <React.Fragment key={`${idx}-${ball.timestamp}`}>
-                        <BallCircle $type={display}>{display}</BallCircle>
-                        {showSeparator && <OverSeparator />}
-                      </React.Fragment>
-                    );
-                  });
-                })()}
-                {(currentInnings?.history || []).length === 0 && (
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px' }}>WAITING...</span>
-                )}
-              </TimelineContainer>
-            </div>
+        <PartnershipRow style={{ background: 'rgba(0, 31, 63, 0.05)', padding: '4px 10px', marginBottom: 0 }}>
+          <PartnershipMain style={{ fontSize: '10px' }}>
+            PARTNERSHIP: <b>{partnershipData.totalRuns}</b> ({partnershipData.totalBalls})
+          </PartnershipMain>
+          <PartnershipSub style={{ fontSize: '10px' }}>
+            {getPlayerName(store.strikerId)} <b>{strikerStats.runs}({strikerStats.balls})*</b> | {getPlayerName(store.nonStrikerId)} <b>{nonStrikerStats.runs}({nonStrikerStats.balls})</b>
+          </PartnershipSub>
+        </PartnershipRow>
 
-            <div style={{ padding: '0 12px 6px', display: 'flex', justifyContent: 'flex-end', position: 'relative', zIndex: 20 }}>
-              <button 
-                onClick={() => { if(window.confirm("Undo last ball?")) { store.undoLastBall(); setIsOverComplete(false); } }}
-                title="Undo Last Ball"
-                style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', borderRadius: 6, padding: '4px 12px', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+        <ScoringInterface style={{ position: 'fixed', padding: '10px 10px 10px' }}>
+          {/* UNDO & UTILITY ROW - FIXED FOOTER */}
+          <div style={{ padding: '0 10px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 30 }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={() => setShowLineups(true)}
+                title="View Lineups"
+                style={{ background: 'rgba(250, 176, 5, 0.15)', border: 'none', borderRadius: 6, padding: '6px 10px', color: '#FAB005', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
               >
-                <RotateCcw size={12} />
-                <span style={{ fontSize: '11px', fontWeight: 800 }}>UNDO LAST BALL</span>
+                <Users size={12} />
+                <span style={{ fontSize: '10px', fontWeight: 800 }}>LINEUPS</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: 'Match Scorecard',
+                      text: `Score: ${currentInnings?.totalRuns}/${currentInnings?.wickets} (${store.getOvers(currentInnings?.totalBalls || 0)} ovs)`,
+                      url: window.location.href
+                    }).catch(console.error);
+                  } else {
+                    toast.success("Link copied!");
+                    navigator.clipboard.writeText(window.location.href);
+                  }
+                }}
+                title="Share Scorecard"
+                style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 6, padding: '6px 10px', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <Share2 size={12} />
+                <span style={{ fontSize: '10px', fontWeight: 800 }}>SHARE</span>
               </button>
             </div>
 
-            <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {store.isWaitingForBowler && (
-                <div style={{ position: 'absolute', inset: -4, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)', borderRadius: 12 }}>
-                  <button
-                    onClick={() => setShowBowlerModal(true)}
-                    style={{ background: '#FAB005', color: '#000', border: 'none', padding: '10px 20px', borderRadius: 10, fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
-                  >
-                    SELECT NEXT BOWLER
-                  </button>
-                </div>
+            <button
+              onClick={() => { store.undoLastBall(); setIsOverComplete(false); }}
+              title="Undo Last Ball"
+              style={{ background: 'rgba(239, 68, 68, 0.2)', border: 'none', borderRadius: 6, padding: '6px 12px', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: 1, visibility: 'visible' }}
+            >
+              <div style={{ pointerEvents: 'none' }}><RotateCcw size={14} /></div>
+              <span style={{ fontSize: '11px', fontWeight: 900 }}>UNDO</span>
+            </button>
+          </div>
+
+          <div style={{ background: '#001F3F', margin: '0 0 2px', borderRadius: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <TimelineContainer ref={timelineRef} id="match-timeline" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              {(() => {
+                const balls = currentInnings?.history || [];
+                const last30 = balls.slice(-30);
+                return last30.map((ball: any, idx: number) => {
+                  let display = ball.runs.toString();
+                  if (ball.isWicket) {
+                    const prefix = ball.type === 'no-ball' ? 'NB' : ball.type === 'wide' ? 'WD' : '';
+                    const amount = ball.runs > 0 ? `+${ball.runs}` : '';
+                    display = prefix ? `${prefix}${amount}+W` : 'W';
+                  }
+                  else if (ball.type === 'wide') display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                  else if (ball.type === 'no-ball') display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                  else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
+                  else if (ball.type === 'bye') display = `B${ball.runs}`;
+                  const ballInOverNum = ball.ballNumber;
+                  const isLastBallOfOver = ballInOverNum === 6 && ball.isLegal;
+                  const showSeparator = isLastBallOfOver && idx < last30.length - 1;
+                  return (
+                    <React.Fragment key={`${idx}-${ball.timestamp}`}>
+                      <BallCircle $type={display}>{display}</BallCircle>
+                      {showSeparator && <OverSeparator />}
+                    </React.Fragment>
+                  );
+                });
+              })()}
+              {(currentInnings?.history || []).length === 0 && (
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px' }}>WAITING...</span>
               )}
+            </TimelineContainer>
+          </div>
 
-              <div style={{ opacity: store.isWaitingForBowler ? 0.3 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <RunGrid>
-                  <ScoringBtn onClick={() => attemptRecord(0, 'legal')}>0</ScoringBtn>
-                  <ScoringBtn onClick={() => attemptRecord(1, 'legal')}>1</ScoringBtn>
-                  <ScoringBtn onClick={() => attemptRecord(2, 'legal')}>2</ScoringBtn>
-                  <ScoringBtn onClick={() => attemptRecord(3, 'legal')}>3</ScoringBtn>
-                  <ScoringBtn onClick={() => attemptRecord(4, 'legal')}>4</ScoringBtn>
-                  <ScoringBtn onClick={() => attemptRecord(5, 'legal')}>5</ScoringBtn>
-                  <ScoringBtn onClick={() => attemptRecord(6, 'legal')}>6</ScoringBtn>
-                  <ScoringBtn $variant="wicket" style={{ background: '#FF4D4D', color: '#FFF' }} onClick={() => setShowWicketModal(true)}>WKT</ScoringBtn>
-                </RunGrid>
-
-                <ExtraStack>
-                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('wd'); setShowNBModal(true); }}>WD</ScoringBtn>
-                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('nb'); setShowNBModal(true); }}>NB</ScoringBtn>
-                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('byes'); setShowNBModal(true); }}>B</ScoringBtn>
-                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
-                </ExtraStack>
+          <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {store.isWaitingForBowler && (
+              <div style={{ position: 'absolute', inset: -4, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)', borderRadius: 12 }}>
+                <button
+                  onClick={() => setShowBowlerModal(true)}
+                  style={{ background: '#FAB005', color: '#000', border: 'none', padding: '10px 20px', borderRadius: 10, fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
+                >
+                  SELECT NEXT BOWLER
+                </button>
               </div>
+            )}
+
+            <div style={{ opacity: store.isWaitingForBowler ? 0.3 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <RunGrid>
+                <ScoringBtn onClick={() => attemptRecord(0, 'legal')}>0</ScoringBtn>
+                <ScoringBtn onClick={() => attemptRecord(1, 'legal')}>1</ScoringBtn>
+                <ScoringBtn onClick={() => attemptRecord(2, 'legal')}>2</ScoringBtn>
+                <ScoringBtn onClick={() => attemptRecord(3, 'legal')}>3</ScoringBtn>
+                <ScoringBtn onClick={() => attemptRecord(4, 'legal')}>4</ScoringBtn>
+                <ScoringBtn onClick={() => attemptRecord(5, 'legal')}>5</ScoringBtn>
+                <ScoringBtn onClick={() => attemptRecord(6, 'legal')}>6</ScoringBtn>
+                <ScoringBtn $variant="wicket" style={{ background: '#FF4D4D', color: '#FFF' }} onClick={() => setShowWicketModal(true)}>WKT</ScoringBtn>
+              </RunGrid>
+
+              <ExtraStack>
+                <ScoringBtn $variant="extra" onClick={() => { setExtraType('wd'); setShowNBModal(true); }}>WD</ScoringBtn>
+                <ScoringBtn $variant="extra" onClick={() => { setExtraType('nb'); setShowNBModal(true); }}>NB</ScoringBtn>
+                <ScoringBtn $variant="extra" onClick={() => { setExtraType('byes'); setShowNBModal(true); }}>B</ScoringBtn>
+                <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
+              </ExtraStack>
             </div>
-          </ScoringInterface>
+          </div>
+        </ScoringInterface>
 
         {showBowlerModal && (
           <ModalOverlay onClick={() => setShowBowlerModal(false)}>
