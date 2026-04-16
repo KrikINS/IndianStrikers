@@ -51,13 +51,21 @@ export default function GlobalChat({ currentUser }: { currentUser: any }) {
 
   return (
     <>
-      {/* Floating FAB */}
-      <button
+      {/* Floating FAB - Draggable */}
+      <motion.button
+        drag
+        dragConstraints={{ left: -300, right: 0, top: -600, bottom: 0 }}
+        dragElastic={0.1}
+        dragTransition={{ bounceStiffness: 200, bounceDamping: 20 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        whileDrag={{ scale: 1.15, boxShadow: "0 20px 40px rgba(0,0,0,0.4)" }}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-[90px] right-6 z-[60] w-14 h-14 bg-sky-600 hover:bg-sky-500 text-white rounded-full shadow-[0_10px_30px_-5px_rgba(56,189,248,0.5)] flex items-center justify-center transition-all active:scale-95 border-2 border-white/20"
+        title="Open club chat"
+        className="fixed bottom-[90px] right-6 z-[60] w-14 h-14 bg-sky-600 hover:bg-sky-500 text-white rounded-full shadow-[0_10px_30px_-5px_rgba(56,189,248,0.5)] flex items-center justify-center transition-colors border-2 border-white/20 touch-none cursor-grab active:cursor-grabbing"
       >
         <MessageCircle size={28} />
-      </button>
+      </motion.button>
 
       <AnimatePresence>
         {isOpen && (
@@ -79,12 +87,14 @@ export default function GlobalChat({ currentUser }: { currentUser: any }) {
               <div className="flex gap-2">
                 <button 
                   onClick={loadMessages}
+                  title="Refresh messages"
                   className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400"
                 >
                   <Loader2 size={18} className={loading ? 'animate-spin' : ''} />
                 </button>
                 <button 
                   onClick={() => setIsOpen(false)}
+                  title="Close chat"
                   className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400"
                 >
                   <X size={20} />
@@ -142,6 +152,7 @@ export default function GlobalChat({ currentUser }: { currentUser: any }) {
               <button 
                 type="submit"
                 disabled={!newMessage.trim() || loading}
+                title="Send message"
                 className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 w-12 h-12 flex items-center justify-center rounded-2xl text-white transition-all disabled:opacity-50 shadow-lg shadow-sky-600/20 active:scale-90"
               >
                 <Send size={18} />

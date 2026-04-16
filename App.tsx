@@ -187,8 +187,8 @@ const AppContent: React.FC<{
 
         </main>
         
-        {/* Global Club Chat */}
-        {currentUser && (
+        {/* Global Club Chat - Only for Members & Admins */}
+        {currentUser && userRole !== 'guest' && (
           <GlobalChat currentUser={currentUser} />
         )}
       </div>
