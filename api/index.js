@@ -1414,6 +1414,43 @@ app.get('/api/tournament-performers', async (req, res) => {
   }
 });
 
+// CHAT
+app.get('/api/chat', async (req, res) => {
+  try {
+    const { data, error } = await db.query(
+      'SELECT * FROM club_messages ORDER BY created_at DESC LIMIT 50'
+    );
+    if (error) throw error;
+    // Return messages in chronological order (oldest first for the UI)
+    res.json({ messages: (data || []).reverse() });
+  } catch (e) {
+    console.error('[GET /api/chat] Error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/chat', authGuard(), async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content || content.length > 500) {
+      return res.status(400).json({ error: 'Message must be between 1 and 500 characters' });
+    }
+    
+    const userId = req.user.id;
+    const userName = req.user.name || req.user.username;
+
+    const { data, error } = await db.query(
+      'INSERT INTO club_messages (user_id, user_name, content) VALUES ($1, $2, $3) RETURNING *',
+      [userId, userName, content]
+    );
+    if (error) throw error;
+    res.json({ message: data[0] });
+  } catch (e) {
+    console.error('[POST /api/chat] Error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // HEALTH
 // Serve static Frontend files
 const path = require('path');

@@ -25,6 +25,7 @@ import { Player, UserRole, OpponentTeam } from './types';
 import { getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo, getMatches } from './services/storageService';
 import { Menu, Shield, ArrowRight } from 'lucide-react';
 import KirikINSLogo from './components/KirikINSLogo';
+import GlobalChat from './components/GlobalChat';
 import { Toaster, toast } from 'react-hot-toast';
 
 declare global {
@@ -185,6 +186,11 @@ const AppContent: React.FC<{
           </div>
 
         </main>
+        
+        {/* Global Club Chat */}
+        {currentUser && (
+          <GlobalChat currentUser={currentUser} />
+        )}
       </div>
 
       <Toaster
