@@ -383,6 +383,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     }
   };
 
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const getRoleIcon = (role: PlayerRole) => {
     switch (role) {
       case PlayerRole.BATSMAN: return <Sword size={16} className="text-blue-500" />;
@@ -1058,50 +1060,75 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
             {/* Content */}
             <div className="pt-16 md:pt-20 p-4 md:p-8 flex-1 overflow-y-auto">
               {/* General Info Grid */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 bg-slate-50 p-5 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Jersey No.</div>
-                  <div className="text-2xl font-black text-slate-800 italic">{viewingPlayer.jerseyNumber || '-'}</div>
+              <div className="flex flex-col md:flex-row gap-4 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex gap-4">
+                  <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-center min-w-[100px] text-center">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Jersey No.</div>
+                    <div className="text-3xl font-black text-slate-800 italic leading-none">{viewingPlayer.jerseyNumber || '-'}</div>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-center min-w-[160px]">
+                    <div className="flex items-center justify-between text-xs mb-1.5 pb-1.5 border-b border-slate-50">
+                      <span className="text-slate-400 font-bold uppercase">Bat:</span>
+                      <span className="font-black text-slate-800">{viewingPlayer.battingStyle || 'RHB'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400 font-bold uppercase">Bowl:</span>
+                      <span className="font-black text-slate-800">{viewingPlayer.bowlingStyle || 'None'}</span>
+                    </div>
+                  </div>
                 </div>
-                {viewingPlayer.externalId && (
-                  <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Player ID</div>
-                    <div className="text-sm font-mono font-bold text-slate-600 truncate" title={viewingPlayer.externalId}>{viewingPlayer.externalId}</div>
+
+                <div className="flex-1 bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-center overflow-hidden">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Activity className="text-blue-500" size={12} /> Recent Form
+                    </h3>
+                    <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">Last 5 Innings</p>
                   </div>
-                )}
-                {viewingPlayer.dob && (
-                  <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Birth</div>
-                    <div className="font-bold text-slate-700">{new Date(viewingPlayer.dob).toLocaleDateString()}</div>
-                  </div>
-                )}
-                <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-center">
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-slate-400 font-bold uppercase">Bat:</span>
-                    <span className="font-bold text-slate-700">{viewingPlayer.battingStyle || 'RHB'}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400 font-bold uppercase">Bowl:</span>
-                    <span className="font-bold text-slate-700">{viewingPlayer.bowlingStyle || 'None'}</span>
+                  <div className="flex gap-2 items-center">
+                    {(detailedStats as any)?.recentForm?.length > 0 ? (
+                      (detailedStats as any)?.recentForm?.map((match: any, i: number) => (
+                        <div 
+                          key={i} 
+                          className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center font-black text-xs shadow-sm transition-transform hover:scale-110 cursor-help ${
+                            match.runs >= 50 ? 'bg-yellow-400 text-yellow-900 ring-2 ring-yellow-200' : 
+                            match.runs >= 30 ? 'bg-sky-500 text-white' : 
+                            match.runs === 0 && !match.isNotOut ? 'bg-slate-800 text-white ring-2 ring-red-400' :
+                            'bg-slate-50 text-slate-700 border border-slate-200'
+                          }`}
+                          title={match.isNotOut ? `${match.runs}* (Not Out)` : `${match.runs} Runs`}
+                        >
+                          {match.runs}{match.isNotOut ? '*' : ''}
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-slate-400 italic text-[10px]">No recent matches played</span>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Detailed Stats Section */}
               <div className="mb-6 md:mb-8">
-                <div className="flex gap-2 md:gap-4 mb-4 overflow-x-auto pb-2">
-                  <button
-                    onClick={() => setActiveStatTab('batting')}
-                    className={`px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all border whitespace-nowrap ${activeStatTab === 'batting' ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
-                  >
-                    BATTING STATISTICS
-                  </button>
-                  <button
-                    onClick={() => setActiveStatTab('bowling')}
-                    className={`px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all border whitespace-nowrap ${activeStatTab === 'bowling' ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
-                  >
-                    BOWLING STATISTICS
-                  </button>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex gap-2 md:gap-4 overflow-x-auto pb-2">
+                    <button
+                      onClick={() => setActiveStatTab('batting')}
+                      className={`px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all border whitespace-nowrap ${activeStatTab === 'batting' ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                    >
+                      BATTING STATISTICS
+                    </button>
+                    <button
+                      onClick={() => setActiveStatTab('bowling')}
+                      className={`px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all border whitespace-nowrap ${activeStatTab === 'bowling' ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                    >
+                      BOWLING STATISTICS
+                    </button>
+                  </div>
+                  
+                  <div className={`shrink-0 px-4 py-1.5 rounded-lg border font-black text-[10px] tracking-wider transition-all shadow-sm ${viewingPlayer.isAvailable ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                    {viewingPlayer.isAvailable ? 'MATCH READY' : 'UNAVAILABLE'}
+                  </div>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1109,82 +1136,103 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                     {activeStatTab === 'batting' ? (
                       <div className="relative">
                         <table className="w-full text-[11px] md:text-xs text-left">
-                          <thead className="bg-[#1e3a8a] text-white font-bold uppercase sticky top-0 z-20">
-                            <tr>
-                              <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-30">Tournament</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Inn</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden md:table-cell">NO</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/50">Runs</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden md:table-cell">Ave</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden md:table-cell">SR</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">HS</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden lg:table-cell">100s</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden lg:table-cell">50s</th>
+                          <thead className="text-white font-bold uppercase sticky top-0 z-20 shadow-sm">
+                            <tr className="bg-[#1e3a8a]">
+                              <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-30 min-w-[140px]">Tournament</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Mat</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Inn</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden md:table-cell">NO</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/80">Runs</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden md:table-cell">Balls</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Ave</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">SR</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">HS</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden lg:table-cell">100s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden lg:table-cell">50s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden lg:table-cell">0s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden lg:table-cell">4s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden lg:table-cell">6s</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {/* Detailed Rows */}
-                            {detailedStats?.legacy && (
-                              <tr className="bg-slate-50/80 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
-                                <td className="p-2 md:p-3 font-bold text-slate-600 italic sticky left-0 bg-slate-50/80 z-10 transition-colors group-hover:bg-slate-100">Legacy Baseline</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.innings}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.not_outs}</td>
-                                <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.runs}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.balls}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.average}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.strikeRate}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.highest_score}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.hundreds}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.fifties}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.ducks}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.fours}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.sixes}</td>
-                              </tr>
-                            )}
+                            {/* Detailed Rows with dynamic expansion */}
+                            {isExpanded ? (
+                              <>
+                                {detailedStats?.legacy && (
+                                  <tr className="bg-slate-50/80 text-[10px] md:text-xs text-black border-b border-slate-100 animate-in fade-in slide-in-from-top-1 duration-300">
+                                    <td className="p-2 md:p-3 font-bold text-slate-600 italic sticky left-0 bg-slate-50/80 z-10 transition-colors group-hover:bg-slate-100" style={{ fontSize: '9px' }}>Legacy Baseline</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats.legacy.innings}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats.legacy.not_outs}</td>
+                                    <td className="p-2 md:p-3 text-center font-bold text-black">{detailedStats.legacy.runs}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats.legacy.balls}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.average}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.strikeRate}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.highest_score}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.hundreds}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.fifties}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.ducks}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.fours}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.sixes}</td>
+                                  </tr>
+                                )}
 
-                            {detailedStats?.tournaments.map((t, idx) => (
-                              <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-slate-500 border-b border-slate-100 group hover:bg-slate-50">
-                                <td className="p-2 md:p-3 font-bold text-sky-600 sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors">
-                                  {t.tournamentId && t.tournamentId !== '00000000-0000-0000-0000-000000000000' ? (
-                                    <Link to={`/tournaments/${t.tournamentId}?player=${viewingPlayer.id}`} className="hover:underline flex items-center gap-1">
-                                      {t.tournamentName} <ExternalLink size={10} />
-                                    </Link>
-                                  ) : t.tournamentName}
-                                </td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.matches}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.innings}</td>
-                                <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.notOuts}</td>
-                                <td className="p-2 md:p-3 text-center font-bold text-slate-700">{t.batting.runs}</td>
-                                <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.average}</td>
-                                <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.strikeRate}</td>
-                                <td className="p-2 md:p-3 text-center">{t.batting.highestScore}</td>
-                                <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.hundreds}</td>
-                                <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.fifties}</td>
-                              </tr>
-                            ))}
+                                {detailedStats?.tournaments.map((t, idx) => (
+                                  <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-black border-b border-slate-100 group hover:bg-slate-50 animate-in fade-in slide-in-from-top-1 duration-300">
+                                    <td className="p-2 md:p-3 font-bold text-sky-600 sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors" style={{ fontSize: '9px', lineHeight: '1.2' }}>
+                                      {t.tournamentId && t.tournamentId !== '00000000-0000-0000-0000-000000000000' ? (
+                                        <Link to={`/tournaments/${t.tournamentId}?player=${viewingPlayer.id}`} className="hover:underline flex items-center gap-1">
+                                          {t.tournamentName} <ExternalLink size={8} />
+                                        </Link>
+                                      ) : t.tournamentName}
+                                    </td>
+                                    <td className="p-2 md:p-3 text-center">{t.batting.matches}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.batting.innings}</td>
+                                    <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.notOuts}</td>
+                                    <td className="p-2 md:p-3 text-center font-bold text-black whitespace-nowrap">{t.batting.runs}</td>
+                                    <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.balls || '-'}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.batting.average}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.batting.strikeRate}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.batting.highestScore}</td>
+                                    <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.hundreds}</td>
+                                    <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.fifties}</td>
+                                    <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.ducks || '0'}</td>
+                                    <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.fours || '0'}</td>
+                                    <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.sixes || '0'}</td>
+                                  </tr>
+                                ))}
+                              </>
+                            ) : null}
 
-                            {!detailedStats?.tournaments.length && !detailedStats?.legacy && (
+                            {!isExpanded && !detailedStats?.tournaments.length && !detailedStats?.legacy && (
                               <tr><td colSpan={14} className="p-8 text-center text-slate-400 italic font-medium">No tournament records found for this player.</td></tr>
                             )}
                           </tbody>
                           <tfoot className="sticky bottom-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
                             <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
-                              <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30">Grand Total</td>
+                              <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30 flex items-center justify-between gap-2 min-h-[44px]">
+                                <span>Career Total</span>
+                                <button 
+                                  onClick={() => setIsExpanded(!isExpanded)}
+                                  className="p-1 hover:bg-slate-800 rounded transition-colors"
+                                  title={isExpanded ? 'Minimize' : 'Expand'}
+                                >
+                                  {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
+                                </button>
+                              </td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.matches || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.innings || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.notOuts || '0'}</td>
+                              <td className="p-2 md:p-3 text-center hidden md:table-cell">{detailedStats?.total?.batting.notOuts || '0'}</td>
                               <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{detailedStats?.total?.batting.runs || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.balls || '0'}</td>
+                              <td className="p-2 md:p-3 text-center hidden md:table-cell">{detailedStats?.total?.batting.balls || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.average || '0.00'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.strikeRate || '0.00'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.highestScore || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.hundreds || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.fifties || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.ducks || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.fours || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.sixes || '0'}</td>
+                              <td className="p-2 md:p-3 text-center hidden lg:table-cell">{detailedStats?.total?.batting.hundreds || '0'}</td>
+                              <td className="p-2 md:p-3 text-center hidden lg:table-cell">{detailedStats?.total?.batting.fifties || '0'}</td>
+                              <td className="p-2 md:p-3 text-center hidden lg:table-cell">{detailedStats?.total?.batting.ducks || '0'}</td>
+                              <td className="p-2 md:p-3 text-center hidden lg:table-cell">{detailedStats?.total?.batting.fours || '0'}</td>
+                              <td className="p-2 md:p-3 text-center hidden lg:table-cell">{detailedStats?.total?.batting.sixes || '0'}</td>
                             </tr>
                           </tfoot>
                         </table>
@@ -1192,59 +1240,83 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                     ) : (
                       <div className="relative">
                         <table className="w-full text-[11px] md:text-xs text-left">
-                          <thead className="bg-[#1e3a8a] text-white font-bold uppercase sticky top-0 z-20">
-                            <tr>
-                              <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-30">Tournament</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Mat</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Inn</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden lg:table-cell">Overs</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/50">Wkts</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap">Best</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden md:table-cell">Ave</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap hidden md:table-cell">Econ</th>
+                          <thead className="text-white font-bold uppercase sticky top-0 z-20 shadow-sm">
+                            <tr className="bg-[#1e3a8a]">
+                              <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-30 min-w-[140px]">Tournament</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Mat</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Inn</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Overs</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Maid</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Runs</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/80">Wkts</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Best</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Ave</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Econ</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">SR</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">4W</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">5W</th>
                             </tr>
                           </thead>
-                          <tbody>
-                            {detailedStats?.legacy && (
-                              <tr className="bg-slate-50/80 text-[10px] md:text-xs text-slate-500 border-b border-slate-100">
-                                <td className="p-2 md:p-3 font-bold text-slate-600 italic sticky left-0 bg-slate-50/80 z-10">Legacy Baseline</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.bowling_innings || detailedStats.legacy.innings}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.overs_bowled}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.maidens}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats.legacy.runs_conceded}</td>
-                                <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.wickets}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_average || '-'}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.economy || '-'}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_strikeRate || '-'}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.four_wickets}</td>
-                                <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.five_wickets}</td>
-                              </tr>
-                            )}
+                           <tbody>
+                            {/* Detailed Rows with dynamic expansion */}
+                            {isExpanded ? (
+                              <>
+                                {detailedStats?.legacy && (
+                                  <tr className="bg-slate-50/80 text-[10px] md:text-xs text-black border-b border-slate-100 animate-in fade-in slide-in-from-top-1 duration-300">
+                                    <td className="p-2 md:p-3 font-bold text-slate-600 italic sticky left-0 bg-slate-50/80 z-10" style={{ fontSize: '9px' }}>Legacy Baseline</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats.legacy.bowling_innings || detailedStats.legacy.innings}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats.legacy.overs_bowled}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats.legacy.maidens}</td>
+                                    <td className="p-2 md:p-3 text-center font-bold text-black">{detailedStats.legacy.runs_conceded}</td>
+                                    <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.wickets}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_average || '-'}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.economy || '-'}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_strikeRate || '-'}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.four_wickets}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.five_wickets}</td>
+                                  </tr>
+                                )}
 
-                            {detailedStats?.tournaments.map((t, idx) => (
-                              <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-slate-500 border-b border-slate-100 group hover:bg-slate-50">
-                                <td className="p-2 md:p-3 font-bold text-sky-600 sticky left-0 bg-white group-hover:bg-slate-50 z-10">
-                                  {t.tournamentId && t.tournamentId !== '00000000-0000-0000-0000-000000000000' ? (
-                                    <Link to={`/tournaments/${t.tournamentId}?player=${viewingPlayer.id}`} className="hover:underline flex items-center gap-1">
-                                      {t.tournamentName} <ExternalLink size={10} />
-                                    </Link>
-                                  ) : t.tournamentName}
-                                </td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.matches}</td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.innings}</td>
-                                <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.bowling.overs}</td>
-                                <td className="p-2 md:p-3 text-center font-bold text-slate-700">{t.bowling.wickets}</td>
-                                <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
-                                <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.bowling.average}</td>
-                                <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.bowling.economy}</td>
-                              </tr>
-                            ))}
+                                {detailedStats?.tournaments.map((t, idx) => (
+                                  <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-black border-b border-slate-100 group hover:bg-slate-50 animate-in fade-in slide-in-from-top-1 duration-300">
+                                    <td className="p-2 md:p-3 font-bold text-sky-600 sticky left-0 bg-white group-hover:bg-slate-50 z-10" style={{ fontSize: '9px', lineHeight: '1.2' }}>
+                                      {t.tournamentId && t.tournamentId !== '00000000-0000-0000-0000-000000000000' ? (
+                                        <Link to={`/tournaments/${t.tournamentId}?player=${viewingPlayer.id}`} className="hover:underline flex items-center gap-1">
+                                          {t.tournamentName} <ExternalLink size={8} />
+                                        </Link>
+                                      ) : t.tournamentName}
+                                    </td>
+                                    <td className="p-2 md:p-3 text-center">{t.bowling.matches}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.bowling.innings}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.bowling.overs}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.bowling.maidens || '0'}</td>
+                                    <td className="p-2 md:p-3 text-center font-bold text-black">{t.bowling.runsConceded || t.bowling.runs || '0'}</td>
+                                    <td className="p-2 md:p-3 text-center font-bold text-slate-700 whitespace-nowrap">{t.bowling.wickets}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.bowling.average}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.bowling.economy}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.bowling.strikeRate || '-'}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.bowling.fourWickets || '0'}</td>
+                                    <td className="p-2 md:p-3 text-center">{t.bowling.fiveWickets || '0'}</td>
+                                  </tr>
+                                ))}
+                              </>
+                            ) : null}
                           </tbody>
                           <tfoot className="sticky bottom-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
                             <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
-                              <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30">Grand Total</td>
+                              <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30 flex items-center justify-between gap-2 min-h-[44px]">
+                                <span>Career Total</span>
+                                <button 
+                                  onClick={() => setIsExpanded(!isExpanded)}
+                                  className="p-1 hover:bg-slate-800 rounded transition-colors"
+                                  title={isExpanded ? 'Minimize' : 'Expand'}
+                                >
+                                  {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
+                                </button>
+                              </td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.matches || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.innings || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.overs || '0.0'}</td>
@@ -1262,54 +1334,6 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                         </table>
                       </div>
                     )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Extended Info Block */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-8">
-                <div className="bg-slate-50 rounded-2xl p-4 md:p-6 border border-slate-100 shadow-sm">
-                  <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <Activity className="text-blue-500" size={18} /> Recent Form
-                  </h3>
-                  <div className="flex gap-2 items-center">
-                    {(detailedStats as any)?.recentForm?.length > 0 ? (
-                      (detailedStats as any)?.recentForm?.map((match: any, i: number) => (
-                        <div 
-                          key={i} 
-                          className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-black text-xs md:text-sm shadow-sm transition-transform hover:scale-110 cursor-help ${
-                            match.runs >= 50 ? 'bg-yellow-400 text-yellow-900 ring-2 ring-yellow-200' : 
-                            match.runs >= 30 ? 'bg-sky-500 text-white' : 
-                            match.runs === 0 && !match.isNotOut ? 'bg-slate-800 text-white ring-2 ring-red-400' :
-                            'bg-white text-slate-700 border border-slate-200'
-                          }`}
-                          title={match.isNotOut ? `${match.runs}* (Not Out)` : `${match.runs} Runs`}
-                        >
-                          {match.runs}{match.isNotOut ? '*' : ''}
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-slate-400 italic text-xs">No recent matches played</span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase mt-4 tracking-widest">Last 5 Innings (Most Recent Left)</p>
-                </div>
-
-                <div className="bg-slate-50 rounded-2xl p-4 md:p-6 border border-slate-100 shadow-sm">
-                  <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <UserCheck className="text-blue-500" size={18} /> Additional Details
-                  </h3>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                      <span className="text-slate-500 font-medium">Availability Status</span>
-                      <span className={`font-black uppercase text-[10px] px-3 py-1 rounded-full ${viewingPlayer.isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                        {viewingPlayer.isAvailable ? 'Match Ready' : 'Unavailable'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-slate-200">
-                      <span className="text-slate-500 font-medium">External Reference</span>
-                      <span className="font-mono text-xs font-bold text-slate-400">{viewingPlayer.externalId || 'NOT_SET'}</span>
-                    </div>
                   </div>
                 </div>
               </div>

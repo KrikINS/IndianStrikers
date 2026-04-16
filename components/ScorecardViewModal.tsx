@@ -11,6 +11,7 @@ interface ScorecardViewModalProps {
     players?: Player[];
     allOpponents?: OpponentTeam[];
     grounds?: Ground[];
+    initialTab?: 'scorecard' | 'commentary';
 }
 
 const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
@@ -19,14 +20,15 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
     onClose,
     players = [],
     allOpponents = [],
-    grounds = []
+    grounds = [],
+    initialTab = 'scorecard'
 }) => {
     const inn1Ref = useRef<HTMLDivElement>(null);
     const inn2Ref = useRef<HTMLDivElement>(null);
     const fullScorecardRef = useRef<HTMLDivElement>(null);
     const modalContentRef = useRef<HTMLDivElement>(null);
     const [isExporting, setIsExporting] = useState(false);
-    const [activeTab, setActiveTab] = useState<'scorecard' | 'commentary'>('scorecard');
+    const [activeTab, setActiveTab] = useState<'scorecard' | 'commentary'>(initialTab);
 
     if (!isOpen || !match.scorecard) return null;
 

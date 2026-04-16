@@ -10,6 +10,8 @@ import { Loader2 } from 'lucide-react';
 const LiveScorecardPage: React.FC<{ opponents?: OpponentTeam[] }> = ({ opponents = [] }) => {
     const { players } = usePlayerStore();
     const { id } = useParams<{ id: string }>();
+    const query = new URLSearchParams(window.location.search);
+    const initialTab = (query.get('tab') === 'commentary' ? 'commentary' : 'scorecard') as 'scorecard' | 'commentary';
     const navigate = useNavigate();
     const [match, setMatch] = useState<ScheduledMatch | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -124,6 +126,7 @@ const LiveScorecardPage: React.FC<{ opponents?: OpponentTeam[] }> = ({ opponents
             players={players}
             allOpponents={opponents}
             grounds={grounds}
+            initialTab={initialTab}
         />
     );
 };

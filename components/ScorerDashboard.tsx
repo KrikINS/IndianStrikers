@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -48,7 +48,7 @@ const DashboardContainer = styled.div`
 const Header = styled.header`
   background-color: #001F3F;
   color: #FFFFFF;
-  padding: 8px 12px;
+  padding: 4px 12px;
   border-radius: 6px;
   display: flex;
   justify-content: space-between;
@@ -112,8 +112,8 @@ const OverSeparator = styled.div`
 
 const ScoreSection = styled.div`
   background: #ffffffff;
-  padding: 8px 12px 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -150,8 +150,47 @@ const ActiveParticipants = styled.div`
   }
 `;
 
+const PartnershipRow = styled.div`
+  background: rgba(0, 31, 63, 0.03);
+  border-bottom: 1px solid #F1F3F5;
+  padding: 4px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 1px;
+`;
+
+const PartnershipMain = styled.div`
+  font-size: 12px;
+  font-weight: 700;
+  color: #1A1A1A;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  b {
+    font-weight: 900;
+    color: #001F3F;
+  }
+`;
+
+const PartnershipSub = styled.div`
+  font-size: 9px;
+  font-weight: 600;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  span {
+    color: #495057;
+    font-weight: 700;
+  }
+`;
+
 const ParticipantCard = styled.div<{ $active?: boolean }>`
-  padding: 8px 12px;
+  padding: 2px 10px;
   border-radius: 8px;
   background: ${props => props.$active ? '#E7F5FF' : '#F8F9FA'};
   border: 1px solid ${props => props.$active ? '#339AF0' : '#E9ECEF'};
@@ -165,7 +204,7 @@ const CardHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 `;
 
 const NameLabel = styled.span`
@@ -179,7 +218,7 @@ const NameLabel = styled.span`
 `;
 
 const StatValue = styled.span`
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   color: #212529;
   white-space: nowrap;
@@ -189,18 +228,18 @@ const StatValue = styled.span`
 `;
 
 const TimelineContainer = styled.div`
-  margin: 1px 1px;
-  padding: 10px 10px;
+  margin: 0;
+  padding: 8px 10px;
   background: #001f3f;
-  border-radius: 4px;
+  border-radius: 0;
   overflow-x: auto;
   white-space: nowrap;
   display: flex;
-  align-items: right;
+  align-items: center;
   gap: 3px;
   box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
   scrollbar-width: none;
-  border: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
   flex-shrink: 0;
   &::-webkit-scrollbar { display: none; }
 `;
@@ -229,15 +268,12 @@ const BallCircle = styled.div<{ $type: string }>`
 `;
 
 const ScoringInterface = styled.div`
-  padding: 8px 12px 12px;
+  padding: 8px 10px 10px;
   background: #001F3F;
   display: flex;
   gap: 8px;
   flex-shrink: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  @media (min-height: 800px) {
-    padding: 12px 16px 20px;
-  }
+  border-top: none;
 `;
 
 const RunGrid = styled.div`
@@ -1947,6 +1983,93 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const nonStrikerStats = currentInnings.battingStats[store.nonStrikerId || ''] || { runs: 0, balls: 0 };
   const bowlerStats = currentInnings.bowlingStats[store.currentBowlerId || ''] || { overs: 0, runs: 0, wickets: 0 };
 
+  const partnershipData = useMemo(() => {
+    const balls = currentInnings?.history || [];
+    let pruns = 0;
+    let plegalBalls = 0;
+    let pextras = 0;
+    
+    let lastWicketIdx = -1;
+    for (let i = balls.length - 1; i >= 0; i--) {
+      const b = balls[i] as any;
+      if (b.isWicket && !['Retired Hurt'].includes(b.wicketType || '')) {
+        lastWicketIdx = i;
+        break;
+      }
+    }
+
+    const currentStandBalls = lastWicketIdx === -1 ? balls : balls.slice(lastWicketIdx + 1);
+
+    const sId = store.strikerId;
+    const nsId = store.nonStrikerId;
+    let sPRuns = 0; let sPBalls = 0;
+    let nsPRuns = 0; let nsPBalls = 0;
+
+    currentStandBalls.forEach((b: any) => {
+      pruns += b.runs;
+      if (b.isLegal) plegalBalls++;
+      
+      if (b.type !== 'legal') {
+        if (b.type === 'wide' || b.type === 'no-ball') {
+          pruns += 1;
+          pextras += 1 + b.runs;
+        } else {
+          pextras += b.runs;
+        }
+      }
+
+      // Individual contributions in this stand
+      if (b.strikerId === sId) {
+        if (b.subType === 'bat') sPRuns += b.runs;
+        if (b.isLegal) sPBalls++;
+      } else if (b.strikerId === nsId) {
+        if (b.subType === 'bat') nsPRuns += b.runs;
+        if (b.isLegal) nsPBalls++;
+      }
+    });
+
+    return {
+      totalRuns: pruns,
+      totalBalls: plegalBalls,
+      s: { name: getPlayerName(sId || null).split(' ')[0], runs: sPRuns, balls: sPBalls },
+      ns: { name: getPlayerName(nsId || null).split(' ')[0], runs: nsPRuns, balls: nsPBalls },
+      extras: pextras
+    };
+  }, [currentInnings?.history, store.strikerId, store.nonStrikerId]);
+
+  const lastWicketData = useMemo(() => {
+    const balls = currentInnings?.history || [];
+    let lastBall = null;
+    let totalRunsAtW = 0;
+    let wicketsAtW = 0;
+    
+    let cRuns = 0;
+    let cWickets = 0;
+
+    for (let i = 0; i < balls.length; i++) {
+      const b = balls[i] as any;
+      cRuns += b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0);
+      if (b.isWicket && !['Retired Hurt'].includes(b.wicketType || '')) {
+        cWickets++;
+        lastBall = b;
+        totalRunsAtW = cRuns;
+        wicketsAtW = cWickets;
+      }
+    }
+
+    if (!lastBall) return null;
+    const victimId = lastBall.outPlayerId || lastBall.strikerId;
+    const victimName = getPlayerName(victimId).split(' ')[0];
+    const bStat = currentInnings.battingStats[victimId];
+
+    return {
+      name: victimName,
+      runs: bStat?.runs || 0,
+      balls: bStat?.balls || 0,
+      score: `${totalRunsAtW}/${wicketsAtW}`
+    };
+  }, [currentInnings?.history, currentInnings?.battingStats]);
+
 
   return (
     <DashboardContainer>
@@ -2078,13 +2201,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         </AnimatePresence>
 
         <ScoreSection>
-          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 6 }}>
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 4 }}>
             <button
               title="View Lineups"
               onClick={() => setShowLineups(true)}
               style={{
                 background: 'rgba(0,31,63,0.05)', border: 'none', borderRadius: 6, display: 'flex', alignItems: 'center',
-                padding: '4px 12px', color: '#001F3F', cursor: 'pointer'
+                padding: '4px 8px', color: '#001F3F', cursor: 'pointer'
               }}
             >
               <Users size={12} />
@@ -2097,7 +2220,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 gap: 4, padding: '4px 12px', color: 'rgba(247, 247, 248, 1)', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer'
               }}
             >
-              <LayoutList size={12} /> FULL SCORECARD
+              <LayoutList size={12} /> SCORECARD
             </button>
             <button
               title="Share Scorecard"
@@ -2115,17 +2238,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               }}
               style={{
                 background: 'rgba(0,31,63,0.05)', border: 'none', borderRadius: 6, display: 'flex', alignItems: 'center',
-                padding: '4px 12px', color: '#001F3F', cursor: 'pointer'
+                padding: '4px 8px', color: '#001F3F', cursor: 'pointer'
               }}
             >
               <Share2 size={12} />
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0 4px', marginTop: 4 }}>
-            <div style={{ textAlign: 'left', minWidth: 60 }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>CRR</div>
-              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#001F3F' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0 4px' }}>
+            <div style={{ textAlign: 'left', minWidth: 45 }}>
+              <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>CRR</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#001F3F' }}>
                 {(() => {
                   const totalBalls = currentInnings?.totalBalls || 0;
                   if (totalBalls === 0) return '0.00';
@@ -2135,13 +2258,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             </div>
 
             <div style={{ textAlign: 'center' }}>
-              <MainScore>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</MainScore>
-              <OversText>OVERS {store.getOvers(currentInnings?.totalBalls || 0)}</OversText>
+              <MainScore style={{ fontSize: '2.2rem' }}>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</MainScore>
+              <OversText style={{ fontSize: '0.8rem', marginTop: -4 }}>OVERS {store.getOvers(currentInnings?.totalBalls || 0)}</OversText>
             </div>
 
-            <div style={{ textAlign: 'right', minWidth: 60 }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>Projected</div>
-              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#001F3F' }}>
+            <div style={{ textAlign: 'right', minWidth: 45 }}>
+              <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>Projected Score</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#001F3F' }}>
                 {(() => {
                   const totalBalls = currentInnings?.totalBalls || 0;
                   const rr = totalBalls === 0 ? 0 : (currentInnings?.totalRuns || 0) / (totalBalls / 6);
@@ -2155,13 +2278,28 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             <FreeHitBadge
               animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
               transition={{ repeat: Infinity, duration: 1.5 }}
+              style={{ marginTop: 4 }}
             >
               FREE HIT
             </FreeHitBadge>
           )}
         </ScoreSection>
 
-        <ActiveParticipants>
+        <PartnershipRow style={{ background: 'rgba(0, 31, 63, 0.05)', gap: 0, padding: '2px 12px' }}>
+          <PartnershipMain>
+            PARTNERSHIP: <b>{partnershipData.totalRuns}</b> ({partnershipData.totalBalls})
+          </PartnershipMain>
+          <PartnershipSub>
+            {partnershipData.s.name} <span>{partnershipData.s.runs}({partnershipData.s.balls})</span> • {partnershipData.ns.name} <span>{partnershipData.ns.runs}({partnershipData.ns.balls})</span> • Extras <span>{partnershipData.extras}</span>
+          </PartnershipSub>
+          {lastWicketData && (
+            <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(0,31,63,0.4)', marginTop: 1, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+              LAST WKT: <span style={{ color: '#ef4444' }}>{lastWicketData.name} {lastWicketData.runs}({lastWicketData.balls})</span> • {lastWicketData.score}
+            </div>
+          )}
+        </PartnershipRow>
+
+        <ActiveParticipants style={{ borderBottom: 'none' }}>
           <ParticipantCard $active>
             <CardHeader>
               <NameLabel>Striker*</NameLabel>
@@ -2223,74 +2361,83 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </ParticipantCard>
         </ActiveParticipants>
 
-        <TimelineContainer ref={timelineRef} id="match-timeline">
-          {(() => {
-            const balls = currentInnings?.history || [];
-            const last30 = balls.slice(-30);
+        <div style={{
+          background: '#001F3F',
+          margin: '0',
+          borderRadius: 0,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <TimelineContainer ref={timelineRef} id="match-timeline">
+            {(() => {
+              const balls = currentInnings?.history || [];
+              const last30 = balls.slice(-30);
 
-            return last30.map((ball: any, idx: number) => {
-              let display = ball.runs.toString();
-              if (ball.isWicket) {
-                const prefix = ball.type === 'no-ball' ? 'NB' : ball.type === 'wide' ? 'WD' : '';
-                const amount = ball.runs > 0 ? `+${ball.runs}` : '';
-                display = prefix ? `${prefix}${amount}+W` : 'W';
-              }
-              else if (ball.type === 'wide') display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
-              else if (ball.type === 'no-ball') display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
-              else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
-              else if (ball.type === 'bye') display = `B${ball.runs}`;
+              return last30.map((ball: any, idx: number) => {
+                let display = ball.runs.toString();
+                if (ball.isWicket) {
+                  const prefix = ball.type === 'no-ball' ? 'NB' : ball.type === 'wide' ? 'WD' : '';
+                  const amount = ball.runs > 0 ? `+${ball.runs}` : '';
+                  display = prefix ? `${prefix}${amount}+W` : 'W';
+                }
+                else if (ball.type === 'wide') display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                else if (ball.type === 'no-ball') display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
+                else if (ball.type === 'bye') display = `B${ball.runs}`;
 
-              const ballInOverNum = ball.ballNumber;
-              const isLastBallOfOver = ballInOverNum === 6 && ball.isLegal;
-              const showSeparator = isLastBallOfOver && idx < last30.length - 1;
+                const ballInOverNum = ball.ballNumber;
+                const isLastBallOfOver = ballInOverNum === 6 && ball.isLegal;
+                const showSeparator = isLastBallOfOver && idx < last30.length - 1;
 
-              return (
-                <React.Fragment key={`${idx}-${ball.timestamp}`}>
-                  <BallCircle $type={display}>
-                    {display}
-                  </BallCircle>
-                  {showSeparator && <OverSeparator />}
-                </React.Fragment>
-              );
-            });
-          })()}
-          {(currentInnings?.history || []).length === 0 && (
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px' }}>
-              WAITING FOR LIVE ACTION...
-            </span>
-          )}
-        </TimelineContainer>
+                return (
+                  <React.Fragment key={`${idx}-${ball.timestamp}`}>
+                    <BallCircle $type={display}>
+                      {display}
+                    </BallCircle>
+                    {showSeparator && <OverSeparator />}
+                  </React.Fragment>
+                );
+              });
+            })()}
+            {(currentInnings?.history || []).length === 0 && (
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px' }}>
+                WAITING FOR LIVE ACTION...
+              </span>
+            )}
+          </TimelineContainer>
 
-        <ScoringInterface style={{ opacity: store.isWaitingForBowler ? 0.6 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', position: 'relative' }}>
-          {store.isWaitingForBowler && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', borderRadius: 16 }}>
-              <button
-                onClick={() => setShowBowlerModal(true)}
-                style={{ background: '#FAB005', color: '#000', border: 'none', padding: '12px 24px', borderRadius: 12, fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
-              >
-                SELECT NEXT BOWLER
-              </button>
-            </div>
-          )}
+          <ScoringInterface style={{ opacity: store.isWaitingForBowler ? 0.6 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', position: 'relative' }}>
+            {store.isWaitingForBowler && (
+              <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', borderRadius: 16 }}>
+                <button
+                  onClick={() => setShowBowlerModal(true)}
+                  style={{ background: '#FAB005', color: '#000', border: 'none', padding: '12px 24px', borderRadius: 12, fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
+                >
+                  SELECT NEXT BOWLER
+                </button>
+              </div>
+            )}
 
-          <RunGrid>
-            <ScoringBtn onClick={() => handleRecord(0, 'legal')}>0</ScoringBtn>
-            <ScoringBtn onClick={() => handleRecord(1, 'legal')}>1</ScoringBtn>
-            <ScoringBtn onClick={() => handleRecord(2, 'legal')}>2</ScoringBtn>
-            <ScoringBtn onClick={() => handleRecord(3, 'legal')}>3</ScoringBtn>
-            <ScoringBtn onClick={() => handleRecord(4, 'legal')}>4</ScoringBtn>
-            <ScoringBtn onClick={() => handleRecord(5, 'legal')}>5</ScoringBtn>
-            <ScoringBtn onClick={() => handleRecord(6, 'legal')}>6</ScoringBtn>
-            <ScoringBtn $variant="wicket" style={{ background: '#FF4D4D', color: '#FFF' }} onClick={() => setShowWicketModal(true)}>WKT</ScoringBtn>
-          </RunGrid>
+            <RunGrid>
+              <ScoringBtn onClick={() => handleRecord(0, 'legal')}>0</ScoringBtn>
+              <ScoringBtn onClick={() => handleRecord(1, 'legal')}>1</ScoringBtn>
+              <ScoringBtn onClick={() => handleRecord(2, 'legal')}>2</ScoringBtn>
+              <ScoringBtn onClick={() => handleRecord(3, 'legal')}>3</ScoringBtn>
+              <ScoringBtn onClick={() => handleRecord(4, 'legal')}>4</ScoringBtn>
+              <ScoringBtn onClick={() => handleRecord(5, 'legal')}>5</ScoringBtn>
+              <ScoringBtn onClick={() => handleRecord(6, 'legal')}>6</ScoringBtn>
+              <ScoringBtn $variant="wicket" style={{ background: '#FF4D4D', color: '#FFF' }} onClick={() => setShowWicketModal(true)}>WKT</ScoringBtn>
+            </RunGrid>
 
-          <ExtraStack>
-            <ScoringBtn $variant="extra" onClick={() => { setExtraType('wd'); setShowNBModal(true); }}>WD</ScoringBtn>
-            <ScoringBtn $variant="extra" onClick={() => { setExtraType('nb'); setShowNBModal(true); }}>NB</ScoringBtn>
-            <ScoringBtn $variant="extra" onClick={() => { setExtraType('byes'); setShowNBModal(true); }}>B</ScoringBtn>
-            <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
-          </ExtraStack>
-        </ScoringInterface>
+            <ExtraStack>
+              <ScoringBtn $variant="extra" onClick={() => { setExtraType('wd'); setShowNBModal(true); }}>WD</ScoringBtn>
+              <ScoringBtn $variant="extra" onClick={() => { setExtraType('nb'); setShowNBModal(true); }}>NB</ScoringBtn>
+              <ScoringBtn $variant="extra" onClick={() => { setExtraType('byes'); setShowNBModal(true); }}>B</ScoringBtn>
+              <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
+            </ExtraStack>
+          </ScoringInterface>
+        </div>
 
         {showBowlerModal && (
           <ModalOverlay onClick={() => setShowBowlerModal(false)}>

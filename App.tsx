@@ -120,7 +120,7 @@ const AppContent: React.FC<{
   return (
     <>
       <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
-          {!isScorerActive && (
+          <div className={`${isScorerActive ? 'hidden md:block' : ''}`}>
             <Sidebar
               userRole={userRole}
               effectiveRole={effectiveRole}
@@ -130,9 +130,10 @@ const AppContent: React.FC<{
               teamLogo={teamLogo}
               onUpdateLogo={onUpdateLogo}
               currentUser={currentUser}
+              linkedPlayer={linkedPlayer}
               isOffline={isOffline}
             />
-          )}
+          </div>
 
           <main className={`flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto ${isScorerActive ? 'p-0 h-[100dvh] overflow-hidden' : ''}`}>
             <div className="p-3 md:p-6 lg:p-8 w-full pb-24 md:pb-8">

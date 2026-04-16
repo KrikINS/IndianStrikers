@@ -304,7 +304,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         </div>
         
         <div className="bg-[#0f172a] text-white px-3 md:px-6 py-1.5 md:py-2 rounded-full font-black italic uppercase tracking-tighter md:tracking-widest text-[9px] md:text-sm shadow-xl border border-sky-400/20 whitespace-nowrap shrink-0">
-          ONE TEAM <span className="mx-1 md:mx-2 text-sky-400/40">•</span> ONE DREAM
+          <span className="animate-bounce-shimmer">
+            ONE TEAM <span className="mx-1 md:mx-2 text-sky-400/40">•</span> ONE DREAM
+          </span>
         </div>
       </div>
 
@@ -400,17 +402,37 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               <Award className="text-yellow-400" /> Team Legacy
             </h3>
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
-                <p className="text-2xl md:text-3xl font-black text-yellow-400">{legacy.winnersTrophies}</p>
-                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-tighter">Winners</p>
+              <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center relative group overflow-hidden">
+                <div className="absolute -top-1 -right-1 opacity-10 group-hover:opacity-20 transition-opacity"><Medal size={48} className="text-yellow-400" /></div>
+                <div className="flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-1.5">
+                    <Medal size={16} className="text-yellow-400 shrink-0" />
+                    <p className="text-2xl md:text-3xl font-black text-yellow-400 leading-none">{legacy.winnersTrophies}</p>
+                  </div>
+                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-tighter mt-2">Winners</p>
+                </div>
               </div>
-              <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
-                <p className="text-2xl md:text-3xl font-black text-slate-300">{legacy.runnersUp}</p>
-                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-tighter">Finalists</p>
+
+              <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center relative group overflow-hidden">
+                <div className="absolute -top-1 -right-1 opacity-10 group-hover:opacity-20 transition-opacity"><Medal size={48} className="text-slate-300" /></div>
+                <div className="flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-1.5">
+                    <Medal size={16} className="text-slate-300 shrink-0" />
+                    <p className="text-2xl md:text-3xl font-black text-slate-300 leading-none">{legacy.runnersUp}</p>
+                  </div>
+                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-tighter mt-2">Finalists</p>
+                </div>
               </div>
-              <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
-                <p className="text-2xl md:text-3xl font-black text-orange-400">17</p>
-                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-tighter">Semis</p>
+
+              <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center relative group overflow-hidden">
+                <div className="absolute -top-1 -right-1 opacity-10 group-hover:opacity-20 transition-opacity"><Medal size={48} className="text-orange-400" /></div>
+                <div className="flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-1.5">
+                    <Medal size={16} className="text-orange-400 shrink-0" />
+                    <p className="text-2xl md:text-3xl font-black text-orange-400 leading-none">17</p>
+                  </div>
+                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-tighter mt-2">Semis</p>
+                </div>
               </div>
             </div>
           </div>
@@ -451,7 +473,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             )}
           </div>
           {nextMatch?.status === 'live' ? (
-            <Link to={`/live/${nextMatch.id}`} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black rounded-lg flex items-center justify-center gap-2 uppercase tracking-widest mt-4 transition-all animate-pulse">
+            <Link to={`/live/${nextMatch.id}?tab=commentary`} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black rounded-lg flex items-center justify-center gap-2 uppercase tracking-widest mt-4 transition-all animate-pulse">
               <Activity size={14} /> View Live Score
             </Link>
           ) : (

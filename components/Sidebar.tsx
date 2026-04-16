@@ -353,7 +353,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
                 <div className="overflow-hidden">
                   <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Logged In</p>
                   <p className="text-sm font-bold text-white capitalize truncate group-hover/user:text-blue-300 transition-colors">
-                    {linkedPlayer?.name || currentUser?.name || userRole}
+                    {(linkedPlayer?.name || currentUser?.name || userRole).split(' ')[0]}
                   </p>
                 </div>
               )}
