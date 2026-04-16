@@ -912,6 +912,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
   const [showMatchSummaryModal, setShowMatchSummaryModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [allOpponents, setAllOpponents] = useState<any[]>([]);
 
   // Opponent players fetched separately from the opponents table
   const [opponentPlayers, setOpponentPlayers] = useState<{ id: string; name: string; role?: string }[]>([]);
@@ -926,6 +927,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     // awayXI may store names directly for opponent teams without registered IDs
     return id;
   };
+
+  useEffect(() => {
+    import('../services/storageService').then(({ getOpponents }) => {
+      getOpponents().then(data => setAllOpponents(data || [])).catch(console.error);
+    });
+  }, []);
 
   useEffect(() => {
     if (store.maxOvers) {
@@ -981,6 +988,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         ? 'OPPONENT'
         : (meta.opponentName || 'OPPONENT');
 
+      // Resolve Opponent Logo from allOpponents if missing in meta
+      const opponentMeta = allOpponents.find(o => o.id === meta.opponentId || o.name === meta.opponentName);
+      const resolvedAwayLogo = meta.opponentLogo || opponentMeta?.logoUrl || '';
+
       console.log(`[Scorer] Initializing Match: ${activeMatchId} | Live: ${isActuallyLive}`);
 
       store.initializeMatch({
@@ -993,7 +1004,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         homeXI: meta.homeTeamXI || [],
         awayXI: meta.opponentTeamXI || [],
         homeLogo: teamLogo || '/INS%20LOGO.PNG',
-        awayLogo: meta.opponentLogo || '',
+        awayLogo: resolvedAwayLogo,
         liveData: meta.live_data
       });
     };
@@ -1025,6 +1036,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       console.log('[Scorer] Match is live in DB. Rehydrating store from live_data...');
       const ld = matchMeta.live_data as any;
       if (ld && ld.innings1) {
+        // Resolve Opponent Logo from allOpponents if missing in meta
+        const opponentMeta = allOpponents.find(o => o.id === matchMeta.opponentId || o.name === matchMeta.opponentName);
+        const resolvedAwayLogo = matchMeta.opponentLogo || opponentMeta?.logoUrl || '';
+
         // live_data has innings - reinitialize the full store state
         store.initializeMatch({
           matchId: matchMeta.id,
@@ -1036,7 +1051,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           homeXI: matchMeta.homeTeamXI || [],
           awayXI: matchMeta.opponentTeamXI || [],
           homeLogo: teamLogo || '/INS%20LOGO.PNG',
-          awayLogo: matchMeta.opponentLogo || '',
+          awayLogo: resolvedAwayLogo,
           liveData: ld
         });
         // setSetupStep(null) will fire on next render when store.innings1 is set
@@ -2101,9 +2116,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               <span style={{ fontSize: '12px', fontWeight: 900, color: 'rgba(252, 253, 253, 1)', letterSpacing: '-0.2px' }}>
                 {store.innings1?.battingTeamId === 'AWAY' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT').toUpperCase()}
               </span>
-              {store.awayLogo ? (
+              {store.awayLogo || matchMeta?.opponentLogo ? (
                 <img
-                  src={store.awayLogo}
+                  src={store.awayLogo || matchMeta?.opponentLogo}
                   style={{ width: 30, height: 30, objectFit: 'contain' }}
                   alt="A"
                 />

@@ -176,17 +176,22 @@ function WeeklyPerformerCarousel({
                 className={isActive ? 'pointer-events-auto' : 'pointer-events-none'}
               >
                 <div
-                  onClick={() => isActive && onSelectHero({
-                    player,
-                    statsType: player.wickets > 0 ? 'bowling' : 'batting',
-                    statsValue: player.wickets > 0 ? `${player.wickets}/${player.bowlingRuns}` : `${player.runs} (${player.balls})`,
-                    matchDate: player.matchDate,
-                    matchTime: player.matchTime || (player.matchDate ? new Date(player.matchDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined),
-                    opponentName: opponents.find((o: any) => o.id === player.opponentId)?.name || player.opponentName || 'TEAM',
-                    groundName: player.groundName || grounds.find((g: any) => g.id === player.groundId)?.name || 'CRICKET GROUND',
-                    fullStats: player,
-                    isSuperStriker: player.isSuperStriker
-                  })}
+                  onClick={() => {
+                    const hasMoreImpactFromBowling = (player.wickets || 0) * 35 > (player.runs || 0);
+                    if (isActive) onSelectHero({
+                      player,
+                      statsType: hasMoreImpactFromBowling ? 'bowling' : 'batting',
+                      statsValue: hasMoreImpactFromBowling 
+                        ? `${player.wickets}/${player.bowlingRuns}` 
+                        : `${player.runs} (${player.balls})`,
+                      matchDate: player.matchDate,
+                      matchTime: player.matchTime || (player.matchDate ? new Date(player.matchDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined),
+                      opponentName: opponents.find((o: any) => o.id === player.opponentId)?.name || player.opponentName || 'TEAM',
+                      groundName: player.groundName || grounds.find((g: any) => g.id === player.groundId)?.name || 'CRICKET GROUND',
+                      fullStats: player,
+                      isSuperStriker: player.isSuperStriker
+                    });
+                  }}
                   className={`bg-[#0f172a] rounded-[3rem] p-8 border ${isActive ? 'border-sky-500/50 shadow-[0_0_50px_rgba(56,189,248,0.3)]' : 'border-white/10'} relative overflow-hidden group transition-all duration-500`}
                 >
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-sky-600/20 to-transparent"></div>
@@ -202,8 +207,10 @@ function WeeklyPerformerCarousel({
                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-4">{player.role}</p>
                     <div className="mb-6 text-center">
                       <p className="text-4xl font-black text-sky-400 italic">
-                        {player.wickets > 0 ? player.wickets : player.runs}
-                        <span className="text-sm font-black text-sky-400/50 ml-1 uppercase">{player.wickets > 0 ? 'Wickets' : 'Runs'}</span>
+                        {player.wickets * 35 > player.runs ? player.wickets : player.runs}
+                        <span className="text-sm font-black text-sky-400/50 ml-1 uppercase">
+                          {player.wickets * 35 > player.runs ? 'Wickets' : 'Runs'}
+                        </span>
                       </p>
                       
                       {/* Dynamic Milestone Tagline */}
@@ -235,7 +242,7 @@ function WeeklyPerformerCarousel({
 
 // --- Main Dashboard Component ---
 export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }: DashboardProps) {
-  const { players, loading } = usePlayerStore();
+  const { players, fetchPlayers } = usePlayerStore();
   const { legacy, tournaments, grounds } = useMasterData();
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [selectedHero, setSelectedHero] = useState<any | null>(null);
@@ -250,7 +257,8 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         const [opp, allMatches, perf] = await Promise.all([
           getOpponents(), 
           getMatches(),
-          getTournamentPerformers()
+          getTournamentPerformers(),
+          fetchPlayers()
         ]);
         setOpponents(opp);
         setPerformerData(perf);
@@ -275,8 +283,39 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     load();
   }, []);
 
-  const topRunScorers = [...players].sort((a, b) => b.runsScored - a.runsScored).slice(0, 5);
-  const topWicketTakers = [...players].sort((a, b) => b.wicketsTaken - a.wicketsTaken).slice(0, 5);
+  const topRunScorers = [...players]
+    .sort((a, b) => ((b.battingStats?.runs || b.runsScored) || 0) - ((a.battingStats?.runs || a.runsScored) || 0))
+    .slice(0, 5);
+  const topWicketTakers = [...players]
+    .sort((a, b) => ((b.bowlingStats?.wickets || b.wicketsTaken) || 0) - ((a.bowlingStats?.wickets || a.wicketsTaken) || 0))
+    .slice(0, 5);
+
+  const topInningsRuns = [...players]
+    .filter(p => p.battingStats?.highestScore && p.battingStats.highestScore !== '0')
+    .sort((a, b) => {
+      const valA = parseInt(a.battingStats.highestScore.replace('*', '')) || 0;
+      const valB = parseInt(b.battingStats.highestScore.replace('*', '')) || 0;
+      return valB - valA;
+    })
+    .slice(0, 5);
+
+  const topInningsWickets = [...players]
+    .filter(p => p.bowlingStats?.bestBowling && p.bowlingStats.bestBowling !== '0/0')
+    .sort((a, b) => {
+      const [wA, rA] = (a.bowlingStats?.bestBowling || '0/0').split('/').map(Number);
+      const [wB, rB] = (b.bowlingStats?.bestBowling || '0/0').split('/').map(Number);
+      if (wB !== wA) return wB - wA;
+      return rA - rB;
+    })
+    .slice(0, 5);
+
+  const topSixHitters = [...players]
+    .sort((a, b) => (b.battingStats?.sixes || 0) - (a.battingStats?.sixes || 0))
+    .slice(0, 5);
+
+  const topFourHitters = [...players]
+    .sort((a, b) => (b.battingStats?.fours || 0) - (a.battingStats?.fours || 0))
+    .slice(0, 5);
 
   const handleGenerateHeroPoster = async () => {
     if (!heroPosterRef.current || !selectedHero) return;
@@ -522,33 +561,75 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Leaderboard</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 md:gap-14 relative z-10">
           {/* Batting Leaderboard */}
           <div className="space-y-6">
-            <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Flame size={16} className="text-orange-500" /> Run Machines
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Flame size={14} className="text-orange-500" /> Run Machines
             </h4>
-            <div className="space-y-5">
+            <div className="space-y-4">
               {topRunScorers.map((p, idx) => (
-                <div key={p.id} className="flex items-center gap-4 group">
-                  <div className="relative">
-                    <img src={p.avatarUrl} className="w-12 h-12 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} />
-                    <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                <div key={p.id} className="flex items-center gap-3 group">
+                  <div className="relative shrink-0">
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} />
+                    <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{p.name}</span>
-                      <span className="text-sm font-black text-blue-600">{p.runsScored}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate mr-2">{p.name}</span>
+                      <span className="text-[11px] font-black text-blue-600">{p.battingStats?.runs || p.runsScored || 0}</span>
                     </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <motion.div 
-                        initial={{ width: 0 }} 
-                        animate={{ width: `${(p.runsScored / (topRunScorers[0].runsScored || 1)) * 100}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                        className="h-full bg-orange-500 rounded-full"
-                      />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Highest Innings Runs */}
+          <div className="space-y-6">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Award size={14} className="text-yellow-500" /> Best Innings
+            </h4>
+            <div className="space-y-4">
+              {topInningsRuns.map((p, idx) => (
+                <div key={p.id} className="flex items-center gap-3 group">
+                  <div className="relative shrink-0">
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-yellow-500 transition-colors" alt={p.name} />
+                    <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
+                      {idx + 1}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate mr-2">{p.name}</span>
+                      <span className="text-[11px] font-black text-yellow-600">{p.battingStats?.highestScore}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Leaderboard: Sixes */}
+          <div className="space-y-6">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Zap size={14} className="text-sky-500" /> Six Hitters
+            </h4>
+            <div className="space-y-4">
+              {topSixHitters.map((p, idx) => (
+                <div key={p.id} className="flex items-center gap-3 group">
+                  <div className="relative shrink-0">
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-sky-500 transition-colors" alt={p.name} />
+                    <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
+                      {idx + 1}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate mr-2">{p.name}</span>
+                      <span className="text-[11px] font-black text-sky-600">{p.battingStats?.sixes || 0}</span>
                     </div>
                   </div>
                 </div>
@@ -558,30 +639,72 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
           {/* Bowling Leaderboard */}
           <div className="space-y-6">
-            <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Zap size={16} className="text-blue-500" /> Wicket Takers
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Activity size={14} className="text-blue-500" /> Wicket Takers
             </h4>
-            <div className="space-y-5">
+            <div className="space-y-4">
               {topWicketTakers.map((p, idx) => (
-                <div key={p.id} className="flex items-center gap-4 group">
-                  <div className="relative">
-                    <img src={p.avatarUrl} className="w-12 h-12 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} />
-                    <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                <div key={p.id} className="flex items-center gap-3 group">
+                  <div className="relative shrink-0">
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} />
+                    <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-sm font-black text-slate-800 uppercase tracking-tight">{p.name}</span>
-                      <span className="text-sm font-black text-blue-600">{p.wicketsTaken}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate mr-2">{p.name}</span>
+                      <span className="text-[11px] font-black text-blue-600">{p.bowlingStats?.wickets || p.wicketsTaken || 0}</span>
                     </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <motion.div 
-                        initial={{ width: 0 }} 
-                        animate={{ width: `${(p.wicketsTaken / (topWicketTakers[0].wicketsTaken || 1)) * 100}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                        className="h-full bg-blue-600 rounded-full"
-                      />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Best Bowling Figures */}
+          <div className="space-y-6">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Target size={14} className="text-purple-500" /> Best Spell
+            </h4>
+            <div className="space-y-4">
+              {topInningsWickets.map((p, idx) => (
+                <div key={p.id} className="flex items-center gap-3 group">
+                  <div className="relative shrink-0">
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-purple-500 transition-colors" alt={p.name} />
+                    <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
+                      {idx + 1}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate mr-2">{p.name}</span>
+                      <span className="text-[11px] font-black text-purple-600">{p.bowlingStats?.bestBowling}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Leaderboard: Fours */}
+          <div className="space-y-6">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Star size={14} className="text-rose-500" /> Boundary Kings
+            </h4>
+            <div className="space-y-4">
+              {topFourHitters.map((p, idx) => (
+                <div key={p.id} className="flex items-center gap-3 group">
+                  <div className="relative shrink-0">
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-rose-500 transition-colors" alt={p.name} />
+                    <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
+                      {idx + 1}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate mr-2">{p.name}</span>
+                      <span className="text-[11px] font-black text-rose-600">{p.battingStats?.fours || 0}</span>
                     </div>
                   </div>
                 </div>
