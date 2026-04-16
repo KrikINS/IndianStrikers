@@ -2285,7 +2285,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         </AnimatePresence>
 
         <ScoreSection>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0 4px', marginBottom: 16 }}>
+            {/* LEFT: CRR */}
             <div style={{ textAlign: 'left', minWidth: 45 }}>
               <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>CRR</div>
               <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#001F3F' }}>
@@ -2293,13 +2294,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   const totalBalls = currentInnings?.totalBalls || 0;
                   if (totalBalls === 0) return '0.00';
                   return ((currentInnings?.totalRuns || 0) / (totalBalls / 6)).toFixed(2);
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                })()}
+              </div>
+            </div>
+
+            {/* MIDDLE: SCORE AND BUTTON ALIGNED HORIZONTALLY (Vertical Center) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <ScoreTitle style={{ fontSize: '1.4rem', lineHeight: 1 }}>
-                  {currentInnings?.totalRuns}/{currentInnings?.wickets}
-                </ScoreTitle>
-                <OversText style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: 2 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <MainScore style={{ fontSize: '2rem', marginBottom: 0 }}>
+                  {currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}
+                </MainScore>
+                <OversText style={{ fontSize: '0.75rem', opacity: 0.6 }}>
                   {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
                 </OversText>
               </div>
@@ -2317,8 +2322,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </button>
             </div>
 
+            {/* RIGHT: PROJECTED */}
             <div style={{ textAlign: 'right', minWidth: 45 }}>
-              <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>Projected Score</div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>Proj</div>
               <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#001F3F' }}>
                 {(() => {
                   const totalBalls = currentInnings?.totalBalls || 0;
