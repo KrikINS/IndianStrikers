@@ -943,7 +943,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Helper: resolve player name from either squad
   const getPlayerName = (id: string | null): string => {
-    if (!id) return '—';
+    if (!id) return 'â€”';
     const homePlayer = players.find((p: Player) => p.id === id);
     if (homePlayer) return homePlayer.name;
     const awayPlayer = opponentPlayers.find(p => p.id === id);
@@ -1081,7 +1081,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       if (matchMeta) {
         initFromMeta(matchMeta);
       } else {
-        // matchMeta not in local store yet — fetch directly from API
+        // matchMeta not in local store yet â€” fetch directly from API
         console.log(`[Scorer] matchMeta not found locally, fetching match ${activeMatchId} directly...`);
         import('../services/storageService').then(({ getMatch }) => {
           getMatch(activeMatchId).then(freshMeta => {
@@ -1197,7 +1197,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       setSyncStatus('idle');
       toast.success("Match synced. Safe to hand over!", {
         duration: 5000,
-        icon: '🤝'
+        icon: 'ðŸ¤'
       });
 
       // 4. Clean exit
@@ -1394,7 +1394,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     )}
                   </div>
                   <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: 4, fontWeight: 600 }}>
-                    {m.tournament} • {new Date(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {m.tournament} â€¢ {new Date(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </div>
                 </div>
                 <ChevronRight size={20} color="#FAB005" />
@@ -1994,7 +1994,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     else if (score === 4 && subType === 'bat') shufflePreview('FOUR');
     else if (score === 0 && subType === 'bat') shufflePreview('DOT');
 
-    if (store.useWagonWheel && subType === 'bat' && (score > 0 || isWicket)) {
+    const isWagonWorthy = (score > 0) || (isWicket && !['Bowled', 'LBW', 'Retired Hurt', 'Retired Out', 'Hit Wicket'].includes(wicketType));
+
+    if (store.useWagonWheel && subType === 'bat' && isWagonWorthy) {
       setShowWagonWheelModal({ score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, commentary: comm });
     } else {
       handleRecord(score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, undefined, comm);
@@ -2194,11 +2196,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             <div style={{ fontSize: '8px', fontWeight: 800, opacity: 0.9, marginTop: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               {store.toss.winnerId && (
                 <span style={{ color: '#FAB005' }}>
-                  {store.toss.winnerId === 'HOME' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT')} won toss & elected to {store.toss.choice} •
+                  {store.toss.winnerId === 'HOME' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT')} won toss & elected to {store.toss.choice} â€¢
                 </span>
               )}
               {` Innings ${store.currentInnings} `}
-              {store.maxOvers ? `• ${store.maxOvers} Overs` : ''}
+              {store.maxOvers ? `â€¢ ${store.maxOvers} Overs` : ''}
             </div>
           </div>
 
@@ -2283,19 +2285,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         </AnimatePresence>
 
         <ScoreSection>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 10 }}>
-            <button
-              title="Full Scorecard"
-              onClick={() => setShowScorecardModal(true)}
-              style={{
-                background: 'hsla(210, 73%, 58%, 0.94)', border: 'none', borderRadius: 6, display: 'flex', alignItems: 'center',
-                gap: 4, padding: '4px 12px', color: 'rgba(247, 247, 248, 1)', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer'
-              }}
-            >
-              <LayoutList size={12} /> FULL SCORECARD
-            </button>
-          </div>
-
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0 4px' }}>
             <div style={{ textAlign: 'left', minWidth: 45 }}>
               <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>CRR</div>
@@ -2304,13 +2293,28 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   const totalBalls = currentInnings?.totalBalls || 0;
                   if (totalBalls === 0) return '0.00';
                   return ((currentInnings?.totalRuns || 0) / (totalBalls / 6)).toFixed(2);
-                })()}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <ScoreTitle style={{ fontSize: '1.4rem', lineHeight: 1 }}>
+                  {currentInnings?.totalRuns}/{currentInnings?.wickets}
+                </ScoreTitle>
+                <OversText style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: 2 }}>
+                  {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
+                </OversText>
               </div>
-            </div>
 
-            <div style={{ textAlign: 'center' }}>
-              <MainScore style={{ fontSize: '2.2rem' }}>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</MainScore>
-              <OversText style={{ fontSize: '0.8rem', marginTop: -4 }}>OVERS {store.getOvers(currentInnings?.totalBalls || 0)}</OversText>
+              <button
+                title="Full Scorecard"
+                onClick={() => setShowScorecardModal(true)}
+                style={{
+                  background: 'hsla(210, 73%, 58%, 0.1)', border: '1px solid hsla(210, 73%, 58%, 0.3)', 
+                  borderRadius: 6, display: 'flex', alignItems: 'center',
+                  gap: 4, padding: '6px 14px', color: '#1a73e8', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
+                }}
+              >
+                <LayoutList size={10} /> FULL SCORECARD
+              </button>
             </div>
 
             <div style={{ textAlign: 'right', minWidth: 45 }}>
@@ -2588,7 +2592,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     key={runs}
                     style={{ height: 60, fontSize: '1.2rem' }}
                     onClick={() => {
-                      attemptRecord(runs, extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye')), false, undefined, (extraType === 'nb' ? nbSubType : 'bat'));
+                      const type = extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye'));
+                      const finalSubType = extraType === 'nb' ? nbSubType : (extraType === 'wd' ? 'bye' : (extraType === 'byes' ? 'bye' : 'lb'));
+                      attemptRecord(runs, type, false, undefined, finalSubType);
                       setShowNBModal(false);
                     }}
                   >
@@ -2599,13 +2605,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
               <button
                 onClick={() => {
+                  const type = extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye'));
+                  const finalSubType = extraType === 'nb' ? nbSubType : (extraType === 'wd' ? 'bye' : (extraType === 'byes' ? 'bye' : 'lb'));
                   setRunOutInvolved({
                     victimId: '',
                     runs: 0,
-                    ballType: extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye')),
-                    subType: extraType === 'nb' ? nbSubType : 'bat'
+                    ballType: type,
+                    subType: finalSubType
                   });
-                  setShowNBModal(false);
                 }}
                 style={{
                   width: '100%', padding: '16px', borderRadius: 12, border: '2px solid #FAB005',
@@ -3239,14 +3246,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                       marginBottom: '-1px'
                     }}
                   >
-                    {tab === 'scorecard' ? '📋 Scorecard' : '🎙 Commentary'}
+                    {tab === 'scorecard' ? '📋 Scorecard' : '🎙️ Commentary'}
                   </button>
                 ))}
               </div>
 
               <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
 
-                {/* ───────── SCORECARD TAB ───────── */}
+                {/* ————————————————— SCORECARD TAB ————————————————— */}
                 {scorecardTab === 'scorecard' && (
                   <>
                     <ScoreSummaryCard style={{ marginTop: 20 }}>
@@ -3342,20 +3349,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   </>
                 )}
 
-                {/* ───────── COMMENTARY TAB ───────── */}
+                {/* ————————————————— COMMENTARY TAB ————————————————— */}
                 {scorecardTab === 'commentary' && (
                   <div style={{ paddingTop: 16 }}>
                     {(() => {
-                      const history: any[] = [...(currentInnings?.history || [])].reverse();
-                      if (history.length === 0) {
-                        return (
-                          <div style={{ textAlign: 'center', opacity: 0.4, padding: '40px 0', fontSize: '0.9rem' }}>
-                            No balls recorded yet.
-                          </div>
-                        );
-                      }
-
-                      // Group by over — we iterate reversed so latest over is first
+                      const history = [...(currentInnings?.history || [])].reverse();
                       const overGroups: Record<number, any[]> = {};
                       history.forEach(ball => {
                         const ov = ball.overNumber ?? 0;
@@ -3495,7 +3493,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </PremiumModalOverlay>
         )}
 
-        {/* --- INNINGS REVIEW MODAL --- */}
+        {/* ——— INNINGS REVIEW MODAL ——— */}
         {showInningsReview && (
           <PremiumModalOverlay
             initial={{ opacity: 0 }}
