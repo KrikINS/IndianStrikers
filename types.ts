@@ -36,6 +36,16 @@ export interface AppUser {
   isFirstLogin?: boolean;
 }
 
+export type CommentaryEventType = 'FOUR' | 'SIX' | 'WICKET' | 'DOT' | 'MILESTONE';
+
+export interface CommentaryTemplate {
+  id: string;
+  event_type: CommentaryEventType;
+  text: string;
+  is_active: boolean;
+  created_at?: string;
+}
+
 export type MatchStatus = 'upcoming' | 'live' | 'completed';
 export type MatchStage = 'League' | 'Quarter-Final' | 'Semi-Final' | 'Final';
 

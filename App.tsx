@@ -19,11 +19,12 @@ import { useOpponentStore } from './store/opponentStore';
 import GroundsManager from './components/GroundsManager';
 import TournamentsManager from './components/TournamentsManager';
 import UserManagement from './components/UserManagement';
+import CommentaryManager from './components/CommentaryManager';
 import { ScorecardPage } from './components/ScorecardPage';
 import LiveScorecardPage from './components/LiveScorecardPage';
 import { Player, UserRole, OpponentTeam } from './types';
 import { getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo, saveTeamLogo, getMatches } from './services/storageService';
-import { Menu, Shield, ArrowRight } from 'lucide-react';
+import { Menu, Shield, ArrowRight, Plus, MapPin, Trophy, Settings, Users, Layout, MessageSquare } from 'lucide-react';
 import KirikINSLogo from './components/KirikINSLogo';
 import GlobalChat from './components/GlobalChat';
 import { Toaster, toast } from 'react-hot-toast';
@@ -170,6 +171,7 @@ const AppContent: React.FC<{
                   <Route path="tournaments" element={<TournamentsManager isAdmin={true} />} />
                   <Route path="legacy" element={<LegacyEditor />} />
                   <Route path="users" element={<UserManagement />} />
+                  <Route path="commentary" element={<CommentaryManager />} />
                 </Route>
               
               <Route path="/scorecard/:id" element={<ScorecardPage opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />

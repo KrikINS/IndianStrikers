@@ -3,10 +3,10 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Player } from '../types';
 import {
   Plus, MapPin, Trophy, Settings,
-  Users, Layout
+  Users, Layout, MessageSquare
 } from 'lucide-react';
 
-type ControlTab = 'grounds' | 'tournaments' | 'users' | 'requests' | 'legacy';
+type ControlTab = 'grounds' | 'tournaments' | 'users' | 'requests' | 'legacy' | 'commentary';
 
 interface ControlPanelProps {}
 
@@ -45,6 +45,7 @@ const ControlPanel: React.FC<ControlPanelProps> = () => {
           {renderTabButton('grounds', 'Grounds', MapPin)}
           {renderTabButton('users', 'Users', Users)}
           {renderTabButton('legacy', 'Club Legacy', Layout)}
+          {renderTabButton('commentary', 'Live Commentary', MessageSquare)}
         </div>
 
         {/* Tab Content - Now using Outlet for sub-routes */}

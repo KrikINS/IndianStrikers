@@ -118,6 +118,7 @@ interface ScorerStore extends MatchState {
         outPlayerId?: string;
         newBatterId?: string;
         zone?: string;
+        commentary?: string;
     }) => void;
     recordPenalty: (team: 'batting' | 'bowling', runs: number) => void;
     undoLastBall: () => void;
@@ -414,7 +415,7 @@ export const useCricketScorer = create<ScorerStore>()(
                     ballNumber: ((nextInnings.totalBalls - (isLegal ? 1 : 0)) % 6) + 1,
                     isLegal,
                     zone,
-                    commentary: (() => {
+                    commentary: payload.commentary || (() => {
                         if (!zone || zone === 'Unknown') return '';
                         const sName = b.name;
                         const zoneMap: any = {

@@ -599,6 +599,30 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
   res.json(data);
 });
 
+// COMMENTARY TEMPLATES
+app.get('/api/commentary/templates', async (_req, res) => {
+  const { data, error } = await db.query('SELECT * FROM commentary_templates WHERE is_active = true ORDER BY created_at DESC');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/commentary/templates', authGuard(['admin']), async (req, res) => {
+  const { event_type, text, is_active } = req.body;
+  if (!event_type || !text) return res.status(400).json({ error: 'Missing event_type or text' });
+  const { data, error } = await db.getOne(
+    'INSERT INTO commentary_templates (event_type, text, is_active) VALUES ($1, $2, $3) RETURNING *',
+    [event_type, text, is_active ?? true]
+  );
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/commentary/templates/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await db.query('DELETE FROM commentary_templates WHERE id = $1', [req.params.id]);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 // GET Match History (Balls)
 app.get('/api/matches/:id/balls', async (req, res) => {
   const { data, error } = await db.query(

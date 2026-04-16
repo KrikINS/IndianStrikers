@@ -21,7 +21,9 @@ import {
   Zap,
   PlusCircle,
   Edit3,
-  Share2
+  Share2,
+  MessageSquare,
+  Mic
 } from 'lucide-react';
 import { useCricketScorer } from './matchStore';
 import { useMatchCenter, updateMatchInStore } from './matchCenterStore';
@@ -32,6 +34,7 @@ import _ from 'lodash';
 import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
 import html2canvas from 'html2canvas';
 import toast from 'react-hot-toast';
+import { getRandomCommentary } from '../data/commentary';
 
 const DashboardContainer = styled.div`
   height: 100dvh;
@@ -866,7 +869,9 @@ import {
   Player,
   ScheduledMatch,
   MatchStatus,
-  OpponentTeam
+  OpponentTeam,
+  CommentaryTemplate,
+  CommentaryEventType
 } from '../types';
 import MatchSummaryModal from './MatchSummaryModal';
 
@@ -912,7 +917,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
   const [showMatchSummaryModal, setShowMatchSummaryModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [customCommentary, setCustomCommentary] = useState('');
+  const [showCommentaryInput, setShowCommentaryInput] = useState(false);
   const [allOpponents, setAllOpponents] = useState<any[]>([]);
+  const [commentaryTemplates, setCommentaryTemplates] = useState<CommentaryTemplate[]>([]);
+  const [nextCommentarySuggestions, setNextCommentarySuggestions] = useState<Record<CommentaryEventType, string[]>>({
+    FOUR: [], SIX: [], WICKET: [], DOT: [], MILESTONE: []
+  });
+  const [currentPreviews, setCurrentPreviews] = useState<Record<CommentaryEventType, string>>({
+    FOUR: '', SIX: '', WICKET: '', DOT: '', MILESTONE: ''
+  });
 
   // Opponent players fetched separately from the opponents table
   const [opponentPlayers, setOpponentPlayers] = useState<{ id: string; name: string; role?: string }[]>([]);
@@ -939,6 +953,50 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       setTempMaxOvers(store.maxOvers);
     }
   }, [store.maxOvers]);
+
+  // Fetch Commentary Templates and prime the previews
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/commentary/templates`);
+        if (!res.ok) return;
+        const data: CommentaryTemplate[] = await res.json();
+        setCommentaryTemplates(data);
+
+        // Group by type for fast lookup
+        const grouped: Record<CommentaryEventType, string[]> = {
+          FOUR: [], SIX: [], WICKET: [], DOT: [], MILESTONE: []
+        };
+        data.forEach(t => {
+          if (grouped[t.event_type]) grouped[t.event_type].push(t.text);
+        });
+        setNextCommentarySuggestions(grouped);
+
+        // Prime initial random selections
+        const initialPreviews: Record<CommentaryEventType, string> = {
+          FOUR: '', SIX: '', WICKET: '', DOT: '', MILESTONE: ''
+        };
+        (Object.keys(grouped) as CommentaryEventType[]).forEach(type => {
+          const list = grouped[type];
+          if (list.length > 0) {
+            initialPreviews[type] = list[Math.floor(Math.random() * list.length)];
+          }
+        });
+        setCurrentPreviews(initialPreviews);
+      } catch (err) {
+        console.error("Failed to load commentary templates:", err);
+      }
+    };
+    fetchTemplates();
+  }, []);
+
+  const shufflePreview = (type: CommentaryEventType) => {
+    const list = nextCommentarySuggestions[type];
+    if (list && list.length > 0) {
+      const randomText = list[Math.floor(Math.random() * list.length)];
+      setCurrentPreviews(prev => ({ ...prev, [type]: randomText }));
+    }
+  };
 
   // Load Wagon Wheel Preference from localStorage
   useEffect(() => {
@@ -1669,7 +1727,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     );
   }
 
-  const handleRecord = (score: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string, zone?: string) => {
+  const handleRecord = (score: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string, zone?: string, commentary?: string) => {
     // 2. The "7th Ball" Fix: Strict Guard
     if (isOverComplete && store.isWaitingForBowler) {
       console.warn("Over complete. Selection required.");
@@ -1680,13 +1738,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     const innings = store.currentInnings === 1 ? store.innings1 : store.innings2;
     if (!innings) return;
     const is_test = matchMeta?.is_test ?? false;
+    const isLegal = type !== 'wide' && type !== 'no-ball';
 
     // 1. Capture IDs locally to avoid race conditions with state resets (e.g. at end of over)
     const currentStrikerId = store.strikerId;
     const currentNonStrikerId = store.nonStrikerId;
     const currentBowlerId = store.currentBowlerId;
 
-    store.recordBall({ runs: score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, zone });
+    store.recordBall({ runs: score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, zone, commentary });
 
     // --- DB Sync Bridge ---
     const syncBallToCloud = async (isRetry = false) => {
@@ -1701,15 +1760,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         non_striker_id: currentNonStrikerId,
         bowler_id: currentBowlerId,
         over_number: Math.floor(innings.totalBalls / 6),
-        ball_number: (innings.totalBalls % 6) + 1,
+        ball_number: ((innings.totalBalls - (isLegal ? 1 : 0)) % 6) + 1,
+        is_legal_ball: isLegal,
+        shot_zone: zone,
         runs_scored: score,
         extras_runs: type === 'wide' || type === 'no-ball' ? 1 : 0,
         extras_type: type === 'legal' ? null : type,
         event_type: isWicket ? 'wicket' : (type === 'legal' ? 'ball' : 'extra'),
         innings_number: store.currentInnings,
-        is_legal_ball: type !== 'wide' && type !== 'no-ball',
         wicket_type: wicketType,
-        is_penalty: false
+        is_penalty: false,
+        commentary: commentary || ''
       };
 
       // Add New Fields Only if NOT a retry (the interceptor might be blocking these)
@@ -1832,6 +1893,49 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         // Show modal after a brief delay for animations
         setTimeout(() => setShowBowlerModal(true), 1200);
       }
+    }
+  };
+
+  /**
+   * INTERCEPTOR: Checks if Wagon Wheel is enabled before finalizing ball record.
+   * If enabled and ball is off-bat (not wide/bye/lb), triggers the modal first.
+   */
+  const attemptRecord = (score: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string) => {
+    // Generate Random Commentary if not custom
+    let comm = customCommentary;
+    if (!comm) {
+      if (isWicket) comm = currentPreviews.WICKET;
+      else if (score === 6 && subType === 'bat') comm = currentPreviews.SIX;
+      else if (score === 4 && subType === 'bat') comm = currentPreviews.FOUR;
+      else if (score === 0 && subType === 'bat') comm = currentPreviews.DOT;
+      
+      // Fallback if no templates or specific type selected
+      if (!comm) {
+        if (isWicket) comm = getRandomCommentary('WICKET');
+        else if (score === 6 && subType === 'bat') comm = getRandomCommentary('SIX');
+        else if (score === 4 && subType === 'bat') comm = getRandomCommentary('FOUR');
+        else if (score === 0 && subType === 'bat') comm = getRandomCommentary('DOT');
+      }
+    }
+
+    // After picking, shuffle the previews for the next ball
+    if (isWicket) shufflePreview('WICKET');
+    else if (score === 6 && subType === 'bat') shufflePreview('SIX');
+    else if (score === 4 && subType === 'bat') shufflePreview('FOUR');
+    else if (score === 0 && subType === 'bat') shufflePreview('DOT');
+
+    // Reset custom commentary after use
+    setCustomCommentary('');
+    setShowCommentaryInput(false);
+
+    // We trigger Wagon Wheel if:
+    // 1. It is enabled in settings
+    // 2. The ball is off-bat (subType 'bat')
+    // 3. There are runs scored off the bat OR it's a wicket (to show dismissal zone)
+    if (store.useWagonWheel && subType === 'bat' && (score > 0 || isWicket)) {
+      setShowWagonWheelModal({ score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, commentary: comm });
+    } else {
+      handleRecord(score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, undefined, comm);
     }
   };
 
@@ -2421,6 +2525,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </span>
             )}
           </TimelineContainer>
+          <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.05)', minHeight: 34, display: 'flex', alignItems: 'center' }}>
+            <span style={{ color: '#FAB005', fontSize: '10px', fontWeight: 900, marginRight: 8, flexShrink: 0 }}>LIVE</span>
+            <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+              {(() => {
+                const history = currentInnings?.history || [];
+                const lastBall = history[history.length - 1];
+                return lastBall?.commentary || 'Waiting for next ball...';
+              })()}
+            </div>
+          </div>
+        </div>
 
           <ScoringInterface style={{ opacity: store.isWaitingForBowler ? 0.6 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', position: 'relative' }}>
             {store.isWaitingForBowler && (
@@ -2434,14 +2549,70 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </div>
             )}
 
+            <div style={{ padding: '0 12px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.6 }}>
+                 <MessageSquare size={14} color="#FAB005" />
+                 <span style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.5px' }}>LIVE COMMENTARY</span>
+               </div>
+               <button 
+                 onClick={() => setShowCommentaryInput(!showCommentaryInput)}
+                 title="Add Custom Note"
+                 style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 8, padding: '4px 8px', color: '#FAB005', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+               >
+                 <Edit3 size={12} />
+                 <span style={{ fontSize: '10px', fontWeight: 700 }}>{showCommentaryInput ? 'HIDE' : 'EDIT NOTE'}</span>
+               </button>
+            </div>
+
+            {showCommentaryInput && (
+              <div style={{ padding: '0 12px 12px' }}>
+                <input 
+                  type="text"
+                  placeholder="Type custom ball note here..."
+                  value={customCommentary}
+                  onChange={(e) => setCustomCommentary(e.target.value)}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '12px', color: '#FFF', fontSize: '0.8rem' }}
+                />
+              </div>
+            )}
+
+            {/* Next Commentary Previews */}
+            {!showCommentaryInput && (
+              <div style={{ padding: '0 12px 12px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px dashed rgba(255,255,255,0.1)', padding: '10px 12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontSize: '9px', fontWeight: 900, color: '#FAB005', letterSpacing: '1px' }}>PREVIEW NEXT ACTION</span>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {(['WICKET', 'FOUR', 'SIX', 'DOT'] as const).map(type => (
+                        <button 
+                          key={type}
+                          onClick={() => shufflePreview(type)}
+                          style={{ border: 'none', color: '#FFF', fontSize: '8px', fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.05)', cursor: 'pointer' }}
+                        >
+                          SHUFFLE {type === 'WICKET' ? 'W' : type === 'FOUR' ? '4' : type === 'SIX' ? '6' : '0'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', lineHeight: 1.4 }}>
+                    {(() => {
+                      const active = currentPreviews.DOT && currentPreviews.FOUR && currentPreviews.SIX && currentPreviews.WICKET;
+                      if (!active) return "No templates loaded. Use defaults.";
+                      return `0: ${currentPreviews.DOT.slice(0, 30)}... | 4: ${currentPreviews.FOUR.slice(0, 30)}...`;
+                    })()}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <RunGrid>
-              <ScoringBtn onClick={() => handleRecord(0, 'legal')}>0</ScoringBtn>
-              <ScoringBtn onClick={() => handleRecord(1, 'legal')}>1</ScoringBtn>
-              <ScoringBtn onClick={() => handleRecord(2, 'legal')}>2</ScoringBtn>
-              <ScoringBtn onClick={() => handleRecord(3, 'legal')}>3</ScoringBtn>
-              <ScoringBtn onClick={() => handleRecord(4, 'legal')}>4</ScoringBtn>
-              <ScoringBtn onClick={() => handleRecord(5, 'legal')}>5</ScoringBtn>
-              <ScoringBtn onClick={() => handleRecord(6, 'legal')}>6</ScoringBtn>
+              <ScoringBtn onClick={() => attemptRecord(0, 'legal')}>0</ScoringBtn>
+              <ScoringBtn onClick={() => attemptRecord(1, 'legal')}>1</ScoringBtn>
+              <ScoringBtn onClick={() => attemptRecord(2, 'legal')}>2</ScoringBtn>
+              <ScoringBtn onClick={() => attemptRecord(3, 'legal')}>3</ScoringBtn>
+              <ScoringBtn onClick={() => attemptRecord(4, 'legal')}>4</ScoringBtn>
+              <ScoringBtn onClick={() => attemptRecord(5, 'legal')}>5</ScoringBtn>
+              <ScoringBtn onClick={() => attemptRecord(6, 'legal')}>6</ScoringBtn>
               <ScoringBtn $variant="wicket" style={{ background: '#FF4D4D', color: '#FFF' }} onClick={() => setShowWicketModal(true)}>WKT</ScoringBtn>
             </RunGrid>
 
@@ -2452,7 +2623,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
             </ExtraStack>
           </ScoringInterface>
-        </div>
 
         {showBowlerModal && (
           <ModalOverlay onClick={() => setShowBowlerModal(false)}>
@@ -2537,7 +2707,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     key={runs}
                     style={{ height: 60, fontSize: '1.2rem' }}
                     onClick={() => {
-                      handleRecord(runs, extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye')), false, undefined, (extraType === 'nb' ? nbSubType : 'bat'));
+                      attemptRecord(runs, extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye')), false, undefined, (extraType === 'nb' ? nbSubType : 'bat'));
                       setShowNBModal(false);
                     }}
                   >
@@ -3103,7 +3273,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         key={p.id}
                         onClick={() => {
                           if (runOutInvolved) {
-                            handleRecord(
+                            attemptRecord(
                               runOutInvolved.runs,
                               runOutInvolved.ballType || 'legal',
                               true,
@@ -3119,7 +3289,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                               const fielder = [...players, ...opponentPlayers].find(fp => fp.id === pendingFielderId);
                               dismissal = `${pendingWicketType === 'Caught' ? 'c' : 'st'} ${fielder?.name || 'Fielder'}`;
                             }
-                            handleRecord(0, 'legal', true, dismissal, 'bat', undefined, p.id);
+                            attemptRecord(0, 'legal', true, dismissal, 'bat', undefined, p.id);
                           }
                           setShowBatterSelectModal(false);
                           setShowWicketModal(false);
@@ -3377,19 +3547,27 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                               {balls.map((ball: any, i: number) => {
                                 const bowlerN = getPlayerName(ball.bowlerId);
                                 const strikerN = getPlayerName(ball.strikerId);
-                                let result = '';
+                                let result = ball.commentary || '';
                                 let resultColor = 'rgba(255,255,255,0.7)';
                                 if (ball.isWicket) {
-                                  result = `OUT! ${ball.wicketType || 'Wicket'} — ${strikerN}`;
+                                  if (!result) result = `OUT! ${ball.wicketType || 'Wicket'} — ${strikerN}`;
                                   resultColor = '#FF4D4D';
-                                } else if (ball.runs === 6) { result = `SIX! ${strikerN} hits it clean`; resultColor = '#38BDF8'; }
-                                else if (ball.runs === 4) { result = `FOUR! ${strikerN} finds the boundary`; resultColor = '#38BDF8'; }
-                                else if (ball.type === 'wide') result = `Wide${ball.runs > 0 ? ` + ${ball.runs} run(s)` : ''}`;
+                                } else if (ball.runs === 6) { 
+                                  if (!result) result = `SIX! ${strikerN} hits it clean`; 
+                                  resultColor = '#38BDF8'; 
+                                } else if (ball.runs === 4) { 
+                                  if (!result) result = `FOUR! ${strikerN} finds the boundary`; 
+                                  resultColor = '#38BDF8'; 
+                                } else if (ball.type === 'wide') result = `Wide${ball.runs > 0 ? ` + ${ball.runs} run(s)` : ''}`;
                                 else if (ball.type === 'no-ball') result = `No Ball${ball.runs > 0 ? ` + ${ball.runs} run(s)` : ''}`;
                                 else if (ball.type === 'leg-bye') result = `Leg Bye — ${ball.runs} run(s)`;
                                 else if (ball.type === 'bye') result = `Bye — ${ball.runs} run(s)`;
-                                else if (ball.runs === 0) { result = `Dot ball`; resultColor = 'rgba(255,255,255,0.4)'; }
-                                else result = `${ball.runs} run(s)`;
+                                else if (ball.runs === 0) { 
+                                  if (!result) result = `Dot ball`; 
+                                  resultColor = 'rgba(255,255,255,0.4)'; 
+                                } else {
+                                  if (!result) result = `${ball.runs} run(s)`;
+                                };
 
                                 const ballLabel = ball.isLegal
                                   ? `${overNum}.${ball.ballNumber}`
@@ -3756,7 +3934,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         key={zone.name}
                         onClick={() => {
                           const p = showWagonWheelModal;
-                          handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name);
+                          handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name, p.commentary);
                           setShowWagonWheelModal(null);
                         }}
                         style={{
@@ -3780,7 +3958,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   <button
                     onClick={() => {
                       const p = showWagonWheelModal;
-                      handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, 'Unknown');
+                      handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, 'Unknown', p.commentary);
                       setShowWagonWheelModal(null);
                     }}
                     style={{ flex: 1, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: 'none', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}
