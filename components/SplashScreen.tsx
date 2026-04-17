@@ -212,7 +212,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
               <img src="/INS%20LOGO.PNG" className="w-24 h-24 object-contain" alt="INS" />
             )}
           </div>
-          <h2 className="text-3xl md:text-5xl text-blue-100 font-cursive tracking-wide min-h-[60px] drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+          <h2 className="text-4xl md:text-6xl text-blue-100 font-cursive min-h-[70px] drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
             {loadingText}
             <span className="animate-blink text-blue-400">|</span>
           </h2>
@@ -244,10 +244,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
 
       {/* Dynamic Background */}
       <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-slate-900 to-black opacity-90"></div>
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[100px] animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[100px] animate-pulse delay-700"></div>
-        <div className="absolute inset-0 opacity-10 bg-dot-pattern"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1128] via-[#020617] to-[#000000]"></div>
       </div>
 
       <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col items-center justify-center min-h-screen py-12">
@@ -260,24 +257,54 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
         `}>
 
           {/* Main Team Logo */}
-          <div className="mb-4 transform hover:scale-105 transition-transform duration-500">
-            <div className="w-28 h-28 md:w-36 md:h-36 bg-transparent rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.3)] border-4 border-white/10 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-tr from-blue-700 to-blue-500 opacity-50"></div>
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+          <motion.div 
+            className="mb-8 relative z-20"
+            initial={{ opacity: 0, scale: 0.5, y: 20 }}
+            animate={{ 
+              opacity: animationStep >= 1 ? 1 : 0, 
+              scale: animationStep >= 1 ? 1 : 0.5,
+              y: animationStep >= 1 ? [0, -10, 0] : 20
+            }}
+            transition={{
+              opacity: { duration: 1 },
+              scale: { type: "spring", stiffness: 200, damping: 20 },
+              y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+            }}
+          >
+            <motion.div 
+              className="w-36 h-36 md:w-44 md:h-44 flex items-center justify-center relative cursor-pointer group overflow-hidden rounded-3xl"
+              whileHover={{ 
+                scale: 1.15,
+                rotateY: 20,
+                rotateX: -10,
+                filter: "drop-shadow(0 0 40px rgba(59, 130, 246, 0.7)) brightness(1.1)",
+              }}
+              whileTap={{ scale: 0.9, rotateY: 0, rotateX: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            >
+              {/* Energy Flare behind logo */}
+              <motion.div 
+                className="absolute inset-0 bg-blue-500/20 rounded-full blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+
               {teamLogo && !imgError ? (
-                <img
+                <motion.img
                   src={teamLogo}
                   onError={() => setImgError(true)}
-                  className="w-full h-full object-cover z-10 relative"
+                  className="w-full h-full object-contain relative z-10"
                   alt="Team Logo"
+                  layoutId="main-logo"
                 />
               ) : (
-                <Shield size={64} className="text-white z-10 relative drop-shadow-md" />
+                <Shield size={90} className="text-white relative z-10 drop-shadow-2xl" />
               )}
-              {/* Shine effect */}
-              <div className="absolute top-0 -left-full w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 group-hover:animate-[shine_1.5s_infinite]"></div>
-            </div>
-          </div>
+
+              {/* Shine Sweep Effect */}
+              <div className="absolute top-0 -left-[150%] w-[100%] h-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[35deg] group-hover:animate-[shine_1.5s_infinite] pointer-events-none"></div>
+            </motion.div>
+          </motion.div>
 
           {/* Restored Indian Strikers Title */}
           <div className={`text-center w-full transform transition-all duration-1000 delay-300 ${animationStep >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
@@ -292,14 +319,14 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
 
         {/* UNIFIED LOGIN / ACTIONS */}
         <div className={`
-          w-full max-w-md mt-6 relative
+          w-full max-w-sm mt-4 relative
           transform transition-all duration-700 ease-out delay-100
           ${animationStep >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20 pointer-events-none'}
         `}>
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="p-8">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-transparent rounded-xl flex items-center justify-center overflow-hidden">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 bg-transparent rounded-lg flex items-center justify-center overflow-hidden">
                   <motion.img 
                     src="/cricket-hit.png" 
                     alt="Hit"
@@ -316,41 +343,41 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
                   />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white uppercase tracking-wider">Sign In</h3>
+                  <h3 className="text-lg font-bold text-white uppercase tracking-wider">Sign In</h3>
                 </div>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-3">
                 <div>
                   <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                     <input
                       type="text"
                       value={userId}
                       onChange={(e) => setUserId(e.target.value)}
                       placeholder="Email or User ID"
-                      className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 text-white pl-12 pr-4 py-3 rounded-xl outline-none transition-colors placeholder:text-slate-600"
+                      className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 text-white pl-10 pr-4 py-2.5 rounded-lg outline-none transition-colors placeholder:text-slate-600 text-sm"
                     />
                   </div>
                 </div>
 
                 <div>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                     <input
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Password"
-                      className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 text-white pl-12 pr-12 py-3 rounded-xl outline-none transition-colors placeholder:text-slate-600"
+                      className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 text-white pl-10 pr-10 py-2.5 rounded-lg outline-none transition-colors placeholder:text-slate-600 text-sm"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
                       title={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                   {error && (
@@ -361,38 +388,38 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
                   )}
                 </div>
 
-                <div className="flex justify-end mb-4">
-                  <button type="button" onClick={() => setShowForgotPassword(true)} className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                <div className="flex justify-end mb-3">
+                  <button type="button" onClick={() => setShowForgotPassword(true)} className="text-[11px] font-medium text-blue-400 hover:text-blue-300 transition-colors">
                     Forgot Password?
                   </button>
                 </div>
 
                 <button
-                  type="submit"
-                  disabled={!userId || !password || isAuthenticating}
-                  className={`
-                    w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-4 shadow-lg shadow-blue-600/20
-                    ${(!userId || !password || isAuthenticating) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02]'}
-                  `}
-                >
-                  {isAuthenticating ? <Loader2 size={18} className="animate-spin" /> : 'Enter Portal'}
-                </button>
-              </form>
-              
-              <div className="mt-6 flex flex-col gap-3">
-                <button
-                  onClick={() => setShowMembershipForm(true)}
-                  className="w-full py-2 text-sm text-slate-400 hover:text-white bg-slate-800 border border-slate-700 rounded-lg transition-colors group"
-                >
-                  <span className="font-medium text-slate-300 group-hover:text-white transition-colors">Not a Member?</span> Apply Here
-                </button>
-                <button
-                  onClick={handleGuestEntry}
-                  className="w-full py-2 text-sm text-orange-400 hover:text-orange-300 group transition-colors flex items-center justify-center gap-2"
-                >
-                  <Ticket size={16} /> Continue as Guest <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
+                   type="submit"
+                   disabled={!userId || !password || isAuthenticating}
+                   className={`
+                     w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-all mt-2 shadow-lg shadow-blue-600/20 text-sm
+                     ${(!userId || !password || isAuthenticating) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02]'}
+                   `}
+                 >
+                   {isAuthenticating ? <Loader2 size={16} className="animate-spin" /> : 'Enter Portal'}
+                 </button>
+               </form>
+               
+               <div className="mt-5 flex flex-col gap-2.5">
+                 <button
+                   onClick={() => setShowMembershipForm(true)}
+                   className="w-full py-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 border border-slate-700 rounded-lg transition-colors group"
+                 >
+                   <span className="font-medium text-slate-300 group-hover:text-white transition-colors">Not a Member?</span> Apply Here
+                 </button>
+                 <button
+                   onClick={handleGuestEntry}
+                   className="w-full py-1.5 text-xs text-orange-400 hover:text-orange-300 group transition-colors flex items-center justify-center gap-2"
+                 >
+                   <Ticket size={14} /> Continue as Guest <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                 </button>
+               </div>
               
             </div>
           </div>

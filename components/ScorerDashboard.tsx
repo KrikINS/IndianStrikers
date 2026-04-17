@@ -24,7 +24,8 @@ import {
   Share2,
   MessageSquare,
   Mic,
-  RotateCcw
+  RotateCcw,
+  Cloud
 } from 'lucide-react';
 import { useCricketScorer } from './matchStore';
 import { useMatchCenter, updateMatchInStore } from './matchCenterStore';
@@ -1031,12 +1032,37 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       setCurrentPreviews(prev => ({ ...prev, [type]: randomText }));
     }
   };
-
   // Load Wagon Wheel Preference from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('ins-wagon-wheel-enabled');
     if (saved !== null) {
       store.updateMatchSettings({ useWagonWheel: saved === 'true' });
+    }
+  }, []);
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [syncQueue, setSyncQueue] = useState<number>(0);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const hapticFeedback = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      const patterns = {
+        light: [10],
+        medium: [20],
+        heavy: [50]
+      };
+      navigator.vibrate(patterns[type]);
     }
   }, []);
 
@@ -1864,8 +1890,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
     store.recordBall({ runs: score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, zone, commentary });
 
-    const syncBallToCloud = async (isRetry = false) => {
+    const syncBallToCloud = async (retryCount = 0) => {
       if (!activeMatchId || is_test) return;
+      
+      setIsSyncing(true);
+      setSyncQueue(prev => prev + 1);
 
       const baseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
 
@@ -1878,7 +1907,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         ball_number: ((innings.totalBalls - (isLegal ? 1 : 0)) % 6) + 1,
         is_legal_ball: isLegal,
         shot_zone: zone,
-        hit_zone: zone, // Added for granular schema support
+        hit_zone: zone,
         runs_scored: score,
         extras_runs: type === 'wide' || type === 'no-ball' ? 1 : 0,
         extras_type: type === 'legal' ? null : type,
@@ -1887,16 +1916,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         wicket_type: wicketType,
         is_penalty: false,
         commentary: commentary || '',
-        generated_commentary: commentary || '' // Added for granular metadata storage
+        generated_commentary: commentary || '',
+        tournament_id: matchMeta?.tournamentId || null
       };
-
-      if (!isRetry) {
-        payload.shot_zone = zone;
-        payload.hit_zone = zone;
-        payload.generated_commentary = commentary || '';
-        payload.fifty_notified = store.innings1?.battingStats[store.strikerId || '']?.fifty_notified ?? false;
-        payload.tournament_id = matchMeta?.tournamentId || null;
-      }
 
       try {
         const response = await fetch(`${baseUrl}/score/ball`, {
@@ -1909,19 +1931,25 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         });
 
         if (!response.ok) {
-          if (response.status === 400 && !isRetry) {
-            console.warn("[Sync] Interceptor conflict detected. Ball saved using minimalist fallback.");
-            return syncBallToCloud(true);
-          }
-          const errorText = await response.text();
-          throw new Error(`Sync Error (${response.status}): ${errorText}`);
+          throw new Error(`Cloud sync returned ${response.status}`);
         }
 
-        // FORCE MatchCenter update after successful ball sync
+        // Success! Force MatchCenter to update so public view is in sync
         useMatchCenter.getState().syncWithCloud().catch(() => {});
-
+        
       } catch (err) {
-        console.error("[Sync] Ball-by-ball sync failed:", err);
+        console.error(`[Sync] Ball sync failed (Attempt ${retryCount + 1}):`, err);
+        
+        if (retryCount < 2) {
+          // Exponential backoff: 1s, 2s
+          const delay = (retryCount + 1) * 1000;
+          setTimeout(() => syncBallToCloud(retryCount + 1), delay);
+        } else {
+          toast.error("Cloud Sync Failed. Local backup saved.", { id: 'sync-fail' });
+        }
+      } finally {
+        setSyncQueue(prev => Math.max(0, prev - 1));
+        if (syncQueue <= 1) setIsSyncing(false);
       }
     };
 
@@ -2025,6 +2053,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       // For non-wagon wheel balls, generate a basic dynamic commentary if generic one is missing
       const strikerN = getPlayerName(store.strikerId);
       const finalComm = comm || generateDynamicCommentary(strikerN, score, undefined, isWicket);
+      hapticFeedback(score >= 4 ? 'heavy' : 'medium');
       handleRecord(score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, undefined, finalComm);
     }
   };
@@ -2329,6 +2358,35 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           )}
         </AnimatePresence>
 
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, padding: '0 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: !isOnline ? '#EF4444' : (isSyncing ? '#FAB005' : '#10B981'),
+              boxShadow: isOnline && !isSyncing ? '0 0 8px rgba(16,185,129,0.5)' : 'none'
+            }} />
+            <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#001F3F', opacity: 0.6, letterSpacing: 0.5 }}>
+              {!isOnline ? 'OFFLINE' : (isSyncing ? 'SYNCING...' : 'LIVE TUNNEL')}
+            </span>
+          </div>
+          <button 
+            onClick={() => {
+              toast.promise(syncWithCloud(), {
+                loading: 'Syncing with cloud...',
+                success: 'Cloud states aligned!',
+                error: 'Sync failed'
+              });
+            }}
+            style={{ 
+              background: 'none', border: 'none', color: 'rgba(0,31,63,0.4)', 
+              fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 4
+            }}
+          >
+            <Cloud size={10} /> FORCE RE-SYNC
+          </button>
+        </div>
+
         <ScoreSection>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0 4px', marginBottom: 16 }}>
             {/* LEFT: CRR */}
@@ -2343,28 +2401,28 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </div>
             </div>
 
-            {/* MIDDLE: SCORE AND BUTTON ALIGNED HORIZONTALLY (Vertical Center) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <MainScore style={{ fontSize: '2rem', marginBottom: 0 }}>
-                  {currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}
-                </MainScore>
-                <OversText style={{ fontSize: '0.75rem', opacity: 0.6 }}>
-                  {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
-                </OversText>
-              </div>
-
+            {/* MIDDLE: SCORECARD BUTTON ABOVE SCORE */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
               <button
                 title="Full Scorecard"
                 onClick={() => setShowScorecardModal(true)}
                 style={{
                   background: 'hsla(210, 73%, 58%, 0.1)', border: '1px solid hsla(210, 73%, 58%, 0.3)', 
-                  borderRadius: 6, display: 'flex', alignItems: 'center',
-                  gap: 4, padding: '6px 14px', color: '#1a73e8', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
+                  borderRadius: 20, display: 'flex', alignItems: 'center',
+                  gap: 4, padding: '4px 16px', color: '#1a73e8', fontSize: '0.6rem', fontStyle: 'italic', fontWeight: 900, cursor: 'pointer'
                 }}
               >
-                <LayoutList size={10} /> FULL SCORECARD
+                <LayoutList size={10} /> SCORECARD
               </button>
+
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <MainScore style={{ fontSize: '2.5rem', marginBottom: -4, lineHeight: 1 }}>
+                  {currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}
+                </MainScore>
+                <OversText style={{ fontSize: '0.85rem', fontWeight: 900, opacity: 0.8, color: '#1a73e8' }}>
+                  {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
+                </OversText>
+              </div>
             </div>
 
             {/* RIGHT: PROJECTED */}
@@ -3848,6 +3906,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           const p = showWagonWheelModal;
                           const strikerN = getPlayerName(store.strikerId);
                           const dynamicComm = generateDynamicCommentary(strikerN, p.score, zone.name, p.isWicket);
+                          hapticFeedback(p.score >= 4 ? 'heavy' : 'medium');
                           handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name, dynamicComm);
                           setShowWagonWheelModal(null);
                         }}
@@ -3894,19 +3953,36 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               setSyncStatus('loading');
               try {
                 // Prepare performer data for career update
-                const performers = calculateTopPerformers().map(p => ({
-                  playerId: p.id,
-                  playerName: p.name,
-                  runs: p.runs,
-                  balls: p.balls,
-                  fours: 0, // Simplified for this sync
-                  sixes: 0,
-                  wickets: p.wickets,
-                  bowlingRuns: p.runsConceded,
-                  bowlingOvers: p.overs || 0,
-                  maidens: p.maidens,
-                  isNotOut: true // Summary view fallback
-                }));
+                // Aggregate all participating players across both innings
+                const allParticipatingIds = new Set([
+                  ...Object.keys(store.innings1?.battingStats || {}),
+                  ...Object.keys(store.innings1?.bowlingStats || {}),
+                  ...(store.innings2 ? [
+                    ...Object.keys(store.innings2.battingStats || {}),
+                    ...Object.keys(store.innings2.bowlingStats || {})
+                  ] : [])
+                ]);
+
+                const performers = Array.from(allParticipatingIds).map(pid => {
+                  const b1 = store.innings1?.battingStats[pid];
+                  const b2 = store.innings2?.battingStats[pid];
+                  const w1 = store.innings1?.bowlingStats[pid];
+                  const w2 = store.innings2?.bowlingStats[pid];
+
+                  return {
+                    playerId: pid,
+                    playerName: getPlayerName(pid),
+                    runs: (b1?.runs || 0) + (b2?.runs || 0),
+                    balls: (b1?.balls || 0) + (b2?.balls || 0),
+                    fours: (b1?.fours || 0) + (b2?.fours || 0),
+                    sixes: (b1?.sixes || 0) + (b2?.sixes || 0),
+                    wickets: (w1?.wickets || 0) + (w2?.wickets || 0),
+                    bowlingRuns: (w1?.runs || 0) + (w2?.runs || 0),
+                    bowlingOvers: (w1?.overs || 0) + (w2?.overs || 0),
+                    maidens: (w1?.maidens || 0) + (w2?.maidens || 0),
+                    isNotOut: (b1 && b1.status !== 'out') || (b2 && b2.status !== 'out')
+                  };
+                });
 
                 await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/matches/${activeMatchId}/finalize`, {
                   method: 'POST',

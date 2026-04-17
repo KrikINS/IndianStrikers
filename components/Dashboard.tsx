@@ -430,8 +430,49 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
       {/* Top Grid: Logo, Legacy, and Match Alert */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="md:col-span-1 flex items-center justify-center bg-transparent rounded-3xl p-6">
-          <img src="/INS%20LOGO.PNG" className="h-44 object-contain drop-shadow-[0_0_25px_rgba(56,189,248,0.5)]" alt="Team Logo" />
+        <div className="md:col-span-1 flex items-center justify-center p-6 relative perspective-container">
+          <motion.div 
+            className="relative z-20"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1,
+              y: [0, -10, 0]
+            }}
+            transition={{
+              opacity: { duration: 1 },
+              scale: { type: "spring", stiffness: 200, damping: 20 },
+              y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+            }}
+          >
+            <motion.div 
+              className="w-44 h-44 flex items-center justify-center relative cursor-pointer group overflow-hidden rounded-[2.5rem]"
+              whileHover={{ 
+                scale: 1.1,
+                rotateY: 15,
+                rotateX: -10,
+                filter: "drop-shadow(0 0 30px rgba(56, 189, 248, 0.6)) brightness(1.1)",
+              }}
+              whileTap={{ scale: 0.95, rotateY: 0, rotateX: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            >
+              {/* Energy Flare behind logo */}
+              <motion.div 
+                className="absolute inset-0 bg-sky-500/10 rounded-full blur-[30px] opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+
+              <img 
+                src={teamLogo || "/INS%20LOGO.PNG"} 
+                className="h-40 object-contain relative z-10" 
+                alt="Team Logo" 
+              />
+
+              {/* Shine Sweep Effect */}
+              <div className="absolute top-0 -left-[150%] w-[100%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[35deg] group-hover:animate-shine pointer-events-none"></div>
+            </motion.div>
+          </motion.div>
         </div>
         
         <div className="md:col-span-2 bg-slate-900 rounded-[2rem] p-8 text-white relative overflow-hidden flex flex-col justify-center border border-slate-800 shadow-xl">

@@ -13,7 +13,7 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        cursive: ["Dancing Script", "cursive"],
+        cursive: ["Zeyada", "cursive"],
         neon: ["Tilt Neon", "sans-serif"],
       },
       animation: {
@@ -22,8 +22,13 @@ export default {
         'spin-circle': 'spinCircle 5s infinite linear',
         'shimmer': 'shimmer 1.5s infinite',
         'blink': 'blink 1s step-end infinite',
+        'shine': 'shine 1.5s ease-in-out infinite',
       },
       keyframes: {
+        shine: {
+          '0%': { left: '-150%' },
+          '100%': { left: '150%' },
+        },
         fadeIn: {
           from: { opacity: '0', transform: 'translateY(10px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
