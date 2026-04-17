@@ -28,7 +28,7 @@ import {
   Cloud
 } from 'lucide-react';
 import { useCricketScorer } from './matchStore';
-import { useMatchCenter, updateMatchInStore } from './matchCenterStore';
+import { useMatchCenter } from './matchCenterStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMasterData } from './masterDataStore';
 import { usePlayerStore } from '../store/playerStore';
@@ -1077,7 +1077,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }, [store.toss]);
 
   // Get metadata from MatchCenterStore
-  const { matches, syncWithCloud, updateMatchStatus, finalizeMatch } = useMatchCenter();
+  const { matches, syncWithCloud, updateMatchStatus, finalizeMatch, updateMatch } = useMatchCenter();
   const { grounds, syncMasterData } = useMasterData();
   const activeMatchId = id || propMatchId || store.matchId;
 
@@ -1195,7 +1195,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const syncToDatabase = useCallback(
     _.debounce((state: any) => {
       if (activeMatchId) {
-        updateMatchInStore(activeMatchId, { live_data: state, last_updated: new Date().toISOString() });
+        updateMatch(activeMatchId, { live_data: state, last_updated: new Date().toISOString() });
       }
     }, 3000),
     [activeMatchId]
@@ -1235,7 +1235,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     try {
       // 1. Force a final atomic sync and AWAIT the result
       // We send full live_data (store) and summarized live_state
-      await updateMatchInStore(activeMatchId, {
+      await updateMatch(activeMatchId, {
         live_data: {
           ...store,
           strikerId: store.strikerId,
@@ -1511,7 +1511,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
       // Persist the toss outcome and match status to the metadata store
       if (activeMatchId) {
-        updateMatchInStore(activeMatchId, {
+        updateMatch(activeMatchId, {
           isHomeBattingFirst: startBatTeamId === 'HOME',
           status: 'live',
           homeTeamXI: homeXI,
@@ -2226,7 +2226,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       if (updatePayload.status === 'completed') {
         await finalizeMatch(activeMatchId, updatePayload, playerStatsUpdate);
       } else {
-        await updateMatchInStore(activeMatchId, updatePayload);
+        await updateMatch(activeMatchId, updatePayload);
       }
       if (updatePayload.status === 'completed') {
         fetchPlayers(); // Sync global stats after match completion

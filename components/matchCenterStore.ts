@@ -251,16 +251,3 @@ export const useMatchCenter = create<MatchStore>()(
   )
 );
 
-/**
- * Standalone helper to bridge ScorerDashboard and MatchCenterStore.
- * Returns the underlying fetch promise so callers can await a confirmed 200 OK.
- */
-export const updateMatchInStore = async (id: string, updates: Partial<ScheduledMatch>): Promise<any> => {
-  const store = useMatchCenter.getState();
-  try {
-    const response = await store.updateMatch(id, updates);
-    return response;
-  } catch (error) {
-    throw error; // Propagate to UI for error handling
-  }
-};
