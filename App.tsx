@@ -32,6 +32,7 @@ import GroundsManager from './components/GroundsManager';
 import TournamentsManager from './components/TournamentsManager';
 import UserManagement from './components/UserManagement';
 import CommentaryManager from './components/CommentaryManager';
+import LegacyEditor from './components/LegacyEditor';
 import { ScorecardPage } from './components/ScorecardPage';
 import LiveScorecardPage from './components/LiveScorecardPage';
 import { Player, UserRole, OpponentTeam } from './types';
