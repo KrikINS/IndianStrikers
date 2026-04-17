@@ -1914,7 +1914,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         ball_number: ((innings.totalBalls - (isLegal ? 1 : 0)) % 6) + 1,
         is_legal_ball: isLegal,
         shot_zone: zone,
-        hit_zone: zone,
+        wagon_wheel_zone: zone,
         runs_scored: score,
         extras_runs: type === 'wide' || type === 'no-ball' ? 1 : 0,
         extras_type: type === 'legal' ? null : type,
@@ -2027,42 +2027,45 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   };
 
   const attemptRecord = (score: number, type: any = 'legal', isWicket: boolean = false, wicketType?: any, subType: any = 'bat', outPlayerId?: string, newBatterId?: string) => {
-    let comm = "";
-    if (isWicket) comm = currentPreviews.WICKET;
-    else if (score === 6 && subType === 'bat') comm = currentPreviews.SIX;
-    else if (score === 4 && subType === 'bat') comm = currentPreviews.FOUR;
-    else if (score === 0 && subType === 'bat') comm = currentPreviews.DOT;
+    let typeKey: CommentaryEventType = 'DOT';
+    if (isWicket) typeKey = 'WICKET';
+    else if (score === 6 && subType === 'bat') typeKey = 'SIX';
+    else if (score === 4 && subType === 'bat') typeKey = 'FOUR';
+    else if (score > 0 && subType === 'bat') typeKey = 'DOT'; // Fallback for 1s, 2s, 3s if no RUNS key exists
+
+    let comm = currentPreviews[typeKey] || "";
 
     if (!comm) {
-      if (isWicket) comm = getRandomCommentary('WICKET');
-      else if (score === 6 && subType === 'bat') comm = getRandomCommentary('SIX');
-      else if (score === 4 && subType === 'bat') comm = getRandomCommentary('FOUR');
-      else if (score === 0 && subType === 'bat') comm = getRandomCommentary('DOT');
+      const list = nextCommentarySuggestions[typeKey];
+      if (list && list.length > 0) {
+        comm = list[Math.floor(Math.random() * list.length)];
+      } else {
+        comm = getRandomCommentary(typeKey);
+      }
     }
 
-    if (isWicket) shufflePreview('WICKET');
-    else if (score === 6 && subType === 'bat') shufflePreview('SIX');
-    else if (score === 4 && subType === 'bat') shufflePreview('FOUR');
-    else if (score === 0 && subType === 'bat') shufflePreview('DOT');
+    // Dynamic substitution
+    const strikerName = getPlayerName(store.strikerId);
+    comm = comm.replace(/\{batsman\}/g, strikerName)
+               .replace(/\{striker\}/g, strikerName)
+               .replace(/\{bowler\}/g, getPlayerName(store.currentBowlerId));
 
-    const worthWickets = ['Caught', 'Stumped', 'Run Out'];
+    shufflePreview(typeKey);
+
+    const worthWickets = ['Caught', 'Stumped', 'Run Out', 'Bowled', 'LBW'];
     const isWagonWorthy = (score > 0) || (isWicket && worthWickets.some(w => String(wicketType || '').includes(w)));
 
     if (store.useWagonWheel && subType === 'bat' && isWagonWorthy) {
       if (store.wagonWheelQuickSave) {
-        // Quick Save Mode: Use default Straight zone and record immediately
-        const strikerN = getPlayerName(store.strikerId);
-        const dynamicComm = generateDynamicCommentary(strikerN, score, 'Straight', isWicket);
-        hapticFeedback(score >= 4 ? 'heavy' : 'medium');
-        handleRecord(score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, 'Straight', dynamicComm);
+        const finalComm = comm.replace(/\{zone\}/g, 'Straight');
+        hapticFeedback(score >= 4 ? 'heavy' : 'light');
+        handleRecord(score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, 'Straight', finalComm);
       } else {
         setShowWagonWheelModal({ score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, commentary: comm });
       }
     } else {
-      // For non-wagon wheel balls, generate a basic dynamic commentary if generic one is missing
-      const strikerN = getPlayerName(store.strikerId);
-      const finalComm = comm || generateDynamicCommentary(strikerN, score, undefined, isWicket);
-      hapticFeedback(score >= 4 ? 'heavy' : 'medium');
+      const finalComm = comm.replace(/\{zone\}/g, '');
+      hapticFeedback(score >= 4 ? 'heavy' : 'light');
       handleRecord(score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, undefined, finalComm);
     }
   };
@@ -3984,14 +3987,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     const isLH = striker?.battingStyle === 'Left Handed';
 
                     const zones = [
-                      { name: 'Third Man', top: '15%', left: isLH ? '85%' : '15%' },
-                      { name: 'Point', top: '50%', left: isLH ? '95%' : '5%' },
-                      { name: 'Cover', top: '80%', left: isLH ? '85%' : '15%' },
-                      { name: 'Mid Off', top: '92%', left: '50%' },
-                      { name: 'Mid On', top: '80%', left: isLH ? '15%' : '85%' },
-                      { name: 'Mid Wicket', top: '50%', left: isLH ? '5%' : '95%' },
-                      { name: 'Square Leg', top: '15%', left: isLH ? '15%' : '85%' },
-                      { name: 'Fine Leg', top: '8%', left: '50%' }
+                      { name: 'Third Man', top: '15%', left: isLH ? '85%' : '15%', color: '#94a3b8' },
+                      { name: 'Point', top: '50%', left: isLH ? '95%' : '5%', color: '#38bdf8' },
+                      { name: 'Cover', top: '80%', left: isLH ? '85%' : '15%', color: '#60a5fa' },
+                      { name: 'Mid Off', top: '92%', left: '50%', color: '#818cf8' },
+                      { name: 'Mid On', top: '80%', left: isLH ? '15%' : '85%', color: '#a78bfa' },
+                      { name: 'Mid Wicket', top: '50%', left: isLH ? '5%' : '95%', color: '#c084fc' },
+                      { name: 'Square Leg', top: '15%', left: isLH ? '15%' : '85%', color: '#f472b6' },
+                      { name: 'Fine Leg', top: '8%', left: '50%', color: '#fb7185' }
                     ];
 
                     return zones.map(zone => (
@@ -4000,17 +4003,25 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         onClick={() => {
                           const p = showWagonWheelModal;
                           const strikerN = getPlayerName(store.strikerId);
-                          const dynamicComm = generateDynamicCommentary(strikerN, p.score, zone.name, p.isWicket);
-                          hapticFeedback(p.score >= 4 ? 'heavy' : 'medium');
-                          handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name, dynamicComm);
+                          const finalComm = p.commentary.replace(/\{batsman\}/g, strikerN)
+                                                       .replace(/\{striker\}/g, strikerN)
+                                                       .replace(/\{bowler\}/g, getPlayerName(store.currentBowlerId))
+                                                       .replace(/\{zone\}/g, zone.name);
+                          hapticFeedback(p.score >= 4 ? 'heavy' : 'light');
+                          handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name, finalComm);
                           setShowWagonWheelModal(null);
                         }}
                         style={{
                           position: 'absolute', top: zone.top, left: zone.left, transform: 'translate(-50%, -50%)',
-                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: 20, padding: '4px 10px', color: '#fff', fontSize: '0.6rem', fontWeight: 800,
-                          cursor: 'pointer', whiteSpace: 'nowrap', zIndex: 10
+                          background: 'rgba(15, 23, 42, 0.8)', border: `1px solid ${zone.color}44`,
+                          borderRadius: 20, padding: '4px 10px', color: zone.color, fontSize: '0.6rem', fontWeight: 900,
+                          cursor: 'pointer', whiteSpace: 'nowrap', zIndex: 10,
+                          boxShadow: `0 4px 12px ${zone.color}22`,
+                          transition: 'all 0.2s',
+                          backdropFilter: 'blur(4px)'
                         }}
+                        onMouseEnter={(e: any) => e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.1)'}
+                        onMouseLeave={(e: any) => e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)'}
                       >
                         {zone.name}
                       </button>

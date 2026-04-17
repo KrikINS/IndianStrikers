@@ -4,6 +4,7 @@ import { useMasterData } from './masterDataStore';
 import { useOpponentStore } from '../store/opponentStore';
 import { Plus, Trash2, Edit2, Trophy, X, ChevronDown, ChevronUp, ExternalLink, Calendar as CalendarIcon, Shield, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useMatchCenter } from '../store/matchStore';
 
 interface TournamentsManagerProps {
   isAdmin?: boolean;
