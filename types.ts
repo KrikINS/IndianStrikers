@@ -106,6 +106,8 @@ export interface BallRecord {
   ballNumber: number; // 1-6 for legal balls
   isLegal: boolean;
   timestamp: string;
+  wagon_wheel_zone?: string;
+  commentary?: string;
 }
 
 export interface InningsExtras {
@@ -186,6 +188,8 @@ export interface Player {
   battingStats?: BattingStats;
   bowlingStats?: BowlingStats;
   linkedUserId?: string;
+  wides?: number;
+  no_balls?: number;
 }
 
 export interface OpponentPlayer {

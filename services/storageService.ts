@@ -15,14 +15,17 @@ const handleResponse = async (res: Response) => {
   if (!res.ok) {
     if (res.status === 401) {
       sessionStorage.removeItem('authToken');
-      window.location.reload(); // Force reload to show login screen
+      window.location.reload(); 
       throw new Error("Session expired. Please login again.");
     }
     
-    // TRAP: Prevent app crash on DB Timeout or Server Error
+    // CRITICAL: Previously returned null for 500s, causing False Positive "Saves"
+    // Now we throw so the Store can detect failure and preserve local state.
     if (res.status >= 500) {
-      console.warn(`[API] Server/DB Error ${res.status}. Falling back to empty/cached results.`);
-      return null; // Return null so callers can handle gracefully
+      const dbError = new Error(`Database/Server Error (${res.status})`);
+      (dbError as any).status = res.status;
+      (dbError as any).isSyncError = true;
+      throw dbError;
     }
 
     const text = await res.text();

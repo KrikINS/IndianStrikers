@@ -124,9 +124,20 @@ export const useMatchCenter = create<MatchStore>()(
               isCareerSynced: matchData.isCareerSynced ?? m.isCareerSynced
             } : m)
           }));
-        } catch (e) {
-          console.error("Failed to finalize match:", e);
-          throw e;
+        } catch (e: any) {
+          console.error("Failed to finalize match on cloud, but preserved locally:", e);
+          
+          // CRITICAL: Even if cloud fails, save locally so the user doesn't lose data!
+          set((state) => ({
+            matches: state.matches.map(m => m.id === id ? { 
+              ...m, 
+              ...matchData, 
+              status: 'completed' as MatchStatus,
+              is_local_only_override: true // Mark as needing manual sync later
+            } : m)
+          }));
+
+          throw new Error(`Sync Failed: Your data is saved LOCALLY but couldn't reach the server. (Error: ${e.message})`);
         }
       },
 
@@ -134,30 +145,40 @@ export const useMatchCenter = create<MatchStore>()(
         try {
           console.log("[Sync] Starting Cloud Check...");
           const rawDbMatches = (await api.getMatches()) || [];
-          // Filter out Ghost/Dummy data from DB
-          // Automatic cleanup filter for Ghost/Synthetic data from DB
           const dbMatches = rawDbMatches.filter(m => 
             !m.is_test && 
             m.id !== '00000000-0000-0000-0000-000000000001'
           );
 
-          const dbIds = new Set(dbMatches.map(m => m.id));
-          const unsynced = get().matches.filter(m => !dbIds.has(m.id));
-          
-          if (unsynced.length > 0) {
-            console.log(`[Sync] Found ${unsynced.length} local-only matches. Preserving them during sync.`);
-          }
-          
-          console.log("[Sync] Pulling latest from cloud and merging...");
-          
-          // CRITICAL: Merge DB matches with local-only matches to prevent data loss!
-          // Filtered list should include ALL cloud matches and ONLY local matches that haven't hit DB yet
-          const mergedMatches = [...dbMatches, ...unsynced];
-          
-          set({ matches: mergedMatches });
-        } catch (e) {
+          const localMatches = get().matches;
+          const merged = [...localMatches];
+
+          dbMatches.forEach(dbMatch => {
+            const existingIdx = merged.findIndex(m => m.id === dbMatch.id);
+            if (existingIdx !== -1) {
+              const local = merged[existingIdx];
+              // RESILIENT MERGE:
+              // If local match is 'completed' but DB is 'upcoming'/'live', 
+              // it means a sync failed. KEEP the local detailed scorecard!
+              if (local.status === 'completed' && dbMatch.status !== 'completed') {
+                console.warn(`[Sync] Conflict detected for ${dbMatch.id}. Prioritizing local COMPLETED state.`);
+                // We keep local, but maybe sync other fields if needed
+              } else {
+                merged[existingIdx] = { ...dbMatch, ...local, status: dbMatch.status }; // Cloud status usually wins unless we are completed locally
+                // Actually, if DB is completed, take DB version as source of truth
+                if (dbMatch.status === 'completed') {
+                   merged[existingIdx] = dbMatch;
+                }
+              }
+            } else {
+              merged.push(dbMatch);
+            }
+          });
+
+          set({ matches: merged, _hasHydrated: true });
+        } catch (e: any) {
           console.error("Cloud sync failed:", e);
-          throw e;
+          // If sync fails, we keep the local state (offline mode)
         }
       },
 

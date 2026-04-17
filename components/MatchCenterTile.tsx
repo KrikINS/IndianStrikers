@@ -95,7 +95,15 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         ) : isUpcoming ? (
                             <div className="bg-blue-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-blue-500/10 uppercase tracking-wider">Upcoming</div>
                         ) : (
-                            <div className="bg-slate-800 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-black/10 uppercase tracking-wider">Completed</div>
+                            <div className="flex items-center gap-2">
+                                <div className="bg-slate-800 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-black/10 uppercase tracking-wider">Completed</div>
+                                {(match as any).is_local_only_override && (
+                                    <div className="bg-amber-500 text-black px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-amber-500/10 uppercase tracking-wider flex items-center gap-1">
+                                        <RefreshCcw size={10} className="animate-spin" />
+                                        <span>Local Only</span>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
 

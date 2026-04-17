@@ -1945,6 +1945,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     };
 
     syncBallToCloud();
+    
+    // Milestone Detection: Check for 50/100 BEFORE the database sync 
+    // using the updated store state to ensure flags are persisted.
+    const updatedInnings = store.currentInnings === 1 ? store.innings1 : store.innings2;
+    const currentStriker = updatedInnings?.battingStats[sId];
+    
+    if (currentStriker && subType === 'bat') {
+      const sName = getPlayerName(sId);
+      if (currentStriker.runs >= 100 && !currentStriker.hundred_notified) {
+        milestoneRef.current?.trigger({ type: 'HUNDRED', playerName: sName });
+        store.setMilestoneNotified(sId, 'hundred');
+      } else if (currentStriker.runs >= 50 && !currentStriker.fifty_notified) {
+        milestoneRef.current?.trigger({ type: 'FIFTY', playerName: sName });
+        store.setMilestoneNotified(sId, 'fifty');
+      }
+    }
 
     syncToDatabase(store);
 
@@ -1984,16 +2000,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       }
     }
 
-    const strikerStat = innings.battingStats[sId];
-    if (strikerStat && subType === 'bat') {
-      if (strikerStat.runs >= 100 && !strikerStat.hundred_notified) {
-        milestoneRef.current?.trigger({ type: 'HUNDRED', playerName: sName });
-        store.setMilestoneNotified(sId, 'hundred');
-      } else if (strikerStat.runs >= 50 && !strikerStat.fifty_notified) {
-        milestoneRef.current?.trigger({ type: 'FIFTY', playerName: sName });
-        store.setMilestoneNotified(sId, 'fifty');
-      }
-    }
+    // Milestone logic moved up before syncToDatabase to ensure notification flags are persisted.
 
     const isLegalBall = type !== 'wide' && type !== 'no-ball';
     if (isLegalBall) {

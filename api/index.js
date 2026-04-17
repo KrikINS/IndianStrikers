@@ -68,6 +68,34 @@ function authGuard(roles = []) {
   };
 }
 
+/**
+ * Ensures player IDs exist in the database by creating 'Guest' stubs if missing.
+ * Prevents Foreign Key violations during high-concurrency live scoring.
+ */
+async function ensurePlayersExist(ids) {
+  const cleanIds = Array.from(new Set(ids.filter(id => id && String(id).length > 5))); // IDs are usually BIGINT timestamps
+  if (cleanIds.length === 0) return;
+
+  try {
+    // We use a single batch query for performance
+    const placeholders = cleanIds.map((_, i) => `$${i + 1}`).join(',');
+    const { data: existing } = await db.query(`SELECT id FROM players WHERE id IN (${placeholders})`, cleanIds);
+    const existingIds = new Set(existing.map(r => String(r.id)));
+    const missingIds = cleanIds.filter(id => !existingIds.has(String(id)));
+
+    for (const id of missingIds) {
+      await db.query(
+        `INSERT INTO players (id, name, is_active, status) 
+         VALUES ($1, 'Guest Player', false, 'inactive') 
+         ON CONFLICT (id) DO NOTHING`,
+        [id]
+      );
+    }
+  } catch (err) {
+    console.error('[API Stability] Failed to ensure global player registration:', err.message);
+  }
+}
+
 // AUTH
 app.post('/api/login', async (req, res) => {
   console.log('[Login Attempt] Body:', req.body);
@@ -228,13 +256,13 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
   console.log('[POST /api/players] Sanitized Payload:', JSON.stringify(payload));
 
   const { data, error } = await db.getOne(
-    `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id, is_active, status) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *`,
+    `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, wides, no_balls, linked_user_id, jersey_number, dob, external_id, is_active, status) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) RETURNING *`,
     [
       payload.name, payload.role, payload.batting_style, payload.bowling_style, payload.avatar_url, 
       payload.matches_played, payload.runs_scored, payload.wickets_taken, payload.average, 
       payload.is_captain, payload.is_vice_captain, payload.is_available, 
-      payload.batting_stats, payload.bowling_stats, payload.linked_user_id, 
+      payload.batting_stats, payload.bowling_stats, Number(req.body.wides || 0), Number(req.body.no_balls || 0), payload.linked_user_id, 
       payload.jersey_number, payload.dob, payload.external_id,
       payload.is_active, payload.status
     ]
@@ -276,13 +304,28 @@ app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => 
     external_id
   };
 
+  const { 
+    wides, no_balls
+  } = req.body || {};
+
   const { error } = await db.query(
-    `UPDATE players SET name=$1, role=$2, batting_style=$3, bowling_style=$4, avatar_url=$5, matches_played=$6, runs_scored=$7, wickets_taken=$8, average=$9, is_captain=$10, is_vice_captain=$11, is_available=$12, batting_stats=$13, bowling_stats=$14, linked_user_id=$15, jersey_number=$16, dob=$17, external_id=$18, is_active=$19, status=$20, updated_at=NOW() WHERE id=$21`,
+    `UPDATE players SET 
+      name=$1, role=$2, batting_style=$3, bowling_style=$4, 
+      avatar_url=$5, matches_played=$6, runs_scored=$7, 
+      wickets_taken=$8, average=$9, is_captain=$10, 
+      is_vice_captain=$11, is_available=$12, 
+      batting_stats=$13, bowling_stats=$14, 
+      wides=$15, no_balls=$16, linked_user_id=$17, 
+      jersey_number=$18, dob=$19, external_id=$20, 
+      is_active=$21, status=$22, updated_at=NOW() 
+     WHERE id=$23`,
     [
-      payload.name, payload.role, payload.batting_style, payload.bowling_style, payload.avatar_url, 
-      payload.matches_played, payload.runs_scored, payload.wickets_taken, payload.average, 
-      payload.is_captain, payload.is_vice_captain, payload.is_available, 
-      payload.batting_stats, payload.bowling_stats, payload.linked_user_id, 
+      payload.name, payload.role, payload.batting_style, payload.bowling_style, 
+      payload.avatar_url, payload.matches_played, payload.runs_scored, 
+      payload.wickets_taken, payload.average, payload.is_captain, 
+      payload.is_vice_captain, payload.is_available, 
+      payload.batting_stats, payload.bowling_stats, 
+      Number(wides || 0), Number(no_balls || 0), payload.linked_user_id, 
       payload.jersey_number, payload.dob, payload.external_id,
       payload.is_active, payload.status, req.params.id
     ]
@@ -558,22 +601,26 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
     match_id, striker_id, non_striker_id, bowler_id, 
     over_number, ball_number, runs_scored, extras_runs, 
     extras_type, event_type, innings_number, is_legal_ball,
-    wicket_type, fielder_id, shot_zone, penalty_runs, is_penalty,
+    wicket_type, fielder_id, shot_zone, wagon_wheel_zone, commentary, penalty_runs, is_penalty,
     is_not_out, fifty_notified, tournament_id
   } = req.body;
+
+  // Stability: Ensure players exist before inserting ball to prevent FK failure
+  await ensurePlayersExist([striker_id, non_striker_id, bowler_id, fielder_id]);
 
   const { data, error } = await db.getOne(
     `INSERT INTO ball_by_ball (
       match_id, striker_id, non_striker_id, bowler_id, 
       over_number, ball_number, runs_scored, extras_runs, 
       extras_type, event_type, innings_number, is_legal_ball,
-      wicket_type, fielder_id, shot_zone, penalty_runs, is_penalty
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
+      wicket_type, fielder_id, shot_zone, wagon_wheel_zone, commentary, penalty_runs, is_penalty
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING *`,
     [
       match_id, striker_id, non_striker_id, bowler_id, 
       over_number, ball_number, runs_scored || 0, extras_runs || 0, 
       extras_type, event_type, innings_number || 1, is_legal_ball ?? true,
-      wicket_type, fielder_id, shot_zone, penalty_runs || 0, is_penalty || false
+      wicket_type, fielder_id, shot_zone || wagon_wheel_zone, wagon_wheel_zone || shot_zone,
+      commentary || null, penalty_runs || 0, is_penalty || false
     ]
   );
 
@@ -955,8 +1002,10 @@ async function recalculateCareerStats(playerId) {
             matches_played=$3, 
             batting_stats=$4, 
             bowling_stats=$5, 
+            wides=$6,
+            no_balls=$7,
             updated_at=NOW() 
-         WHERE id=$6`,
+         WHERE id=$8`,
         [
             totalRuns, totalWickets, totalMatches,
             JSON.stringify({
@@ -972,6 +1021,8 @@ async function recalculateCareerStats(playerId) {
                 bestBowling: bestBBI, fourWickets: total4W, fiveWickets: total5W,
                 wides: totalWides, no_balls: totalNoBalls
             }),
+            totalWides,
+            totalNoBalls,
             playerId
         ]
     );
