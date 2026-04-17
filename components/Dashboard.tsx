@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Player, OpponentTeam, UserRole, ScheduledMatch } from '../types';
 import { getOpponents, getTournamentPerformers, getMatches } from '../services/storageService';
-import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, Bell, MapPin, Clock, Loader2 } from 'lucide-react';
+import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, Bell, MapPin, Clock, Loader2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
