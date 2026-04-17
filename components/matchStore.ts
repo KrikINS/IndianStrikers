@@ -91,6 +91,7 @@ export interface MatchState {
     setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
     isWaitingForBowler: boolean;
     wagonWheelQuickSave: boolean;
+    pendingMilestone: { type: 'fifty' | 'hundred', player: string } | null;
 }
 
 interface ScorerStore extends MatchState {
@@ -162,7 +163,8 @@ const INITIAL_STATE: MatchState = {
     useWagonWheel: false,
     wagonWheelQuickSave: false,
     setMilestoneNotified: () => {},
-    isWaitingForBowler: false
+    isWaitingForBowler: false,
+    pendingMilestone: null
 };
 
 export const useCricketScorer = create<ScorerStore>()(
@@ -294,7 +296,8 @@ export const useCricketScorer = create<ScorerStore>()(
                     isFinished: state.isFinished,
                     homeXI: state.homeXI,
                     awayXI: state.awayXI,
-                    isWaitingForBowler: state.isWaitingForBowler
+                    isWaitingForBowler: state.isWaitingForBowler,
+                    pendingMilestone: state.pendingMilestone
                 }));
 
                 const { runs, type, isWicket, wicketType, subType = 'bat', outPlayerId, newBatterId, zone } = payload;
@@ -338,6 +341,30 @@ export const useCricketScorer = create<ScorerStore>()(
                     } else {
                         b.status = 'out';
                         b.outHow = wicketType;
+                    }
+                }
+
+                // Milestone Detection: Perform atomically during run increment
+                let pendingMilestone: any = null;
+                if (subType === 'bat') {
+                    if (b.runs >= 100 && !b.hundred_notified) {
+                        b.hundred_notified = true;
+                        pendingMilestone = { type: 'hundred', player: b.name || 'Striker' };
+                    } else if (b.runs >= 50 && !b.fifty_notified) {
+                        b.fifty_notified = true;
+                        pendingMilestone = { type: 'fifty', player: b.name || 'Striker' };
+                    }
+                }
+
+                // Milestone Detection: Perform atomically during run increment
+                let pendingMilestone: any = null;
+                if (subType === 'bat') {
+                    if (b.runs >= 100 && !b.hundred_notified) {
+                        b.hundred_notified = true;
+                        pendingMilestone = { type: 'hundred', player: b.name || 'Striker' };
+                    } else if (b.runs >= 50 && !b.fifty_notified) {
+                        b.fifty_notified = true;
+                        pendingMilestone = { type: 'fifty', player: b.name || 'Striker' };
                     }
                 }
 
@@ -455,6 +482,7 @@ export const useCricketScorer = create<ScorerStore>()(
                     nonStrikerId: nsId,
                     isFreeHit: isNoBall || (state.isFreeHit && (isWide || isNoBall)),
                     isFinished: finished,
+                    pendingMilestone: pendingMilestone,
                     historyStack: [...state.historyStack, prevState].slice(-50)
                 });
             },

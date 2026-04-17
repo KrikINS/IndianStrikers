@@ -1146,6 +1146,18 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       }
     }
   }, [activeMatchId, matchMeta, store.matchId, grounds, teamLogo]);
+  
+  // Trigger Milestone Splash Screen based on store events
+  useEffect(() => {
+    if (store.pendingMilestone && milestoneRef.current) {
+      const { type, player } = store.pendingMilestone;
+      milestoneRef.current.trigger({ 
+        type: type === 'hundred' ? 'HUNDRED' : 'FIFTY', 
+        playerName: player 
+      });
+      // Note: pendingMilestone is reset by the store on the next ball and cleared on UNDO.
+    }
+  }, [store.pendingMilestone]);
 
   // Sync setupStep when store state changes (Rehydration check)
   useEffect(() => {
@@ -1951,20 +1963,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     const sName = getPlayerName(sId);
     const bName = getPlayerName(bId);
 
-    // Milestone Detection: Check for 50/100 BEFORE the database sync 
-    // using the updated store state to ensure flags are persisted.
-    const updatedInnings = store.currentInnings === 1 ? store.innings1 : store.innings2;
-    const currentStriker = updatedInnings?.battingStats[sId];
-    
-    if (currentStriker && subType === 'bat') {
-      if (currentStriker.runs >= 100 && !currentStriker.hundred_notified) {
-        milestoneRef.current?.trigger({ type: 'HUNDRED', playerName: sName });
-        store.setMilestoneNotified(sId, 'hundred');
-      } else if (currentStriker.runs >= 50 && !currentStriker.fifty_notified) {
-        milestoneRef.current?.trigger({ type: 'FIFTY', playerName: sName });
-        store.setMilestoneNotified(sId, 'fifty');
-      }
-    }
+    // Milestone Detection is now handled atomically inside matchStore.ts recordBall action.
+    // The store sets pendingMilestone which triggers the UI effect above.
 
     syncToDatabase(store);
 
