@@ -2108,25 +2108,36 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const totalWickets = currentInnings.wickets;
       const target = (store.innings1?.totalRuns || 0) + 1;
 
+      // Clean store to avoid massive payload (strip UNDO historyStack)
+      const exportableStore = JSON.parse(JSON.stringify(store));
+      delete exportableStore.historyStack;
+      if (exportableStore.backup_data) delete exportableStore.backup_data;
+
       const updatePayload: any = {
         tournament_id: matchMeta?.tournamentId,
-        live_data: {
-          ...store,
-          backup_data: JSON.parse(JSON.stringify(store))
-        }
+        live_data: exportableStore
       };
 
-      const playerStatsUpdate = Object.entries(currentInnings.battingStats).map(([pid, stat]) => ({
-        player_id: pid,
-        match_id: activeMatchId,
-        tournament_id: matchMeta?.tournamentId || null,
-        runs: stat.runs,
-        balls: stat.balls,
-        fours: stat.fours,
-        sixes: stat.sixes,
-        is_not_out: stat.status === 'batting',
-        is_batting_innings: stat.balls > 0 || (stat.status !== 'dnb' && stat.status !== 'batting')
-      }));
+      const allBattingStats: any[] = [];
+      [store.innings1, store.innings2].forEach((inn, idx) => {
+        if (!inn) return;
+        Object.entries(inn.battingStats).forEach(([pid, stat]) => {
+          allBattingStats.push({
+            player_id: pid,
+            match_id: activeMatchId,
+            tournament_id: matchMeta?.tournamentId || null,
+            runs: stat.runs,
+            balls: stat.balls,
+            fours: stat.fours,
+            sixes: stat.sixes,
+            is_not_out: stat.status === 'batting',
+            is_batting_innings: stat.balls > 0 || (stat.status !== 'dnb' && stat.status !== 'batting'),
+            innings_num: idx + 1
+          });
+        });
+      });
+
+      const playerStatsUpdate = allBattingStats;
 
       if (store.currentInnings === 1) {
         updatePayload.innings_1_score = totalScore;
@@ -2148,7 +2159,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         updatePayload.resultSummary = resultMessage;
       }
 
-      await updateMatchInStore(activeMatchId, updatePayload);
+      const matchCenter = useMatchCenter.getState();
+      if (updatePayload.status === 'completed') {
+        await matchCenter.finalizeMatch(activeMatchId, updatePayload, playerStatsUpdate);
+      } else {
+        await updateMatchInStore(activeMatchId, updatePayload);
+      }
       if (updatePayload.status === 'completed') {
         fetchPlayers(); // Sync global stats after match completion
       }
