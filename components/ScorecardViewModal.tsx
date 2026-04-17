@@ -195,6 +195,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
             label = "0";
         }
 
+        return (
             <div 
                 className={classes} 
                 style={{
