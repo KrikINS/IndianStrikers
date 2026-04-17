@@ -1523,19 +1523,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             >
               <Settings size={20} />
             </button>
-            {store.innings1 && (
-              <button
-                onClick={() => {
-                  if (window.confirm("RESET SCORER? This will permanently clear all recorded balls for THIS session. You will need to re-select toss and openers. Proceed?")) {
-                    store.hardReset();
-                    setSetupStep('preview');
-                  }
-                }}
-                style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#ef4444', padding: '6px 12px', borderRadius: 8, fontSize: '10px', fontWeight: 900, cursor: 'pointer' }}
-              >
-                RESET SCORER
-              </button>
-            )}
+
           </div>
         </Header>
 
@@ -3039,8 +3027,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 24, marginBottom: 24 }}>
                   <img src={store.homeLogo || '/INS%20LOGO.PNG'} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="H" />
                   <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'rgba(0,0,0,0.1)' }}>VS</span>
-                  {store.awayLogo ? (
-                    <img src={store.awayLogo} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="A" />
+                  {store.awayLogo || matchMeta?.opponentLogo ? (
+                    <img src={store.awayLogo || matchMeta?.opponentLogo} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="A" />
                   ) : <Shield size={40} color="rgba(0,0,0,0.1)" />}
                 </div>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#001F3F', margin: 0 }}>INNINGS BREAK</h1>
