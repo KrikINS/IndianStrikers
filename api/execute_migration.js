@@ -18,7 +18,17 @@ async function runMigration() {
         `ALTER TABLE players ADD COLUMN IF NOT EXISTS no_balls INTEGER DEFAULT 0;`,
 
         // 5. Ensure shot_zone data is moved to wagon_wheel_zone if it exists
-        `UPDATE ball_by_ball SET wagon_wheel_zone = shot_zone WHERE wagon_wheel_zone IS NULL AND shot_zone IS NOT NULL;`
+        `UPDATE ball_by_ball SET wagon_wheel_zone = shot_zone WHERE wagon_wheel_zone IS NULL AND shot_zone IS NOT NULL;`,
+
+        // 6. CREATE COMMENTARY_TEMPLATES TABLE
+        `CREATE TABLE IF NOT EXISTS commentary_templates (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            event_type VARCHAR(50) NOT NULL,
+            text TEXT NOT NULL,
+            wagon_wheel_zone VARCHAR(50),
+            is_active BOOLEAN DEFAULT true,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );`
     ];
 
     for (const cmd of commands) {

@@ -644,7 +644,7 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
       match_id, striker_id, non_striker_id, bowler_id, 
       over_number, ball_number, runs_scored || 0, extras_runs || 0, 
       extras_type, event_type, innings_number || 1, is_legal_ball ?? true,
-      wicket_type, fielder_id, shot_zone || wagon_wheel_zone, wagon_wheel_zone || shot_zone,
+      wicket_type, fielder_id, wagon_wheel_zone || shot_zone, wagon_wheel_zone || shot_zone,
       commentary || null, penalty_runs || 0, is_penalty || false
     ]
   );
@@ -675,18 +675,24 @@ app.post('/api/score/ball', authGuard(['admin', 'member']), async (req, res) => 
 // COMMENTARY TEMPLATES
 app.get('/api/commentary/templates', async (_req, res) => {
   const { data, error } = await db.query('SELECT * FROM commentary_templates WHERE is_active = true ORDER BY created_at DESC');
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  if (error) {
+    console.error('[GET /api/commentary/templates] Error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+  res.json(data || []);
 });
 
 app.post('/api/commentary/templates', authGuard(['admin']), async (req, res) => {
-  const { event_type, text, is_active } = req.body;
+  const { event_type, text, is_active, wagon_wheel_zone } = req.body;
   if (!event_type || !text) return res.status(400).json({ error: 'Missing event_type or text' });
   const { data, error } = await db.getOne(
-    'INSERT INTO commentary_templates (event_type, text, is_active) VALUES ($1, $2, $3) RETURNING *',
-    [event_type, text, is_active ?? true]
+    'INSERT INTO commentary_templates (event_type, text, is_active, wagon_wheel_zone) VALUES ($1, $2, $3, $4) RETURNING *',
+    [event_type, text, is_active ?? true, wagon_wheel_zone || null]
   );
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) {
+    console.error('[POST /api/commentary/templates] Error:', error);
+    return res.status(400).json({ error: error.message });
+  }
   res.json(data);
 });
 
