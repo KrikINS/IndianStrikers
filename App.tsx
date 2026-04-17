@@ -227,6 +227,7 @@ const App: React.FC = () => {
   const [teamLogo, setTeamLogo] = useState<string>('');
   const [isOffline, setIsOffline] = useState(false);
   const resetZombieMatches = useMatchCenter(state => state.resetZombieMatches);
+  const syncWithCloud = useMatchCenter(state => state.syncWithCloud);
   const isOfflineStore = useMasterData(state => state.isOffline);
   const setOfflineStore = useMasterData(state => state.setOffline);
 
@@ -242,7 +243,7 @@ const App: React.FC = () => {
         fetchPlayers(),
         fetchOpponents(),
         useMasterData.getState().syncMasterData(),
-        useMatchCenter.getState().syncWithCloud(),
+        syncWithCloud(),
         getTeamLogo().then(l => setTeamLogo(l || ''))
       ]);
 
@@ -273,7 +274,7 @@ const App: React.FC = () => {
       const savedAdminView = sessionStorage.getItem('isAdminView');
       if (savedAdminView === 'true') setIsAdminView(true);
 
-      useMatchCenter.getState().syncWithCloud();
+      syncWithCloud();
 
       const savedUser = sessionStorage.getItem('currentUser');
       if (savedUser) setCurrentUser(JSON.parse(savedUser));
