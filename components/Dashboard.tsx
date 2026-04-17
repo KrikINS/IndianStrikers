@@ -240,149 +240,99 @@ function WeeklyPerformerCarousel({
   );
 }
 
-// --- Match Performance Carousel (Glassmorphic) ---
+}
+
+// --- Match Ticker (Infinite Marquee Strip) ---
 function MatchCarousel({ matches, opponents, teamLogo }: { matches: ScheduledMatch[], opponents: any[], teamLogo: string }) {
-  const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  useEffect(() => {
-    if (isPaused || matches.length <= 1) return;
-    const interval = setInterval(() => {
-      setIndex(prev => prev + 1);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isPaused, matches.length]);
-
-  const handleDragEnd = (_: any, info: any) => {
-    if (info.offset.x < -50) setIndex(prev => prev + 1);
-    else if (info.offset.x > 50) setIndex(prev => prev - 1);
-    setIsPaused(true);
-    setTimeout(() => setIsPaused(false), 3000);
-  };
+  // Triple matches to ensure seamless loop
+  const displayMatches = [...matches, ...matches, ...matches];
 
   if (!matches.length) return null;
 
   return (
     <div 
-      className="relative w-full overflow-hidden py-4 px-2"
+      className="relative w-full overflow-hidden py-1 border-y border-white/5 bg-slate-950/40 backdrop-blur-sm"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="flex items-center justify-center">
+      <div className="flex whitespace-nowrap">
         <motion.div
-          className="flex gap-6 cursor-grab active:cursor-grabbing"
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          onDragEnd={handleDragEnd}
-          animate={{ x: -index * 320 }}
-          transition={{ type: "spring", stiffness: 100, damping: 20 }}
-          style={{ width: 'fit-content' }}
+          className="flex gap-4 px-4 items-center"
+          animate={!isPaused ? { x: [0, -(100 / 3) + "%"] } : {}}
+          transition={{
+            x: {
+              repeat: Infinity,
+              repeatType: "loop",
+              duration: matches.length * 8, // Adjust speed based on item count
+              ease: "linear",
+            },
+          }}
         >
-          {matches.map((match, i) => {
+          {displayMatches.map((match, i) => {
             const opponent = opponents.find(o => o.id === match.opponentId);
             const isLive = match.status === 'live';
-            const isActive = (index % matches.length + matches.length) % matches.length === i;
             
             return (
-              <motion.div
-                key={match.id}
-                className={`min-w-[300px] md:min-w-[400px] rounded-3xl p-6 border backdrop-blur-xl transition-all duration-500 relative overflow-hidden ${
+              <Link 
+                key={`${match.id}-${i}`}
+                to={isLive ? `/live/${match.id}` : `/scorecard/${match.id}`}
+                className={`flex-shrink-0 min-w-[200px] md:min-w-[240px] rounded-xl p-3 border backdrop-blur-xl transition-all duration-300 relative group overflow-hidden ${
                   isLive 
-                    ? 'bg-red-500/5 border-red-500/20 shadow-[0_10px_40px_-10px_rgba(239,68,68,0.2)]' 
-                    : 'bg-white/5 border-white/10 shadow-xl'
+                    ? 'bg-red-500/10 border-red-500/30' 
+                    : 'bg-white/5 border-white/10 hover:bg-white/10'
                 }`}
-                animate={{
-                  scale: isActive ? 1 : 0.92,
-                  opacity: isActive ? 1 : 0.6,
-                }}
               >
                 {/* Background Glow */}
-                <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] rounded-full -translate-y-1/2 translate-x-1/2 ${isLive ? 'bg-red-500/10' : 'bg-sky-500/5'}`}></div>
+                <div className={`absolute top-0 right-0 w-20 h-20 blur-[40px] rounded-full -translate-y-1/2 translate-x-1/2 opacity-20 ${isLive ? 'bg-red-500' : 'bg-sky-500'}`}></div>
                 
-                <div className="relative z-10">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex flex-col">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">
-                        {new Date(match.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </p>
-                      {isLive && (
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-2 w-2 relative">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                          </span>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-red-500">Live Match</span>
-                        </div>
-                      )}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                       <img src={teamLogo || "/INS%20LOGO.PNG"} alt="Home" className="w-5 h-5 object-contain" />
+                       <span className="text-[10px] font-black uppercase text-slate-300">INS</span>
+                       <span className="text-[10px] font-black text-white">
+                         {match.innings1 ? `${match.innings1.totalRuns}/${match.innings1.wickets}` : '0/0'}
+                       </span>
                     </div>
-                    {!isLive && match.status === 'completed' && (
-                       <span className="text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full border border-emerald-500/20">Final Result</span>
+                    <div className="flex items-center gap-2">
+                       <div className="w-5 h-5 rounded-md bg-white/5 flex items-center justify-center border border-white/10 p-0.5">
+                         {opponent?.logoUrl ? (
+                           <img src={opponent.logoUrl} alt="Away" className="w-full h-full object-contain" />
+                         ) : (
+                           <Shield size={10} className="text-slate-400" />
+                         )}
+                       </div>
+                       <span className="text-[10px] font-black uppercase text-slate-300 truncate w-8 overflow-hidden">
+                         {match.opponentName?.substring(0, 3) || opponent?.name?.substring(0, 3) || 'OPP'}
+                       </span>
+                       <span className="text-[10px] font-black text-white">
+                         {match.innings2 ? `${match.innings2.totalRuns}/${match.innings2.wickets}` : '0/0'}
+                       </span>
+                    </div>
+                  </div>
+
+                  <div className="h-8 w-px bg-white/10"></div>
+
+                  <div className="flex flex-col items-end flex-1 min-w-0">
+                    {isLive ? (
+                      <div className="flex items-center gap-1.5 animate-pulse">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+                        <span className="text-[8px] font-black uppercase text-red-500 tracking-widest">Live</span>
+                      </div>
+                    ) : (
+                      <span className="text-[8px] font-bold text-slate-500 uppercase">{new Date(match.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                     )}
+                    <p className="text-[9px] font-medium text-slate-400 truncate w-full text-right mt-1 italic">
+                      {match.result_text || 'Match Scheduled'}
+                    </p>
                   </div>
-
-                  <div className="flex items-center justify-between gap-4 mb-6">
-                    <div className="flex flex-col items-center gap-2 flex-1">
-                      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 p-2 shadow-inner">
-                        <img src={teamLogo || "/INS%20LOGO.PNG"} alt="Home" className="w-full h-full object-contain" />
-                      </div>
-                      <p className="font-black text-[11px] uppercase tracking-tighter text-center">Indian Strikers</p>
-                      {match.innings1 && (
-                        <p className="text-xl font-black italic">{match.innings1.totalRuns}/{match.innings1.wickets}</p>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col items-center">
-                      <p className="text-xs font-black text-slate-500 italic uppercase">VS</p>
-                      <div className="h-4 w-px bg-white/10 my-2"></div>
-                    </div>
-
-                    <div className="flex flex-col items-center gap-2 flex-1">
-                      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 p-2 shadow-inner">
-                        {opponent?.logoUrl ? (
-                          <img src={opponent.logoUrl} alt="Away" className="w-full h-full object-contain" />
-                        ) : (
-                          <Shield size={24} className="text-slate-400" />
-                        )}
-                      </div>
-                      <p className="font-black text-[11px] uppercase tracking-tighter text-center truncate w-full">{match.opponentName || opponent?.name || 'TBA'}</p>
-                      {match.innings2 && (
-                        <p className="text-xl font-black italic">{match.innings2.totalRuns}/{match.innings2.wickets}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {match.result_text && (
-                    <div className="bg-white/5 rounded-2xl p-3 border border-white/5 text-center">
-                      <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wide leading-tight">{match.result_text}</p>
-                    </div>
-                  )}
-
-                  {isLive && (
-                    <Link to={`/live/${match.id}`} className="mt-4 w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-600/20 active:scale-95">
-                      <Zap size={14} fill="white" /> Enter Match Center
-                    </Link>
-                  )}
-                  
-                  {!isLive && match.status === 'completed' && (
-                    <Link to={`/scorecard/${match.id}`} className="mt-4 w-full py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all active:scale-95">
-                      View Scorecard <ChevronRight size={14} />
-                    </Link>
-                  )}
                 </div>
-              </motion.div>
+              </Link>
             );
           })}
         </motion.div>
-      </div>
-
-      <div className="flex justify-center gap-2 mt-6">
-        {matches.map((_, i) => (
-          <button 
-            key={i} 
-            onClick={() => setIndex(i)}
-            className={`h-1 rounded-full transition-all duration-500 ${ (index % matches.length + matches.length) % matches.length === i ? 'w-8 bg-sky-400' : 'w-2 bg-white/10' }`}
-          />
-        ))}
       </div>
     </div>
   );
@@ -568,6 +518,19 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         </div>
       </div>
 
+      {/* New Match Performance Ticker (Second Header) */}
+      <AnimatePresence mode="wait">
+        {carouselMatches.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full relative z-20 -mt-6 mb-2"
+          >
+            <MatchCarousel matches={carouselMatches} opponents={opponents} teamLogo={teamLogo || ''} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Hero Poster Modal */}
       <AnimatePresence>
         {selectedHero && (
@@ -643,28 +606,6 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                 </button>
               </div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-      {/* New Match Performance Carousel Section */}
-      <AnimatePresence mode="wait">
-        {carouselMatches.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full relative z-10"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Activity className="text-sky-400" size={24} />
-                <h2 className="text-sm font-black uppercase tracking-[0.3em] text-slate-400">Match Performances</h2>
-              </div>
-              <Link to="/match-center" className="text-[10px] font-black text-blue-600 hover:text-blue-500 uppercase tracking-widest flex items-center gap-1 group">
-                Full Center <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            <MatchCarousel matches={carouselMatches} opponents={opponents} teamLogo={teamLogo || ''} />
           </motion.div>
         )}
       </AnimatePresence>
