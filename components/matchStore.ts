@@ -247,6 +247,8 @@ export const useCricketScorer = create<ScorerStore>()(
                 nonStrikerId: nStrId,
                 currentBowlerId: bwlId,
                 isFreeHit: false, // Reset Free Hit at start of innings
+                isFinished: false, // CRITICAL: Reset finish flag
+                manOfTheMatch: null, // Reset MOTM
                 [num === 1 ? 'innings1' : 'innings2']: {
                     battingTeamId: batId,
                     bowlingTeamId: bowlId,

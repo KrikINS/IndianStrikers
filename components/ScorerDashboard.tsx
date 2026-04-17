@@ -1274,7 +1274,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }, [currentInnings?.history?.length]);
   const isBattingFinishing = currentInnings && (
     currentInnings.wickets === 10 ||
-    currentInnings.totalBalls >= (store.maxOvers || 20) * 6 ||
+    (currentInnings.totalBalls > 0 && currentInnings.totalBalls >= (store.maxOvers || 20) * 6) ||
     (store.currentInnings === 2 && currentInnings.totalRuns > (store.innings1?.totalRuns || 0))
   );
   const isMatchComplete = store.isFinished;
