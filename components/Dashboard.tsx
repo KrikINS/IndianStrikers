@@ -288,7 +288,10 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const enrichedPlayers = useMemo(() => {
     if (!players || !performerData.performers) return players;
     return players.map(p => {
-      const matchPerf = performerData.performers.find(perf => String(perf.playerId) === String(p.id));
+      const matchPerf = performerData.performers.find(perf => 
+        String(perf.playerId) === String(p.id) || 
+        String(perf.id) === String(p.id)
+      );
       if (!matchPerf) return p;
 
       // Create enriched stats objects by adding tournament data to legacy/base data

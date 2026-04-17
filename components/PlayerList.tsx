@@ -138,7 +138,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const enrichedPlayers = useMemo(() => {
     if (!players || !performerData.length) return players;
     return players.map(p => {
-      const matchPerf = performerData.find(perf => String(perf.playerId) === String(p.id));
+      const matchPerf = performerData.find(perf => 
+        String(perf.playerId) === String(p.id) || 
+        String(perf.id) === String(p.id)
+      );
       if (!matchPerf) return p;
 
       // Create enriched stats objects by adding tournament data to legacy/base data

@@ -792,6 +792,7 @@ export const getTournamentPerformers = async (): Promise<any> => {
     tournamentName: data.tournament_name || data.tournamentName,
     performers: (data.performers || []).map((p: any) => ({
       ...p,
+      playerId: p.player_id || p.playerId,
       avatarUrl: p.avatar_url || p.avatarUrl,
       opponentId: p.opponent_id || p.opponentId,
       groundId: p.ground_id || p.groundId,
