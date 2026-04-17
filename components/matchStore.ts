@@ -344,17 +344,6 @@ export const useCricketScorer = create<ScorerStore>()(
                     }
                 }
 
-                // Milestone Detection: Perform atomically during run increment
-                let pendingMilestone: any = null;
-                if (subType === 'bat') {
-                    if (b.runs >= 100 && !b.hundred_notified) {
-                        b.hundred_notified = true;
-                        pendingMilestone = { type: 'hundred', player: b.name || 'Striker' };
-                    } else if (b.runs >= 50 && !b.fifty_notified) {
-                        b.fifty_notified = true;
-                        pendingMilestone = { type: 'fifty', player: b.name || 'Striker' };
-                    }
-                }
 
                 // Milestone Detection: Perform atomically during run increment
                 let pendingMilestone: any = null;
