@@ -90,6 +90,7 @@ export interface MatchState {
     useWagonWheel: boolean;
     setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
     isWaitingForBowler: boolean;
+    wagonWheelQuickSave: boolean;
 }
 
 interface ScorerStore extends MatchState {

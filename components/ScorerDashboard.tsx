@@ -1946,13 +1946,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
     syncBallToCloud();
     
+    const sId = store.strikerId || '';
+    const bId = store.currentBowlerId || '';
+    const sName = getPlayerName(sId);
+    const bName = getPlayerName(bId);
+
     // Milestone Detection: Check for 50/100 BEFORE the database sync 
     // using the updated store state to ensure flags are persisted.
     const updatedInnings = store.currentInnings === 1 ? store.innings1 : store.innings2;
     const currentStriker = updatedInnings?.battingStats[sId];
     
     if (currentStriker && subType === 'bat') {
-      const sName = getPlayerName(sId);
       if (currentStriker.runs >= 100 && !currentStriker.hundred_notified) {
         milestoneRef.current?.trigger({ type: 'HUNDRED', playerName: sName });
         store.setMilestoneNotified(sId, 'hundred');
@@ -1963,11 +1967,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     }
 
     syncToDatabase(store);
-
-    const sId = store.strikerId || '';
-    const bId = store.currentBowlerId || '';
-    const sName = getPlayerName(sId);
-    const bName = getPlayerName(bId);
 
     if (score === 4 && subType === 'bat') {
       milestoneRef.current?.trigger({ type: 'FOUR', playerName: sName });
