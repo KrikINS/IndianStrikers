@@ -286,7 +286,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       } catch (e) { console.error(e); }
     };
     load();
-  }, [fetchPlayers])  const enrichedPlayers = useMemo(() => {
+  }, [fetchPlayers]);
+
+  const enrichedPlayers = useMemo(() => {
     if (!players) return [];
     return players.map(p => {
       const matchPerf = performerData.performers?.find(perf => 
