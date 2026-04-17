@@ -2118,26 +2118,73 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         live_data: exportableStore
       };
 
-      const allBattingStats: any[] = [];
-      [store.innings1, store.innings2].forEach((inn, idx) => {
-        if (!inn) return;
-        Object.entries(inn.battingStats).forEach(([pid, stat]) => {
-          allBattingStats.push({
-            player_id: pid,
-            match_id: activeMatchId,
-            tournament_id: matchMeta?.tournamentId || null,
-            runs: stat.runs,
-            balls: stat.balls,
-            fours: stat.fours,
-            sixes: stat.sixes,
-            is_not_out: stat.status === 'batting',
-            is_batting_innings: stat.balls > 0 || (stat.status !== 'dnb' && stat.status !== 'batting'),
-            innings_num: idx + 1
-          });
-        });
-      });
+      const playerStatsUpdate: any[] = [];
+      const homeXI = store.homeXI || [];
 
-      const playerStatsUpdate = allBattingStats;
+      homeXI.forEach(pid => {
+        let runs = 0;
+        let balls = 0;
+        let fours = 0;
+        let sixes = 0;
+        let isNotOut = false;
+        let playedInnings = false;
+        
+        let wickets = 0;
+        let bowlingRuns = 0;
+        let bowlingOvers = 0;
+        let maidens = 0;
+        let wides = 0;
+        let no_balls = 0;
+        let bowledInnings = false;
+
+        [store.innings1, store.innings2].forEach((inn) => {
+          if (!inn) return;
+          
+          const bStat = inn.battingStats[pid];
+          if (bStat) {
+            runs += (bStat.runs || 0);
+            balls += (bStat.balls || 0);
+            fours += (bStat.fours || 0);
+            sixes += (bStat.sixes || 0);
+            if (bStat.status === 'batting') isNotOut = true;
+            if (bStat.status !== 'dnb') playedInnings = true;
+          }
+
+          const bwStat = inn.bowlingStats[pid];
+          if (bwStat) {
+            wickets += (bwStat.wickets || 0);
+            bowlingRuns += (bwStat.runs || 0);
+            bowlingOvers += (bwStat.overs || 0);
+            maidens += (bwStat.maidens || 0);
+            
+            // Calculate extras from history
+            const bowlerEvents = (inn.history || []).filter(b => String(b.bowlerId) === String(pid));
+            wides += bowlerEvents.filter(b => b.type === 'wide').length;
+            no_balls += bowlerEvents.filter(b => b.type === 'no-ball').length;
+            
+            if (bwStat.overs > 0) bowledInnings = true;
+          }
+        });
+
+        if (playedInnings || bowledInnings) {
+          playerStatsUpdate.push({
+            playerId: pid,
+            matchId: activeMatchId,
+            tournamentId: matchMeta?.tournamentId || null,
+            runs,
+            balls,
+            fours,
+            sixes,
+            wickets,
+            bowlingRuns,
+            bowlingOvers,
+            maidens,
+            wides,
+            no_balls,
+            isNotOut
+          });
+        }
+      });
 
       if (store.currentInnings === 1) {
         updatePayload.innings_1_score = totalScore;

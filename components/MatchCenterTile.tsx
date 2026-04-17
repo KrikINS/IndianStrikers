@@ -63,7 +63,8 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     const isToday = timeContext === 'TODAY';
     const isPast = timeContext === 'PAST';
 
-    const opponentName = opponent ? opponent.name : (match.opponentId || 'Opponent').replace(/-/g, ' ');
+    const opponentName = opponent?.name || match.opponentName || (match.opponentId && !match.opponentId.includes('-') ? match.opponentId : 'Opponent');
+    const opponentLogo = opponent?.logoUrl || match.opponentLogo;
 
     return (
         <div className={`match-card-compact border transition-all duration-300 ${isLive ? 'border-red-500' : isCarouselActive ? 'border-blue-500/50 shadow-2xl shadow-blue-500/10' : 'border-white/5'} ${isCarouselActive ? 'bg-slate-900' : 'bg-slate-950'}`}>
@@ -145,8 +146,8 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 {/* Away Team */}
                 <div className="team-vertical">
                     <div className="logo-wrapper">
-                        {opponent?.logoUrl
-                            ? <img src={opponent.logoUrl} className="team-logo-md object-contain" alt={opponentName} />
+                        {opponentLogo
+                            ? <img src={opponentLogo} className="team-logo-md object-contain" alt={opponentName} />
                             : <div className="team-logo-md flex items-center justify-center bg-transparent border border-slate-200 text-slate-400 font-black text-xs rounded-xl">{String(opponentName).slice(0, 3).toUpperCase()}</div>
                         }
                         <button

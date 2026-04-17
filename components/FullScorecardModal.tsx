@@ -47,10 +47,13 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
       innings2: { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } },
     };
 
-    if (!base.innings1.batting.length) base.innings1.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '' }));
-    if (!base.innings1.bowling.length) base.innings1.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0 }));
-    if (!base.innings2.batting.length) base.innings2.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '' }));
-    if (!base.innings2.bowling.length) base.innings2.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0 }));
+    if (!base.innings1 || !base.innings1.batting) base.innings1 = { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } };
+    if (!base.innings2 || !base.innings2.batting) base.innings2 = { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } };
+
+    if (!base.innings1.batting || !base.innings1.batting.length) base.innings1.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '' }));
+    if (!base.innings1.bowling || !base.innings1.bowling.length) base.innings1.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0 }));
+    if (!base.innings2.batting || !base.innings2.batting.length) base.innings2.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '' }));
+    if (!base.innings2.bowling || !base.innings2.bowling.length) base.innings2.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0 }));
 
     return base;
   });
@@ -125,13 +128,13 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
   };
 
   const calculateInningsTotal = (inn: InningsData) => {
-    const batSum = inn.batting.reduce((acc: number, b) => acc + (b.runs || 0), 0);
-    const bowlExtras = inn.bowling.reduce((acc: number, b: any) => acc + (b.wides || 0) + (b.no_balls || 0), 0);
-    return batSum + bowlExtras + (inn.extras.legByes || 0) + (inn.extras.byes || 0);
+    const batSum = (inn?.batting || []).reduce((acc: number, b) => acc + (b.runs || 0), 0);
+    const bowlExtras = (inn?.bowling || []).reduce((acc: number, b: any) => acc + (b.wides || 0) + (b.no_balls || 0), 0);
+    return batSum + bowlExtras + (inn?.extras?.legByes || 0) + (inn?.extras?.byes || 0);
   };
 
   const calculateInningsWickets = (inn: InningsData) => {
-    return inn.batting.filter(b => b.outHow !== 'Not Out' && b.outHow !== 'Did Not Bat' && b.outHow !== 'Retired Hurt' && b.playerId).length;
+    return (inn?.batting || []).filter(b => b.outHow !== 'Not Out' && b.outHow !== 'Did Not Bat' && b.outHow !== 'Retired Hurt' && b.playerId).length;
   };
 
   const handleSave = async () => {

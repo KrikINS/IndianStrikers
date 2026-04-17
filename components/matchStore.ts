@@ -635,10 +635,10 @@ export const useCricketScorer = create<ScorerStore>()(
             getOvers: (balls) => `${Math.floor(balls / 6)}.${balls % 6}`
         }),
         { 
-            name: 'ins-cricket-scorer',
+            name: 'ins-cricket-scorer-storage',
             storage: {
                 getItem: (name) => {
-                    const str = sessionStorage.getItem(name);
+                    const str = localStorage.getItem(name);
                     try {
                         return str ? JSON.parse(str) : null;
                     } catch (e) {
@@ -647,10 +647,14 @@ export const useCricketScorer = create<ScorerStore>()(
                 },
                 setItem: (name, value) => {
                     const state = { ...value.state };
-                    delete (state as any).historyStack;
-                    sessionStorage.setItem(name, JSON.stringify({ state, version: value.version }));
+                    // We keep historyStack in local storage now for better recovery, 
+                    // but we prune it if it gets too large (> 200 balls) to stay under 5MB limit
+                    if (state.historyStack && state.historyStack.length > 200) {
+                        state.historyStack = state.historyStack.slice(-200);
+                    }
+                    localStorage.setItem(name, JSON.stringify({ state, version: value.version }));
                 },
-                removeItem: (name) => sessionStorage.removeItem(name)
+                removeItem: (name) => localStorage.removeItem(name)
             }
         }
     )

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Tournament } from '../types';
 import { useMasterData } from './masterDataStore';
-import { useMatchCenter } from './matchCenterStore';
-import { Plus, Trash2, Edit2, Trophy, X, ChevronDown, ChevronUp, ExternalLink, Calendar as CalendarIcon, Shield } from 'lucide-react';
+import { useOpponentStore } from '../store/opponentStore';
+import { Plus, Trash2, Edit2, Trophy, X, ChevronDown, ChevronUp, ExternalLink, Calendar as CalendarIcon, Shield, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface TournamentsManagerProps {
@@ -12,6 +12,7 @@ interface TournamentsManagerProps {
 const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false }) => {
   const { tournaments, addTournament: addTourneyStore, updateTournament: updateTourneyStore, removeTournament } = useMasterData();
   const { matches } = useMatchCenter();
+  const { opponents } = useOpponentStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Tournament | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -167,28 +168,52 @@ const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false
                         </div>
                       ) : (
                         <div className="grid gap-3">
-                          {tourneyMatches.map(match => (
-                            <div key={match.id} className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-blue-200 transition-colors shadow-sm">
-                              <div className="flex items-center gap-4">
-                                <div className="hidden sm:flex flex-col items-center justify-center bg-slate-100 rounded-lg p-2 min-w-[60px]">
-                                  <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(match.date).toLocaleDateString(undefined, { month: 'short' })}</span>
-                                  <span className="text-lg font-black text-slate-900 leading-none">{new Date(match.date).getDate()}</span>
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-black text-slate-900 uppercase tracking-tight">Indian Strikers</span>
-                                    <span className="text-[10px] font-black text-slate-300 italic">VS</span>
-                                    <span className="text-xs font-black text-blue-600 uppercase tracking-tight">{match.opponentName}</span>
+                          {tourneyMatches.map(match => {
+                            const opp = opponents.find(o => o.id === match.opponentId);
+                            const oppLogo = opp?.logoUrl || match.opponentLogo;
+                            const oppName = opp?.name || match.opponentName || 'Opponent';
+
+                            return (
+                              <div key={match.id} className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-blue-200 transition-colors shadow-sm">
+                                <div className="flex items-center gap-4">
+                                  <div className="hidden sm:flex flex-col items-center justify-center bg-slate-100 rounded-lg p-2 min-w-[60px] border border-slate-200 shadow-inner">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(match.date).toLocaleDateString(undefined, { month: 'short' })}</span>
+                                    <span className="text-lg font-black text-slate-900 leading-none">{new Date(match.date).getDate()}</span>
                                   </div>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                                      <CalendarIcon size={10} /> {new Date(match.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    <span className="text-slate-200">•</span>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase">{match.venue}</span>
+                                  
+                                  {/* Team Info with Logos */}
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex -space-x-2">
+                                      {/* Home Logo */}
+                                      <div className="w-8 h-8 rounded-full border-2 border-white overflow-hidden bg-slate-100 shadow-sm z-10">
+                                        <img src="/INS%20LOGO.PNG" className="w-full h-full object-contain" alt="INS" />
+                                      </div>
+                                      {/* Away Logo */}
+                                      <div className="w-8 h-8 rounded-full border-2 border-white overflow-hidden bg-white shadow-sm flex items-center justify-center text-[10px] font-black">
+                                        {oppLogo ? (
+                                          <img src={oppLogo} className="w-full h-full object-contain" alt={oppName} />
+                                        ) : (
+                                          <span className="text-slate-400">{String(oppName).substring(0,2).toUpperCase()}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-black text-slate-900 uppercase tracking-tight">Indian Strikers</span>
+                                        <span className="text-[10px] font-black text-slate-300 italic">VS</span>
+                                        <span className="text-xs font-black text-blue-600 uppercase tracking-tight">{oppName}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                                          <CalendarIcon size={10} /> {new Date(match.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                        <span className="text-slate-200">•</span>
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase">{match.venue}</span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
                               
                               <div className="flex items-center gap-3 justify-end">
                                 {match.status === 'completed' ? (
@@ -210,7 +235,7 @@ const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false
                                 </Link>
                               </div>
                             </div>
-                          ))}
+                          )})}
                         </div>
                       )}
                     </div>

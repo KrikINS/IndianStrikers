@@ -48,30 +48,42 @@ export const useMatchCenter = create<MatchStore>()(
       }),
       
       addMatch: async (match) => {
+        const tempId = match.id || crypto.randomUUID();
+        const localMatch = { ...match, id: tempId, status: match.status || 'upcoming' };
+        
+        // 1. Optimistically add to local state immediately
+        set((state) => ({ matches: [...state.matches, localMatch as ScheduledMatch] }));
+        
         try {
+          // 2. Attempt to save to cloud
           const savedMatch = await api.addMatch(match);
-          set((state) => ({ matches: [...state.matches, savedMatch] }));
+          
+          // 3. Update the local state with the confirmed server ID and data
+          set((state) => ({
+            matches: state.matches.map(m => m.id === tempId ? savedMatch : m)
+          }));
           return savedMatch.id;
         } catch (e) {
-          console.error("Failed to add match:", e);
-          throw e;
+          console.error("Cloud save failed, match remains in local storage:", e);
+          // We keep the localMatch in the list so the user doesn't lose their work!
+          return tempId;
         }
       },
 
       updateMatch: async (id, updates) => {
+        // Optimistic update
+        set((state) => ({
+          matches: state.matches.map(m => m.id === id ? { ...m, ...updates } : m)
+        }));
+
         try {
           const currentMatch = get().matches.find(m => m.id === id);
           if (!currentMatch) return;
-          const merged = { ...currentMatch, ...updates };
-          // Return the actual API response so callers can await the fetch result
-          const response = await api.updateMatch(id, merged);
-          set((state) => ({
-            matches: state.matches.map(m => m.id === id ? merged : m)
-          }));
+          const response = await api.updateMatch(id, { ...currentMatch, ...updates });
           return response;
         } catch (e) {
-          console.error("Failed to update match:", e);
-          throw e; // Re-throw so awaiting callers receive the rejection
+          console.error("Failed to sync update to cloud, kept local version:", e);
+          // We don't throw here to prevent UI crashes, the local state is already updated
         }
       },
 
@@ -125,11 +137,7 @@ export const useMatchCenter = create<MatchStore>()(
           // Filter out Ghost/Dummy data from DB
           // Automatic cleanup filter for Ghost/Synthetic data from DB
           const dbMatches = rawDbMatches.filter(m => 
-            m.tournament !== "Dummy Tournament" && 
-            m.opponentName !== "Sandbox XI" &&
-            !m.is_test &&
-            !String(m.id).toLowerCase().includes("dummy") &&
-            !String(m.id).toLowerCase().includes("sandbox") &&
+            !m.is_test && 
             m.id !== '00000000-0000-0000-0000-000000000001'
           );
 
@@ -137,12 +145,16 @@ export const useMatchCenter = create<MatchStore>()(
           const unsynced = get().matches.filter(m => !dbIds.has(m.id));
           
           if (unsynced.length > 0) {
-            console.log(`[Sync] Found ${unsynced.length} local-only matches. If this is intentional, they will persist. If these are 'ghost' matches, please use the Wipe Cache tool.`);
-            // No auto-pushing ghost data to cloud anymore to avoid resurrection loops
+            console.log(`[Sync] Found ${unsynced.length} local-only matches. Preserving them during sync.`);
           }
           
-          console.log("[Sync] Pulling latest from cloud...");
-          set({ matches: dbMatches });
+          console.log("[Sync] Pulling latest from cloud and merging...");
+          
+          // CRITICAL: Merge DB matches with local-only matches to prevent data loss!
+          // Filtered list should include ALL cloud matches and ONLY local matches that haven't hit DB yet
+          const mergedMatches = [...dbMatches, ...unsynced];
+          
+          set({ matches: mergedMatches });
         } catch (e) {
           console.error("Cloud sync failed:", e);
           throw e;
@@ -154,11 +166,7 @@ export const useMatchCenter = create<MatchStore>()(
         // Automatic cleanup filter for Ghost/Dummy entries
         // Automatic cleanup filter for Ghost/Synthetic entries
         const cleanMatches = matches.filter(m => 
-          m.tournament !== "Dummy Tournament" && 
-          m.opponentName !== "Sandbox XI" &&
-          !m.is_test &&
-          !String(m.id).toLowerCase().includes("dummy") &&
-          !String(m.id).toLowerCase().includes("sandbox") &&
+          !m.is_test && 
           m.id !== '00000000-0000-0000-0000-000000000001'
         );
 

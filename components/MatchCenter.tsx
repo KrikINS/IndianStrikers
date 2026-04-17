@@ -68,13 +68,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         syncMasterData().catch(err => console.error("Master data sync error:", err));
     }, [syncWithCloud, syncMasterData]);
 
-    // Default tournament selection to active one
+    // Only auto-set tournament filter if it's explicitly 'All' AND user hasn't interacted yet?
+    // Actually, DEFAULT TO 'ALL' for a better overview of the total schedule.
     React.useEffect(() => {
-        if (tournamentFilter === 'All' && tournaments?.length > 0) {
-            const active = tournaments.find(t => t.status === 'active');
-            if (active) setTournamentFilter(active.name);
-        }
-    }, [tournaments, tournamentFilter]);
+        // Optional: Pre-select active tournament only if no search/other filters are active
+        // For now, let's keep 'All' to ensure transparency of data.
+    }, [tournaments]);
 
     const handleManualScoreSubmit = async (data: any, options: { skipCareerSync?: boolean } = {}) => {
         if (!manualScoreConfig) return;

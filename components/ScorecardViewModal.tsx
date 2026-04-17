@@ -30,17 +30,78 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
     const [isExporting, setIsExporting] = useState(false);
     const [activeTab, setActiveTab] = useState<'scorecard' | 'commentary'>(initialTab);
 
-    if (!isOpen || !match.scorecard) return null;
+    // --- LIVE DATA REHYDRATION ENGINE ---
+    const scorecard = useMemo(() => {
+        // If match is live and has live_data, transform it into FullScorecardData structure
+        if (match.status === 'live' && (match as any).live_data) {
+            const ld = (match as any).live_data;
+            
+            const transformInnings = (inn: any): InningsData | null => {
+                if (!inn || (!inn.battingStats && !inn.bowlingStats)) return null;
 
-    const scorecard = match.scorecard;
+                // Transform Batting Record to Array
+                const battingArr: InningsBattingEntry[] = Object.entries(inn.battingStats || {}).map(([id, p]: [string, any]) => ({
+                    playerId: id,
+                    name: p.name || 'Unknown',
+                    runs: p.runs || 0,
+                    balls: p.balls || 0,
+                    fours: p.fours || 0,
+                    sixes: p.sixes || 0,
+                    outHow: p.status === 'batting' ? 'Not Out' : (p.outHow || (p.status === 'out' ? 'Out' : 'Did Not Bat')),
+                    bowlerId: p.bowlerId,
+                    fielderId: p.fielderId,
+                    index: p.index
+                })).sort((a, b) => (a.index || 0) - (b.index || 0));
+
+                // Transform Bowling Record to Array
+                const bowlingArr: InningsBowlingEntry[] = Object.entries(inn.bowlingStats || {}).map(([id, b]: [string, any]) => ({
+                    playerId: id,
+                    name: b.name || 'Unknown',
+                    overs: b.overs || 0,
+                    maidens: b.maidens || 0,
+                    runsConceded: b.runs || 0,
+                    wickets: b.wickets || 0,
+                    index: b.index
+                })).sort((a, b) => (a.index || 0) - (b.index || 0));
+
+                // Transform Extras
+                const extras: InningsExtras = {
+                    wide: inn.extras?.wide || 0,
+                    no_ball: inn.extras?.no_ball || 0,
+                    legByes: inn.extras?.legByes || 0,
+                    byes: inn.extras?.byes || 0
+                };
+
+                return {
+                    batting: battingArr,
+                    bowling: bowlingArr,
+                    extras,
+                    totalRuns: inn.totalRuns || 0,
+                    totalWickets: inn.wickets || 0,
+                    totalOvers: Number(((inn.totalBalls || 0) / 6).toFixed(1)),
+                    fallOfWickets: inn.fallOfWickets || '',
+                    history: inn.history || []
+                };
+            };
+
+            return {
+                innings1: transformInnings(ld.innings1) || { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0, history: [] },
+                innings2: transformInnings(ld.innings2) || { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0, history: [] }
+            } as FullScorecardData;
+        }
+        
+        // Fallback to static scorecard record
+        return match.scorecard || { 
+            innings1: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0, history: [] },
+            innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0, history: [] }
+        } as FullScorecardData;
+    }, [match]);
+
     const isHomeBattingFirst = match.isHomeBattingFirst ?? true;
-
     const opponent = allOpponents.find(o => o.id === match.opponentId);
     const opponentName = opponent?.name || match.opponentName || 'Opponent';
-
     const innings1BattingTeam = isHomeBattingFirst ? 'Indian Strikers' : opponentName;
     const innings2BattingTeam = isHomeBattingFirst ? opponentName : 'Indian Strikers';
-
     const ground = grounds.find(g => g.id === match.groundId);
     const groundDisplay = ground?.name || match.groundId || 'TBA';
 
@@ -266,7 +327,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
         // Calculate Run Rates
         const totalRuns = (inn.batting || []).reduce((s: number, b: any) => s + (b.runs || 0), 0) + 
-                         (inn.extras?.total || 0);
+                         ((inn.extras as any)?.total || 0);
         const totalBalls = (history || []).filter(b => b.isLegal).length;
         const crr = totalBalls > 0 ? ((totalRuns / totalBalls) * 6).toFixed(2) : '0.00';
         
@@ -281,8 +342,8 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
         // Partnership Logic
         // In this app structure, we identify the current pair by the most recent balls
-        const p1 = activeBatters[0];
-        const p2 = activeBatters[1];
+        const p1 = (activeBatters || [])[0];
+        const p2 = (activeBatters || [])[1];
         const pRuns = (p1?.runs || 0) + (p2?.runs || 0); // Simplified partnership for this view
         const pBalls = (p1?.balls || 0) + (p2?.balls || 0);
 
@@ -508,24 +569,31 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
     const renderInningsContent = (inn: 1 | 2, ref: React.RefObject<HTMLDivElement | null>) => {
         const data = inn === 1 ? scorecard.innings1 : scorecard.innings2;
-        if (!data) return null;
+        if (!data || (data.batting?.length === 0 && data.bowling?.length === 0)) {
+            return (
+                <div className="flex flex-col items-center justify-center p-20 border-2 border-dashed border-slate-100 rounded-3xl opacity-40">
+                    <Activity size={48} className="text-slate-300 mb-4" />
+                    <p className="text-sm font-black text-slate-800 uppercase tracking-widest">No Data Recorded for {inn === 1 ? '1st' : '2nd'} Inning</p>
+                </div>
+            );
+        }
 
         const battingTeam = inn === 1 ? innings1BattingTeam : innings2BattingTeam;
         const bowlingTeam = inn === 1 ? innings2BattingTeam : innings1BattingTeam;
         const isBattingHome = inn === 1 ? isHomeBattingFirst : !isHomeBattingFirst;
 
         const extrasCount = (data as any)?.extras_total || calculateTotalExtras(data);
-        const autoOvers = calculateTotalOvers(data.bowling);
+        const autoOvers = calculateTotalOvers(data?.bowling || []);
         const displayOvers = (data as any).total_overs || (data.totalOvers && Number(data.totalOvers) !== 0 ? data.totalOvers : autoOvers);
 
         // Separate active batters from DNB
-        const activeBatters = data.batting.filter(b => {
+        const activeBatters = (data.batting || []).filter(b => {
              const hasPlayed = (b.runs || 0) > 0 || (b.balls || 0) > 0 || (b.outHow && b.outHow !== 'Did Not Bat' && b.outHow !== 'Not Out');
              // Also include current 'Not Out' players even if 0(0)
              return hasPlayed || b.outHow === 'Not Out';
         }).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
 
-        const dnbList = data.batting.filter(b => {
+        const dnbList = (data.batting || []).filter(b => {
              const hasNotPlayed = (b.runs || 0) === 0 && (b.balls || 0) === 0 && (b.outHow === 'Did Not Bat' || !b.outHow);
              // Verify they aren't one of the 'active' ones
              return hasNotPlayed && !activeBatters.find(ab => ab.playerId === b.playerId);
@@ -640,7 +708,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {data.bowling?.filter(b => b.playerId || b.name)
+                                    {(data.bowling || []).filter(b => b.playerId || b.name)
                                         .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
                                         .map((b, i) => (
                                         <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -705,9 +773,13 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                             LEAGUE MATCH
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-4">
-                            <span className="text-lg sm:text-3xl font-black text-white italic graduate">{scorecard?.innings1?.totalRuns || 0}-{scorecard?.innings1?.totalWickets || 0}</span>
+                            <span className="text-lg sm:text-3xl font-black text-white italic graduate">
+                                {scorecard?.innings1?.totalRuns ?? 0}-{scorecard?.innings1?.totalWickets ?? 0}
+                            </span>
                             <span className="text-[10px] sm:text-base text-slate-700 font-black italic">VS</span>
-                            <span className="text-lg sm:text-3xl font-black text-white italic graduate">{scorecard?.innings2?.totalRuns || 0}-{scorecard?.innings2?.totalWickets || 0}</span>
+                            <span className="text-lg sm:text-3xl font-black text-white italic graduate">
+                                {scorecard?.innings2?.totalRuns ?? 0}-{scorecard?.innings2?.totalWickets ?? 0}
+                            </span>
                         </div>
                     </div>
 
@@ -795,7 +867,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                 const innings1Total = (scorecard.innings1?.batting || []).reduce((s: number, b: any) => s + (b.runs || 0), 0) + 
                                                      ((scorecard.innings1?.extras as any)?.total || (scorecard.innings1 ? calculateTotalExtras(scorecard.innings1) : 0));
 
-                                if (!inn.history || inn.history.length === 0) return null;
+                                if (!inn.history || (inn.history || []).length === 0) return null;
 
                                 const history = [...inn.history].reverse();
                                 const overGroups: Record<number, any[]> = {};
@@ -836,7 +908,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                                 const lastBall = ballsInOver[0]; 
                                                 const bowlerId = lastBall?.bowlerId;
                                                 const bowlerName = resolvePlayerName(undefined, bowlerId, innNum === 1 ? 'opponent' : 'home');
-                                                const bowlerStats = inn.bowling.find((b: any) => b.playerId === bowlerId);
+                                                const bowlerStats = (inn.bowling || []).find((b: any) => b.playerId === bowlerId);
                                                 const bowlerFigures = bowlerStats ? `${bowlerStats.wickets}-${(bowlerStats as any).runsConceded || (bowlerStats as any).runs || 0}` : '';
 
                                                 // --- Big Moments Data Processing ---
