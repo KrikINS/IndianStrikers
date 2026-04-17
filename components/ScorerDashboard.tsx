@@ -2267,14 +2267,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 />
               ) : <Shield size={24} color="#338feba9" />}
             </div>
-            <div style={{ fontSize: '8px', fontWeight: 800, opacity: 0.9, marginTop: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ fontSize: '7.5px', fontWeight: 900, opacity: 0.9, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2 }}>
               {store.toss.winnerId && (
-                <span style={{ color: '#FAB005' }}>
-                  {store.toss.winnerId === 'HOME' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT')} won toss & elected to {store.toss.choice} â€¢
-                </span>
+                <div style={{ color: '#FAB005' }}>
+                  {store.toss.winnerId === 'HOME' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT')} won toss & elected to {store.toss.choice}
+                </div>
               )}
-              {` Innings ${store.currentInnings} `}
-              {store.maxOvers ? `â€¢ ${store.maxOvers} Overs` : ''}
+              <div style={{ color: 'rgba(255,255,255,0.6)' }}>
+                {`Innings ${store.currentInnings}  •  ${store.maxOvers || 20} Overs`}
+              </div>
             </div>
           </div>
 
@@ -2419,7 +2420,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <MainScore style={{ fontSize: '2.5rem', marginBottom: -4, lineHeight: 1 }}>
                   {currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}
                 </MainScore>
-                <OversText style={{ fontSize: '0.85rem', fontWeight: 900, opacity: 0.8, color: '#1a73e8' }}>
+                <OversText style={{ fontSize: '0.85rem', fontWeight: 900, opacity: 0.8, color: '#1a73e8', marginTop: 6 }}>
                   {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
                 </OversText>
               </div>
