@@ -59,6 +59,14 @@ body {
   animation: spinCircle 5s infinite linear;
 }
 
+.text-glow-sky {
+  text-shadow: 0 0 10px rgba(14, 165, 233, 0.6), 0 0 20px rgba(14, 165, 233, 0.4);
+}
+
+.text-glow-red {
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.6), 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }

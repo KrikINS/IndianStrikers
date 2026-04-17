@@ -251,13 +251,13 @@ function MatchCarousel({ matches, opponents, teamLogo }: { matches: ScheduledMat
 
   return (
     <div 
-      className="relative w-full overflow-hidden py-1 border-y border-white/5 bg-slate-950/40 backdrop-blur-sm"
+      className="relative w-full overflow-hidden py-6 border-y border-white/10 bg-transparent"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="flex whitespace-nowrap">
         <motion.div
-          className="flex gap-4 px-4 items-center"
+          className="flex gap-12 px-12 items-center"
           animate={!isPaused ? { x: [0, -(100 / 3) + "%"] } : {}}
           transition={{
             x: {
@@ -276,20 +276,20 @@ function MatchCarousel({ matches, opponents, teamLogo }: { matches: ScheduledMat
               <Link 
                 key={`${match.id}-${i}`}
                 to={isLive ? `/live/${match.id}` : `/scorecard/${match.id}`}
-                className={`flex-shrink-0 min-w-[200px] md:min-w-[240px] rounded-xl p-3 border backdrop-blur-xl transition-all duration-300 relative group overflow-hidden ${
+                className={`flex-shrink-0 min-w-[220px] md:min-w-[260px] rounded-xl p-5 border transition-all duration-300 relative group overflow-hidden ${
                   isLive 
-                    ? 'bg-red-500/10 border-red-500/30' 
-                    : 'bg-white/5 border-white/10 hover:bg-white/10'
+                    ? 'bg-sky-600 border-sky-400 shadow-[0_0_25px_rgba(14,165,233,0.4)]' 
+                    : 'bg-[#1e293b] border-slate-700 hover:border-sky-500/50 hover:bg-[#253347]'
                 }`}
               >
                 {/* Background Glow */}
-                <div className={`absolute top-0 right-0 w-20 h-20 blur-[40px] rounded-full -translate-y-1/2 translate-x-1/2 opacity-20 ${isLive ? 'bg-red-500' : 'bg-sky-500'}`}></div>
+                <div className={`absolute top-0 right-0 w-20 h-20 blur-[40px] rounded-full -translate-y-1/2 translate-x-1/2 opacity-20 ${isLive ? 'bg-sky-500' : 'bg-slate-500'}`}></div>
                 
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
                        <img src={teamLogo || "/INS%20LOGO.PNG"} alt="Home" className="w-5 h-5 object-contain" />
-                       <span className="text-[10px] font-black uppercase text-slate-300">INS</span>
+                       <span className="text-[10px] font-black uppercase text-slate-200">INS</span>
                        <span className="text-[10px] font-black text-white">
                          {match.innings1 ? `${match.innings1.totalRuns}/${match.innings1.wickets}` : '0/0'}
                        </span>
@@ -302,7 +302,7 @@ function MatchCarousel({ matches, opponents, teamLogo }: { matches: ScheduledMat
                            <Shield size={10} className="text-slate-400" />
                          )}
                        </div>
-                       <span className="text-[10px] font-black uppercase text-slate-300 truncate w-8 overflow-hidden">
+                       <span className="text-[10px] font-black uppercase text-slate-200 truncate w-8 overflow-hidden">
                          {match.opponentName?.substring(0, 3) || opponent?.name?.substring(0, 3) || 'OPP'}
                        </span>
                        <span className="text-[10px] font-black text-white">
@@ -316,13 +316,13 @@ function MatchCarousel({ matches, opponents, teamLogo }: { matches: ScheduledMat
                   <div className="flex flex-col items-end flex-1 min-w-0">
                     {isLive ? (
                       <div className="flex items-center gap-1.5 animate-pulse">
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                        <span className="text-[8px] font-black uppercase text-red-500 tracking-widest">Live</span>
+                        <span className="h-1.5 w-1.5 rounded-full bg-sky-400"></span>
+                        <span className="text-[8px] font-black uppercase text-sky-400 tracking-widest text-glow-sky">Live</span>
                       </div>
                     ) : (
                       <span className="text-[8px] font-bold text-slate-500 uppercase">{new Date(match.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                     )}
-                    <p className="text-[9px] font-medium text-slate-400 truncate w-full text-right mt-1 italic">
+                    <p className="text-[9px] font-bold text-slate-100 truncate w-full text-right mt-1">
                       {match.result_text || 'Match Scheduled'}
                     </p>
                   </div>
@@ -484,6 +484,12 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     .sort((a, b) => (b.battingStats?.fours || 0) - (a.battingStats?.fours || 0))
     .slice(0, 5);
 
+  const filteredSpotlightPerformers = useMemo(() => {
+    return performerData.performers.filter(perf => 
+      players.some(p => String(p.id) === String(perf.playerId || perf.id))
+    );
+  }, [performerData.performers, players]);
+
   const handleGenerateHeroPoster = async () => {
     if (!heroPosterRef.current || !selectedHero) return;
     setIsGenerating(true);
@@ -522,7 +528,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full relative z-20 -mt-6 mb-2"
+            className="w-full relative z-20 mt-4 mb-2"
           >
             <MatchCarousel matches={carouselMatches} opponents={opponents} teamLogo={teamLogo || ''} />
           </motion.div>
@@ -759,9 +765,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         </div>
 
         <div className="relative z-10">
-          {performerData.performers.length > 0 ? (
+          {filteredSpotlightPerformers.length > 0 ? (
             <WeeklyPerformerCarousel 
-              performers={performerData.performers} 
+              performers={filteredSpotlightPerformers} 
               onSelectHero={setSelectedHero} 
               opponents={opponents} 
               grounds={grounds} 

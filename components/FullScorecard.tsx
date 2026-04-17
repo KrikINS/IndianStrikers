@@ -11,8 +11,8 @@ interface FullScorecardProps {
 }
 
 export const FullScorecard: React.FC<FullScorecardProps> = ({ match, homeTeamName, opponentName, groundName, players = [] }) => {
-  const battingPerformers = match.performers?.filter((p: Performer) => p.runs > 0 || p.balls > 0 || p.isNotOut) || [];
-  const bowlingPerformers = match.performers?.filter((p: Performer) => p.bowlingOvers > 0) || [];
+  const battingPerformers = (Array.isArray(match.performers) ? match.performers : []).filter((p: Performer) => p.runs > 0 || p.balls > 0 || p.isNotOut) || [];
+  const bowlingPerformers = (Array.isArray(match.performers) ? match.performers : []).filter((p: Performer) => p.bowlingOvers > 0) || [];
 
   return (
     <div className="scorecard-container shadow-2xl animate-in fade-in zoom-in-95 duration-500">

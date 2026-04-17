@@ -424,6 +424,13 @@ export const useCricketScorer = create<ScorerStore>()(
                 // Normal rotation based on runs
                 if (runs % 2 !== 0) [sId, nsId] = [nsId, sId];
                 // Construct Ball Record for Timeline
+                let ballCommentary = payload.commentary;
+                
+                // User Request #2: Add Bowler Introduction to commentary
+                if (state.pendingIntroduction) {
+                    ballCommentary = `${state.pendingIntroduction} ${ballCommentary || ''}`.trim();
+                }
+
                 const ballRecord: any = {
                     runs,
                     type,
@@ -436,7 +443,7 @@ export const useCricketScorer = create<ScorerStore>()(
                     ballNumber: ((nextInnings.totalBalls - (isLegal ? 1 : 0)) % 6) + 1,
                     isLegal,
                     zone,
-                    commentary: payload.commentary || (() => {
+                    commentary: ballCommentary || (() => {
                         if (!zone || zone === 'Unknown') return '';
                         const sName = b.name;
                         const zoneMap: any = {

@@ -15,6 +15,7 @@ const LiveScorecardPage: React.FC<{ opponents?: OpponentTeam[] }> = ({ opponents
     const navigate = useNavigate();
     const [match, setMatch] = useState<ScheduledMatch | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [lastUpdated, setLastUpdated] = useState<string>(new Date().toISOString());
     const { grounds } = useMasterData();
 
     const transformInnings = (inn: any): any => {
@@ -62,38 +63,38 @@ const LiveScorecardPage: React.FC<{ opponents?: OpponentTeam[] }> = ({ opponents
         };
     };
 
-    useEffect(() => {
+    const fetchMatch = async () => {
         if (!id) return;
-
-        const fetchMatch = async () => {
-            try {
-                const m = await getMatch(id);
-                if (m) {
-                    // Extract structured live_data into scorecard payload
-                    if (m.live_data) {
-                        let parsedData = m.live_data;
-                        if (typeof m.live_data === 'string') {
-                            try { parsedData = JSON.parse(m.live_data); } catch (e) {}
-                        }
-                        
-                        // Map Zustand state format to Scorecard format expected by modal
-                        m.scorecard = {
-                            innings1: transformInnings(parsedData.innings1),
-                            innings2: transformInnings(parsedData.innings2)
-                        };
-
-                        // Sync Toss and other metadata if missing
-                        m.isHomeBattingFirst = parsedData.isHomeBattingFirst;
+        try {
+            const m = await getMatch(id);
+            if (m) {
+                // Extract structured live_data into scorecard payload
+                if (m.live_data) {
+                    let parsedData = m.live_data;
+                    if (typeof m.live_data === 'string') {
+                        try { parsedData = JSON.parse(m.live_data); } catch (e) {}
                     }
-                    setMatch(m);
-                }
-            } catch (err) {
-                console.error("Failed to fetch live match:", err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+                    
+                    // Map Zustand state format to Scorecard format expected by modal
+                    m.scorecard = {
+                        innings1: transformInnings(parsedData.innings1),
+                        innings2: transformInnings(parsedData.innings2)
+                    };
 
+                    // Sync Toss and other metadata if missing
+                    m.isHomeBattingFirst = parsedData.isHomeBattingFirst;
+                }
+                setMatch(m);
+                setLastUpdated(m.last_updated || new Date().toISOString());
+            }
+        } catch (err) {
+            console.error("Failed to fetch live match:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchMatch();
         // Poll every 5 seconds for live updates
         const interval = setInterval(fetchMatch, 5000);
@@ -127,6 +128,8 @@ const LiveScorecardPage: React.FC<{ opponents?: OpponentTeam[] }> = ({ opponents
             allOpponents={opponents}
             grounds={grounds}
             initialTab={initialTab}
+            onRefresh={fetchMatch}
+            lastUpdated={lastUpdated}
         />
     );
 };
