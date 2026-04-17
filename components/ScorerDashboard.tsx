@@ -2069,7 +2069,27 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       milestoneRef.current?.trigger({ type: 'WICKET', playerName: vName });
     }
 
-    if (isBattingFinishing) {
+    // NEW: Detect if this wicket results in All Out (10 wickets)
+    // currentInnings.wickets is currently 9 if this is the 10th wicket.
+    const isNowAllOut = currentInnings && currentInnings.wickets === 9;
+    
+    if (isNowAllOut || isBattingFinishing) {
+      if (isNowAllOut) {
+        // Record the wicket IMMEDIATELY since no new batter is needed
+        let dismissal = type;
+        if (pendingFielderId && (type === 'Caught' || type === 'Stumped')) {
+          const fielder = [...players, ...opponentPlayers].find(fp => fp.id === pendingFielderId);
+          dismissal = `${type === 'Caught' ? 'c' : 'st'} ${fielder?.name || 'Fielder'}`;
+        }
+        
+        if (runOutInvolved) {
+          handleRecord(runOutInvolved.runs, runOutInvolved.ballType || 'legal', true, 'Run Out', runOutInvolved.subType || 'bat', runOutInvolved.victimId, undefined);
+          setRunOutInvolved(null);
+        } else {
+          handleRecord(0, 'legal', true, dismissal, 'bat', undefined, undefined);
+        }
+      }
+
       setTimeout(() => setShowInningsReview(true), 1500);
       return;
     }
@@ -2857,7 +2877,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   triggerWicketSplash('Run Out');
                 }}
               >
-                SELECT NEXT BATTER
+                {currentInnings && currentInnings.wickets === 9 ? 'FINISH INNINGS' : 'SELECT NEXT BATTER'}
               </ActionButton>
 
               <button

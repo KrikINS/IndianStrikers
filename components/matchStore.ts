@@ -365,10 +365,10 @@ export const useCricketScorer = create<ScorerStore>()(
                     if (victimId === sId) sId = newBatterId || null;
                     else nsId = newBatterId || null;
 
-                    // If a new batter is coming in (whether fresh or returning)
-                    if (!nextInnings.battingStats[sId!]) {
-                        nextInnings.battingStats[sId!] = { 
-                            id: sId!, 
+                    // If a new batter is coming in (and we're NOT in a final wicket situation)
+                    if (sId && !nextInnings.battingStats[sId]) {
+                        nextInnings.battingStats[sId] = { 
+                            id: sId, 
                             name: 'Unknown', 
                             runs: 0, 
                             balls: 0, 
@@ -380,9 +380,9 @@ export const useCricketScorer = create<ScorerStore>()(
                             hundred_notified: false
                         };
                     }
-                    if (!nextInnings.battingStats[nsId!]) {
-                        nextInnings.battingStats[nsId!] = { 
-                            id: nsId!, 
+                    if (nsId && !nextInnings.battingStats[nsId]) {
+                        nextInnings.battingStats[nsId] = { 
+                            id: nsId, 
                             name: 'Unknown', 
                             runs: 0, 
                             balls: 0, 
@@ -394,9 +394,8 @@ export const useCricketScorer = create<ScorerStore>()(
                             hundred_notified: false
                         };
                     }
-                    if (newBatterId) {
-                        if (nextInnings.battingStats[newBatterId] && nextInnings.battingStats[newBatterId].status === 'retired_hurt') {
-                            // Returning batter (Retired Hurt)
+                    if (newBatterId && nextInnings.battingStats[newBatterId]) {
+                        if (nextInnings.battingStats[newBatterId].status === 'retired_hurt') {
                             nextInnings.battingStats[newBatterId].status = 'batting';
                         }
                     }
