@@ -79,9 +79,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const [activeStatTab, setActiveStatTab] = useState<'batting' | 'bowling'>('batting');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEditTab, setActiveEditTab] = useState<'general' | 'batting' | 'bowling'>('general');
-  const [detailedStats, setDetailedStats] = useState<PlayerDetailedStats | null>(null);
+   const [detailedStats, setDetailedStats] = useState<PlayerDetailedStats | null>(null);
   const [isStatsExpanded, setIsStatsExpanded] = useState(false);
   const [isStatsLoading, setIsStatsLoading] = useState(false);
+  const [performerData, setPerformerData] = useState<any[]>([]);
 
   const [users, setUsers] = useState<AppUser[]>([]); // New State for user linking
   const [searchParams, setSearchParams] = useSearchParams();
@@ -115,6 +116,54 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
       localStorage.removeItem('ins_offline_players');
     }
   }, [players.length]);
+
+  useEffect(() => {
+    const fetchMasters = async () => {
+      try {
+        const [uList, perf] = await Promise.all([
+          api.getAppUsers(),
+          api.getTournamentPerformers()
+        ]);
+        setUsers(uList);
+        setPerformerData(perf?.performers || []);
+      } catch (err) {
+        console.error("Failed to load masters in PlayerList", err);
+      }
+    };
+    fetchMasters();
+  }, []);
+
+  const enrichedPlayers = useMemo(() => {
+    if (!players || !performerData.length) return players;
+    return players.map(p => {
+      const matchPerf = performerData.find(perf => String(perf.playerId) === String(p.id));
+      if (!matchPerf) return p;
+
+      // Create enriched stats objects by adding tournament data to legacy/base data
+      const baseRuns = Math.max(p.battingStats?.runs || 0, p.runsScored || 0);
+      const baseWickets = Math.max(p.bowlingStats?.wickets || 0, p.wicketsTaken || 0);
+      const baseMatches = Math.max(p.battingStats?.matches || 0, p.matchesPlayed || 0);
+
+      const enrichedBatting = {
+        ...(p.battingStats || {}),
+        matches: baseMatches + (matchPerf.matches || 1),
+        runs: baseRuns + (matchPerf.runs || 0),
+        sixes: (p.battingStats?.sixes || 0) + (matchPerf.sixes || 0),
+        fours: (p.battingStats?.fours || 0) + (matchPerf.fours || 0),
+      };
+
+      const enrichedBowling = {
+        ...(p.bowlingStats || {}),
+        wickets: baseWickets + (matchPerf.wickets || 0),
+      };
+
+      return {
+        ...p,
+        battingStats: enrichedBatting as any,
+        bowlingStats: enrichedBowling as any
+      };
+    });
+  }, [players, performerData]);
 
   // Fetch detailed stats when viewing a player
   useEffect(() => {
@@ -170,7 +219,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
 
   // Filter by search query first
-  const searchingPlayers = (players || []).filter((p: Player) =>
+  const searchingPlayers = (enrichedPlayers || []).filter((p: Player) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 

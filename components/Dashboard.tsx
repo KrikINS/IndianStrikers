@@ -245,8 +245,10 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const { players, fetchPlayers } = usePlayerStore();
   const { legacy, tournaments, grounds } = useMasterData();
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
-  const [selectedHero, setSelectedHero] = useState<any | null>(null);
+  const [selectedHero, setSelectedHero] = useState<any>(null);
+  const [showHeroModal, setShowHeroModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const heroPosterRef = useRef<HTMLDivElement>(null);
   const [nextMatch, setNextMatch] = useState<ScheduledMatch | null>(null);
   const [performerData, setPerformerData] = useState<{ tournamentName: string, performers: any[] }>({ tournamentName: '', performers: [] });
@@ -281,16 +283,54 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       } catch (e) { console.error(e); }
     };
     load();
-  }, []);
+  }, [fetchPlayers]);
 
-  const topRunScorers = [...(players || [])]
-    .sort((a, b) => ((b.battingStats?.runs || b.runsScored) || 0) - ((a.battingStats?.runs || a.runsScored) || 0))
+  const enrichedPlayers = useMemo(() => {
+    if (!players || !performerData.performers) return players;
+    return players.map(p => {
+      const matchPerf = performerData.performers.find(perf => String(perf.playerId) === String(p.id));
+      if (!matchPerf) return p;
+
+      // Create enriched stats objects by adding tournament data to legacy/base data
+      const baseRuns = Math.max(p.battingStats?.runs || 0, p.runsScored || 0);
+      const baseWickets = Math.max(p.bowlingStats?.wickets || 0, p.wicketsTaken || 0);
+      const baseMatches = Math.max(p.battingStats?.matches || 0, p.matchesPlayed || 0);
+
+      const enrichedBatting = {
+        ...(p.battingStats || {}),
+        matches: baseMatches + (matchPerf.matches || 1), // Fallback to 1 if not specified
+        runs: baseRuns + (matchPerf.runs || 0),
+        sixes: (p.battingStats?.sixes || 0) + (matchPerf.sixes || 0),
+        fours: (p.battingStats?.fours || 0) + (matchPerf.fours || 0),
+        highestScore: matchPerf.runs > parseInt((p.battingStats?.highestScore || '0').replace('*','')) 
+          ? String(matchPerf.runs) 
+          : (p.battingStats?.highestScore || '0')
+      };
+
+      const enrichedBowling = {
+        ...(p.bowlingStats || {}),
+        wickets: baseWickets + (matchPerf.wickets || 0),
+        bestBowling: matchPerf.wickets > parseInt((p.bowlingStats?.bestBowling || '0/0').split('/')[0])
+           ? `${matchPerf.wickets}/${matchPerf.bowlingRuns}`
+           : (p.bowlingStats?.bestBowling || '0/0')
+      };
+
+      return {
+        ...p,
+        battingStats: enrichedBatting as any,
+        bowlingStats: enrichedBowling as any
+      };
+    });
+  }, [players, performerData.performers]);
+
+  const topRunScorers = [...(enrichedPlayers || [])]
+    .sort((a, b) => (b.battingStats?.runs || 0) - (a.battingStats?.runs || 0))
     .slice(0, 5);
-  const topWicketTakers = [...(players || [])]
-    .sort((a, b) => ((b.bowlingStats?.wickets || b.wicketsTaken) || 0) - ((a.bowlingStats?.wickets || a.wicketsTaken) || 0))
+  const topWicketTakers = [...(enrichedPlayers || [])]
+    .sort((a, b) => (b.bowlingStats?.wickets || 0) - (a.bowlingStats?.wickets || 0))
     .slice(0, 5);
 
-  const topInningsRuns = [...(players || [])]
+  const topInningsRuns = [...(enrichedPlayers || [])]
     .filter(p => p.battingStats?.highestScore && p.battingStats.highestScore !== '0')
     .sort((a, b) => {
       const valA = parseInt((a.battingStats?.highestScore || '0').replace('*', '')) || 0;
@@ -299,7 +339,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     })
     .slice(0, 5);
 
-  const topInningsWickets = [...(players || [])]
+  const topInningsWickets = [...(enrichedPlayers || [])]
     .filter(p => p.bowlingStats?.bestBowling && p.bowlingStats.bestBowling !== '0/0')
     .sort((a, b) => {
       const [wA, rA] = (a.bowlingStats?.bestBowling || '0/0').split('/').map(Number);
@@ -309,11 +349,11 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     })
     .slice(0, 5);
 
-  const topSixHitters = [...players]
+  const topSixHitters = [...enrichedPlayers]
     .sort((a, b) => (b.battingStats?.sixes || 0) - (a.battingStats?.sixes || 0))
     .slice(0, 5);
 
-  const topFourHitters = [...players]
+  const topFourHitters = [...enrichedPlayers]
     .sort((a, b) => (b.battingStats?.fours || 0) - (a.battingStats?.fours || 0))
     .slice(0, 5);
 
@@ -597,9 +637,23 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       {/* Leaderboard Section */}
       <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-8 md:p-12 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-5"><Target size={140} /></div>
-        <div className="flex items-center gap-3 mb-10 relative z-10">
-          <Crown className="text-yellow-500 fill-yellow-500" size={32} />
-          <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Leaderboard</h3>
+        <div className="flex items-center justify-between mb-10 relative z-10">
+          <div className="flex items-center gap-3">
+            <Crown className="text-yellow-500 fill-yellow-500" size={32} />
+            <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Leaderboard</h3>
+          </div>
+          <button 
+            onClick={async () => {
+              setIsSyncing(true);
+              await fetchPlayers();
+              setTimeout(() => setIsSyncing(false), 1000);
+            }}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-full border border-slate-100 transition-all group active:scale-95"
+          >
+            <RefreshCw size={16} className={`${isSyncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+            <span className="text-[10px] font-black uppercase tracking-widest">{isSyncing ? 'Syncing...' : 'Sync Stats'}</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 md:gap-14 relative z-10">
