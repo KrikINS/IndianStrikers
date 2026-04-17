@@ -28,7 +28,11 @@ async function runMigration() {
             wagon_wheel_zone VARCHAR(50),
             is_active BOOLEAN DEFAULT true,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );`
+        );`,
+
+        // 7. PERFORMANCE INDEXES
+        `CREATE INDEX IF NOT EXISTS idx_ball_by_ball_match_id ON ball_by_ball (match_id);`,
+        `CREATE INDEX IF NOT EXISTS idx_ball_by_ball_striker_id ON ball_by_ball (striker_id);`
     ];
 
     for (const cmd of commands) {

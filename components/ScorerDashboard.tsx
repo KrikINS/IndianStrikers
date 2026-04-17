@@ -3567,60 +3567,96 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         if (!overGroups[ov]) overGroups[ov] = [];
                         overGroups[ov].push(ball);
                       });
-
                       const sortedOvers = Object.keys(overGroups)
                         .map(Number)
                         .sort((a, b) => b - a); // Latest over first
 
                       return sortedOvers.map(overNum => {
-                        const balls = overGroups[overNum]; // already reversed (latest ball first)
+                        const balls = overGroups[overNum]; // latest ball first
+                        const historyBalls = currentInnings?.history || [];
+                        const ballsUpToEnd = historyBalls.filter(b => (b.overNumber ?? 0) <= overNum);
+                        
+                        // Cumulative Stats at end of over
+                        const totalRunsAtEnd = ballsUpToEnd.reduce((s, b) => s + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                        const totalWktsAtEnd = ballsUpToEnd.filter(b => b.isWicket).length;
+                        const currentRR = ballsUpToEnd.length === 0 ? 0 : (totalRunsAtEnd / (ballsUpToEnd.filter(b => b.isLegal).length / 6));
+
+                        // Over Stats
                         const overRuns = balls.reduce((s: number, b: any) => s + b.runs + (!b.isLegal ? 1 : 0), 0);
                         const overWkts = balls.filter((b: any) => b.isWicket).length;
                         const isMaiden = overRuns === 0 && balls.filter((b: any) => b.isLegal).length === 6;
                         const isComplete = balls.filter((b: any) => b.isLegal).length === 6;
 
+                        // Last Pair in over
+                        const lastBallInOver = balls[0];
+                        const strikerN = getPlayerName(lastBallInOver.strikerId);
+                        const nonStrikerN = getPlayerName(lastBallInOver.nonStrikerId);
+                        
+                        const getPStats = (pId: string) => {
+                          const pBalls = ballsUpToEnd.filter(b => b.strikerId === pId);
+                          return { runs: pBalls.reduce((s, b) => s + b.runs, 0), balls: pBalls.length };
+                        };
+                        const sStats = getPStats(lastBallInOver.strikerId);
+                        const nsStats = getPStats(lastBallInOver.nonStrikerId);
+
+                        // Bowler figures at end of over
+                        const bName = getPlayerName(lastBallInOver.bowlerId);
+                        const bBalls = ballsUpToEnd.filter(b => b.bowlerId === lastBallInOver.bowlerId);
+                        const bRuns = bBalls.reduce((s, b) => s + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                        const bWkts = bBalls.filter(b => b.isWicket).length;
+                        const bMaidens = 0; // Simplified for now
+                        const bOvers = store.getOvers(bBalls.filter(b => b.isLegal).length);
+
                         return (
-                          <div key={overNum} style={{ marginBottom: 20 }}>
-                            {/* Over Summary Card */}
+                          <div key={overNum} style={{ marginBottom: 24 }}>
+                            {/* PREMIUM BROADCAST OVER SUMMARY */}
                             <div style={{
-                              background: isMaiden ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255,255,255,0.04)',
-                              border: `1px solid ${isMaiden ? 'rgba(56,189,248,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                              borderRadius: 10,
-                              padding: '10px 14px',
+                              background: '#10B981', // Emerald Green
+                              borderRadius: 8,
+                              overflow: 'hidden',
                               display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: 8
+                              flexDirection: 'row',
+                              color: '#FFF',
+                              boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                              marginBottom: 12,
+                              minHeight: 50,
+                              fontSize: '0.7rem',
+                              fontWeight: 700
                             }}>
-                              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                <span style={{ fontWeight: 900, fontSize: '0.8rem', color: '#38BDF8' }}>
-                                  OVER {overNum + 1}{!isComplete ? ' (live)' : ''}
-                                </span>
-                                <div style={{ display: 'flex', gap: 4 }}>
-                                  {[...balls].reverse().map((b: any, i: number) => {
-                                    let display = b.isWicket ? 'W' : `${b.runs}`;
-                                    if (b.type === 'wide') display = `wd${b.runs > 0 ? `+${b.runs}` : ''}`;
-                                    else if (b.type === 'no-ball') display = `nb${b.runs > 0 ? `+${b.runs}` : ''}`;
-                                    else if (b.type === 'leg-bye') display = `lb${b.runs}`;
-                                    else if (b.type === 'bye') display = `b${b.runs}`;
-                                    const dot = b.isLegal;
-                                    return (
-                                      <span key={i} style={{
-                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                        minWidth: 22, height: 22, borderRadius: '50%', fontSize: '0.6rem', fontWeight: 900,
-                                        background: b.isWicket ? 'rgba(255,77,77,0.25)' : b.runs === 4 || b.runs === 6 ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.07)',
-                                        color: b.isWicket ? '#FF4D4D' : b.runs === 4 || b.runs === 6 ? '#38BDF8' : 'rgba(255,255,255,0.7)',
-                                        border: `1px solid ${b.isWicket ? 'rgba(255,77,77,0.3)' : 'rgba(255,255,255,0.1)'}`
-                                      }}>{display}</span>
-                                    );
-                                  })}
+                              {/* Over Info */}
+                              <div style={{ padding: '8px 12px', background: 'rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', minWidth: 80 }}>
+                                <div style={{ opacity: 0.9 }}>Over {overNum + 1}</div>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 900 }}>({overRuns} Runs)</div>
+                              </div>
+
+                              {/* Batsmen Split */}
+                              <div style={{ flex: 2, display: 'grid', gridTemplateRows: '1fr 1fr', padding: '6px 12px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ opacity: 0.8, fontWeight: 800 }}>{strikerN}</span>
+                                  <span style={{ fontWeight: 900 }}>{sStats.runs} ({sStats.balls})</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ opacity: 0.8, fontWeight: 800 }}>{nonStrikerN}</span>
+                                  <span style={{ fontWeight: 900 }}>{nsStats.runs} ({nsStats.balls})</span>
                                 </div>
                               </div>
-                              <div style={{ textAlign: 'right' }}>
-                                <span style={{ fontWeight: 900, color: '#FAB005', fontSize: '0.9rem' }}>{overRuns}</span>
-                                <span style={{ opacity: 0.4, fontSize: '0.7rem' }}> runs</span>
-                                {overWkts > 0 && <span style={{ color: '#FF4D4D', fontWeight: 900, fontSize: '0.8rem', marginLeft: 6 }}>· {overWkts}W</span>}
-                                {isMaiden && <span style={{ color: '#38BDF8', fontWeight: 900, fontSize: '0.7rem', marginLeft: 6 }}>· M</span>}
+
+                              {/* Bowler & RR */}
+                              <div style={{ flex: 1.5, padding: '6px 12px', borderRight: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span style={{ opacity: 0.8 }}>{bName}</span>
+                                  <span style={{ fontWeight: 900 }}>{bOvers}-0-{bRuns}-{bWkts}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span style={{ opacity: 0.6, fontSize: '0.6rem' }}>RUN RATE:</span>
+                                  <span style={{ fontWeight: 900 }}>{currentRR.toFixed(2)}</span>
+                                </div>
+                              </div>
+
+                              {/* Final Score */}
+                              <div style={{ padding: '8px 16px', background: '#001F3F', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minWidth: 80 }}>
+                                <div style={{ fontSize: '0.6rem', opacity: 0.6 }}>INS</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FAB005' }}>{totalRunsAtEnd}/{totalWktsAtEnd}</div>
                               </div>
                             </div>
 
