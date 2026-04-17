@@ -28,7 +28,7 @@ import {
   Cloud
 } from 'lucide-react';
 import { useCricketScorer } from './matchStore';
-import { useMatchCenter } from './matchCenterStore';
+import { useMatchCenter } from '../store/matchStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMasterData } from './masterDataStore';
 import { usePlayerStore } from '../store/playerStore';
@@ -1089,9 +1089,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     }
 
     if (matches.length === 0) {
-      syncWithCloud().catch(console.error);
+      if (syncWithCloud) {
+        syncWithCloud().catch(console.error);
+      }
     }
-    syncMasterData().catch(console.error);
+    if (syncMasterData) {
+        syncMasterData().catch(console.error);
+    }
   }, [activeMatchId]); // Re-run if ID changes
 
   const matchMeta = (matches || []).find(m => m.id === activeMatchId);

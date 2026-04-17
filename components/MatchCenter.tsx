@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Player, OpponentTeam, UserRole, ScheduledMatch } from '../types';
-import { useMatchCenter } from './matchCenterStore';
+import { useMatchCenter } from '../store/matchStore';
 import MatchCenterTile from './MatchCenterTile';
 import ScorecardViewModal from './ScorecardViewModal';
 import { PlayingXIModal } from './PlayingXIModal';
@@ -48,6 +48,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         wipeLocalMatches
     } = useMatchCenter();
     const { grounds, tournaments, syncMasterData } = useMasterData();
+    const initializeMatch = useCricketScorer(state => state.initializeMatch);
 
     // Filters and Search
     const [activeTab, setActiveTab] = useState<'list' | 'cards' | 'standings' | 'tournaments'>('list');
@@ -64,8 +65,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
     // Auto-sync on mount
     React.useEffect(() => {
-        syncWithCloud().catch(err => console.error("Auto-sync error:", err));
-        syncMasterData().catch(err => console.error("Master data sync error:", err));
+        if (syncWithCloud) {
+            syncWithCloud().catch(err => console.error("Auto-sync error:", err));
+        }
+        if (syncMasterData) {
+            syncMasterData().catch(err => console.error("Master data sync error:", err));
+        }
     }, [syncWithCloud, syncMasterData]);
 
     // Only auto-set tournament filter if it's explicitly 'All' AND user hasn't interacted yet?
@@ -294,7 +299,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         }
 
         // Initialize store before navigating. initializeMatch is now non-destructive if IDs match.
-        useCricketScorer.getState().initializeMatch({
+        initializeMatch({
             matchId: match.id,
             matchType: match.matchFormat || 'T20',
             tournament: match.tournament || 'Live Match',

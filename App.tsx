@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import Sidebar from './components/Sidebar';
@@ -8,11 +8,23 @@ import FieldingMap from './components/FieldingMap';
 import OpponentTeams from './components/OpponentTeams';
 import Memories from './components/Memories';
 import SplashScreen from './components/SplashScreen';
-import ScorerDashboard from './components/ScorerDashboard';
-import LegacyEditor from './components/LegacyEditor';
-import MatchCenter from './components/MatchCenter';
+const ScorerDashboard = lazy(() => import('./components/ScorerDashboard'));
+const MatchCenter = lazy(() => import('./components/MatchCenter'));
+
+// Themed Loader for Suspense
+const StrikersLoader = () => (
+  <div className="flex flex-col items-center justify-center min-h-[400px] w-full gap-4">
+    <div className="relative w-16 h-16">
+      <div className="absolute inset-0 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 bg-blue-600 rounded-xl animate-pulse"></div>
+      </div>
+    </div>
+    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] animate-pulse">Powering Up Live Feed...</p>
+  </div>
+);
 import ControlPanel from './components/ControlPanel';
-import { useMatchCenter } from './components/matchCenterStore';
+import { useMatchCenter } from './store/matchStore';
 import { useMasterData } from './components/masterDataStore';
 import { usePlayerStore } from './store/playerStore';
 import { useOpponentStore } from './store/opponentStore';
@@ -161,9 +173,34 @@ const AppContent: React.FC<{
                   }
                 />
                 <Route path="/memories" element={<Memories userRole={effectiveRole} currentUser={currentUser} />} />
-                <Route path="/match-center" element={<MatchCenter opponents={opponents} userRole={effectiveRole} currentUser={currentUser} teamLogo={teamLogo} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />} />
-                <Route path="/scorer" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard teamLogo={teamLogo} /> : <Unauthorized />} />
-                <Route path="/scorer/:id" element={(effectiveRole === 'admin' || currentUser?.canScore) ? <ScorerDashboard teamLogo={teamLogo} /> : <Unauthorized />} />
+                <Route 
+                  path="/match-center" 
+                  element={
+                    <Suspense fallback={<StrikersLoader />}>
+                      <MatchCenter opponents={opponents} userRole={effectiveRole} currentUser={currentUser} teamLogo={teamLogo} onUpdateOpponent={onUpdateOpponent} onRefresh={onRefresh} />
+                    </Suspense>
+                  } 
+                />
+                <Route 
+                  path="/scorer" 
+                  element={
+                    (effectiveRole === 'admin' || currentUser?.canScore) ? (
+                      <Suspense fallback={<StrikersLoader />}>
+                        <ScorerDashboard teamLogo={teamLogo} />
+                      </Suspense>
+                    ) : <Unauthorized />
+                  } 
+                />
+                <Route 
+                  path="/scorer/:id" 
+                  element={
+                    (effectiveRole === 'admin' || currentUser?.canScore) ? (
+                      <Suspense fallback={<StrikersLoader />}>
+                        <ScorerDashboard teamLogo={teamLogo} />
+                      </Suspense>
+                    ) : <Unauthorized />
+                  } 
+                />
                 <Route path="/live/:id" element={<LiveScorecardPage opponents={opponents} />} />
                 <Route path="/control-panel" element={effectiveRole === 'admin' ? <ControlPanel /> : <Unauthorized />}>
                   <Route index element={<Navigate to="grounds" replace />} />
@@ -230,6 +267,7 @@ const App: React.FC = () => {
   const syncWithCloud = useMatchCenter(state => state.syncWithCloud);
   const isOfflineStore = useMasterData(state => state.isOffline);
   const setOfflineStore = useMasterData(state => state.setOffline);
+  const syncMasterData = useMasterData(state => state.syncMasterData);
 
   useEffect(() => {
     resetZombieMatches();
@@ -239,11 +277,17 @@ const App: React.FC = () => {
     try {
       console.log("Fetching data from backend...");
       // Fetch data via stores
+      const syncCheck = async () => {
+          if (syncWithCloud) {
+              return await syncWithCloud();
+          }
+      };
+
       await Promise.allSettled([
         fetchPlayers(),
         fetchOpponents(),
-        useMasterData.getState().syncMasterData(),
-        syncWithCloud(),
+        syncMasterData(),
+        syncCheck(),
         getTeamLogo().then(l => setTeamLogo(l || ''))
       ]);
 

@@ -37,8 +37,6 @@ export const useMatchCenter = create<MatchStore>()(
         const today = new Date().setHours(0,0,0,0);
         const updatedMatches: ScheduledMatch[] = state.matches.map(match => {
           const matchDate = new Date(match.date).setHours(0,0,0,0);
-          // If it's still marked 'Live' but the day has passed, 
-          // change it back to 'upcoming' so we can see the "Add Summary" buttons
           if (match.status === 'live' && matchDate < today) {
             return { ...match, status: 'upcoming' as MatchStatus };
           }
@@ -50,32 +48,23 @@ export const useMatchCenter = create<MatchStore>()(
       addMatch: async (match) => {
         const tempId = match.id || crypto.randomUUID();
         const localMatch = { ...match, id: tempId, status: match.status || 'upcoming' };
-        
-        // 1. Optimistically add to local state immediately
         set((state) => ({ matches: [...state.matches, localMatch as ScheduledMatch] }));
-        
         try {
-          // 2. Attempt to save to cloud
           const savedMatch = await api.addMatch(match);
-          
-          // 3. Update the local state with the confirmed server ID and data
           set((state) => ({
             matches: state.matches.map(m => m.id === tempId ? savedMatch : m)
           }));
           return savedMatch.id;
         } catch (e) {
           console.error("Cloud save failed, match remains in local storage:", e);
-          // We keep the localMatch in the list so the user doesn't lose their work!
           return tempId;
         }
       },
 
       updateMatch: async (id, updates) => {
-        // Optimistic update
         set((state) => ({
           matches: state.matches.map(m => m.id === id ? { ...m, ...updates } : m)
         }));
-
         try {
           const currentMatch = get().matches.find(m => m.id === id);
           if (!currentMatch) return;
@@ -83,7 +72,6 @@ export const useMatchCenter = create<MatchStore>()(
           return response;
         } catch (e) {
           console.error("Failed to sync update to cloud, kept local version:", e);
-          // We don't throw here to prevent UI crashes, the local state is already updated
         }
       },
 
@@ -126,17 +114,14 @@ export const useMatchCenter = create<MatchStore>()(
           }));
         } catch (e: any) {
           console.error("Failed to finalize match on cloud, but preserved locally:", e);
-          
-          // CRITICAL: Even if cloud fails, save locally so the user doesn't lose data!
           set((state) => ({
             matches: state.matches.map(m => m.id === id ? { 
               ...m, 
               ...matchData, 
               status: 'completed' as MatchStatus,
-              is_local_only_override: true // Mark as needing manual sync later
+              is_local_only_override: true 
             } : m)
           }));
-
           throw new Error(`Sync Failed: Your data is saved LOCALLY but couldn't reach the server. (Error: ${e.message})`);
         }
       },
@@ -157,15 +142,10 @@ export const useMatchCenter = create<MatchStore>()(
             const existingIdx = merged.findIndex(m => m.id === dbMatch.id);
             if (existingIdx !== -1) {
               const local = merged[existingIdx];
-              // RESILIENT MERGE:
-              // If local match is 'completed' but DB is 'upcoming'/'live', 
-              // it means a sync failed. KEEP the local detailed scorecard!
               if (local.status === 'completed' && dbMatch.status !== 'completed') {
                 console.warn(`[Sync] Conflict detected for ${dbMatch.id}. Prioritizing local COMPLETED state.`);
-                // We keep local, but maybe sync other fields if needed
               } else {
-                merged[existingIdx] = { ...dbMatch, ...local, status: dbMatch.status }; // Cloud status usually wins unless we are completed locally
-                // Actually, if DB is completed, take DB version as source of truth
+                merged[existingIdx] = { ...dbMatch, ...local, status: dbMatch.status }; 
                 if (dbMatch.status === 'completed') {
                    merged[existingIdx] = dbMatch;
                 }
@@ -178,14 +158,11 @@ export const useMatchCenter = create<MatchStore>()(
           set({ matches: merged, _hasHydrated: true });
         } catch (e: any) {
           console.error("Cloud sync failed:", e);
-          // If sync fails, we keep the local state (offline mode)
         }
       },
 
       getSortedMatches: () => {
         const { matches } = get();
-        // Automatic cleanup filter for Ghost/Dummy entries
-        // Automatic cleanup filter for Ghost/Synthetic entries
         const cleanMatches = matches.filter(m => 
           !m.is_test && 
           m.id !== '00000000-0000-0000-0000-000000000001'
@@ -201,16 +178,15 @@ export const useMatchCenter = create<MatchStore>()(
           const timeB = new Date(b.date).getTime();
 
           if (a.status === 'upcoming') {
-            return timeA - timeB; // Earliest first
+            return timeA - timeB; 
           } else {
-            return timeB - timeA; // Most recent first
+            return timeB - timeA; 
           }
         });
       },
 
       purgeTestData: async () => {
         try {
-          // Include matches marked is_test OR matches with Sandbox XI as opponent
           const testMatches = get().matches.filter(m => 
             m.is_test || 
             m.opponentName === 'Sandbox XI' || 
@@ -222,12 +198,8 @@ export const useMatchCenter = create<MatchStore>()(
           }
 
           console.log(`[Admin] Purging ${testMatches.length} test/sandbox matches...`);
-          
           for (const m of testMatches) {
-            // Delete stats first (ledger entries)
             await api.deleteMatchStats(m.id);
-            
-            // Delete match
             await api.deleteMatch(m.id);
           }
 
@@ -250,4 +222,3 @@ export const useMatchCenter = create<MatchStore>()(
     }
   )
 );
-

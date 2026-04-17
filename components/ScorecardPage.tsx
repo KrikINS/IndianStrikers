@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useMatchCenter } from './matchCenterStore';
+import { useMatchCenter } from '../store/matchStore';
 import { useMasterData } from './masterDataStore';
 import { usePlayerStore } from '../store/playerStore';
 import { FullScorecard } from './FullScorecard';
