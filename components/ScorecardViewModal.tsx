@@ -686,89 +686,72 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
             className="fixed inset-0 z-[150] bg-slate-950 flex flex-col overflow-hidden"
         >
             {/* Frozen Header - Premium Aesthetic */}
-            <div className="sticky top-0 z-[160] bg-slate-950/80 backdrop-blur-xl border-b border-white/10 p-4 shrink-0">
-                <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="sticky top-0 z-[160] bg-slate-950/90 backdrop-blur-xl border-b border-white/10 p-2 sm:p-4 shrink-0">
+                <div className="max-w-7xl mx-auto flex items-center justify-between gap-1 sm:gap-4">
                     {/* Left: Home Team */}
-                    <div className="flex items-center gap-3 flex-1 justify-end">
-                        <div className="text-right hidden sm:block">
-                            <h2 className="text-sm font-black text-white graduate tracking-tight">INDIAN STRIKERS</h2>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase">Home Team</p>
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end">
+                        <div className="text-right hidden md:block">
+                            <h2 className="text-xs sm:text-sm font-black text-white graduate tracking-tight">INDIAN STRIKERS</h2>
+                            <p className="text-[8px] sm:text-[10px] font-bold text-slate-500 uppercase">Home</p>
                         </div>
-                        <div className="w-12 h-12 flex items-center justify-center">
+                        <div className="w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center shrink-0">
                             <img src="/INS%20LOGO.PNG" className="max-h-full max-w-full object-contain" alt="Indian Strikers" />
                         </div>
                     </div>
 
                     {/* Center: Score & Badge */}
-                    <div className="flex flex-col items-center gap-1 min-w-[140px]">
-                        <div className="bg-sky-500/10 text-sky-400 text-[8px] font-black uppercase tracking-[0.3em] px-3 py-1 rounded-full border border-sky-500/20 mb-1 animate-pulse">
+                    <div className="flex flex-col items-center gap-0.5 sm:gap-1 min-w-[80px] sm:min-w-[140px]">
+                        <div className="hidden xs:block bg-sky-500/10 text-sky-400 text-[6px] sm:text-[8px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-sky-500/20 mb-0.5 animate-pulse whitespace-nowrap">
                             LEAGUE MATCH
                         </div>
-                        <div className="flex items-center gap-4">
-                            <span className="text-3xl font-black text-white italic graduate">{scorecard?.innings1?.totalRuns || 0}-{scorecard?.innings1?.totalWickets || 0}</span>
-                            <span className="text-slate-700 font-black italic">VS</span>
-                            <span className="text-3xl font-black text-white italic graduate">{scorecard?.innings2?.totalRuns || 0}-{scorecard?.innings2?.totalWickets || 0}</span>
+                        <div className="flex items-center gap-1.5 sm:gap-4">
+                            <span className="text-lg sm:text-3xl font-black text-white italic graduate">{scorecard?.innings1?.totalRuns || 0}-{scorecard?.innings1?.totalWickets || 0}</span>
+                            <span className="text-[10px] sm:text-base text-slate-700 font-black italic">VS</span>
+                            <span className="text-lg sm:text-3xl font-black text-white italic graduate">{scorecard?.innings2?.totalRuns || 0}-{scorecard?.innings2?.totalWickets || 0}</span>
                         </div>
-                        <div className="text-white font-black text-[12.5px] uppercase tracking-widest mt-1 italic flex items-center gap-2">
-                            <ExternalLink size={16} className="text-sky-500" />
-                            {new Date(match.date).getFullYear()} {match.tournament}
-                        </div>
-                        {((match as any).resultNote || (match as any).resultSummary) && (
-                            <div className={`mt-2 ${
-                                ((match as any).resultNote || (match as any).resultSummary)?.toLowerCase().includes('won') 
-                                    ? 'bg-emerald-900/60 border-emerald-500/30 text-white' 
-                                    : ((match as any).resultNote || (match as any).resultSummary)?.toLowerCase().includes('lost')
-                                        ? 'bg-red-900/60 border-red-500/30 text-white'
-                                        : 'bg-slate-900/30 border-slate-800/20 text-white'
-                            } text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded flex items-center gap-2 border`}>
-                                <Trophy size={14} className="fill-current/20" />
-                                {(match as any).resultNote || (match as any).resultSummary}
-                            </div>
-                        )}
                     </div>
 
                     {/* Right: Away Team */}
-                    <div className="flex items-center gap-3 flex-1">
-                        <div className="w-12 h-12 flex items-center justify-center">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                        <div className="w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center shrink-0">
                             {opponent?.logoUrl ? (
                                 <img src={opponent.logoUrl} className="max-h-full max-w-full object-contain" alt={opponentName} />
                             ) : (
-                                <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                                    <Activity className="text-blue-500" size={24} />
+                                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                                    <Activity className="text-blue-500" size={16} />
                                 </div>
                             )}
                         </div>
-                        <div className="hidden sm:block">
-                            <h2 className="text-sm font-black text-white graduate tracking-tight">{opponentName.toUpperCase()}</h2>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase">Opponent</p>
+                        <div className="hidden md:block">
+                            <h2 className="text-xs sm:text-sm font-black text-white graduate tracking-tight">{opponentName.toUpperCase()}</h2>
+                            <p className="text-[8px] sm:text-[10px] font-bold text-slate-500 uppercase">Opponent</p>
                         </div>
                     </div>
 
                     {/* Exit & Export */}
-                    <div className="flex items-center gap-2 pl-4 border-l border-white/10">
+                    <div className="flex items-center gap-1 sm:gap-2 pl-2 sm:pl-4 border-l border-white/10">
                         <button
                             onClick={shareScorecard}
                             disabled={isExporting}
-                            className="p-2 text-slate-400 hover:text-emerald-400 transition-all hover:bg-white/5 rounded-lg active:scale-95"
-                            title="Share on Social Media"
+                            className="p-1.5 sm:p-2 text-slate-400 hover:text-emerald-400 transition-all hover:bg-white/5 rounded-lg active:scale-95"
+                            title="Share"
                         >
-                            <Share2 size={20} />
+                            <Share2 size={18} className="sm:w-5 sm:h-5" />
                         </button>
                         <button
                             onClick={downloadAsImage}
                             disabled={isExporting}
-                            className="p-2 text-slate-400 hover:text-sky-400 transition-all hover:bg-white/5 rounded-lg active:scale-95"
-                            title="Download HD Image"
+                            className="p-1.5 sm:p-2 text-slate-400 hover:text-sky-400 transition-all hover:bg-white/5 rounded-lg active:scale-95"
+                            title="Download"
                         >
-                            <ImageIcon size={20} />
+                            <ImageIcon size={18} className="sm:w-5 sm:h-5" />
                         </button>
-                        {/* Close Button */}
                         <button
                             onClick={onClose}
-                            aria-label="Close scorecard"
-                            className="p-2 text-slate-400 hover:text-white transition-all hover:bg-white/5 rounded-lg active:scale-95"
+                            aria-label="Close"
+                            className="p-1.5 sm:p-2 text-slate-400 hover:text-white transition-all hover:bg-white/5 rounded-lg active:scale-95 ml-1"
                         >
-                            <X size={24} />
+                            <X size={22} className="sm:w-6 sm:h-6" />
                         </button>
                     </div>
                 </div>
