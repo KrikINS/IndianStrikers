@@ -307,8 +307,117 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
         return totalWides + totalNBs + Number(ext.legByes || 0) + Number(ext.byes || 0);
     };
 
-    const shareScorecard = async () => { /* Logic omitted for brevity, should be restored if needed */ };
-    const downloadAsImage = async () => { /* Logic omitted for brevity, should be restored if needed */ };
+    const shareScorecard = async () => {
+        setIsExporting(true);
+        try {
+            const ref = modalContentRef;
+            if (ref.current) {
+                const canvas = await html2canvas(ref.current, {
+                    scale: 2,
+                    backgroundColor: '#020617',
+                    useCORS: true,
+                    logging: false,
+                    onclone: (clonedDoc) => {
+                        const clonedTarget = clonedDoc.getElementById('scorecard-capture-target');
+                        if (clonedTarget) {
+                            clonedTarget.style.height = 'auto';
+                            clonedTarget.style.width = '1080px'; 
+                            clonedTarget.style.overflow = 'visible';
+                            const scrollable = clonedTarget.querySelector('.overflow-y-auto');
+                            if (scrollable) {
+                                (scrollable as HTMLElement).style.height = 'auto';
+                                (scrollable as HTMLElement).style.overflow = 'visible';
+                            }
+                        }
+                    }
+                });
+                canvas.toBlob(async (blob) => {
+                    if (blob) {
+                        const file = new File([blob], `Scorecard_${match.opponentName || 'Match'}.png`, { type: 'image/png' });
+                        const shareData = {
+                            files: [file],
+                            title: `Match Scorecard: Indian Strikers vs ${match.opponentName}`,
+                            text: `Detailed scorecard for our match against ${match.opponentName}. #IndianStrikers #Cricket`,
+                            url: `${window.location.origin}/#/scorecard/${match.id}`
+                        };
+                        if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                            try {
+                                await navigator.share(shareData);
+                            } catch (e) {
+                                await navigator.share({
+                                    title: shareData.title,
+                                    text: shareData.text,
+                                    url: shareData.url
+                                });
+                            }
+                        } else if (navigator.share) {
+                             await navigator.share({
+                                 title: shareData.title,
+                                 text: shareData.text,
+                                 url: shareData.url
+                             });
+                        } else {
+                            downloadAsImage();
+                        }
+                    }
+                }, 'image/png', 0.9);
+            }
+        } catch (err) {
+            console.error('Failed to share scorecard:', err);
+            downloadAsImage();
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const downloadAsImage = async () => {
+        setIsExporting(true);
+        try {
+            const ref = modalContentRef; 
+            if (ref.current) {
+                const canvas = await html2canvas(ref.current, {
+                    scale: 3,
+                    backgroundColor: '#020617',
+                    useCORS: true,
+                    logging: false,
+                    scrollY: -window.scrollY,
+                    onclone: (clonedDoc) => {
+                        const clonedTarget = clonedDoc.getElementById('scorecard-capture-target');
+                        if (clonedTarget) {
+                            clonedTarget.style.height = 'auto';
+                            clonedTarget.style.width = '1200px';
+                            clonedTarget.style.overflow = 'visible';
+                            clonedTarget.style.position = 'relative';
+                            const scrollable = clonedTarget.querySelector('.overflow-y-auto');
+                            if (scrollable) {
+                                (scrollable as HTMLElement).style.height = 'auto';
+                                (scrollable as HTMLElement).style.overflow = 'visible';
+                            }
+                        }
+                    }
+                });
+                const rawName = match.opponentName || 'Match';
+                const safeName = rawName.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+                const fileName = `Full_Scorecard_${safeName}.png`.replace(/_+/g, '_');
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }
+                }, 'image/png', 1.0);
+            }
+        } catch (err) {
+            console.error('Failed to export image:', err);
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     const renderInningsContent = (inn: 1 | 2, ref: React.RefObject<HTMLDivElement | null>) => {
         const data = inn === 1 ? scorecard.innings1 : scorecard.innings2;
@@ -383,8 +492,33 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                         <img src="/INS%20LOGO.PNG" className="h-10 w-10 object-contain" alt="Logo" />
                         <h2 className="text-white font-black graduate italic text-lg hidden sm:block">INDIAN STRIKERS</h2>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <button onClick={onClose} className="p-2 text-slate-400 hover:text-white"><X size={24} /></button>
+                    <div className="flex items-center gap-1 sm:gap-2 pl-2 sm:pl-4 border-l border-white/10">
+                        <button
+                            onClick={shareScorecard}
+                            disabled={isExporting}
+                            title="Share Scorecard"
+                            aria-label="Share Scorecard"
+                            className="p-1.5 sm:p-2 text-slate-400 hover:text-emerald-400 transition-all hover:bg-white/5 rounded-lg"
+                        >
+                            <Share2 size={18} className="sm:w-5 sm:h-5" />
+                        </button>
+                        <button
+                            onClick={downloadAsImage}
+                            disabled={isExporting}
+                            title="Download Scorecard Image"
+                            aria-label="Download Scorecard Image"
+                            className="p-1.5 sm:p-2 text-slate-400 hover:text-sky-400 transition-all hover:bg-white/5 rounded-lg"
+                        >
+                            <ImageIcon size={18} className="sm:w-5 sm:h-5" />
+                        </button>
+                        <button 
+                            onClick={onClose} 
+                            title="Close Scorecard"
+                            aria-label="Close Scorecard"
+                            className="p-2 text-slate-400 hover:text-white"
+                        >
+                            <X size={24} />
+                        </button>
                     </div>
                 </div>
                 <div className="max-w-7xl mx-auto flex gap-6 mt-4 border-b border-white/5">
