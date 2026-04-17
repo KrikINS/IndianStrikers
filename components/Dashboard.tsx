@@ -240,8 +240,6 @@ function WeeklyPerformerCarousel({
   );
 }
 
-}
-
 // --- Match Ticker (Infinite Marquee Strip) ---
 function MatchCarousel({ matches, opponents, teamLogo }: { matches: ScheduledMatch[], opponents: any[], teamLogo: string }) {
   const [isPaused, setIsPaused] = useState(false);
@@ -956,23 +954,6 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           </div>
         </div>
       </div>
-
-      {/* New Match Performance Carousel Section */}
-      <AnimatePresence>
-        {carouselMatches.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <Activity className="text-sky-400" size={18} />
-              <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">Match Performances</h2>
-            </div>
-            <MatchCarousel matches={carouselMatches} opponents={opponents} teamLogo={teamLogo || ''} />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Global Persistence/Wait State */}
       {isGenerating && (
