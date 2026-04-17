@@ -1077,7 +1077,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }, [store.toss]);
 
   // Get metadata from MatchCenterStore
-  const { matches, syncWithCloud, updateMatchStatus } = useMatchCenter();
+  const { matches, syncWithCloud, updateMatchStatus, finalizeMatch } = useMatchCenter();
   const { grounds, syncMasterData } = useMasterData();
   const activeMatchId = id || propMatchId || store.matchId;
 
@@ -1926,7 +1926,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         }
 
         // Success! Force MatchCenter to update so public view is in sync
-        useMatchCenter.getState().syncWithCloud().catch(() => {});
+        syncWithCloud().catch(() => {});
         
       } catch (err) {
         console.error(`[Sync] Ball sync failed (Attempt ${retryCount + 1}):`, err);
@@ -2224,9 +2224,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         updatePayload.resultSummary = resultMessage;
       }
 
-      const matchCenter = useMatchCenter.getState();
       if (updatePayload.status === 'completed') {
-        await matchCenter.finalizeMatch(activeMatchId, updatePayload, playerStatsUpdate);
+        await finalizeMatch(activeMatchId, updatePayload, playerStatsUpdate);
       } else {
         await updateMatchInStore(activeMatchId, updatePayload);
       }

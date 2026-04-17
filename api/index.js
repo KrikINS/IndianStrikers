@@ -96,6 +96,31 @@ async function ensurePlayersExist(ids) {
   }
 }
 
+/**
+ * Synchronizes an opponent team's roster with the global players registry.
+ * Ensures every player in the JSONB roster exists in the flat 'players' table.
+ */
+async function syncPlayersFromOpponent(players) {
+  if (!Array.isArray(players) || players.length === 0) return;
+  
+  try {
+    console.log(`[Roster Sync] Registering ${players.length} players to global registry...`);
+    for (const player of players) {
+      if (!player.id || !player.name) continue;
+      
+      await db.query(
+        `INSERT INTO players (id, name, is_active, status) 
+         VALUES ($1, $2, false, 'inactive') 
+         ON CONFLICT (id) DO UPDATE SET 
+            name = EXCLUDED.name`,
+        [player.id, player.name]
+      );
+    }
+  } catch (err) {
+    console.error('[Roster Sync] Error during player registration:', err.message);
+  }
+}
+
 // AUTH
 app.post('/api/login', async (req, res) => {
   console.log('[Login Attempt] Body:', req.body);
@@ -698,6 +723,12 @@ app.post('/api/opponents', authGuard(['admin']), async (req, res) => {
     [name, rank, logo_url, strength || '', weakness || '', JSON.stringify(players || []), color || 'bg-slate-500']
   );
   if (error) return res.status(400).json({ error: error.message });
+
+  // Architect: Sync players immediately so database is 'aware' of them
+  if (players && players.length > 0) {
+    syncPlayersFromOpponent(players);
+  }
+
   res.json(data);
 });
 app.put('/api/opponents/:id', authGuard(['admin', 'member']), async (req, res) => {
