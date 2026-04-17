@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
-import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
 import * as api from '../services/storageService';
 import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUsers } from '../services/storageService';
 import { usePlayerStore } from '../store/playerStore';
@@ -67,7 +67,7 @@ const PasswordConfirmModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean;
 };
 
 const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
-  const { players, loading, addPlayer: onAddPlayer, updatePlayer: onUpdatePlayer, deletePlayer: onDeletePlayer } = usePlayerStore();
+  const { players, loading, fetchPlayers, addPlayer: onAddPlayer, updatePlayer: onUpdatePlayer, deletePlayer: onDeletePlayer } = usePlayerStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false); // New State
@@ -84,6 +84,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const [isStatsExpanded, setIsStatsExpanded] = useState(false);
   const [isStatsLoading, setIsStatsLoading] = useState(false);
   const [performerData, setPerformerData] = useState<any[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [users, setUsers] = useState<AppUser[]>([]); // New State for user linking
   const [searchParams, setSearchParams] = useSearchParams();
@@ -621,6 +622,24 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         </div>
         
         <div className="flex gap-2">
+          <button 
+            onClick={async () => {
+              setIsSyncing(true);
+              try {
+                await fetchPlayers();
+                const perf = await api.getTournamentPerformers();
+                setPerformerData(perf?.performers || []);
+              } finally {
+                setTimeout(() => setIsSyncing(false), 800);
+              }
+            }}
+            disabled={isSyncing}
+            className="px-4 py-2.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:bg-slate-200 flex items-center gap-2"
+          >
+            <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+            {isSyncing ? 'Syncing...' : 'Sync'}
+          </button>
+
           {userRole === 'admin' && (
             <button
               onClick={handleExportExcel}
