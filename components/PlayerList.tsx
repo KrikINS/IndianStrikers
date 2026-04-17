@@ -533,14 +533,24 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           <span className="font-medium">{player.role}</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="grid grid-cols-3 gap-2 text-xs">
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-            <span className="text-slate-400 block uppercase text-[10px]">Runs</span>
-            <span className="font-bold text-slate-700 text-sm">{player.runsScored}</span>
+            <span className="text-slate-400 block uppercase text-[10px]">MTCH</span>
+            <span className="font-bold text-slate-700 text-sm">
+              {player.battingStats?.matches || player.matchesPlayed || 0}
+            </span>
           </div>
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-            <span className="text-slate-400 block uppercase text-[10px]">Wickets</span>
-            <span className="font-bold text-slate-700 text-sm">{player.wicketsTaken}</span>
+            <span className="text-slate-400 block uppercase text-[10px]">Runs</span>
+            <span className="font-bold text-slate-700 text-sm">
+              {player.battingStats?.runs || player.runsScored || 0}
+            </span>
+          </div>
+          <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span className="text-slate-400 block uppercase text-[10px]">Wkts</span>
+            <span className="font-bold text-slate-700 text-sm">
+              {player.bowlingStats?.wickets || player.wicketsTaken || 0}
+            </span>
           </div>
         </div>
       </div>

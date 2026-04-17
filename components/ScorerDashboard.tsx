@@ -912,7 +912,7 @@ import {
 import MatchSummaryModal from './MatchSummaryModal';
 
 const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ matchId: propMatchId, teamLogo }) => {
-  const { players } = usePlayerStore();
+  const { players, fetchPlayers } = usePlayerStore();
   const store = useCricketScorer();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -2129,6 +2129,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       }
 
       await updateMatchInStore(activeMatchId, updatePayload);
+      if (updatePayload.status === 'completed') {
+        fetchPlayers(); // Sync global stats after match completion
+      }
       setSyncStatus('success');
 
       setTimeout(() => {
