@@ -187,14 +187,38 @@ const PartnershipSub = styled.div`
   font-weight: 600;
   color: #6c757d;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  
-  span {
-    color: #495057;
-    font-weight: 700;
-  }
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+  letter-spacing: 0.5px;
 `;
+
+/**
+ * Dynamic Sentence Builder for Commentary
+ * Generates descriptive long-form commentary based on match events and field zones
+ */
+const generateDynamicCommentary = (player: string, runs: number, zone?: string, isWicket?: boolean): string => {
+  const z = zone || "the field";
+  if (isWicket) {
+    return `Disaster for the Strikers! ${player} tries to go over ${z} but finds the fielder instead.`;
+  }
+  
+  switch (runs) {
+    case 6:
+      return `That is massive! ${player} has cleared the ropes at ${z} with a towering hit.`;
+    case 4:
+      return `${player} finds the fence! A superb shot hit with great timing towards ${z}.`;
+    case 1:
+      return `A gentle push into ${z} allows ${player} to rotate the strike comfortably.`;
+    case 2:
+      return `Nicely placed by ${player}, finding the gap in ${z} for a well-run brace.`;
+    case 3:
+      return `Excellent running! ${player} pierces ${z} and the batters scamper through for three.`;
+    case 0:
+      return `Well fielded! ${player} hits it towards ${z} but can't find the gap.`;
+    default:
+      return `${player} scores ${runs} run(s) towards ${z}.`;
+  }
+};
 
 const ParticipantCard = styled.div<{ $active?: boolean }>`
   padding: 2px 10px;
@@ -928,7 +952,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
   const [showMatchSummaryModal, setShowMatchSummaryModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-
+  const lastSplashRef = useRef<string | null>(null);
   const [allOpponents, setAllOpponents] = useState<any[]>([]);
   const [commentaryTemplates, setCommentaryTemplates] = useState<CommentaryTemplate[]>([]);
   const [nextCommentarySuggestions, setNextCommentarySuggestions] = useState<Record<CommentaryEventType, string[]>>({
@@ -1854,6 +1878,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         ball_number: ((innings.totalBalls - (isLegal ? 1 : 0)) % 6) + 1,
         is_legal_ball: isLegal,
         shot_zone: zone,
+        hit_zone: zone, // Added for granular schema support
         runs_scored: score,
         extras_runs: type === 'wide' || type === 'no-ball' ? 1 : 0,
         extras_type: type === 'legal' ? null : type,
@@ -1861,12 +1886,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         innings_number: store.currentInnings,
         wicket_type: wicketType,
         is_penalty: false,
-        commentary: commentary || ''
+        commentary: commentary || '',
+        generated_commentary: commentary || '' // Added for granular metadata storage
       };
 
       if (!isRetry) {
         payload.shot_zone = zone;
-        payload.is_not_out = !isWicket;
+        payload.hit_zone = zone;
+        payload.generated_commentary = commentary || '';
         payload.fifty_notified = store.innings1?.battingStats[store.strikerId || '']?.fifty_notified ?? false;
         payload.tournament_id = matchMeta?.tournamentId || null;
       }
@@ -1889,6 +1916,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           const errorText = await response.text();
           throw new Error(`Sync Error (${response.status}): ${errorText}`);
         }
+
+        // FORCE MatchCenter update after successful ball sync
+        useMatchCenter.getState().syncWithCloud().catch(() => {});
+
       } catch (err) {
         console.error("[Sync] Ball-by-ball sync failed:", err);
       }
@@ -1911,18 +1942,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
     if (isWicket) {
       const victimId = outPlayerId || sId;
-      const victimName = getPlayerName(victimId);
       const bStat = innings.battingStats[victimId];
-
-      if (bStat && bStat.runs === 0) {
-        if (bStat.balls === 1) {
-          milestoneRef.current?.trigger({ type: 'GOLDEN_DUCK', playerName: victimName });
-        } else {
-          milestoneRef.current?.trigger({ type: 'DUCK', playerName: victimName });
-        }
-      } else {
-        milestoneRef.current?.trigger({ type: 'WICKET', playerName: victimName });
-      }
+      // Note: WICKET splash moved to triggerWicketSplash to avoid double appearance.
+      // Keeping Hat-trick and multi-wicket logic here as they fire on ball record.
 
       const bowlerBalls = (innings.history || []).filter(b => b.bowlerId === bId && b.isLegal);
       if (bowlerBalls.length >= 3) {
@@ -1994,18 +2016,41 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     else if (score === 4 && subType === 'bat') shufflePreview('FOUR');
     else if (score === 0 && subType === 'bat') shufflePreview('DOT');
 
-    const isWagonWorthy = (score > 0) || (isWicket && !['Bowled', 'LBW', 'Retired Hurt', 'Retired Out', 'Hit Wicket'].includes(wicketType));
+    const worthWickets = ['Caught', 'Stumped', 'Run Out'];
+    const isWagonWorthy = (score > 0) || (isWicket && worthWickets.some(w => String(wicketType || '').includes(w)));
 
     if (store.useWagonWheel && subType === 'bat' && isWagonWorthy) {
       setShowWagonWheelModal({ score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, commentary: comm });
     } else {
-      handleRecord(score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, undefined, comm);
+      // For non-wagon wheel balls, generate a basic dynamic commentary if generic one is missing
+      const strikerN = getPlayerName(store.strikerId);
+      const finalComm = comm || generateDynamicCommentary(strikerN, score, undefined, isWicket);
+      handleRecord(score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, undefined, finalComm);
     }
   };
 
   const triggerWicketSplash = (type: string) => {
-    const victimName = getPlayerName(runOutInvolved?.victimId || store.strikerId);
-    milestoneRef.current?.trigger({ type: 'WICKET', playerName: victimName });
+    const vId = runOutInvolved?.victimId || store.strikerId;
+    if (!vId) return;
+
+    // Guard against multiple splashes for the same wicket event
+    const splashId = `${vId}_${currentInnings?.totalBalls || 0}`;
+    if (lastSplashRef.current === splashId) return;
+    lastSplashRef.current = splashId;
+
+    const vName = getPlayerName(vId);
+    const bStat = currentInnings?.battingStats[vId];
+
+    // Detect duck/golden duck before ball is recorded (balls will be 0 for golden duck at this point)
+    if (bStat && bStat.runs === 0) {
+      if (bStat.balls === 0) {
+        milestoneRef.current?.trigger({ type: 'GOLDEN_DUCK', playerName: vName });
+      } else {
+        milestoneRef.current?.trigger({ type: 'DUCK', playerName: vName });
+      }
+    } else {
+      milestoneRef.current?.trigger({ type: 'WICKET', playerName: vName });
+    }
 
     if (isBattingFinishing) {
       setTimeout(() => setShowInningsReview(true), 1500);
@@ -3801,7 +3846,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         key={zone.name}
                         onClick={() => {
                           const p = showWagonWheelModal;
-                          handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name, p.commentary);
+                          const strikerN = getPlayerName(store.strikerId);
+                          const dynamicComm = generateDynamicCommentary(strikerN, p.score, zone.name, p.isWicket);
+                          handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name, dynamicComm);
                           setShowWagonWheelModal(null);
                         }}
                         style={{

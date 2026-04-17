@@ -880,13 +880,13 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                                                 ))}
                                                             </div>
                                                         </div>
-
-                                                        <div className="bg-slate-900/40 border-x border-b border-slate-800 rounded-b-2xl overflow-hidden divide-y divide-slate-800/50">
+                <div className="bg-slate-900/40 border-x border-b border-slate-800 rounded-b-2xl overflow-hidden divide-y divide-slate-800/50">
                                                             {ballsInOver.sort((a,b) => (b.ballNumber || 0) - (a.ballNumber || 0)).map((ball, bIdx) => {
                                                                 const bName = resolvePlayerName(undefined, ball.bowlerId, innNum === 1 ? 'opponent' : 'home');
                                                                 const sName = resolvePlayerName(undefined, ball.strikerId, innNum === 1 ? 'home' : 'opponent');
                                                                 
-                                                                let resultText = ball.isWicket ? `OUT! (${ball.wicketType || 'Wicket'})` : 
+                                                                let resultText = (ball.generatedCommentary || ball.generated_commentary) ? (ball.generatedCommentary || ball.generated_commentary) : 
+                                                                              ball.isWicket ? `OUT! (${ball.wicketType || 'Wicket'})` : 
                                                                               ball.runs === 6 ? 'SIX - Deep into the stands!' : 
                                                                               ball.runs === 4 ? 'FOUR - Elegant boundary!' : 
                                                                               ball.type === 'wide' ? 'WIDE' : 
@@ -897,12 +897,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                                                 const isWicket = ball.isWicket;
                                                                 
                                                                 // To detect milestones, we need cumulative runs up to THIS ball.
-                                                                // For efficiency, we find the batter's total in the current context
-                                                                const batterFinalStats = inn.batting.find((b: any) => b.playerId === ball.strikerId);
-                                                                // Simplified: If batter finally has 50+, and this over contains their 50th run
-                                                                // (In a real app, we'd slice balls chronologically, but since this is for display, we check if this specific ball was a boundary/run that crossed the threshold)
-                                                                // We'll use a local state to ensure it only renders once if we traverse. 
-                                                                // For this UI-only view, we check ball.milestoneReached which we can simulate or derive.
+                                                                const hitZone = ball.hitZone || ball.hit_zone;
                                                                 
                                                                 return (
                                                                     <React.Fragment key={bIdx}>
@@ -920,8 +915,11 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                                                                     <span className="text-[10px] font-black text-sky-400 uppercase tracking-tighter">{bName}</span>
                                                                                     <ChevronRight size={10} className="text-slate-600" />
                                                                                     <span className="text-[10px] font-black text-white uppercase tracking-tighter">{sName}</span>
+                                                                                    {hitZone && (
+                                                                                        <span className="ml-auto bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest">{hitZone}</span>
+                                                                                    )}
                                                                                 </div>
-                                                                                <div className={`text-sm font-bold tracking-tight ${
+                                                                                <div className={`text-sm font-bold tracking-tight leading-relaxed ${
                                                                                     ball.isWicket ? 'text-red-500' : (ball.runs || 0) >= 4 ? 'text-emerald-400' : 'text-slate-200'
                                                                                 }`}>
                                                                                     {resultText}

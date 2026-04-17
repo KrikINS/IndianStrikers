@@ -66,7 +66,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
 
   useEffect(() => {
     if (isAppLoading) {
-      const fullText = "Initializing Strikers Pulse...";
+      const fullText = "Legacy of Few Kirukkans";
       let currentIndex = 0;
       setProgress(0);
 
@@ -212,9 +212,9 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
               <img src="/INS%20LOGO.PNG" className="w-24 h-24 object-contain" alt="INS" />
             )}
           </div>
-          <h2 className="text-3xl md:text-5xl text-slate-300 font-cursive tracking-wide min-h-[60px]">
+          <h2 className="text-3xl md:text-5xl text-blue-100 font-cursive tracking-wide min-h-[60px] drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
             {loadingText}
-            <span className="animate-blink">|</span>
+            <span className="animate-blink text-blue-400">|</span>
           </h2>
 
           {/* Progress Bar */}
@@ -227,7 +227,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
             </div>
           </div>
           <div className="mt-2 flex items-center gap-2 text-slate-500 text-xs font-mono tracking-widest uppercase">
-            <span>Loading Assets</span>
+            <span>SYNCING LEGACY</span>
             <span className="text-blue-400">{progress}%</span>
           </div>
         </div>
