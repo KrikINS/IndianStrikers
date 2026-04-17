@@ -621,8 +621,8 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col truncate mr-2">
                         <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate">{p.name}</span>
-                        {p.battingStats?.average > 0 && (
-                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">AVG: {p.battingStats.average}</span>
+                        {(p.battingStats?.average ?? 0) > 0 && (
+                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">AVG: {p.battingStats?.average}</span>
                         )}
                       </div>
                       <span className="text-[11px] font-black text-blue-600 font-mono">{p.battingStats?.runs || p.runsScored || 0}</span>
@@ -701,8 +701,8 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col truncate mr-2">
                         <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate">{p.name}</span>
-                        {p.bowlingStats?.economy > 0 && (
-                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">ECON: {p.bowlingStats.economy}</span>
+                        {(p.bowlingStats?.economy ?? 0) > 0 && (
+                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">ECON: {p.bowlingStats?.economy}</span>
                         )}
                       </div>
                       <span className="text-[11px] font-black text-blue-600 font-mono">{p.bowlingStats?.wickets || p.wicketsTaken || 0}</span>
