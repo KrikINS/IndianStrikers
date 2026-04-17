@@ -92,6 +92,7 @@ export interface MatchState {
     isWaitingForBowler: boolean;
     wagonWheelQuickSave: boolean;
     pendingMilestone: { type: 'fifty' | 'hundred', player: string } | null;
+    pendingIntroduction: string | null;
 }
 
 interface ScorerStore extends MatchState {
@@ -125,7 +126,7 @@ interface ScorerStore extends MatchState {
     recordPenalty: (team: 'batting' | 'bowling', runs: number) => void;
     undoLastBall: () => void;
     switchStriker: () => void;
-    setNewBowler: (id: string) => void;
+    setNewBowler: (id: string, name?: string) => void;
     changeBowler: (id: string) => void;
     retireBatter: (id: string) => void;
     declareInnings: () => void;
@@ -164,7 +165,8 @@ const INITIAL_STATE: MatchState = {
     wagonWheelQuickSave: false,
     setMilestoneNotified: () => {},
     isWaitingForBowler: false,
-    pendingMilestone: null
+    pendingMilestone: null,
+    pendingIntroduction: null
 };
 
 export const useCricketScorer = create<ScorerStore>()(
@@ -451,6 +453,12 @@ export const useCricketScorer = create<ScorerStore>()(
                     })(),
                     timestamp: new Date().toISOString()
                 };
+
+                // Inject pending introduction if present
+                if (state.pendingIntroduction) {
+                    ballRecord.commentary = `${state.pendingIntroduction}\n${ballRecord.commentary || ''}`.trim();
+                }
+
                 nextInnings.history = [...(nextInnings.history || []), ballRecord];
 
                 // Match Complete check
@@ -472,6 +480,7 @@ export const useCricketScorer = create<ScorerStore>()(
                     isFreeHit: isNoBall || (state.isFreeHit && (isWide || isNoBall)),
                     isFinished: finished,
                     pendingMilestone: pendingMilestone,
+                    pendingIntroduction: null, // Clear after use
                     historyStack: [...state.historyStack, prevState].slice(-50)
                 });
             },
@@ -576,22 +585,26 @@ export const useCricketScorer = create<ScorerStore>()(
                 });
             },
 
-            setNewBowler: (id) => {
+            setNewBowler: (id, name) => {
                 const state = get();
                 const currentKey = state.currentInnings === 1 ? 'innings1' : 'innings2';
                 const innings = state[currentKey];
                 
+                let bName = name || 'Bowler';
                 if (innings && !innings.bowlingStats[id]) {
                     const nextInnings = JSON.parse(JSON.stringify(innings));
-                    nextInnings.bowlingStats[id] = { id, name: 'Unknown', overs: 0, maidens: 0, runs: 0, wickets: 0, index: Object.keys(nextInnings.bowlingStats).length };
+                    nextInnings.bowlingStats[id] = { id, name: bName, overs: 0, maidens: 0, runs: 0, wickets: 0, index: Object.keys(nextInnings.bowlingStats).length };
                     set({ [currentKey]: nextInnings });
+                } else if (innings && innings.bowlingStats[id]) {
+                    bName = innings.bowlingStats[id].name;
                 }
 
                 set({
                     currentBowlerId: id,
                     strikerId: state.nonStrikerId,
                     nonStrikerId: state.strikerId,
-                    isWaitingForBowler: false
+                    isWaitingForBowler: false,
+                    pendingIntroduction: `${bName}, comes into attack.`
                 });
             },
             changeBowler: (id) => {

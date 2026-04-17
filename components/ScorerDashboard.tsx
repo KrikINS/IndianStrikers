@@ -2742,7 +2742,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         <PlayerCard
                           key={p.id}
                           onClick={() => {
-                            store.setNewBowler(p.id);
+                            store.setNewBowler(p.id, p.name);
                             setShowBowlerModal(false);
                             setIsOverComplete(false);
                           }}
