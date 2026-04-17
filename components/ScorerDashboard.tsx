@@ -2246,7 +2246,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </button>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, width: '100%' }}>
               <img
                 src={store.homeLogo || '/INS%20LOGO.PNG'}
                 style={{ width: 30, height: 30, objectFit: 'contain' }}
@@ -3370,13 +3370,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                       <div>
                         <div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 800 }}>TOTAL SCORE</div>
                         <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#FAB005' }}>
-                          {(currentInnings as any).totalRuns}/{(currentInnings as any).wickets}
+                          {((currentInnings as any)?.totalRuns || 0)}/{((currentInnings as any)?.wickets || 0)}
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 800 }}>OVERS</div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>
-                          {store.getOvers((currentInnings as any).totalBalls)} / {store.maxOvers}
+                          {store.getOvers((currentInnings as any)?.totalBalls || 0)} / {store.maxOvers}
                         </div>
                       </div>
                     </ScoreSummaryCard>
@@ -3395,7 +3395,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         </tr>
                       </thead>
                       <tbody>
-                        {(Object.entries((currentInnings as any).battingStats) as [string, any][])
+                        {(Object.entries((currentInnings as any)?.battingStats || {}) as [string, any][])
                           .sort(([, a], [, b]) => (a.index ?? 0) - (b.index ?? 0))
                           .map(([id, stat]) => (
                             <tr key={id}>
@@ -3623,12 +3623,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 16 }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '9px', fontWeight: 900, opacity: 0.5 }}>TARGET</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38BDF8' }}>{store.innings1.totalRuns + 1}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38BDF8' }}>{(store.innings1?.totalRuns || 0) + 1}</div>
                   </div>
                   <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }} />
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '9px', fontWeight: 900, opacity: 0.5 }}>SCORE</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FAB005' }}>{currentInnings.totalRuns}/{currentInnings.wickets}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FAB005' }}>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</div>
                   </div>
                 </div>
               )}
@@ -3639,11 +3639,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div>
                     <div style={{ fontSize: '10px', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', marginBottom: 4 }}>Total Score</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 900, color: syncStatus === 'success' ? '#4ADE80' : '#FAB005' }}>{currentInnings.totalRuns}/{currentInnings.wickets}</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 900, color: syncStatus === 'success' ? '#4ADE80' : '#FAB005' }}>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: '10px', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', marginBottom: 4 }}>Overs Bowled</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>{store.getOvers(currentInnings.totalBalls)}</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>{store.getOvers(currentInnings?.totalBalls || 0)}</div>
                   </div>
                 </div>
               </div>

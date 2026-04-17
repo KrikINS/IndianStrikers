@@ -263,9 +263,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         setOpponents(opp);
         setPerformerData(perf);
 
-        // Prioritize Live matches, then the nearest upcoming match
+        // Prioritize Live matches (even if is_test), then the nearest upcoming match (not test)
         const priorityMatch = (allMatches || [])
-          .filter(m => (m.status === 'live' || m.status === 'upcoming') && !m.is_test)
+          .filter(m => (m.status === 'live' || (m.status === 'upcoming' && !m.is_test)))
           .sort((a, b) => {
             // Live matches always come first
             if (a.status === 'live' && b.status !== 'live') return -1;
@@ -553,12 +553,12 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             )}
           </div>
           {nextMatch?.status === 'live' ? (
-            <Link to={`/live/${nextMatch.id}?tab=commentary`} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black rounded-lg flex items-center justify-center gap-2 uppercase tracking-widest mt-4 transition-all animate-pulse">
-              <Activity size={14} /> View Live Score
+            <Link to={`/live/${nextMatch.id}?tab=commentary`} className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black rounded-xl flex items-center justify-center gap-2 uppercase tracking-widest mt-4 transition-all animate-pulse shadow-lg shadow-red-600/20">
+              <Activity size={14} /> View Live Scorecard
             </Link>
           ) : (
             <Link to="/match-center" className="text-[10px] font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 uppercase tracking-widest mt-4">
-              Full Schedule <ChevronRight size={12} />
+              View Full Schedule <ChevronRight size={12} />
             </Link>
           )}
         </div>

@@ -703,9 +703,9 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                             LEAGUE MATCH
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="text-3xl font-black text-white italic graduate">{scorecard.innings1.totalRuns}-{scorecard.innings1.totalWickets}</span>
+                            <span className="text-3xl font-black text-white italic graduate">{scorecard?.innings1?.totalRuns || 0}-{scorecard?.innings1?.totalWickets || 0}</span>
                             <span className="text-slate-700 font-black italic">VS</span>
-                            <span className="text-3xl font-black text-white italic graduate">{scorecard.innings2.totalRuns}-{scorecard.innings2.totalWickets}</span>
+                            <span className="text-3xl font-black text-white italic graduate">{scorecard?.innings2?.totalRuns || 0}-{scorecard?.innings2?.totalWickets || 0}</span>
                         </div>
                         <div className="text-white font-black text-[12.5px] uppercase tracking-widest mt-1 italic flex items-center gap-2">
                             <ExternalLink size={16} className="text-sky-500" />
