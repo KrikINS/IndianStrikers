@@ -253,7 +253,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
         batTeamName: string,
         oppTeamName: string 
     }> = ({ inn, innNum, target, batTeamName, oppTeamName }) => {
-        if (!inn.history || inn.history.length === 0) return null;
+        if (!inn || !inn.history || inn.history.length === 0) return null;
 
         const history = [...inn.history]; // chronological
         const recentBalls = [...history].reverse().slice(0, 12);
@@ -508,11 +508,13 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
     const renderInningsContent = (inn: 1 | 2, ref: React.RefObject<HTMLDivElement | null>) => {
         const data = inn === 1 ? scorecard.innings1 : scorecard.innings2;
+        if (!data) return null;
+
         const battingTeam = inn === 1 ? innings1BattingTeam : innings2BattingTeam;
         const bowlingTeam = inn === 1 ? innings2BattingTeam : innings1BattingTeam;
         const isBattingHome = inn === 1 ? isHomeBattingFirst : !isHomeBattingFirst;
 
-        const extrasCount = (data as any).extras_total || calculateTotalExtras(data);
+        const extrasCount = (data as any)?.extras_total || calculateTotalExtras(data);
         const autoOvers = calculateTotalOvers(data.bowling);
         const displayOvers = (data as any).total_overs || (data.totalOvers && Number(data.totalOvers) !== 0 ? data.totalOvers : autoOvers);
 
@@ -802,11 +804,13 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                         <div className="space-y-8">
                             {[1, 2].map(innNum => {
                                 const inn = innNum === 1 ? scorecard.innings1 : scorecard.innings2;
+                                if (!inn) return null;
+
                                 const batTeam = innNum === 1 ? innings1BattingTeam : innings2BattingTeam;
 
                                 // Calculate Innings 1 total for RRR in Innings 2
                                 const innings1Total = (scorecard.innings1?.batting || []).reduce((s: number, b: any) => s + (b.runs || 0), 0) + 
-                                                     ((scorecard.innings1?.extras as any)?.total || calculateTotalExtras(scorecard.innings1));
+                                                     ((scorecard.innings1?.extras as any)?.total || (scorecard.innings1 ? calculateTotalExtras(scorecard.innings1) : 0));
 
                                 if (!inn.history || inn.history.length === 0) return null;
 
