@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Player, OpponentTeam, UserRole, ScheduledMatch } from '../types';
-import { getOpponents, getTournamentPerformers, getMatches } from '../services/storageService';
+import { getOpponents, getTournamentPerformers, getMatches, getLegacyStats } from '../services/storageService';
 import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, Bell, MapPin, Clock, Loader2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -252,18 +252,21 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const heroPosterRef = useRef<HTMLDivElement>(null);
   const [nextMatch, setNextMatch] = useState<ScheduledMatch | null>(null);
   const [performerData, setPerformerData] = useState<{ tournamentName: string, performers: any[] }>({ tournamentName: '', performers: [] });
+  const [legacyStats, setLegacyStats] = useState<any[]>([]);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [opp, allMatches, perf] = await Promise.all([
+        const [opp, allMatches, perf, legacy] = await Promise.all([
           getOpponents(), 
           getMatches(),
           getTournamentPerformers(),
+          getLegacyStats(),
           fetchPlayers()
         ]);
         setOpponents(opp);
         setPerformerData(perf);
+        setLegacyStats(legacy || []);
 
         // Prioritize Live matches (even if is_test), then the nearest upcoming match (not test)
         const priorityMatch = (allMatches || [])
@@ -283,39 +286,37 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       } catch (e) { console.error(e); }
     };
     load();
-  }, [fetchPlayers]);
-
-  const enrichedPlayers = useMemo(() => {
-    if (!players || !performerData.performers) return players;
+  }, [fetchPlayers])  const enrichedPlayers = useMemo(() => {
+    if (!players) return [];
     return players.map(p => {
-      const matchPerf = performerData.performers.find(perf => 
+      const matchPerf = performerData.performers?.find(perf => 
         String(perf.playerId) === String(p.id) || 
         String(perf.id) === String(p.id)
       );
-      if (!matchPerf) return p;
+      const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
 
-      // Create enriched stats objects by adding tournament data to legacy/base data
-      const baseRuns = Math.max(p.battingStats?.runs || 0, p.runsScored || 0);
-      const baseWickets = Math.max(p.bowlingStats?.wickets || 0, p.wicketsTaken || 0);
-      const baseMatches = Math.max(p.battingStats?.matches || 0, p.matchesPlayed || 0);
+      // Use legacyRow as the definitive baseline if it exists, otherwise fallback to player table summary
+      const baseRuns = Number(legacyRow?.runs || p.runsScored || 0);
+      const baseWickets = Number(legacyRow?.wickets || p.wicketsTaken || 0);
+      const baseMatches = Number(legacyRow?.matches || p.matchesPlayed || 0);
 
       const enrichedBatting = {
         ...(p.battingStats || {}),
-        matches: baseMatches + (matchPerf.matches || 1), // Fallback to 1 if not specified
-        runs: baseRuns + (matchPerf.runs || 0),
-        sixes: (p.battingStats?.sixes || 0) + (matchPerf.sixes || 0),
-        fours: (p.battingStats?.fours || 0) + (matchPerf.fours || 0),
-        highestScore: matchPerf.runs > parseInt((p.battingStats?.highestScore || '0').replace('*','')) 
+        matches: baseMatches + (matchPerf?.matches || 0),
+        runs: baseRuns + (matchPerf?.runs || 0),
+        sixes: Number(legacyRow?.sixes || p.battingStats?.sixes || 0) + (matchPerf?.sixes || 0),
+        fours: Number(legacyRow?.fours || p.battingStats?.fours || 0) + (matchPerf?.fours || 0),
+        highestScore: (matchPerf?.runs || 0) > parseInt((legacyRow?.highest_score || p.battingStats?.highestScore || '0').toString().replace('*','')) 
           ? String(matchPerf.runs) 
-          : (p.battingStats?.highestScore || '0')
+          : String(legacyRow?.highest_score || p.battingStats?.highestScore || '0')
       };
 
       const enrichedBowling = {
         ...(p.bowlingStats || {}),
-        wickets: baseWickets + (matchPerf.wickets || 0),
-        bestBowling: matchPerf.wickets > parseInt((p.bowlingStats?.bestBowling || '0/0').split('/')[0])
+        wickets: baseWickets + (matchPerf?.wickets || 0),
+        bestBowling: (matchPerf?.wickets || 0) > parseInt((legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0').split('/')[0])
            ? `${matchPerf.wickets}/${matchPerf.bowlingRuns}`
-           : (p.bowlingStats?.bestBowling || '0/0')
+           : (legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0')
       };
 
       return {
@@ -324,14 +325,30 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         bowlingStats: enrichedBowling as any
       };
     });
-  }, [players, performerData.performers]);
+  }, [players, performerData.performers, legacyStats]);
 
-  const topRunScorers = [...(enrichedPlayers || [])]
+  const topRunScorers = [...enrichedPlayers]
     .sort((a, b) => (b.battingStats?.runs || 0) - (a.battingStats?.runs || 0))
     .slice(0, 5);
-  const topWicketTakers = [...(enrichedPlayers || [])]
+
+  const topWicketTakers = [...enrichedPlayers]
     .sort((a, b) => (b.bowlingStats?.wickets || 0) - (a.bowlingStats?.wickets || 0))
     .slice(0, 5);
+
+  const statsSyncHandler = async () => {
+    setIsSyncing(true);
+    try {
+      const [perf, legacy] = await Promise.all([
+        getTournamentPerformers(),
+        getLegacyStats(),
+        fetchPlayers()
+      ]);
+      setPerformerData(perf);
+      setLegacyStats(legacy || []);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 800);
+    }
+  };
 
   const topInningsRuns = [...(enrichedPlayers || [])]
     .filter(p => p.battingStats?.highestScore && p.battingStats.highestScore !== '0')
@@ -646,11 +663,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Leaderboard</h3>
           </div>
           <button 
-            onClick={async () => {
-              setIsSyncing(true);
-              await fetchPlayers();
-              setTimeout(() => setIsSyncing(false), 1000);
-            }}
+            onClick={statsSyncHandler}
             disabled={isSyncing}
             className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-full border border-slate-100 transition-all group active:scale-95"
           >

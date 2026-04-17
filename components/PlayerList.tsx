@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
 import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
 import * as api from '../services/storageService';
-import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUsers } from '../services/storageService';
+import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUsers, getLegacyStats } from '../services/storageService';
 import { usePlayerStore } from '../store/playerStore';
 import styles from './PlayerList.module.css';
 
@@ -84,6 +84,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const [isStatsExpanded, setIsStatsExpanded] = useState(false);
   const [isStatsLoading, setIsStatsLoading] = useState(false);
   const [performerData, setPerformerData] = useState<any[]>([]);
+  const [legacyStats, setLegacyStats] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
   const [users, setUsers] = useState<AppUser[]>([]); // New State for user linking
@@ -122,12 +123,14 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   useEffect(() => {
     const fetchMasters = async () => {
       try {
-        const [uList, perf] = await Promise.all([
+        const [uList, perf, legacy] = await Promise.all([
           api.getAppUsers(),
-          api.getTournamentPerformers()
+          api.getTournamentPerformers(),
+          getLegacyStats()
         ]);
         setUsers(uList);
         setPerformerData(perf?.performers || []);
+        setLegacyStats(legacy || []);
       } catch (err) {
         console.error("Failed to load masters in PlayerList", err);
       }
@@ -136,39 +139,61 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   }, []);
 
   const enrichedPlayers = useMemo(() => {
-    if (!players || !performerData.length) return players;
+    if (!players) return [];
     return players.map(p => {
       const matchPerf = performerData.find(perf => 
         String(perf.playerId) === String(p.id) || 
         String(perf.id) === String(p.id)
       );
-      if (!matchPerf) return p;
+      const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
 
-      // Create enriched stats objects by adding tournament data to legacy/base data
-      const baseRuns = Math.max(p.battingStats?.runs || 0, p.runsScored || 0);
-      const baseWickets = Math.max(p.bowlingStats?.wickets || 0, p.wicketsTaken || 0);
-      const baseMatches = Math.max(p.battingStats?.matches || 0, p.matchesPlayed || 0);
+      // Use legacy stats as the baseline, falling back to player summary columns if legacy missing
+      const baseRuns = Number(legacyRow?.runs || p.runsScored || 0);
+      const baseWickets = Number(legacyRow?.wickets || p.wicketsTaken || 0);
+      const baseMatches = Number(legacyRow?.matches || p.matchesPlayed || 0);
 
       const enrichedBatting = {
         ...(p.battingStats || {}),
-        matches: baseMatches + (matchPerf.matches || 1),
-        runs: baseRuns + (matchPerf.runs || 0),
-        sixes: (p.battingStats?.sixes || 0) + (matchPerf.sixes || 0),
-        fours: (p.battingStats?.fours || 0) + (matchPerf.fours || 0),
+        matches: baseMatches + (matchPerf?.matches || 0),
+        runs: baseRuns + (matchPerf?.runs || 0),
+        highestScore: (matchPerf?.runs || 0) > parseInt((legacyRow?.highest_score || p.battingStats?.highestScore || '0').toString().replace('*','')) 
+          ? String(matchPerf.runs) 
+          : String(legacyRow?.highest_score || p.battingStats?.highestScore || '0')
       };
 
       const enrichedBowling = {
         ...(p.bowlingStats || {}),
-        wickets: baseWickets + (matchPerf.wickets || 0),
+        wickets: baseWickets + (matchPerf?.wickets || 0),
+        bestBowling: (matchPerf?.wickets || 0) > parseInt((legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0').split('/')[0])
+           ? `${matchPerf.wickets}/${matchPerf.bowlingRuns}`
+           : (legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0')
       };
-
       return {
         ...p,
         battingStats: enrichedBatting as any,
         bowlingStats: enrichedBowling as any
       };
     });
-  }, [players, performerData]);
+  }, [players, performerData, legacyStats]);
+
+  const statsSyncHandler = async () => {
+    setIsSyncing(true);
+    try {
+      const [uList, perf, legacy] = await Promise.all([
+        api.getAppUsers(),
+        api.getTournamentPerformers(),
+        getLegacyStats(),
+        fetchPlayers()
+      ]);
+      setUsers(uList);
+      setPerformerData(perf?.performers || []);
+      setLegacyStats(legacy || []);
+    } catch (e) {
+      console.error("Sync failed:", e);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 800);
+    }
+  };
 
   // Fetch detailed stats when viewing a player
   useEffect(() => {
@@ -626,16 +651,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         
         <div className="flex gap-2">
           <button 
-            onClick={async () => {
-              setIsSyncing(true);
-              try {
-                await fetchPlayers();
-                const perf = await api.getTournamentPerformers();
-                setPerformerData(perf?.performers || []);
-              } finally {
-                setTimeout(() => setIsSyncing(false), 800);
-              }
-            }}
+            onClick={statsSyncHandler}
             disabled={isSyncing}
             className="px-4 py-2.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:bg-slate-200 flex items-center gap-2"
           >

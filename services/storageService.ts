@@ -792,7 +792,7 @@ export const getTournamentPerformers = async (): Promise<any> => {
     tournamentName: data.tournament_name || data.tournamentName,
     performers: (data.performers || []).map((p: any) => ({
       ...p,
-      playerId: p.player_id || p.playerId,
+      playerId: String(p.player_id || p.playerId),
       avatarUrl: p.avatar_url || p.avatarUrl,
       opponentId: p.opponent_id || p.opponentId,
       groundId: p.ground_id || p.groundId,
@@ -800,6 +800,9 @@ export const getTournamentPerformers = async (): Promise<any> => {
       groundName: p.ground_name || p.groundName,
       matchTime: p.match_time || p.matchTime,
       matchDate: p.match_date || p.matchDate,
+      runs: Number(p.runs !== undefined ? p.runs : (p.runs_scored !== undefined ? p.runs_scored : 0)),
+      wickets: Number(p.wickets !== undefined ? p.wickets : (p.wickets_taken !== undefined ? p.wickets_taken : 0)),
+      matches: Number(p.matches !== undefined ? p.matches : (p.matches_played !== undefined ? p.matches_played : 0)),
       bowlingRuns: p.bowling_runs || p.bowlingRuns,
       bowlingOvers: p.bowling_overs || p.bowlingOvers
     }))

@@ -44,7 +44,7 @@ const LegacyEditor: React.FC<LegacyEditorProps> = () => {
 
       const legacyMap: Record<string, PlayerLegacyStats> = {};
       allLegacy?.forEach((stat) => {
-        legacyMap[stat.player_id] = stat;
+        legacyMap[String(stat.player_id)] = stat;
       });
 
       setLegacyStats(legacyMap);
@@ -59,8 +59,8 @@ const LegacyEditor: React.FC<LegacyEditorProps> = () => {
   const handleInputChange = (playerId: string, field: keyof PlayerLegacyStats, value: string | number) => {
     setLegacyStats(prev => ({
       ...prev,
-      [playerId]: {
-        ...(prev[playerId] || {
+      [String(playerId)]: {
+        ...(prev[String(playerId)] || {
           player_id: playerId,
           runs: 0,
           balls: 0,
@@ -184,7 +184,7 @@ const LegacyEditor: React.FC<LegacyEditorProps> = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredPlayers?.map((player) => {
-                const row = legacyStats[player.id] || {
+                const row = legacyStats[String(player.id)] || {
                    player_id: player.id, runs: 0, balls: 0, fours: 0, sixes: 0, hundreds: 0, fifties: 0, ducks: 0,
                    matches: 0, innings: 0, not_outs: 0, highest_score: 0, bowling_innings: 0, overs_bowled: 0, runs_conceded: 0,
                    wickets: 0, maidens: 0, four_wickets: 0, five_wickets: 0, best_bowling: '0/0',
