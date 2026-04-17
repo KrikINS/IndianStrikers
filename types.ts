@@ -36,7 +36,7 @@ export interface AppUser {
   isFirstLogin?: boolean;
 }
 
-export type CommentaryEventType = 'FOUR' | 'SIX' | 'WICKET' | 'DOT' | 'MILESTONE';
+export type CommentaryEventType = 'FOUR' | 'SIX' | 'WICKET' | 'DOT' | 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'MILESTONE';
 
 export interface CommentaryTemplate {
   id: string;

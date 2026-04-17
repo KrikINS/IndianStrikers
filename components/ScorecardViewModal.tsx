@@ -594,7 +594,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                                                 <div className="p-4 flex items-start gap-4">
                                                                     <BallBadge ball={ball} />
                                                                     <div>
-                                                                        <div className="text-[10px] font-black text-slate-400 uppercase">{ball.overNumber}.{ball.ballInOver}</div>
+                                                                        <div className="text-[10px] font-black text-slate-400 uppercase">{ball.overNumber}.{ball.ballNumber ?? ball.ball_number ?? 1}</div>
                                                                         <div className="text-xs font-black uppercase">{bName} TO {sName}</div>
                                                                         <p className="text-sm text-slate-800 leading-relaxed">
                                                                             {ball.zone && ball.zone !== 'Unknown' && (
@@ -609,6 +609,51 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                                                 {ball.isWicket && (
                                                                      <CommentaryEventCard type="wicket" player={sName} tagline={getRandomTagline('wicket')} />
                                                                 )}
+                                                                {(ball.ballNumber === 6 || bIdx === overGroups[overNum].length - 1) && (
+                                                                    <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-between">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">End of Over {overNum + 1}</span>
+                                                                            <span className="text-sm font-black text-slate-900">
+                                                                                {innNum === 1 ? innings1BattingTeam : innings2BattingTeam}: {
+                                                                                    (() => {
+                                                                                        let runs = 0;
+                                                                                        let wickets = 0;
+                                                                                        inn.history.forEach(bh => {
+                                                                                            if (bh.overNumber < overNum || (bh.overNumber === overNum && (bh.ballNumber || 0) <= (ball.ballNumber || 0))) {
+                                                                                                const extraR = (bh.type === 'wide' || bh.type === 'no-ball') ? 1 : 0;
+                                                                                                runs += (bh.runs || 0) + extraR;
+                                                                                                if (bh.isWicket && bh.wicketType !== 'Retired Hurt') wickets++;
+                                                                                            }
+                                                                                        });
+                                                                                        return `${runs}/${wickets}`;
+                                                                                    })()
+                                                                                }
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">{bName}</span>
+                                                                            <span className="text-[11px] font-bold text-slate-600">
+                                                                                {(() => {
+                                                                                     let bRuns = 0;
+                                                                                     let bWickets = 0;
+                                                                                     let bBalls = 0;
+                                                                                     inn.history.forEach(bh => {
+                                                                                         if (bh.bowlerId === ball.bowlerId && (bh.overNumber < overNum || (bh.overNumber === overNum && (bh.ballNumber || 0) <= (ball.ballNumber || 0)))) {
+                                                                                             const isLegal = bh.type !== 'wide' && bh.type !== 'no-ball';
+                                                                                             const extraR = (bh.type === 'wide' || bh.type === 'no-ball') ? 1 : 0;
+                                                                                             bRuns += (bh.runs || 0) + extraR;
+                                                                                             const isBWkt = bh.isWicket && !['Retired Hurt', 'Run Out'].includes(bh.wicketType || '');
+                                                                                             if (isBWkt) bWickets++;
+                                                                                             if (isLegal) bBalls++;
+                                                                                         }
+                                                                                     });
+                                                                                     const bOvers = Math.floor(bBalls / 6) + (bBalls % 6 / 10);
+                                                                                     return `${bOvers}-${(bWickets)}-${bRuns}`;
+                                                                                })()}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                 )}
                                                             </React.Fragment>
                                                          );
                                                     })}

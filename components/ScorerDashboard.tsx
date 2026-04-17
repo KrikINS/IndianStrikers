@@ -960,10 +960,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [allOpponents, setAllOpponents] = useState<any[]>([]);
   const [commentaryTemplates, setCommentaryTemplates] = useState<CommentaryTemplate[]>([]);
   const [nextCommentarySuggestions, setNextCommentarySuggestions] = useState<Record<CommentaryEventType, string[]>>({
-    FOUR: [], SIX: [], WICKET: [], DOT: [], MILESTONE: []
+    FOUR: [], SIX: [], WICKET: [], DOT: [], SINGLE: [], DOUBLE: [], TRIPLE: [], MILESTONE: []
   });
   const [currentPreviews, setCurrentPreviews] = useState<Record<CommentaryEventType, string>>({
-    FOUR: '', SIX: '', WICKET: '', DOT: '', MILESTONE: ''
+    FOUR: '', SIX: '', WICKET: '', DOT: '', SINGLE: '', DOUBLE: '', TRIPLE: '', MILESTONE: ''
   });
 
   // Opponent players fetched separately from the opponents table
@@ -1003,7 +1003,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
         // Group by type for fast lookup
         const grouped: Record<CommentaryEventType, string[]> = {
-          FOUR: [], SIX: [], WICKET: [], DOT: [], MILESTONE: []
+          FOUR: [], SIX: [], WICKET: [], DOT: [], SINGLE: [], DOUBLE: [], TRIPLE: [], MILESTONE: []
         };
         data.forEach(t => {
           if (grouped[t.event_type]) grouped[t.event_type].push(t.text);
@@ -1012,7 +1012,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
         // Prime initial random selections
         const initialPreviews: Record<CommentaryEventType, string> = {
-          FOUR: '', SIX: '', WICKET: '', DOT: '', MILESTONE: ''
+          FOUR: '', SIX: '', WICKET: '', DOT: '', SINGLE: '', DOUBLE: '', TRIPLE: '', MILESTONE: ''
         };
         (Object.keys(grouped) as CommentaryEventType[]).forEach(type => {
           const list = grouped[type];
@@ -2031,7 +2031,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     if (isWicket) typeKey = 'WICKET';
     else if (score === 6 && subType === 'bat') typeKey = 'SIX';
     else if (score === 4 && subType === 'bat') typeKey = 'FOUR';
-    else if (score > 0 && subType === 'bat') typeKey = 'DOT'; // Fallback for 1s, 2s, 3s if no RUNS key exists
+    else if (score === 3 && subType === 'bat') typeKey = 'TRIPLE';
+    else if (score === 2 && subType === 'bat') typeKey = 'DOUBLE';
+    else if (score === 1 && subType === 'bat') typeKey = 'SINGLE';
+    else if (score === 0 && subType === 'bat') typeKey = 'DOT';
 
     let comm = currentPreviews[typeKey] || "";
 
@@ -3687,9 +3690,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                   if (!result) result = `${ball.runs} run(s)`;
                                 };
 
+                                const ballNum = ball.ballNumber ?? ball.ball_number ?? 0;
                                 const ballLabel = ball.isLegal
-                                  ? `${overNum}.${ball.ballNumber}`
-                                  : `${overNum}.${ball.ballNumber}*`;
+                                  ? `${overNum}.${ballNum}`
+                                  : `${overNum}.${ballNum}*`;
 
                                 return (
                                   <div key={i} style={{
@@ -3717,6 +3721,55 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                 );
                               })}
                             </div>
+                            
+                            {/* OVER SUMMARY PIN - SHOWN AT END OF EVERY OVER GROUP */}
+                            {(() => {
+                                const balls = overGroups[overNum];
+                                const historyBalls = currentInnings?.history || [];
+                                const totalLegalBallsInOver = balls.filter((b: any) => b.isLegal).length;
+                                
+                                // Only show summary if the over is complete (6 balls) or it's the current in-progress over
+                                if (totalLegalBallsInOver > 0) {
+                                   const ballsUpToEnd = historyBalls.filter(b => (b.overNumber ?? 0) <= overNum);
+                                   const totalRunsAtEnd = ballsUpToEnd.reduce((s, b) => s + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                                   const totalWktsAtEnd = ballsUpToEnd.filter(b => b.isWicket).length;
+                                   
+                                   const lastBall = balls[0]; // balls are reversed
+                                   const bName = getPlayerName(lastBall.bowlerId);
+                                   const bBalls = ballsUpToEnd.filter(b => b.bowlerId === lastBall.bowlerId);
+                                   const bRuns = bBalls.reduce((s, b) => s + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                                   const bWkts = bBalls.filter(b => b.isWicket).length;
+                                   const bOvers = store.getOvers(bBalls.filter(b => b.isLegal).length);
+
+                                   return (
+                                     <div key={`over-sum-${overNum}`} style={{ 
+                                       marginTop: 12, 
+                                       background: '#001F3F', 
+                                       border: '1px solid rgba(255,255,255,0.1)',
+                                       borderRadius: 12, 
+                                       padding: '12px 16px',
+                                       display: 'flex',
+                                       justifyContent: 'space-between',
+                                       alignItems: 'center',
+                                       boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+                                     }}>
+                                       <div>
+                                         <div style={{ fontSize: '10px', fontWeight: 900, color: '#38BDF8', letterSpacing: 1 }}>END OF OVER {overNum + 1}</div>
+                                         <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFF' }}>
+                                           {totalRunsAtEnd}/{totalWktsAtEnd}
+                                         </div>
+                                       </div>
+                                       <div style={{ textAlign: 'right' }}>
+                                         <div style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>{bName.toUpperCase()}</div>
+                                         <div style={{ fontSize: '1rem', fontWeight: 900, color: '#FAB005' }}>
+                                           {bOvers}-{bWkts}-{bRuns}
+                                         </div>
+                                       </div>
+                                     </div>
+                                   );
+                                }
+                                return null;
+                            })()}
                           </div>
                         );
                       });

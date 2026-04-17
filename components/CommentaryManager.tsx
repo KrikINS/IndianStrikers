@@ -74,7 +74,7 @@ const CommentaryManager: React.FC = () => {
     }
   };
 
-  const categories: CommentaryEventType[] = ['FOUR', 'SIX', 'WICKET', 'DOT', 'MILESTONE'];
+  const categories: CommentaryEventType[] = ['FOUR', 'SIX', 'WICKET', 'DOT', 'SINGLE', 'DOUBLE', 'TRIPLE', 'MILESTONE'];
 
   return (
     <div className="animate-fade-in space-y-6">
