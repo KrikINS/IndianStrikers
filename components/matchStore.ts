@@ -159,6 +159,7 @@ const INITIAL_STATE: MatchState = {
     manOfTheMatch: null,
     targetScore: 0,
     useWagonWheel: false,
+    wagonWheelQuickSave: false,
     setMilestoneNotified: () => {},
     isWaitingForBowler: false
 };

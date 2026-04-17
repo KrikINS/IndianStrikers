@@ -193,31 +193,34 @@ const PartnershipSub = styled.div`
   letter-spacing: 0.5px;
 `;
 
-/**
- * Dynamic Sentence Builder for Commentary
- * Generates descriptive long-form commentary based on match events and field zones
- */
 const generateDynamicCommentary = (player: string, runs: number, zone?: string, isWicket?: boolean): string => {
-  const z = zone || "the field";
+  const z = zone || "the gap";
+  const firstName = player.split(' ')[0];
+  
   if (isWicket) {
-    return `Disaster for the Strikers! ${player} tries to go over ${z} but finds the fielder instead.`;
+    const base = getRandomCommentary('WICKET');
+    return `${base} ${firstName} is out! Trapped while trying to hit towards ${z}.`;
   }
   
+  const baseFour = getRandomCommentary('FOUR');
+  const baseSix = getRandomCommentary('SIX');
+  const baseDot = getRandomCommentary('DOT');
+
   switch (runs) {
     case 6:
-      return `That is massive! ${player} has cleared the ropes at ${z} with a towering hit.`;
+      return `${baseSix} ${firstName} clears the ropes at ${z} with pure power.`;
     case 4:
-      return `${player} finds the fence! A superb shot hit with great timing towards ${z}.`;
+      return `${baseFour} ${firstName} pierces the field at ${z} for a boundary.`;
     case 1:
-      return `A gentle push into ${z} allows ${player} to rotate the strike comfortably.`;
+      return `Quick single! ${firstName} taps it into ${z} and scampers through.`;
     case 2:
-      return `Nicely placed by ${player}, finding the gap in ${z} for a well-run brace.`;
+      return `Good placement! ${firstName} finds the gap in ${z} and returns for the second.`;
     case 3:
-      return `Excellent running! ${player} pierces ${z} and the batters scamper through for three.`;
+      return `Excellent running from ${firstName}! He hits it deep into ${z} and they run three.`;
     case 0:
-      return `Well fielded! ${player} hits it towards ${z} but can't find the gap.`;
+      return `${baseDot} ${firstName} looks for room in ${z} but can't find a way past.`;
     default:
-      return `${player} scores ${runs} run(s) towards ${z}.`;
+      return `${firstName} scores ${runs} run(s) towards ${z}.`;
   }
 };
 
@@ -2036,7 +2039,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     const isWagonWorthy = (score > 0) || (isWicket && worthWickets.some(w => String(wicketType || '').includes(w)));
 
     if (store.useWagonWheel && subType === 'bat' && isWagonWorthy) {
-      setShowWagonWheelModal({ score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, commentary: comm });
+      if (store.wagonWheelQuickSave) {
+        // Quick Save Mode: Use default Straight zone and record immediately
+        const strikerN = getPlayerName(store.strikerId);
+        const dynamicComm = generateDynamicCommentary(strikerN, score, 'Straight', isWicket);
+        hapticFeedback(score >= 4 ? 'heavy' : 'medium');
+        handleRecord(score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, 'Straight', dynamicComm);
+      } else {
+        setShowWagonWheelModal({ score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, commentary: comm });
+      }
     } else {
       // For non-wagon wheel balls, generate a basic dynamic commentary if generic one is missing
       const strikerN = getPlayerName(store.strikerId);
@@ -4002,16 +4013,31 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90%', height: '90%', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24 }}>
+                  <div 
+                    onClick={() => store.updateMatchSettings({ wagonWheelQuickSave: !store.wagonWheelQuickSave })}
+                    style={{ 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, 
+                      padding: '8px 16px', borderRadius: 20, background: store.wagonWheelQuickSave ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${store.wagonWheelQuickSave ? '#38BDF8' : 'rgba(255,255,255,0.1)'}`,
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                  >
+                    <Zap size={14} color={store.wagonWheelQuickSave ? '#38BDF8' : '#FFF'} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: store.wagonWheelQuickSave ? '#38BDF8' : '#FFF' }}>
+                      {store.wagonWheelQuickSave ? 'QUICK SAVE ON' : 'QUICK SAVE OFF'}
+                    </span>
+                  </div>
+
                   <button
                     onClick={() => {
                       const p = showWagonWheelModal;
                       handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, 'Unknown', p.commentary);
                       setShowWagonWheelModal(null);
                     }}
-                    style={{ flex: 1, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: 'none', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}
+                    style={{ width: '100%', padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: 'none', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}
                   >
-                    SKIP
+                    SKIP ZONE
                   </button>
                 </div>
               </ModalContent>

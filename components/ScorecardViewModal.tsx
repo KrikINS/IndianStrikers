@@ -178,32 +178,31 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
      * BallBadge Component
      * Standardized design system for ball results
      */
-    const BallBadge: React.FC<{ ball: any }> = ({ ball }) => {
+    const BallBadge: React.FC<{ ball: any, variant?: 'default' | 'small' }> = ({ ball, variant = 'default' }) => {
         const { runs, isWicket, type } = ball;
         
         // Determine styling based on outcome
-        let classes = "flex items-center justify-center rounded-full font-extrabold shadow-sm transition-transform hover:scale-110 ";
+        const isSmall = variant === 'small';
+        let classes = `flex items-center justify-center rounded-full font-black shadow-sm transition-transform hover:scale-110 ${isSmall ? 'w-5 h-5 text-[8px]' : 'w-7 h-7 text-[10px]'}`;
         let label = isWicket ? 'W' : `${runs}`;
 
         if (isWicket) {
-            classes += "bg-red-600 text-white w-8 h-8 text-sm";
+             // Red
         } else if (type === 'wide' || type === 'no-ball') {
-            classes += "bg-amber-400 text-slate-900 w-8 h-8 text-xs";
             label = type === 'wide' ? 'Wd' : 'Nb';
             if (runs > 0) label += `+${runs}`;
-        } else if (runs === 6) {
-            classes += "bg-purple-600 text-white w-9 h-9 text-base ring-2 ring-purple-300 animate-[subtlePulse_2s_infinite]";
-        } else if (runs === 4) {
-            classes += "bg-emerald-500 text-white w-8 h-8 text-sm";
-        } else if (runs > 0) {
-            classes += "bg-blue-500 text-white w-8 h-8 text-sm";
-        } else {
-            classes += "bg-slate-200 text-slate-500 w-7 h-7 text-xs";
+        } else if (runs === 0) {
             label = "0";
         }
 
-        return (
-            <div className={classes} title={isWicket ? `Wicket: ${ball.wicketType || 'Out'}` : `${runs} Runs`}>
+            <div 
+                className={classes} 
+                style={{
+                    backgroundColor: isWicket ? '#EF4444' : (runs >= 4 ? '#10B981' : (runs > 0 ? '#3B82F6' : '#94A3B8')),
+                    color: '#FFFFFF'
+                }}
+                title={isWicket ? `Wicket: ${ball.wicketType || 'Out'}` : `${runs} Runs`}
+            >
                 {label}
             </div>
         );
@@ -348,45 +347,45 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
         const pBalls = (p1?.balls || 0) + (p2?.balls || 0);
 
         return (
-            <div className="sticky top-0 z-[20] -mx-4 mb-6 mt-[-1rem] bg-slate-900/60 backdrop-blur-xl border-b border-white/10 p-4 shadow-2xl overflow-hidden">
+            <div className="sticky top-0 z-[20] -mx-4 mb-6 mt-[-1rem] bg-white border-b border-slate-200 p-4 shadow-sm overflow-hidden">
                 <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
                     
                     {/* Partnership & Strikers */}
                     <div className="flex flex-col gap-1 w-full md:w-auto">
                         <div className="flex items-center gap-2">
                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Partnership</span>
+                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Current Partnership</span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <div className={`flex items-baseline gap-1 ${strikerId === p1?.playerId ? 'text-sky-400' : 'text-white'}`}>
-                                <span className="text-sm font-black italic graduate">{p1 ? resolvePlayerName(undefined, p1.playerId, innNum === 1 ? 'home' : 'opponent') : '---'}</span>
-                                <span className="text-xs font-bold opacity-70">{p1?.runs || 0}({p1?.balls || 0}){strikerId === p1?.playerId ? '*' : ''}</span>
+                            <div className={`flex items-baseline gap-1 ${strikerId === p1?.playerId ? 'text-blue-700' : 'text-slate-900'}`}>
+                                <span className="text-sm font-black italic tracking-tight">{p1 ? resolvePlayerName(undefined, p1.playerId, innNum === 1 ? 'home' : 'opponent') : '---'}</span>
+                                <span className="text-xs font-bold opacity-60">{p1?.runs || 0}({p1?.balls || 0}){strikerId === p1?.playerId ? '*' : ''}</span>
                             </div>
-                            <span className="text-slate-700 font-bold">&</span>
-                            <div className={`flex items-baseline gap-1 ${strikerId === p2?.playerId ? 'text-sky-400' : 'text-white'}`}>
-                                <span className="text-sm font-black italic graduate">{p2 ? resolvePlayerName(undefined, p2.playerId, innNum === 1 ? 'home' : 'opponent') : '---'}</span>
-                                <span className="text-xs font-bold opacity-70">{p2?.runs || 0}({p2?.balls || 0}){strikerId === p2?.playerId ? '*' : ''}</span>
+                            <span className="text-slate-300 font-bold">&</span>
+                            <div className={`flex items-baseline gap-1 ${strikerId === p2?.playerId ? 'text-blue-700' : 'text-slate-900'}`}>
+                                <span className="text-sm font-black italic tracking-tight">{p2 ? resolvePlayerName(undefined, p2.playerId, innNum === 1 ? 'home' : 'opponent') : '---'}</span>
+                                <span className="text-xs font-bold opacity-60">{p2?.runs || 0}({p2?.balls || 0}){strikerId === p2?.playerId ? '*' : ''}</span>
                             </div>
-                            <div className="h-4 w-px bg-white/10 mx-2"></div>
-                            <div className="text-white">
-                                <span className="text-xs font-black opacity-40 uppercase mr-1">Total:</span>
-                                <span className="text-sm font-black text-sky-400 graduate">{pRuns}({pBalls})</span>
+                            <div className="h-4 w-px bg-slate-200 mx-2"></div>
+                            <div className="text-slate-900">
+                                <span className="text-xs font-black opacity-30 uppercase mr-1">Total:</span>
+                                <span className="text-sm font-black text-blue-600">{pRuns}({pBalls})</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Run Rates */}
-                    <div className="flex gap-6 items-center bg-white/5 px-4 py-2 rounded-xl border border-white/5">
+                    <div className="flex gap-6 items-center bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
                         <div className="text-center">
-                            <div className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">CRR</div>
-                            <div className="text-sm font-black text-white italic graduate">{crr}</div>
+                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">CRR</div>
+                            <div className="text-sm font-black text-slate-900 italic">{crr}</div>
                         </div>
                         {rrr && (
                             <>
-                                <div className="h-6 w-px bg-white/10"></div>
+                                <div className="h-6 w-px bg-slate-200"></div>
                                 <div className="text-center">
-                                    <div className="text-[9px] font-black text-amber-500 uppercase tracking-tighter">RRR</div>
-                                    <div className="text-sm font-black text-amber-400 italic graduate">{rrr}</div>
+                                    <div className="text-[9px] font-black text-amber-600 uppercase tracking-tighter">RRR</div>
+                                    <div className="text-sm font-black text-amber-500 italic">{rrr}</div>
                                 </div>
                             </>
                         )}
@@ -394,10 +393,10 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
 
                     {/* Recent Balls Ticker */}
                     <div className="flex flex-col gap-1 items-end w-full md:w-auto">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Last 12 Balls</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Last 12 Balls</span>
                         <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar max-w-[200px] md:max-w-none">
                             {recentBalls.map((b, idx) => (
-                                <BallBadge key={idx} ball={b} />
+                                <BallBadge key={idx} ball={b} variant="small" />
                             ))}
                         </div>
                     </div>
@@ -848,7 +847,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
             </div>
 
             {/* Content Body - Pure Data Flow */}
-            <div className={`flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar ${activeTab === 'scorecard' ? 'bg-white' : 'bg-slate-950'}`}>
+            <div className={`flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar ${activeTab === 'scorecard' ? 'bg-white' : 'bg-slate-50'}`}>
                 <div ref={fullScorecardRef} className="max-w-7xl mx-auto pb-10">
                     {activeTab === 'scorecard' ? (
                         <div className="space-y-5">
@@ -880,13 +879,13 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                 const sortedOvers = Object.keys(overGroups).map(Number).sort((a,b) => b-a);
 
                                 return (
-                                    <div key={innNum}>
+                                    <div key={innNum} className="mb-10">
                                         <div className="flex items-center gap-3 mb-6 px-4">
-                                            <div className="h-px flex-1 bg-white/10" />
-                                            <h3 className="text-[11px] font-black text-sky-400 uppercase tracking-[0.3em] italic">
-                                                {batTeam} Innings
+                                            <div className="h-px flex-1 bg-slate-200" />
+                                            <h3 className="text-[11px] font-black text-blue-900 uppercase tracking-[0.3em] italic">
+                                                {batTeam} Commentary
                                             </h3>
-                                            <div className="h-px flex-1 bg-white/10" />
+                                            <div className="h-px flex-1 bg-slate-200" />
                                         </div>
 
                                         <LiveMiniScoreboard 
@@ -897,7 +896,7 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                             oppTeamName={innNum === 1 ? innings2BattingTeam : innings1BattingTeam}
                                         />
 
-                                        <div className="space-y-6">
+                                        <div className="space-y-6 px-1">
                                             {sortedOvers.map(overNum => {
                                                 const ballsInOver = overGroups[overNum];
                                                 const overRuns = ballsInOver.reduce((s, b) => {
@@ -911,93 +910,46 @@ const ScorecardViewModal: React.FC<ScorecardViewModalProps> = ({
                                                 const bowlerStats = (inn.bowling || []).find((b: any) => b.playerId === bowlerId);
                                                 const bowlerFigures = bowlerStats ? `${bowlerStats.wickets}-${(bowlerStats as any).runsConceded || (bowlerStats as any).runs || 0}` : '';
 
-                                                // --- Big Moments Data Processing ---
-                                                // We process the balls to identify wickets and cumulative scores
-                                                // Since history is already reversed (descending), we process chronological to detect milestones
                                                 const chronBalls = [...ballsInOver].sort((a,b) => (a.ballNumber || 0) - (b.ballNumber || 0));
                                                 
                                                 return (
-                                                    <div key={overNum} className="mb-8">
-                                                        <div className="sticky top-0 z-10 flex justify-between items-center p-4 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-t-2xl shadow-lg">
+                                                    <div key={overNum} className="bg-white rounded-xl shadow-sm border-t-2 border-blue-900 border-x border-b border-slate-100 overflow-hidden mb-6">
+                                                        <div className="flex justify-between items-center p-4 bg-slate-50/50 border-b border-slate-100">
                                                             <div className="flex items-center gap-4">
-                                                                <span className="bg-sky-500 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                                                                <span className="text-[10px] font-black text-blue-900 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
                                                                     Over {overNum + 1}
                                                                 </span>
-                                                                <div className="h-4 w-px bg-slate-700 mx-1"></div>
-                                                                <span className="text-white font-black text-sm graduate italic">
+                                                                <span className="text-slate-900 font-black text-xs italic tracking-tight">
                                                                     {overRuns} RUNS | {overWkts} WKTS
                                                                 </span>
                                                                 {bowlerName && (
-                                                                    <span className="text-slate-400 font-bold text-[10px] uppercase tracking-widest ml-1 hidden sm:inline">
-                                                                        · {bowlerName} {bowlerFigures}
+                                                                    <span className="text-slate-500 font-bold text-[9px] uppercase tracking-widest ml-1">
+                                                                        • {bowlerName} {bowlerFigures}
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <div className="flex gap-1.5">
+                                                            <div className="flex gap-1">
                                                                 {chronBalls.map((b, idx) => (
-                                                                    <div key={idx} className={`w-2 h-2 rounded-full ${b.isWicket ? 'bg-red-500' : (b.runs || 0) >= 4 ? 'bg-emerald-400' : 'bg-slate-700'}`}></div>
+                                                                    <div key={idx} className={`w-2 h-2 rounded-full ${b.isWicket ? 'bg-red-500' : (b.runs || 0) >= 4 ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
                                                                 ))}
                                                             </div>
                                                         </div>
-                <div className="bg-slate-900/40 border-x border-b border-slate-800 rounded-b-2xl overflow-hidden divide-y divide-slate-800/50">
+
+                                                        <div className="divide-y divide-slate-100">
                                                             {ballsInOver.sort((a,b) => (b.ballNumber || 0) - (a.ballNumber || 0)).map((ball, bIdx) => {
                                                                 const bName = resolvePlayerName(undefined, ball.bowlerId, innNum === 1 ? 'opponent' : 'home');
                                                                 const sName = resolvePlayerName(undefined, ball.strikerId, innNum === 1 ? 'home' : 'opponent');
                                                                 
+                                                                const isBoundary = (ball.runs || 0) >= 4;
+                                                                const isWicket = ball.isWicket;
+
                                                                 let resultText = (ball.generatedCommentary || ball.generated_commentary) ? (ball.generatedCommentary || ball.generated_commentary) : 
                                                                               ball.isWicket ? `OUT! (${ball.wicketType || 'Wicket'})` : 
                                                                               ball.runs === 6 ? 'SIX - Deep into the stands!' : 
                                                                               ball.runs === 4 ? 'FOUR - Elegant boundary!' : 
-                                                                              ball.type === 'wide' ? 'WIDE' : 
-                                                                              ball.type === 'no-ball' ? 'NO BALL' : 
-                                                                              ball.runs === 0 ? 'Dot Ball' : `${ball.runs} Run(s)`;
+                                                                              ball.runs === 0 ? 'Dot ball.' : `${ball.runs} runs.`;
 
-                                                                // Logical Detection for "Match Moments"
-                                                                const isWicket = ball.isWicket;
-                                                                
-                                                                // To detect milestones, we need cumulative runs up to THIS ball.
-                                                                const hitZone = ball.hitZone || ball.hit_zone;
-                                                                
                                                                 return (
-                                                                    <React.Fragment key={bIdx}>
-                                                                        {/* The Ball Row */}
-                                                                        <div className="flex items-center gap-4 px-4 py-4 hover:bg-white/5 transition-all group">
-                                                                            <div className="flex flex-col items-center min-w-[40px]">
-                                                                                <span className="text-[10px] font-black text-slate-500 mb-1">
-                                                                                    {overNum}.{ball.ballNumber}
-                                                                                </span>
-                                                                                <BallBadge ball={ball} />
-                                                                            </div>
-                                                                            
-                                                                            <div className="flex-1">
-                                                                                <div className="flex items-center gap-2 mb-1">
-                                                                                    <span className="text-[10px] font-black text-sky-400 uppercase tracking-tighter">{bName}</span>
-                                                                                    <ChevronRight size={10} className="text-slate-600" />
-                                                                                    <span className="text-[10px] font-black text-white uppercase tracking-tighter">{sName}</span>
-                                                                                    {hitZone && (
-                                                                                        <span className="ml-auto bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest">{hitZone}</span>
-                                                                                    )}
-                                                                                </div>
-                                                                                <div className={`text-sm font-bold tracking-tight leading-relaxed ${
-                                                                                    ball.isWicket ? 'text-red-500' : (ball.runs || 0) >= 4 ? 'text-emerald-400' : 'text-slate-200'
-                                                                                }`}>
-                                                                                    {resultText}
-                                                                                </div>
-                                                                            </div>
-
-                                                                            <div className="text-right hidden sm:block">
-                                                                                 <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Ball Result</div>
-                                                                                 <div className="text-xs font-black text-slate-400 italic graduate opacity-60">
-                                                                                    {ball.isWicket ? 'OUT' : `${ball.runs} R`}
-                                                                                 </div>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        {/* Interstitial Event Cards */}
-                                                                        {isWicket && (
-                                                                            <CommentaryEventCard 
-                                                                                type="wicket" 
-                                                                                player={sName} 
                                                                                 tagline={getRandomTagline('wicket')} 
                                                                             />
                                                                         )}
