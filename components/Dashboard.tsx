@@ -492,21 +492,17 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
       const enrichedBatting = {
         ...(p.battingStats || {}),
-        matches: baseMatches + (matchPerf?.matches || 0),
-        runs: baseRuns + (matchPerf?.runs || 0),
-        sixes: Number(legacyRow?.sixes || p.battingStats?.sixes || 0) + (matchPerf?.sixes || 0),
-        fours: Number(legacyRow?.fours || p.battingStats?.fours || 0) + (matchPerf?.fours || 0),
-        highestScore: (matchPerf?.runs || 0) > parseInt((legacyRow?.highest_score || p.battingStats?.highestScore || '0').toString().replace('*','')) 
-          ? String(matchPerf.runs) 
-          : String(legacyRow?.highest_score || p.battingStats?.highestScore || '0')
+        matches: baseMatches,
+        runs: baseRuns,
+        sixes: Number(legacyRow?.sixes || p.battingStats?.sixes || 0),
+        fours: Number(legacyRow?.fours || p.battingStats?.fours || 0),
+        highestScore: String(legacyRow?.highest_score || p.battingStats?.highestScore || '0')
       };
 
       const enrichedBowling = {
         ...(p.bowlingStats || {}),
-        wickets: baseWickets + (matchPerf?.wickets || 0),
-        bestBowling: (matchPerf?.wickets || 0) > parseInt((legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0').split('/')[0])
-           ? `${matchPerf.wickets}/${matchPerf.bowlingRuns}`
-           : (legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0')
+        wickets: baseWickets,
+        bestBowling: (legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0')
       };
 
       return {
@@ -570,18 +566,13 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const filteredSpotlightPerformers = useMemo(() => {
     if (!performerData.performers || !players) return [];
     
-    // Create a set of all opponent player IDs for O(1) lookup
-    const opponentPlayerIds = new Set();
-    (opponents || []).forEach(team => {
-      (team.players || []).forEach(p => opponentPlayerIds.add(String(p.id)));
-    });
-
+    // Simplification: Any player present in our main roster (Indian Strikers) is eligible.
+    // Opponent players are naturally excluded because they are not in the 'players' store.
     return performerData.performers.filter(perf => {
       const pId = String(perf.playerId || perf.id);
-      // Must be in the main players list AND NOT in the opponent list
-      return players.some(p => String(p.id) === pId) && !opponentPlayerIds.has(pId);
+      return players.some(p => String(p.id) === pId);
     });
-  }, [performerData.performers, players, opponents]);
+  }, [performerData.performers, players]);
 
   const handleGenerateHeroPoster = async () => {
     if (!heroPosterRef.current || !selectedHero) return;

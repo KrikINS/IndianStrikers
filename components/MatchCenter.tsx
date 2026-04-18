@@ -88,7 +88,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
         try {
             console.log(`[Sync] Finalizing match ${match.id} on cloud...`);
-            const finalData = { ...data, isCareerSynced: true };
+            
+            // Ensure even summary-only matches have a valid scorecard object for the UI
+            const finalScorecard = data.scorecard || {
+                innings1: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.finalScoreHome?.runs || 0, totalWickets: data.finalScoreHome?.wickets || 0, totalOvers: data.finalScoreHome?.overs || 0, history: [] },
+                innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.finalScoreAway?.runs || 0, totalWickets: data.finalScoreAway?.wickets || 0, totalOvers: data.finalScoreAway?.overs || 0, history: [] }
+            };
+
+            const finalData = { ...data, scorecard: finalScorecard, isCareerSynced: true };
 
             // Pass the performers array if they exist (Full Scorecard) or empty array (Summary Update)
             const performersToSync = options.skipCareerSync ? [] : (data.performers || []);
@@ -134,12 +141,33 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
         const tossWinnerName = summary.tossWinner === HOME_TEAM_ID ? 'Indian Strikers' : oppName;
 
+        const summaryScorecard = match.scorecard || {
+            innings1: { 
+                batting: [], 
+                bowling: [], 
+                extras: { wide: summary.awayScore.wides || 0, no_ball: 0, legByes: 0, byes: 0 }, 
+                totalRuns: summary.homeScore.runs, 
+                totalWickets: summary.homeScore.wickets, 
+                totalOvers: summary.homeScore.overs,
+                history: []
+            }, 
+            innings2: { 
+                batting: [], 
+                bowling: [], 
+                extras: { wide: summary.homeScore.wides || 0, no_ball: 0, legByes: 0, byes: 0 }, 
+                totalRuns: summary.awayScore.runs, 
+                totalWickets: summary.awayScore.wickets, 
+                totalOvers: summary.awayScore.overs,
+                history: []
+            } 
+        };
+
         await handleManualScoreSubmit({
             finalScoreHome: summary.homeScore,
             finalScoreAway: summary.awayScore,
             resultNote: autoResult,
             resultSummary: autoResult,
-            scorecard: match.scorecard || { innings1: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0 }, innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: 0, totalWickets: 0, totalOvers: 0 } },
+            scorecard: summaryScorecard,
             performers: match.performers || [],
             isLiveScored: false,
             toss: { winner: tossWinnerName, choice: summary.tossChoice },

@@ -542,9 +542,13 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
               {tab === 'commentary' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                   {(() => {
-                    const history = [...currentInningsData.history].reverse();
+                    const historyFiltered = [...(currentInningsData?.history || [])].reverse();
+                    if (historyFiltered.length === 0) {
+                        return <div style={{ padding: '40px', textAlign: 'center', opacity: 0.4 }}>NO COMMENTARY AVAILABLE FOR THIS MATCH SUMMARY</div>;
+                    }
+
                     const overGroups: Record<number, any[]> = {};
-                    history.forEach(ball => {
+                    historyFiltered.forEach(ball => {
                       const ov = ball.overNumber ?? 0;
                       if (!overGroups[ov]) overGroups[ov] = [];
                       overGroups[ov].push(ball);
@@ -553,13 +557,11 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
                     return sortedOvers.map(overNum => {
                       const balls = overGroups[overNum];
-                      const historyAtThisPoint = history.filter(b => (b.overNumber ?? 0) <= overNum);
+                      const historyAtThisPoint = historyFiltered.filter(b => (b.overNumber ?? 0) <= overNum);
                       
-                      // CUMULATIVE STATS
                       const runsAtEnd = historyAtThisPoint.reduce((s, b) => s + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
                       const wktsAtEnd = historyAtThisPoint.filter(b => b.isWicket).length;
                       
-                      // OVER STATS
                       const overRuns = balls.reduce((s, b) => s + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
                       const overWkts = balls.filter(b => b.isWicket).length;
                       
@@ -572,7 +574,6 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
                       return (
                         <div key={overNum}>
-                          {/* PREMIUM BROADCAST OVER SUMMARY */}
                           <div style={{
                             background: '#10B981', 
                             borderRadius: 12,
