@@ -427,15 +427,16 @@ const InningsBreakModal = styled.div`
 `;
 
 const HeroPosterWrapper = styled.div`
-  width: 360px;
-  height: 640px;
-  background: #0c1222;
+  width: 400px;
+  height: 600px;
+  background: #020617;
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  font-family: 'Inter', sans-serif;
 `;
 
 const PosterContainer = styled.div`
@@ -2416,16 +2417,26 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     if (!posterRef.current || isGeneratingPoster) return;
     setIsGeneratingPoster(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Ensure element is ready for capture
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       const canvas = await html2canvas(posterRef.current, {
-        backgroundColor: '#0c1222',
-        scale: 2,
+        backgroundColor: '#020617',
+        scale: 3, // Higher resolution for premium feel
         useCORS: true,
-        logging: false
+        allowTaint: true,
+        logging: false,
+        onclone: (clonedDoc) => {
+          // You can modify the clone here if needed to fix rendering issues
+          const el = clonedDoc.querySelector('[data-poster-root]');
+          if (el) (el as HTMLElement).style.left = '0';
+        }
       });
+      
+      const playerName = getPlayerName(store.manOfTheMatch);
       const link = document.createElement('a');
-      link.download = `StrikersPulse_Hero_${getPlayerName(store.manOfTheMatch).replace(/\s+/g, '_')}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.download = `MatchHero_${playerName.replace(/\s+/g, '_')}_${new Date().getTime()}.png`;
+      link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
     } catch (err) {
       console.error("Poster Generation Failed:", err);
@@ -3494,43 +3505,115 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </div>
 
               <PosterContainer>
-                <HeroPosterWrapper ref={posterRef}>
-                  <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
-                    <img src="/INS%20LOGO.PNG" className="w-16 h-16 object-contain" alt="Logo" />
-                    <div className="text-white">
-                      <p className="text-[10px] font-black italic tracking-widest leading-none">MATCH DAY</p>
-                      <p className="text-2xl font-black italic text-sky-400 leading-none">HERO</p>
+                <HeroPosterWrapper ref={posterRef} data-poster-root>
+                  {/* Premium Background Elements */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-[#020617]" />
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
+                  <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[100px] -ml-32 -mb-32" />
+                  <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#FFF 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+
+                  {/* Header: Logos & Status */}
+                  <div className="absolute top-8 inset-x-8 z-20 flex items-center justify-between">
+                    <img src="/INS%20LOGO.PNG" className="w-14 h-14 object-contain filter drop-shadow-2xl" alt="Logo" />
+                    <div className="text-right">
+                      <p className="text-[10px] font-black italic tracking-[0.2em] text-sky-400 uppercase">Indian Strikers Official</p>
+                      <p className="text-xl font-black italic text-white leading-none tracking-tighter">PLAYER OF THE MATCH</p>
                     </div>
                   </div>
 
-                  <div className="flex-1 flex flex-col items-center justify-center pt-16 px-6">
-                    <User size={120} color="#38bdf8" />
-                    <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#38bdf8', textTransform: 'uppercase', fontStyle: 'italic', textAlign: 'center', lineHeight: 1, marginBottom: 8 }}>
+                  {/* Hero Content */}
+                  <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 pt-12">
+                    <div className="relative mb-6">
+                       <div className="absolute inset-0 bg-sky-500/20 blur-2xl rounded-full scale-150" />
+                       <div className="relative bg-slate-900/50 p-6 rounded-full border border-white/10 backdrop-blur-md">
+                        <Star size={80} color="#FAB005" fill="#FAB005" />
+                       </div>
+                    </div>
+                    
+                    <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-2xl">
                       {getPlayerName(store.manOfTheMatch)}
                     </h2>
-                    <div style={{ height: 4, width: 48, background: 'rgba(255,255,255,0.2)', borderRadius: 2, marginBottom: 16 }}></div>
+                    
+                    <div className="h-1 w-12 bg-sky-500 rounded-full mb-8 shadow-[0_0_15px_rgba(56,189,248,0.5)]" />
 
+                    {/* Stats Grid */}
                     {(() => {
                       const heroStats = calculateTopPerformers().find(p => p.id === store.manOfTheMatch);
+                      const isBowler = heroStats && heroStats.wickets > 0;
+                      
                       return (
-                        <>
-                          <p style={{ color: '#FFF', fontSize: '1.5rem', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase' }}>
-                            {heroStats ? (
-                              heroStats.wickets > 0 ? `${heroStats.wickets}/${heroStats.runsConceded}` : `${heroStats.runs} (${heroStats.balls})`
-                            ) : ''}
-                          </p>
-                          <p style={{ color: '#38bdf8', opacity: 0.5, fontSize: '0.8rem', fontWeight: 900, textTransform: 'uppercase', marginTop: 4 }}>
-                            VS {(matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
-                          </p>
-                        </>
+                        <div className="w-full grid grid-cols-2 gap-3 mb-8">
+                          {heroStats ? (
+                            isBowler ? (
+                              <>
+                                <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
+                                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">Wickets</p>
+                                  <p className="text-3xl font-black text-white italic">{heroStats.wickets}</p>
+                                </div>
+                                <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
+                                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">Econ</p>
+                                  <p className="text-3xl font-black text-white italic">
+                                    {(heroStats.runsConceded / (heroStats.overs || 1)).toFixed(1)}
+                                  </p>
+                                </div>
+                                <div className="col-span-2 bg-white/5 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 flex justify-between items-center">
+                                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">Figures</p>
+                                  <p className="text-xl font-black text-white italic">{heroStats.wickets}/{heroStats.runsConceded} ({heroStats.overs} OV)</p>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
+                                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">Runs</p>
+                                  <p className="text-3xl font-black text-white italic">{heroStats.runs}</p>
+                                </div>
+                                <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
+                                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">S.R.</p>
+                                  <p className="text-3xl font-black text-white italic">
+                                    {((heroStats.runs / (heroStats.balls || 1)) * 100).toFixed(1)}
+                                  </p>
+                                </div>
+                                <div className="col-span-2 bg-white/5 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 flex justify-between items-center">
+                                   <div className="flex gap-4">
+                                      <div className="text-center">
+                                        <p className="text-[8px] font-bold text-white/40 uppercase">4s</p>
+                                        <p className="text-sm font-black text-white italic">{heroStats.fours || 0}</p>
+                                      </div>
+                                      <div className="text-center">
+                                        <p className="text-[8px] font-bold text-white/40 uppercase">6s</p>
+                                        <p className="text-sm font-black text-white italic">{heroStats.sixes || 0}</p>
+                                      </div>
+                                   </div>
+                                   <p className="text-base font-black text-sky-400 italic uppercase">Dominant Performance</p>
+                                </div>
+                              </>
+                            )
+                          ) : (
+                            <div className="col-span-2 p-8 text-white/20 text-center italic">No Statistics Available</div>
+                          )}
+                        </div>
                       );
                     })()}
+                    
+                    {/* Fixture Info */}
+                    <div className="w-full text-center">
+                      <p className="text-xs font-black text-white italic uppercase tracking-[0.2em] mb-1">
+                        INDIAN STRIKERS VS {(matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
+                      </p>
+                      <div className="flex items-center justify-center gap-2 text-sky-400/60 font-black italic text-[10px] uppercase">
+                        <span>{matchMeta?.venue || 'LOCAL GROUND'}</span>
+                        <span className="w-1 h-1 bg-sky-400/40 rounded-full" />
+                        <span>{matchMeta?.date ? new Date(matchMeta.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'MATCH DAY'}</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div style={{ padding: 16, textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    <p style={{ fontSize: '8px', color: 'rgba(255,255,255,0.2)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 4 }}>
-                      STRIKERS PULSE OFFICIAL SCORECARD
-                    </p>
+                  {/* Footer Branding */}
+                  <div className="relative z-10 px-8 py-6 flex items-center justify-between border-t border-white/5">
+                    <p className="text-[8px] color-white/20 font-black tracking-widest uppercase">official strikers pulse capture</p>
+                    <div className="flex gap-1">
+                      {[1,2,3].map(i => <div key={i} className="w-1 h-1 bg-sky-500 rounded-full" />)}
+                    </div>
                   </div>
                 </HeroPosterWrapper>
               </PosterContainer>
