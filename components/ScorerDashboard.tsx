@@ -1325,9 +1325,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       });
     }
   }, [currentInnings?.history?.length]);
-  const isBattingFinishing = currentInnings && (
+  const isBattingFinishing = currentInnings && currentInnings.totalBalls > 0 && (
     currentInnings.wickets === 10 ||
-    (currentInnings.totalBalls > 0 && currentInnings.totalBalls >= (store.maxOvers || 20) * 6) ||
+    (currentInnings.totalBalls >= (store.maxOvers || 20) * 6) ||
     (store.currentInnings === 2 && currentInnings.totalRuns > (store.innings1?.totalRuns || 0))
   );
   const isMatchComplete = store.isFinished;
@@ -2232,6 +2232,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const handleConfirmInnings = async () => {
     if (!activeMatchId || !currentInnings) return;
+    
+    // Safety check: Don't finalize an innings that hasn't even started
+    if (currentInnings.totalBalls === 0 && currentInnings.totalRuns === 0) {
+      console.warn("[Scorer] Finalization blocked: No balls recorded in current innings.");
+      setShowInningsReview(false);
+      return;
+    }
+
     setSyncStatus('loading');
 
     try {

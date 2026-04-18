@@ -591,22 +591,17 @@ export const useCricketScorer = create<ScorerStore>()(
             },
 
             undoLastBall: () => {
-                const { historyStack, currentInnings } = get();
+                const { historyStack } = get();
                 if (historyStack.length === 0) return;
                 
-                // Cross-Innings Boundary Protection: 
-                // Only block if we are trying to undo the very first action of the 2nd innings 
-                // which would revert the match to 1st innings state (potentially dangerous).
                 const prevState = historyStack[historyStack.length - 1];
-                if (currentInnings === 2 && prevState.currentInnings === 1) {
-                    console.warn("Undo blocked: Cannot undo across innings boundary.");
-                    return;
-                }
-
+                
+                // Nuclear reset of UI locks when undoing
                 set({
                     ...prevState,
-                    historyStack: historyStack.slice(0, -1),
-                    isWaitingForBowler: !!prevState.isWaitingForBowler
+                    isFinished: false, // Force reset finish if undoing into an active state
+                    isWaitingForBowler: !!prevState.isWaitingForBowler,
+                    historyStack: historyStack.slice(0, -1)
                 });
             },
 
