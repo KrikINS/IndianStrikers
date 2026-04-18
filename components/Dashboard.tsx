@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Player, OpponentTeam, UserRole, ScheduledMatch } from '../types';
+import { Player, OpponentTeam, UserRole, ScheduledMatch, Ground } from '../types';
 import { getOpponents, getTournamentPerformers, getMatches, getLegacyStats } from '../services/storageService';
-import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, Bell, MapPin, Clock, Loader2, RefreshCw } from 'lucide-react';
+import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, Bell, MapPin, Clock, Loader2, RefreshCw, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
@@ -266,6 +266,7 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
       <div className="flex items-center justify-between overflow-visible relative min-h-[120px]">
         {/* Navigation Buttons */}
         <button 
+          title="Previous Match"
           onClick={prev}
           className="absolute left-0 z-20 p-3 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all -translate-x-1/2 md:-translate-x-full"
         >
@@ -299,13 +300,14 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
                 return '0/0';
               };
 
+              const m = match as any;
               const homeScore = isLive 
-                ? (match.innings1 ? `${match.innings1.totalRuns}/${match.innings1.wickets}` : '0/0')
-                : getScoreStr(match.finalScoreHome, match.innings1);
+                ? (m.innings1 ? `${m.innings1.totalRuns}/${m.innings1.wickets}` : '0/0')
+                : getScoreStr(match.finalScoreHome, m.innings1);
               
               const awayScore = isLive
-                ? (match.innings2 ? `${match.innings2.totalRuns}/${match.innings2.wickets}` : '0/0')
-                : getScoreStr(match.finalScoreAway, match.innings2);
+                ? (m.innings2 ? `${m.innings2.totalRuns}/${m.innings2.wickets}` : '0/0')
+                : getScoreStr(match.finalScoreAway, m.innings2);
 
               const isZeroZero = homeScore === '0/0' && awayScore === '0/0';
 
@@ -394,7 +396,7 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
                           </span>
                         </div>
                         <p className="text-[9px] font-black text-white/60 uppercase tracking-tighter">
-                          {match.result_text || match.resultSummary || 'Match Ongoing'}
+                          {match.resultNote || match.resultSummary || 'Match Ongoing'}
                         </p>
                       </div>
                     </div>
@@ -406,6 +408,7 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
         </div>
 
         <button 
+          title="Next Match"
           onClick={next}
           className="absolute right-0 z-20 p-3 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all translate-x-1/2 md:translate-x-full"
         >
@@ -633,6 +636,15 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {/* Visualizer Area */}
               <div className="flex-[1.5] bg-slate-950 p-4 md:p-8 flex items-center justify-center relative overflow-hidden min-h-[500px]">
                 <div ref={heroPosterRef} className="w-[360px] h-[640px] bg-[#0c1222] relative overflow-hidden flex flex-col shrink-0 shadow-2xl">
+                   {/* Poster Background */}
+                   <div 
+                     className="absolute inset-0 z-0 opacity-15"
+                     style={{ 
+                       backgroundImage: 'url(/assets/cricket_ground_bg.png)',
+                       backgroundSize: 'cover',
+                       backgroundPosition: 'center'
+                     }}
+                   />
                    {/* Poster Content */}
                    <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
                       <img src="/INS%20LOGO.PNG" className="w-16 h-16 object-contain" alt="Logo" />

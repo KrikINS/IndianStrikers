@@ -3514,6 +3514,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <HeroPosterWrapper ref={posterRef} data-poster-root>
                   {/* Premium Background Elements */}
                   <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-[#020617]" />
+                  <div 
+                    className="absolute inset-0 z-0 opacity-15"
+                    style={{ 
+                      backgroundImage: 'url(/assets/cricket_ground_bg.png)',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    }}
+                  />
                   <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
                   <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[100px] -ml-32 -mb-32" />
                   <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#FFF 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
