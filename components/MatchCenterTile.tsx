@@ -85,12 +85,12 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 <div className="relative z-10 flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
                         {isLive ? (
-                            <div className="flex items-center gap-2 bg-red-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-red-500/20">
-                                <span className="relative flex h-2 w-2">
+                            <div className="flex items-center gap-2 bg-[#FF0000] text-white px-3 py-1.5 rounded-lg text-[11px] font-black shadow-lg shadow-red-500/40 border border-white/20">
+                                <span className="relative flex h-2.5 w-2.5">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
                                 </span>
-                                LIVE NOW
+                                LIVE
                             </div>
                         ) : isUpcoming ? (
                             <div className="bg-blue-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-blue-500/10 uppercase tracking-wider">Upcoming</div>
@@ -191,11 +191,21 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
             <div className="px-4 pb-4 mt-auto">
                 {/* Info + Admin Controls */}
                 <div className="flex items-center justify-between mb-3 text-[13.5px] match-meta-info uppercase tracking-tight px-1">
-                    <div className="flex gap-3">
-                        <span className="flex items-center gap-1"><Calendar size={15} /> {dateFormatted}</span>
-                        <span className="flex items-center gap-1">
-                            <MapPin size={15} /> 
-                            {grounds.find(g => g.id === match.groundId)?.name || 'TBD'}
+                    <div className="flex gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300"><Calendar size={14} className="text-sky-400" /> {dateFormatted}</span>
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                            <MapPin size={14} className="text-emerald-400" /> 
+                            {(() => {
+                                const ground = grounds.find(g => g.id === match.groundId);
+                                if (!ground) return 'TBD';
+                                // Extract ground number if exists (e.g. Ground 1)
+                                const numMatch = ground.name.match(/\d+/);
+                                return (
+                                    <span>
+                                        {ground.name} {numMatch ? <span className="text-sky-400 font-black ml-1">#{numMatch[0]}</span> : ''}
+                                    </span>
+                                );
+                            })()}
                         </span>
                     </div>
                     {isAdmin && (

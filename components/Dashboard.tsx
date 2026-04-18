@@ -240,97 +240,151 @@ function WeeklyPerformerCarousel({
   );
 }
 
-// --- Match Ticker (Infinite Marquee Strip) ---
-function MatchCarousel({ matches, opponents, teamLogo }: { matches: ScheduledMatch[], opponents: any[], teamLogo: string }) {
-  const [isPaused, setIsPaused] = useState(false);
-
-  // Triple matches to ensure seamless loop
-  const displayMatches = [...matches, ...matches, ...matches];
+// --- Modern Spotlight Carousel ---
+function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: ScheduledMatch[], opponents: any[], teamLogo: string, grounds: Ground[] }) {
+  const [index, setIndex] = useState(0);
 
   if (!matches.length) return null;
 
+  const next = () => setIndex((prev) => (prev + 1) % matches.length);
+  const prev = () => setIndex((prev) => (prev - 1 + matches.length) % matches.length);
+
   return (
-    <div 
-      className="relative w-full overflow-hidden py-6 border-y border-white/10 bg-transparent"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-    >
-      <div className="flex whitespace-nowrap">
-        <motion.div
-          className="flex gap-12 px-12 items-center"
-          animate={!isPaused ? { x: [0, -(100 / 3) + "%"] } : {}}
-          transition={{
-            x: {
-              repeat: Infinity,
-              repeatType: "loop",
-              duration: matches.length * 8, // Adjust speed based on item count
-              ease: "linear",
-            },
-          }}
+    <div className="relative w-full max-w-5xl mx-auto px-4 py-12">
+      <div className="flex items-center justify-between overflow-visible relative min-h-[140px]">
+        {/* Navigation Buttons */}
+        <button 
+          onClick={prev}
+          className="absolute left-0 z-20 p-3 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all -translate-x-1/2 md:-translate-x-full"
         >
-          {displayMatches.map((match, i) => {
-            const opponent = opponents.find(o => o.id === match.opponentId);
-            const isLive = match.status === 'live';
-            
-            return (
-              <Link 
-                key={`${match.id}-${i}`}
-                to={isLive ? `/live/${match.id}` : `/scorecard/${match.id}`}
-                className={`flex-shrink-0 min-w-[220px] md:min-w-[260px] rounded-xl p-5 border transition-all duration-300 relative group overflow-hidden ${
-                  isLive 
-                    ? 'bg-sky-600 border-sky-400 shadow-[0_0_25px_rgba(14,165,233,0.4)]' 
-                    : 'bg-[#1e293b] border-slate-700 hover:border-sky-500/50 hover:bg-[#253347]'
-                }`}
-              >
-                {/* Background Glow */}
-                <div className={`absolute top-0 right-0 w-20 h-20 blur-[40px] rounded-full -translate-y-1/2 translate-x-1/2 opacity-20 ${isLive ? 'bg-sky-500' : 'bg-slate-500'}`}></div>
-                
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                       <img src={teamLogo || "/INS%20LOGO.PNG"} alt="Home" className="w-5 h-5 object-contain" />
-                       <span className="text-[10px] font-black uppercase text-slate-200">INS</span>
-                       <span className="text-[10px] font-black text-white">
-                         {match.innings1 ? `${match.innings1.totalRuns}/${match.innings1.wickets}` : '0/0'}
-                       </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                       <div className="w-5 h-5 rounded-md bg-white/5 flex items-center justify-center border border-white/10 p-0.5">
-                         {opponent?.logoUrl ? (
-                           <img src={opponent.logoUrl} alt="Away" className="w-full h-full object-contain" />
-                         ) : (
-                           <Shield size={10} className="text-slate-400" />
-                         )}
-                       </div>
-                       <span className="text-[10px] font-black uppercase text-slate-200 truncate w-8 overflow-hidden">
-                         {match.opponentName?.substring(0, 3) || opponent?.name?.substring(0, 3) || 'OPP'}
-                       </span>
-                       <span className="text-[10px] font-black text-white">
-                         {match.innings2 ? `${match.innings2.totalRuns}/${match.innings2.wickets}` : '0/0'}
-                       </span>
-                    </div>
-                  </div>
+          <ChevronLeft size={20} />
+        </button>
 
-                  <div className="h-8 w-px bg-white/10"></div>
+        <div className="flex-1 flex justify-center items-center relative gap-4 overflow-visible h-full">
+          <AnimatePresence mode="popLayout">
+            {[-1, 0, 1].map((offset) => {
+              const matchIdx = (index + offset + matches.length) % matches.length;
+              const match = matches[matchIdx];
+              const opponent = opponents.find(o => o.id === match.opponentId);
+              const isLive = match.status === 'live';
+              const isCenter = offset === 0;
 
-                  <div className="flex flex-col items-end flex-1 min-w-0">
-                    {isLive ? (
-                      <div className="flex items-center gap-1.5 animate-pulse">
-                        <span className="h-1.5 w-1.5 rounded-full bg-sky-400"></span>
-                        <span className="text-[8px] font-black uppercase text-sky-400 tracking-widest text-glow-sky">Live</span>
-                      </div>
-                    ) : (
-                      <span className="text-[8px] font-bold text-slate-500 uppercase">{new Date(match.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+              const ground = grounds.find(g => g.id === match.groundId);
+              const groundNum = ground?.name.match(/\d+/)?.[0];
+
+              // Score Logic: Use finalScore for completed, innings for live
+              const homeScore = isLive 
+                ? (match.innings1 ? `${match.innings1.totalRuns}/${match.innings1.wickets}` : '0/0')
+                : (match.finalScoreHome ? `${match.finalScoreHome.runs}/${match.finalScoreHome.wickets}` : (match.innings1 ? `${match.innings1.totalRuns}/${match.innings1.wickets}` : 'N/A'));
+              
+              const awayScore = isLive
+                ? (match.innings2 ? `${match.innings2.totalRuns}/${match.innings2.wickets}` : '0/0')
+                : (match.finalScoreAway ? `${match.finalScoreAway.runs}/${match.finalScoreAway.wickets}` : (match.innings2 ? `${match.innings2.totalRuns}/${match.innings2.wickets}` : 'N/A'));
+
+              const isZeroZero = homeScore === '0/0' && awayScore === '0/0';
+
+              return (
+                <motion.div
+                  key={`${match.id}-${matchIdx}`}
+                  initial={{ opacity: 0, scale: 0.8, x: offset * 300 }}
+                  animate={{ 
+                    opacity: isCenter ? 1 : 0.4, 
+                    scale: isCenter ? 1 : 0.85,
+                    x: offset * (window.innerWidth < 768 ? 240 : 340),
+                    zIndex: isCenter ? 10 : 0
+                  }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className="absolute"
+                >
+                  <Link 
+                    to={isLive ? `/live/${match.id}` : `/scorecard/${match.id}`}
+                    className={`block w-[280px] md:w-[320px] rounded-2xl p-6 border transition-all duration-500 overflow-hidden relative group ${
+                      isLive 
+                        ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500/50 shadow-[0_0_40px_rgba(239,68,68,0.2)]' 
+                        : 'bg-slate-900/60 backdrop-blur-md border-white/10 hover:border-sky-500/40'
+                    }`}
+                  >
+                    {/* Animated Glow on center card */}
+                    {isCenter && (
+                      <motion.div 
+                        animate={{ opacity: [0.1, 0.3, 0.1] }}
+                        transition={{ repeat: Infinity, duration: 3 }}
+                        className={`absolute -top-24 -right-24 w-48 h-48 blur-[60px] rounded-full ${isLive ? 'bg-red-600' : 'bg-sky-600'}`}
+                      />
                     )}
-                    <p className="text-[9px] font-bold text-slate-100 truncate w-full text-right mt-1">
-                      {match.result_text || 'Match Scheduled'}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </motion.div>
+
+                    <div className="relative z-10">
+                      {/* Top Bar: Tournament & Status */}
+                      <div className="flex justify-between items-center mb-5">
+                        <span className="text-[10px] font-black uppercase text-sky-400 tracking-[0.2em]">
+                          {match.tournament || 'Exhibition'}
+                        </span>
+                        {isLive ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#FF0000] animate-pulse"></span>
+                            <span className="text-[10px] font-black uppercase text-[#FF0000] tracking-widest">Live</span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">
+                            {new Date(match.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Main Fixture Display */}
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 flex flex-col items-center gap-2">
+                          <img src={teamLogo || "/INS%20LOGO.PNG"} alt="Home" className="w-10 h-10 object-contain drop-shadow-md" />
+                          <span className="text-xs font-black text-white">INS</span>
+                          {!isZeroZero && <span className="text-lg font-black text-white">{homeScore}</span>}
+                        </div>
+
+                        <div className="flex flex-col items-center">
+                           <div className="text-[10px] font-black text-white/20 italic">VS</div>
+                        </div>
+
+                        <div className="flex-1 flex flex-col items-center gap-2">
+                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 p-1.5">
+                            {opponent?.logoUrl ? (
+                              <img src={opponent.logoUrl} alt="Away" className="w-full h-full object-contain" />
+                            ) : (
+                              <Shield size={20} className="text-slate-500" />
+                            )}
+                          </div>
+                          <span className="text-xs font-black text-white uppercase truncate">
+                            {match.opponentName?.substring(0, 3) || opponent?.name?.substring(0, 3) || 'OPP'}
+                          </span>
+                          {!isZeroZero && <span className="text-lg font-black text-white">{awayScore}</span>}
+                        </div>
+                      </div>
+
+                      {/* Bottom Info: Fixture or Venue */}
+                      <div className="mt-5 pt-4 border-t border-white/5 flex justify-between items-center">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin size={10} className="text-slate-500" />
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            {ground?.name || 'TBD'} {groundNum && <span className="text-sky-400 font-black">#{groundNum}</span>}
+                          </span>
+                        </div>
+                        <p className="text-[9px] font-black text-white/60 uppercase tracking-tighter">
+                          {match.result_text || match.resultSummary || 'Match Ongoing'}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+
+        <button 
+          onClick={next}
+          className="absolute right-0 z-20 p-3 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all translate-x-1/2 md:translate-x-full"
+        >
+          <ChevronRight size={20} />
+        </button>
       </div>
     </div>
   );
@@ -531,7 +585,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             animate={{ opacity: 1, y: 0 }}
             className="w-full relative z-20 mt-4 mb-2"
           >
-            <MatchCarousel matches={carouselMatches} opponents={opponents} teamLogo={teamLogo || ''} />
+            <MatchCarousel matches={carouselMatches} opponents={opponents} teamLogo={teamLogo || ''} grounds={grounds || []} />
           </motion.div>
         )}
       </AnimatePresence>
