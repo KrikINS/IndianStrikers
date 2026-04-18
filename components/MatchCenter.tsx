@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Player, OpponentTeam, UserRole, ScheduledMatch } from '../types';
 import { useMatchCenter } from '../store/matchStore';
 import MatchCenterTile from './MatchCenterTile';
-import ScorecardViewModal from './ScorecardViewModal';
+import { UniversalScorecard } from './UniversalScorecard';
 import { PlayingXIModal } from './PlayingXIModal';
 import EditMatchModal from './EditMatchModal';
 import AddMatchModal from './AddMatchModal';
@@ -1039,13 +1039,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
                 {/* Modals & Overlays */}
                 {viewScorecardMatch && (
-                    <ScorecardViewModal
+                    <UniversalScorecard
                         match={viewScorecardMatch}
-                        isOpen={!!viewScorecardMatch}
                         onClose={() => setViewScorecardMatch(null)}
                         players={players}
-                        allOpponents={opponents}
-                        grounds={grounds}
+                        opponents={opponents}
+                        isLive={viewScorecardMatch.status === 'live'}
                     />
                 )}
                 {editingMatch && (
