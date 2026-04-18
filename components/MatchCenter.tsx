@@ -746,6 +746,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                 onClick={() => {
                                     if(window.confirm("This will clear all matches from your browser's local cache and re-download from the cloud. Continue?")) {
                                         wipeLocalMatches();
+                                        useCricketScorer.getState().resetStore(); // Emergency clear for stuck matches
                                         handleCloudSync();
                                     }
                                 }}

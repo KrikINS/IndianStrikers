@@ -226,6 +226,7 @@ export const useCricketScorer = create<ScorerStore>()(
                 }
 
                 // If we're already scoring this match and have innings data, don't wipe it — just update metadata & branding
+                // If we're already scoring this match and have innings data, don't wipe it — just update metadata & branding
                 if (current.matchId === data.matchId && current.innings1) {
                     set({
                         matchType: data.matchType,
@@ -237,6 +238,7 @@ export const useCricketScorer = create<ScorerStore>()(
                         awayLogo: data.awayLogo || current.awayLogo,
                         homeXI: (data.homeXI && data.homeXI.length > 0) ? data.homeXI : current.homeXI,
                         awayXI: (data.awayXI && data.awayXI.length > 0) ? data.awayXI : current.awayXI,
+                        isFinished: false // Reset isFinished if we're explicitly initializing to start scoring
                     });
                     return;
                 }

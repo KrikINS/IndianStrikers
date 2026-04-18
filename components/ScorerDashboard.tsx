@@ -2806,7 +2806,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit'
             }}>
               {bowlerStats.wickets}-{bowlerStats.runs} ({bowlerStats.overs})
-              {bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5) && " â€¢ QUOTA DONE"}
+              {bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5) && " • QUOTA DONE"}
             </div>
           </ParticipantCard>
         </ActiveParticipants>
@@ -3503,6 +3503,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <ActionButton
                   onClick={() => {
                     handleUpdateMatchStatus('completed');
+                    store.resetStore(); // Clear scoring state from memory after finishing
                     navigate('/match-center');
                   }}
                 >
