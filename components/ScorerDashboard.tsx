@@ -1005,6 +1005,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     return id;
   };
 
+  const getPlayerAvatar = (id: string | null): string | null => {
+    if (!id) return null;
+    const player = players.find((p: Player) => p.id === id);
+    return player?.avatarUrl || null;
+  };
+
   useEffect(() => {
     import('../services/storageService').then(({ getOpponents }) => {
       getOpponents().then(data => setAllOpponents(data || [])).catch(console.error);
@@ -3525,8 +3531,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 pt-12">
                     <div className="relative mb-6">
                        <div className="absolute inset-0 bg-sky-500/20 blur-2xl rounded-full scale-150" />
-                       <div className="relative bg-slate-900/50 p-6 rounded-full border border-white/10 backdrop-blur-md">
-                        <Star size={80} color="#FAB005" fill="#FAB005" />
+                       <div className="relative bg-slate-900/50 p-1.5 rounded-full border border-white/10 backdrop-blur-md overflow-hidden">
+                        {getPlayerAvatar(store.manOfTheMatch) ? (
+                          <img 
+                            src={getPlayerAvatar(store.manOfTheMatch)!} 
+                            crossOrigin="anonymous"
+                            className="w-32 h-32 rounded-full object-cover border-4 border-sky-400/30 shadow-[0_0_20px_rgba(56,189,248,0.2)]"
+                            alt="Hero"
+                          />
+                        ) : (
+                          <div className="w-32 h-32 flex items-center justify-center bg-slate-800 rounded-full border-4 border-sky-400/30">
+                            <Star size={64} color="#FAB005" fill="#FAB005" />
+                          </div>
+                        )}
                        </div>
                     </div>
                     
