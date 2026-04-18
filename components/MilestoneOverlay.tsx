@@ -16,7 +16,8 @@ export type MilestoneType =
   | 'HUNDRED' 
   | 'FOUR_WICKET' 
   | 'FIVE_WICKET' 
-  | 'HAT_TRICK';
+  | 'HAT_TRICK'
+  | 'PARTNERSHIP';
 
 interface MilestoneEvent {
   id: string;
@@ -40,19 +41,17 @@ const OverlayContainer = styled.div`
 const BlurBackdrop = styled(motion.div)`
   position: absolute;
   inset: 0;
-  backdrop-filter: blur(8px);
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.2);
 `;
 
 const Ribbon = styled(motion.div)`
   position: absolute;
   width: 100%;
   height: 120px;
-  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 50px rgba(56, 189, 248, 0.5);
 `;
 
 const WicketGlitch = styled(motion.div)`
@@ -132,9 +131,9 @@ export const MilestoneOverlay = forwardRef<MilestoneOverlayRef>((_, ref) => {
         particleCount: 150,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#001F3F', '#FAB005', '#FFFFFF']
+        colors: ['#FAB005', '#FFD700', '#FFFFFF']
       });
-    } else if (type === 'FIFTY' || type === 'HUNDRED' || type.includes('WICKET')) {
+    } else if (type === 'FIFTY' || type === 'HUNDRED' || type === 'PARTNERSHIP' || type.includes('WICKET')) {
       const end = Date.now() + (2 * 1000);
       const colors = ['#FAB005', '#FFFFFF'];
 
@@ -180,11 +179,6 @@ export const MilestoneOverlay = forwardRef<MilestoneOverlayRef>((_, ref) => {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.2 }}
                 >FOUR</MainText>
-                <motion.div 
-                  className="absolute inset-0 bg-sky-400 blur-2xl opacity-50"
-                  animate={{ opacity: [0.2, 0.5, 0.2] }}
-                  transition={{ duration: 1, repeat: Infinity }}
-                />
               </div>
             </Ribbon>
           </>
@@ -203,7 +197,7 @@ export const MilestoneOverlay = forwardRef<MilestoneOverlayRef>((_, ref) => {
               transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
               style={{ position: 'absolute', width: 400, height: 400, border: '2px dashed rgba(250, 176, 5, 0.3)', borderRadius: '50%' }}
             />
-            <MainText $color="#FAB005" style={{ fontSize: '6rem' }}>MAXIMUM</MainText>
+            <MainText $color="#FAB005" style={{ fontSize: '6rem', marginBottom: '1rem' }}>MAXIMUM</MainText>
             <SubText>{activeEvent.playerName}</SubText>
           </motion.div>
         );
@@ -316,9 +310,32 @@ export const MilestoneOverlay = forwardRef<MilestoneOverlayRef>((_, ref) => {
                 <Trophy size={100} color="#FAB005" className="mx-auto mb-8" />
                 <MainText $color="#FAB005">{activeEvent.type === 'FOUR_WICKET' ? '4-WICKET HAUL' : '5-WICKET CRUSHER'}</MainText>
                 <SubText>{activeEvent.playerName} • {activeEvent.subText}</SubText>
-             </motion.div>
+              </motion.div>
           </div>
         )
+
+      case 'PARTNERSHIP':
+        return (
+          <div style={{ textAlign: 'center' }}>
+             <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', damping: 15 }}
+             >
+                <div style={{ background: 'rgba(250, 176, 5, 0.1)', width: 120, height: 120, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px' }}>
+                  <Users size={64} color="#FAB005" />
+                </div>
+                <MainText $color="#FAB005" style={{ fontSize: '5.5rem' }}>{activeEvent.playerName} PARTNERSHIP</MainText>
+                <SubText style={{ color: '#FFF', opacity: 1, fontWeight: 900 }}>{activeEvent.subText}</SubText>
+                
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: 200 }}
+                  style={{ height: 2, background: '#FAB005', margin: '24px auto', borderRadius: 1 }}
+                />
+             </motion.div>
+          </div>
+        );
 
       default:
         return null;

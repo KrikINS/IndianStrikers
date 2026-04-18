@@ -92,7 +92,8 @@ export interface MatchState {
     setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
     isWaitingForBowler: boolean;
     wagonWheelQuickSave: boolean;
-    pendingMilestone: { type: 'fifty' | 'hundred', player: string } | null;
+    pendingMilestone: { type: 'fifty' | 'hundred' | 'partnership', player: string, subText?: string } | null;
+    partnership_notified: number[];
     pendingIntroduction: string | null;
 }
 
@@ -167,6 +168,7 @@ const INITIAL_STATE: MatchState = {
     setMilestoneNotified: () => {},
     isWaitingForBowler: false,
     pendingMilestone: null,
+    partnership_notified: [],
     pendingIntroduction: null
 };
 
@@ -274,15 +276,16 @@ export const useCricketScorer = create<ScorerStore>()(
                     totalBalls: 0,
                     extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, penalty: 0 },
                     battingStats: {
-                        [strId]: { id: strId, name: 'Striker', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: 0 },
-                        [nStrId]: { id: nStrId, name: 'Non-Striker', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: 1 }
+                        [strId]: { id: strId, name: 'Striker', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: 0, fifty_notified: false, hundred_notified: false },
+                        [nStrId]: { id: nStrId, name: 'Non-Striker', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: 1, fifty_notified: false, hundred_notified: false }
                     },
                     bowlingStats: {
                         [bwlId]: { id: bwlId, name: 'Bowler', overs: 0, maidens: 0, runs: 0, wickets: 0, index: 0 }
                     },
                     fallOfWickets: [],
                     history: []
-                }
+                },
+                partnership_notified: [] // Reset partnership notified list
             }),
 
             recordBall: (payload) => {
@@ -325,7 +328,8 @@ export const useCricketScorer = create<ScorerStore>()(
                     homeXI: state.homeXI,
                     awayXI: state.awayXI,
                     isWaitingForBowler: state.isWaitingForBowler,
-                    pendingMilestone: state.pendingMilestone
+                    pendingMilestone: state.pendingMilestone,
+                    partnership_notified: state.partnership_notified
                 }));
 
                 const { runs, type, isWicket, wicketType, subType = 'bat', outPlayerId, newBatterId, zone } = payload;
@@ -383,6 +387,34 @@ export const useCricketScorer = create<ScorerStore>()(
                         b.fifty_notified = true;
                         pendingMilestone = { type: 'fifty', player: b.name || 'Striker' };
                     }
+                }
+
+                // Partnership Milestone Detection
+                const currentHistory = nextInnings.history || [];
+                let lastWicketIdx = -1;
+                for (let i = currentHistory.length - 1; i >= 0; i--) {
+                  if (currentHistory[i].isWicket && !['Retired Hurt'].includes(currentHistory[i].wicketType || '')) {
+                    lastWicketIdx = i;
+                    break;
+                  }
+                }
+                const standBalls = lastWicketIdx === -1 ? currentHistory : currentHistory.slice(lastWicketIdx + 1);
+                const pRuns = standBalls.reduce((acc: number, cur: any) => acc + cur.runs + (cur.type === 'wide' || cur.type === 'no-ball' ? 1 : 0), 0) + (runs + extraRuns);
+                
+                let partnership_notified = state.partnership_notified || [];
+                const milestoneLevels = [200, 150, 100, 50]; // Check highest first
+                for (const level of milestoneLevels) {
+                  if (pRuns >= level && !partnership_notified.includes(level)) {
+                    partnership_notified = [...partnership_notified, level];
+                    const sName = b.name || 'Striker';
+                    const nsName = nextInnings.battingStats[state.nonStrikerId!]?.name || 'Non-Striker';
+                    pendingMilestone = { 
+                      type: 'partnership', 
+                      player: `${level}`, 
+                      subText: `${sName} & ${nsName}` 
+                    };
+                    break; // Only one milestone per ball
+                  }
                 }
 
                 // Update Bowler Stats
@@ -445,6 +477,12 @@ export const useCricketScorer = create<ScorerStore>()(
                             nextInnings.battingStats[newBatterId].status = 'batting';
                         }
                     }
+                }
+
+                // Reset partnership notified on wicket
+                let next_partnership_notified = partnership_notified;
+                if (isWicket && !['Retired Hurt'].includes(wicketType || '')) {
+                  next_partnership_notified = [];
                 }
 
                 // Normal rotation based on runs
@@ -516,6 +554,7 @@ export const useCricketScorer = create<ScorerStore>()(
                     isFreeHit: isNoBall || (state.isFreeHit && (isWide || isNoBall)),
                     isFinished: finished,
                     pendingMilestone: pendingMilestone,
+                    partnership_notified: next_partnership_notified,
                     pendingIntroduction: null, // Clear after use
                     isWaitingForBowler: isOverComplete,
                     currentBowlerId: isOverComplete ? null : state.currentBowlerId,

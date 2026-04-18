@@ -1178,10 +1178,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   // Trigger Milestone Splash Screen based on store events
   useEffect(() => {
     if (store.pendingMilestone && milestoneRef.current) {
-      const { type, player } = store.pendingMilestone;
+      const { type, player, subText } = store.pendingMilestone;
       milestoneRef.current.trigger({ 
-        type: type === 'hundred' ? 'HUNDRED' : 'FIFTY', 
-        playerName: player 
+        type: type === 'hundred' ? 'HUNDRED' : (type === 'partnership' ? 'PARTNERSHIP' : 'FIFTY'), 
+        playerName: player,
+        subText: subText
       });
       // Note: pendingMilestone is reset by the store on the next ball and cleared on UNDO.
     }
