@@ -293,6 +293,10 @@ export const useCricketScorer = create<ScorerStore>()(
             recordBall: (payload) => {
                 const state = get();
                 const innings = state.currentInnings === 1 ? state.innings1 : state.innings2;
+                if (!innings) {
+                    console.error("[Scorer] recordBall aborted: innings data is null.");
+                    return;
+                }
                 // HARD LOCK: Prevent recording if we are waiting for a bowler selection
                 if (state.isWaitingForBowler) {
                     return;

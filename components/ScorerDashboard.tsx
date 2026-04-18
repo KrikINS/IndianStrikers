@@ -2392,15 +2392,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   };
 
   const calculateTopPerformers = () => {
-    const scores: Record<string, { id: string, name: string, score: number, runs: number, balls: number, wickets: number, maidens: number, runsConceded: number, overs: number }> = {};
+    const scores: Record<string, { id: string, name: string, score: number, runs: number, balls: number, wickets: number, maidens: number, runsConceded: number, overs: number, fours: number, sixes: number }> = {};
 
     [store.innings1, store.innings2].forEach(inn => {
       if (!inn) return;
       Object.entries(inn.battingStats || {}).forEach(([id, s]: [string, any]) => {
-        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, balls: 0, wickets: 0, maidens: 0, runsConceded: 0, overs: 0 };
+        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, balls: 0, wickets: 0, maidens: 0, runsConceded: 0, overs: 0, fours: 0, sixes: 0 };
         scores[id].runs += s.runs;
         scores[id].balls += s.balls;
-        scores[id].score += s.runs + (s.fours * 2) + (s.sixes * 4);
+        scores[id].fours += s.fours || 0;
+        scores[id].sixes += s.sixes || 0;
+        scores[id].score += s.runs + ((s.fours || 0) * 2) + ((s.sixes || 0) * 4);
         if (s.runs >= 50) scores[id].score += 50;
         if (s.runs >= 100) scores[id].score += 100;
       });
@@ -3731,7 +3733,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         )}
         {showScorecardModal && (
           <UniversalScorecard
-            match={store.matchData}
+            match={matchMeta as any}
             players={players}
             opponents={allOpponents}
             onClose={() => setShowScorecardModal(false)}
