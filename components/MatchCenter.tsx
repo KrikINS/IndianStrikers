@@ -428,7 +428,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
           .date-stack { display: flex; flex-direction: column; gap: 2px; }
           .date-main { font-weight: 700; color: #111827; font-size: 12px; }
           .time-sub { font-size: 11px; color: #64748b; }
-          .id-cell { color: #2563eb; font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; }
+
           .tournament-cell { font-size: 12px; font-weight: 700; color: #334155; }
           .vs-cell { 
             font-size: 11px; 
@@ -902,7 +902,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                         <table className="schedule-table">
                                             <thead>
                                                 <tr>
-                                                    <th>#ID</th>
                                                     <th>Date & Time</th>
                                                     <th>Tournament</th>
                                                     <th>Fixture</th>
@@ -917,7 +916,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                     const opp = opponents.find(o => o.id === m.opponentId);
                                                     return (
                                                         <tr key={m.id} onClick={() => setActiveTab('cards')}>
-                                                            <td className="id-cell">#{(String(m.id).slice(-4) || "0000").toUpperCase()}</td>
                                                             <td>
                                                                 <div className="date-stack">
                                                                     <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
