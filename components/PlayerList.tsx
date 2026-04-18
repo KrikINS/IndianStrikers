@@ -2,10 +2,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
-import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ExternalLink, RefreshCw, Swords } from 'lucide-react';
 import * as api from '../services/storageService';
 import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUsers, getLegacyStats } from '../services/storageService';
 import { usePlayerStore } from '../store/playerStore';
+import { useOpponentStore } from '../store/opponentStore';
 import styles from './PlayerList.module.css';
 
 interface PlayerListProps {
@@ -74,9 +75,11 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const [pendingStatTab, setPendingStatTab] = useState<'batting' | 'bowling' | null>(null); // To resume after password
   const [isStatsUnlocked, setIsStatsUnlocked] = useState(false); // Session unlock state for current modal
 
+  const { opponents, fetchOpponents } = useOpponentStore();
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [viewingPlayer, setViewingPlayer] = useState<Player | null>(null);
-  const [rosterTab, setRosterTab] = useState<'active' | 'inactive'>('active');
+  const [rosterTab, setRosterTab] = useState<'active' | 'inactive' | 'others'>('active');
+  const [selectedOpponentId, setSelectedOpponentId] = useState<string>('all');
   const [activeStatTab, setActiveStatTab] = useState<'batting' | 'bowling'>('batting');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEditTab, setActiveEditTab] = useState<'general' | 'batting' | 'bowling'>('general');
@@ -136,7 +139,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
       }
     };
     fetchMasters();
-  }, []);
+    fetchOpponents();
+  }, [fetchOpponents]);
 
   const enrichedPlayers = useMemo(() => {
     if (!players) return [];
@@ -253,17 +257,44 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Subscribe to the rosterTab for filtering (active vs inactive)
-  const displayedPlayers = (searchingPlayers || []).filter((p: Player) => {
-    // Determine active status accurately
-    const isActuallyActive = p.isActive && p.status !== 'inactive';
+  // Map of player IDs to their respective opponent teams for quick lookup
+  const opponentMap = useMemo(() => {
+    const map = new Map<string, { team: OpponentTeam }>();
+    (opponents || []).forEach(team => {
+      (team.players || []).forEach(p => {
+        map.set(String(p.id), { team });
+      });
+    });
+    return map;
+  }, [opponents]);
 
-    if (rosterTab === 'active') {
-      return isActuallyActive;
-    }
-    // Inactive tab shows everyone else
-    return !isActuallyActive;
-  });
+  // Subscribe to the rosterTab for filtering (active vs inactive vs others)
+  const displayedPlayers = useMemo(() => {
+    return (searchingPlayers || []).filter((p: Player) => {
+      const opponentData = opponentMap.get(String(p.id));
+      const belongsToOpponent = !!opponentData;
+
+      if (rosterTab === 'others') {
+        if (!belongsToOpponent) return false;
+        if (selectedOpponentId !== 'all') {
+            return opponentData.team.id === selectedOpponentId;
+        }
+        return true;
+      }
+
+      // Hide opponent players from club member tabs
+      if (belongsToOpponent) return false;
+
+      // Determine active status accurately for club members
+      const isActuallyActive = p.isActive && p.status !== 'inactive';
+
+      if (rosterTab === 'active') {
+        return isActuallyActive;
+      }
+      // Inactive tab shows everyone else who isn't an opponent
+      return !isActuallyActive;
+    });
+  }, [searchingPlayers, rosterTab, opponentMap, selectedOpponentId]);
 
   // TEMP DEBUG: Log this to see if players exist but are filtered out
   console.log("[PlayerList] Total in Store:", players.length);
@@ -607,9 +638,19 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-slate-500 mb-4">
-          {getRoleIcon(player.role)}
-          <span className="font-medium">{player.role}</span>
+        <div className="flex flex-col gap-1 mb-4">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            {getRoleIcon(player.role)}
+            <span className="font-medium">{player.role}</span>
+          </div>
+          {opponentMap.has(String(player.id)) && (
+            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-orange-50/50 border border-orange-100 rounded-lg w-fit">
+              <Swords size={10} className="text-orange-500" />
+              <span className="text-[9px] font-black text-orange-600 uppercase tracking-tighter">
+                {opponentMap.get(String(player.id))?.team.name}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-xs">
@@ -695,7 +736,31 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           >
              <UserMinus size={14} /> Inactive
           </button>
+          <button
+            onClick={() => setRosterTab('others')}
+            className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'others' ? 'bg-orange-600 text-white shadow-lg' : 'text-white hover:bg-orange-600/30 hover:text-white'}`}
+          >
+             <Swords size={14} /> Other Teams
+          </button>
         </div>
+
+        {/* Team Filter for Other Teams */}
+        {rosterTab === 'others' && (
+          <div className="relative w-full md:w-64">
+            <select
+              title="Filter by Team"
+              value={selectedOpponentId}
+              onChange={(e) => setSelectedOpponentId(e.target.value)}
+              className="w-full pl-4 pr-10 py-2.5 bg-slate-800/30 border border-slate-700/50 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-orange-200 text-xs font-bold uppercase tracking-widest appearance-none cursor-pointer"
+            >
+              <option value="all" className="bg-slate-900">All Other Teams</option>
+              {opponents.sort((a,b) => a.name.localeCompare(b.name)).map(team => (
+                <option key={team.id} value={team.id} className="bg-slate-900">{team.name}</option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-orange-400 pointer-events-none" />
+          </div>
+        )}
 
         {/* Search Bar - Integrated into the glass bar */}
         <div className="relative flex-1 w-full">
@@ -734,7 +799,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
               </div>
             )}
           </section>
-        ) : (
+        ) : rosterTab === 'inactive' ? (
           /* Inactive Players Section */
           <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
@@ -749,6 +814,32 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
             ) : (
               <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">
                 No inactive players found.
+              </div>
+            )}
+          </section>
+        ) : (
+          /* Other Teams Section */
+          <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-5">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+                <span className="w-1.5 h-6 bg-orange-600 rounded-full"></span>
+                Other Team Players
+                <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{displayedPlayers.length}</span>
+              </h3>
+              {selectedOpponentId !== 'all' && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-bold ring-1 ring-orange-200">
+                  <Swords size={12} />
+                  Representing: {opponents.find(o => o.id === selectedOpponentId)?.name}
+                </div>
+              )}
+            </div>
+            {displayedPlayers.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                {displayedPlayers?.map(renderPlayerCard)}
+              </div>
+            ) : (
+              <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">
+                No players found for the selected team.
               </div>
             )}
           </section>
