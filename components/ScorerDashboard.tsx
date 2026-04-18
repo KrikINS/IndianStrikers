@@ -25,7 +25,10 @@ import {
   MessageSquare,
   Mic,
   RotateCcw,
-  Cloud
+  Cloud,
+  CloudLightning,
+  CloudDownload,
+  CloudOff
 } from 'lucide-react';
 import { useCricketScorer } from './matchStore';
 import { useMatchCenter } from '../store/matchStore';
@@ -93,6 +96,26 @@ const IconButton = styled.button`
 
   &:hover { background: rgba(255, 255, 255, 0.1); }
   &:hover { transform: scale(1.1); }
+`;
+
+const SyncStatusPill = styled.div<{ $outOfSync: boolean }>`
+  position: fixed;
+  bottom: 310px; // Above the scoring interface
+  right: 12px;
+  background: ${props => props.$outOfSync ? 'rgba(250, 176, 5, 0.95)' : 'rgba(0, 31, 63, 0.8)'};
+  backdrop-filter: blur(8px);
+  color: ${props => props.$outOfSync ? '#000' : '#FFF'};
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.6rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 1000;
+  border: 1px solid ${props => props.$outOfSync ? '#FAB005' : 'rgba(255,255,255,0.1)'};
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  pointer-events: none;
 `;
 
 const OverSeparator = styled.div`
@@ -1076,6 +1099,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     }
   }, [store.toss]);
 
+  // Auto-trigger bowler selection modal at end of over
+  useEffect(() => {
+    if (store.isWaitingForBowler && !showBowlerModal && !showInningsReview && !showMatchSummaryModal) {
+      const timer = setTimeout(() => {
+        setShowBowlerModal(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [store.isWaitingForBowler, showInningsReview, showMatchSummaryModal, showBowlerModal]);
+
   // Get metadata from MatchCenterStore
   const { matches, syncWithCloud, updateMatchStatus, finalizeMatch, updateMatch } = useMatchCenter();
   const { grounds, syncMasterData } = useMasterData();
@@ -1104,27 +1137,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   useEffect(() => {
     if (!activeMatchId) return;
 
-    const initFromMeta = (meta: typeof matchMeta) => {
+    const initFromMeta = (meta: any) => {
       if (!meta) return;
 
-      // FORCE SERVER-SIDE TRUTH: If match is live, prioritize its live_data
       const isActuallyLive = meta.status === 'live';
-      const resolvedOpponentName = (meta.opponentName === 'Sandbox XI' && !meta.is_test)
-        ? 'OPPONENT'
-        : (meta.opponentName || 'OPPONENT');
+      console.log(`[Scorer] Sync Check: Cloud Total Balls: ${(meta.live_data?.innings1?.totalBalls || 0) + (meta.live_data?.innings2?.totalBalls || 0)} | Local Total Balls: ${(store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)}`);
 
       // Resolve Opponent Logo from allOpponents if missing in meta
       const opponentMeta = allOpponents.find(o => o.id === meta.opponentId || o.name === meta.opponentName);
       const resolvedAwayLogo = meta.opponentLogo || opponentMeta?.logoUrl || '';
 
-      console.log(`[Scorer] Initializing Match: ${activeMatchId} | Live: ${isActuallyLive}`);
-
       store.initializeMatch({
         matchId: meta.id,
         matchType: meta.matchFormat || 'T20',
         tournament: meta.tournament || 'Live Match',
-        ground: meta.venue || meta.groundId || (grounds.find(g => g.id === meta.groundId)?.name) || 'Local Ground',
-        opponentName: resolvedOpponentName,
+        ground: meta.venue || meta.groundId || 'Local Ground',
+        opponentName: meta.opponentName || 'OPPONENT',
         maxOvers: meta.maxOvers || 20,
         homeXI: meta.homeTeamXI || [],
         awayXI: meta.opponentTeamXI || [],
@@ -1134,22 +1162,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       });
     };
 
-    if (activeMatchId !== store.matchId) {
-      if (matchMeta) {
-        initFromMeta(matchMeta);
-      } else {
-        // matchMeta not in local store yet â€” fetch directly from API
-        console.log(`[Scorer] matchMeta not found locally, fetching match ${activeMatchId} directly...`);
-        import('../services/storageService').then(({ getMatch }) => {
-          getMatch(activeMatchId).then(freshMeta => {
-            if (freshMeta) {
-              initFromMeta(freshMeta);
-            }
-          }).catch(console.error);
-        });
-      }
-    }
-  }, [activeMatchId, matchMeta, store.matchId, grounds, teamLogo]);
+    // ALWAYS Deep Fetch on mount/activeMatchId change to ensure we have the live_data blob
+    // list endpoints (/matches) often omit the heavy live_data field.
+    console.log(`[Scorer] Deep Fetching match ${activeMatchId} for Cloud Truth...`);
+    import('../services/storageService').then(({ getMatch }) => {
+      getMatch(activeMatchId).then(freshMeta => {
+        if (freshMeta) {
+          initFromMeta(freshMeta);
+        }
+      }).catch(console.error);
+    });
+  }, [activeMatchId, grounds, teamLogo]);
   
   // Trigger Milestone Splash Screen based on store events
   useEffect(() => {
@@ -1198,11 +1221,21 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const syncToDatabase = useCallback(
     _.debounce((state: any) => {
-      if (activeMatchId) {
-        updateMatch(activeMatchId, { live_data: state, last_updated: new Date().toISOString() });
+      if (!activeMatchId) return;
+
+      // GUARDED SYNC: Only push if local totalBalls >= Cloud totalBalls
+      // This prevents a stale desktop tab from overwriting mobile progress
+      const localBalls = (state.innings1?.totalBalls || 0) + (state.innings2?.totalBalls || 0);
+      const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
+
+      if (cloudBalls > localBalls) {
+        console.warn(`[Sync] Stale overwrite prevented: Cloud(${cloudBalls}) > Local(${localBalls})`);
+        return;
       }
+
+      updateMatch(activeMatchId, { live_data: state, last_updated: new Date().toISOString() });
     }, 3000),
-    [activeMatchId]
+    [activeMatchId, matchMeta?.live_data]
   );
 
   // Fetch opponent players when we know the opponent ID
@@ -1421,7 +1454,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         <Header>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button title="Back" onClick={() => navigate('/match-center')} className="p-2 hover:bg-slate-100/10 rounded-xl transition-all text-white"><ChevronLeft /></button>
-            <span style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '1px' }}>LIVE SCORER</span>
+            <span style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '1px' }}>STRIKERS PULSE</span>
+            <span style={{ fontSize: '8px', opacity: 0.3, marginLeft: 6, fontWeight: 700 }}>v0.1.0</span>
           </div>
           <button
             title="Global Settings"
@@ -1433,6 +1467,52 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </button>
         </Header>
         <div style={{ padding: '24px 16px', maxWidth: 500, margin: '0 auto', width: '100%' }}>
+          {/* SYNC STATUS BANNER */}
+          {(() => {
+             const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
+             const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
+             if (cloudBalls > localBalls) {
+               return (
+                 <motion.div 
+                   initial={{ y: -20, opacity: 0 }} 
+                   animate={{ y: 0, opacity: 1 }}
+                   style={{ background: 'rgba(250, 176, 5, 0.1)', border: '1px solid rgba(250, 176, 5, 0.3)', padding: '12px 16px', borderRadius: 12, marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 8 }}
+                 >
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#FAB005', fontWeight: 900, fontSize: '0.75rem' }}>
+                     <CloudLightning size={16} /> CLOUD SCORE IS AHEAD
+                   </div>
+                   <p style={{ margin: 0, fontSize: '0.7rem', opacity: 0.7, color: '#001F3F', fontWeight: 600 }}>
+                     The cloud has {cloudBalls} balls compared to {localBalls} locally. Your mobile might be ahead.
+                   </p>
+                   <button 
+                     onClick={() => {
+                        if (matchMeta?.live_data) {
+                           store.initializeMatch({
+                             matchId: matchMeta.id,
+                             matchType: matchMeta.matchFormat || 'T20',
+                             tournament: matchMeta.tournament || 'Live Match',
+                             ground: matchMeta.venue || 'Local Ground',
+                             opponentName: matchMeta.opponentName || 'OPPONENT',
+                             maxOvers: matchMeta.maxOvers || 20,
+                             homeXI: matchMeta.homeTeamXI || [],
+                             awayXI: matchMeta.opponentTeamXI || [],
+                             homeLogo: teamLogo,
+                             awayLogo: matchMeta.opponentLogo || '',
+                             liveData: matchMeta.live_data
+                           });
+                           toast.success("Synchronized with Cloud!");
+                        }
+                     }}
+                     style={{ background: '#FAB005', border: 'none', borderRadius: 6, padding: '6px 12px', color: '#000', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer', width: 'fit-content' }}
+                   >
+                     DOWNLOAD CLOUD VERSION
+                   </button>
+                 </motion.div>
+               );
+             }
+             return null;
+          })()}
+
           <div style={{ marginBottom: 32, textAlign: 'center' }}>
             <Zap size={32} color="#FAB005" style={{ marginBottom: 12 }} />
             <h2 style={{ fontWeight: 900, color: '#001F3F', margin: '0 0 8px 0' }}>SCORER DASHBOARD</h2>
@@ -1483,6 +1563,29 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             )}
           </div>
         </div>
+
+        {(() => {
+          const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
+          const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
+          return (
+            <SyncStatusPill $outOfSync={cloudBalls !== localBalls}>
+              {cloudBalls === localBalls ? (
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ADE80' }} />
+              ) : (
+                <CloudLightning size={10} />
+              )}
+              L:{localBalls} | C:{cloudBalls}
+            </SyncStatusPill>
+          );
+        })()}
+        <SyncStatusPill $outOfSync={( (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0) ) !== ( (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0) )}>
+          {( (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0) ) === ( (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0) ) ? (
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ADE80' }} />
+          ) : (
+            <CloudLightning size={10} />
+          )}
+          L:{(store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)} | C:{(matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0)}
+        </SyncStatusPill>
       </DashboardContainer>
     );
   }
@@ -2470,22 +2573,77 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               {!isOnline ? 'OFFLINE' : (isSyncing ? 'SYNCING...' : 'LIVE TUNNEL')}
             </span>
           </div>
-          <button 
-            onClick={() => {
-              toast.promise(syncWithCloud(), {
-                loading: 'Syncing with cloud...',
-                success: 'Cloud states aligned!',
-                error: 'Sync failed'
-              });
-            }}
-            style={{ 
-              background: 'none', border: 'none', color: 'rgba(0,31,63,0.4)', 
-              fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 4
-            }}
-          >
-            <Cloud size={10} /> FORCE RE-SYNC
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {(() => {
+                const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
+                const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
+                if (cloudBalls > localBalls) {
+                  return (
+                    <button 
+                      onClick={() => {
+                        if (matchMeta?.live_data) {
+                          store.initializeMatch({
+                            matchId: matchMeta.id,
+                            matchType: matchMeta.matchFormat || 'T20',
+                            tournament: matchMeta.tournament || 'Live Match',
+                            ground: matchMeta.venue || 'Local Ground',
+                            opponentName: matchMeta.opponentName || 'OPPONENT',
+                            maxOvers: matchMeta.maxOvers || 20,
+                            homeXI: matchMeta.homeTeamXI || [],
+                            awayXI: matchMeta.opponentTeamXI || [],
+                            homeLogo: teamLogo,
+                            awayLogo: matchMeta.opponentLogo || '',
+                            liveData: matchMeta.live_data
+                          });
+                          toast.success("Corrected from Mobile!");
+                        }
+                      }}
+                      style={{ 
+                        background: '#FAB005', border: 'none', borderRadius: 4, 
+                        padding: '2px 8px', color: '#000', fontSize: '0.6rem', 
+                        fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4
+                      }}
+                    >
+                      <CloudDownload size={10} /> DOWNLOAD CLOUD SCORE
+                    </button>
+                  );
+                }
+                return null;
+            })()}
+            <button 
+              onClick={() => {
+                const totalBalls = currentInnings?.totalBalls || 0;
+                if (totalBalls % 6 === 0) {
+                  store.updateMatchSettings({ isWaitingForBowler: true, currentBowlerId: null });
+                  toast.success("Ready for new bowler");
+                } else {
+                  toast.error("Over not finished yet");
+                }
+              }}
+              style={{
+                background: 'rgba(51,154,240,0.1)', border: '1px solid rgba(51,154,240,0.2)',
+                borderRadius: 4, padding: '2px 6px', color: '#339AF0', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer'
+              }}
+            >
+              HEAL STATE
+            </button>
+            <button 
+              onClick={() => {
+                toast.promise(syncWithCloud(), {
+                  loading: 'Syncing with cloud...',
+                  success: 'Cloud states aligned!',
+                  error: 'Sync failed'
+                });
+              }}
+              style={{ 
+                background: 'none', border: 'none', color: 'rgba(0,31,63,0.4)', 
+                fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 4
+              }}
+            >
+              <Cloud size={10} /> FORCE RE-SYNC
+            </button>
+          </div>
         </div>
 
         <ScoreSection>
@@ -2578,6 +2736,21 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             <CardHeader>
               <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bowler</span>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <button
+                  onClick={() => setShowBowlerModal(true)}
+                  style={{
+                    background: 'rgba(51,154,240,0.1)',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '2px 8px',
+                    color: '#339AF0',
+                    fontSize: '0.6rem',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  CHANGE
+                </button>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase' }}>This Over</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#001F3F' }}>
@@ -2595,8 +2768,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 </div>
               </div>
             </CardHeader>
-            <StatValue>{getPlayerName(store.currentBowlerId)}</StatValue>
-            <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>{bowlerStats.wickets}-{bowlerStats.runs} ({bowlerStats.overs})</div>
+            <StatValue style={{ 
+              color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit'
+            }}>
+              {getPlayerName(store.currentBowlerId)}
+            </StatValue>
+            <div style={{ 
+              fontSize: '0.9rem', 
+              fontWeight: 700,
+              color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit'
+            }}>
+              {bowlerStats.wickets}-{bowlerStats.runs} ({bowlerStats.overs})
+              {bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5) && " â€¢ QUOTA DONE"}
+            </div>
           </ParticipantCard>
         </ActiveParticipants>
 
@@ -3928,6 +4112,44 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         </div>
                       </>
                     )}
+                  </button>
+                </div>
+
+                {/* FORCE PUSH TOOL */}
+                <div style={{ marginBottom: 16 }}>
+                   <div style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginBottom: 8, marginTop: 12 }}>EMERGENCY SYNC</div>
+                   <button
+                    onClick={async () => {
+                      if (!activeMatchId) return;
+                      if (!window.confirm("CRITICAL: This will take YOUR local score and overwrite the server. Only do this if THIS device has the correct score. Proceed?")) return;
+                      
+                      try {
+                        toast.loading("Force syncing to cloud...");
+                        await updateMatch(activeMatchId, { 
+                          live_data: store, 
+                          last_updated: new Date().toISOString() 
+                        });
+                        toast.dismiss();
+                        toast.success("Cloud Overwritten successfully!");
+                        setShowSettingsDrawer(false);
+                      } catch (e: any) {
+                        toast.dismiss();
+                        toast.error("Force push failed: " + e.message);
+                      }
+                    }}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+                      background: 'rgba(250, 176, 5, 0.1)',
+                      border: '1px solid #FAB005',
+                      borderRadius: 8, color: '#FAB005', fontWeight: 800, cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                  >
+                    <CloudLightning size={12} />
+                    <div>
+                      <div style={{ fontSize: '0.5rem' }}>FORCE PUSH TO CLOUD</div>
+                      <div style={{ fontSize: '0.4rem', opacity: 0.6, fontWeight: 500 }}>Make THIS score the master truth</div>
+                    </div>
                   </button>
                 </div>
 

@@ -35,7 +35,8 @@ export interface BallRecord {
     type: 'legal' | 'wide' | 'no-ball' | 'bye' | 'leg-bye';
     isWicket: boolean;
     wicketType?: 'Bowled' | 'Caught' | 'LBW' | 'Run Out' | 'Stumped' | 'Hit Wicket' | 'Retired Hurt' | 'Retired Out' | 'Timed Out' | 'Obstructing the Field';
-    batterId: string;
+    strikerId: string;
+    nonStrikerId: string;
     bowlerId: string;
     isLegal: boolean;
     commentary: string;
@@ -186,29 +187,39 @@ export const useCricketScorer = create<ScorerStore>()(
             initializeMatch: (data) => {
                 const current = get();
 
-                // 1. REHYDRATION LOGIC: If server provides liveData, override completely
+                // 1. REHYDRATION LOGIC: If server provides liveData, determine if we should override
                 if (data.liveData && Object.keys(data.liveData).length > 0) {
-                    // Try parsing if it's a string from db
                     let parsedData = data.liveData;
                     if (typeof data.liveData === 'string') {
                       try { parsedData = JSON.parse(data.liveData); } catch (e) {}
                     }
+                    
                     if (parsedData.innings1) {
-                         console.log("[Scorer] Rehydrating perfectly from live_data!");
-                         set({ 
-                             ...INITIAL_STATE,
-                             ...parsedData,
-                             matchId: data.matchId,
-                             matchType: data.matchType,
-                             tournament: data.tournament,
-                             ground: data.ground,
-                             opponentName: data.opponentName,
-                             maxOvers: data.maxOvers,
-                             homeXI: Array.isArray(data.homeXI) ? data.homeXI : (Array.isArray(parsedData.homeXI) ? parsedData.homeXI : []),
-                             awayXI: Array.isArray(data.awayXI) ? data.awayXI : (Array.isArray(parsedData.awayXI) ? parsedData.awayXI : []),
-                             isWaitingForBowler: !!parsedData.isWaitingForBowler
-                         });
-                         return;
+                         const localBalls = (current.innings1?.totalBalls || 0) + (current.innings2?.totalBalls || 0);
+                         const cloudBalls = (parsedData.innings1?.totalBalls || 0) + (parsedData.innings2?.totalBalls || 0);
+                         
+                         // Always override if it's a different match, or if cloud data is MORE ADVANCED
+                         if (current.matchId !== data.matchId || cloudBalls >= localBalls) {
+                             console.log(`[Scorer] Sync Rehydration: Cloud(${cloudBalls} balls) >= Local(${localBalls} balls)`);
+                             set({ 
+                                 ...INITIAL_STATE,
+                                 ...parsedData,
+                                 matchId: data.matchId,
+                                 matchType: data.matchType || parsedData.matchType,
+                                 tournament: data.tournament || parsedData.tournament,
+                                 ground: data.ground || parsedData.ground,
+                                 opponentName: data.opponentName || parsedData.opponentName,
+                                 maxOvers: data.maxOvers || parsedData.maxOvers,
+                                 homeXI: Array.isArray(data.homeXI) && data.homeXI.length ? data.homeXI : (parsedData.homeXI || []),
+                                 awayXI: Array.isArray(data.awayXI) && data.awayXI.length ? data.awayXI : (parsedData.awayXI || []),
+                                 isWaitingForBowler: !!parsedData.isWaitingForBowler,
+                                 homeLogo: data.homeLogo || parsedData.homeLogo,
+                                 awayLogo: data.awayLogo || parsedData.awayLogo
+                             });
+                             return;
+                         } else {
+                             console.warn(`[Scorer] Sync Blocked: Local(${localBalls} balls) is ahead of Cloud(${cloudBalls} balls).`);
+                         }
                     }
                 }
 
@@ -277,6 +288,21 @@ export const useCricketScorer = create<ScorerStore>()(
             recordBall: (payload) => {
                 const state = get();
                 const innings = state.currentInnings === 1 ? state.innings1 : state.innings2;
+                // HARD LOCK: Prevent recording if we are waiting for a bowler selection
+                if (state.isWaitingForBowler) {
+                    return;
+                }
+
+                // QUOTA LOCK: Prevent recording if current bowler has finished 4 overs
+                if (state.currentBowlerId) {
+                    const bStats = innings.bowlingStats[state.currentBowlerId];
+                    const maxAllowed = Math.ceil((state.maxOvers || 20) / 5);
+                    if (bStats && bStats.overs >= maxAllowed) {
+                        set({ isWaitingForBowler: true, currentBowlerId: null });
+                        return;
+                    }
+                }
+
                 const inningsKey = state.currentInnings === 1 ? 'innings1' : 'innings2';
                 
                 if (!innings || !state.strikerId || !state.currentBowlerId) {
@@ -480,6 +506,9 @@ export const useCricketScorer = create<ScorerStore>()(
                     }
                 }
 
+                // Determine if over is complete (6 legal balls)
+                const isOverComplete = nextInnings.totalBalls % 6 === 0 && isLegal && !finished;
+
                 set({
                     [inningsKey]: nextInnings,
                     strikerId: sId,
@@ -488,7 +517,9 @@ export const useCricketScorer = create<ScorerStore>()(
                     isFinished: finished,
                     pendingMilestone: pendingMilestone,
                     pendingIntroduction: null, // Clear after use
-                    historyStack: [...state.historyStack, prevState].slice(-50)
+                    isWaitingForBowler: isOverComplete,
+                    currentBowlerId: isOverComplete ? null : state.currentBowlerId,
+                    historyStack: [...state.historyStack, prevState].slice(-20)
                 });
             },
 
@@ -519,7 +550,7 @@ export const useCricketScorer = create<ScorerStore>()(
 
                     set({ 
                         [targetKey]: nextInnings,
-                        historyStack: [...state.historyStack, prevState].slice(-50)
+                        historyStack: [...state.historyStack, prevState].slice(-20)
                     });
                 } else {
                     const currentInningsState = state[currentKey];
@@ -538,7 +569,7 @@ export const useCricketScorer = create<ScorerStore>()(
                             fallOfWickets: [],
                             history: []
                         },
-                        historyStack: [...state.historyStack, prevState].slice(-50)
+                        historyStack: [...state.historyStack, prevState].slice(-20)
                     });
 
                     // Append commentary to the newly created innings
@@ -560,7 +591,7 @@ export const useCricketScorer = create<ScorerStore>()(
             },
 
             undoLastBall: () => {
-                const { historyStack, currentInnings, innings2 } = get();
+                const { historyStack, currentInnings } = get();
                 if (historyStack.length === 0) return;
                 
                 // Cross-Innings Boundary Protection: 
@@ -571,7 +602,6 @@ export const useCricketScorer = create<ScorerStore>()(
                     console.warn("Undo blocked: Cannot undo across innings boundary.");
                     return;
                 }
-
 
                 set({
                     ...prevState,
@@ -588,7 +618,7 @@ export const useCricketScorer = create<ScorerStore>()(
                 set({
                     strikerId: state.nonStrikerId,
                     nonStrikerId: state.strikerId,
-                    historyStack: [...state.historyStack, prevState].slice(-50)
+                    historyStack: [...state.historyStack, prevState].slice(-20)
                 });
             },
 
@@ -675,6 +705,11 @@ export const useCricketScorer = create<ScorerStore>()(
         }),
         { 
             name: 'ins-cricket-scorer-storage',
+            partialize: (state) => {
+                // EXCLUDE historyStack from localStorage to prevent QuotaExceededError
+                const { historyStack, ...rest } = state as any;
+                return rest;
+            },
             storage: {
                 getItem: (name) => {
                     const str = localStorage.getItem(name);
@@ -685,13 +720,7 @@ export const useCricketScorer = create<ScorerStore>()(
                     }
                 },
                 setItem: (name, value) => {
-                    const state = { ...value.state };
-                    // We keep historyStack in local storage now for better recovery, 
-                    // but we prune it if it gets too large (> 200 balls) to stay under 5MB limit
-                    if (state.historyStack && state.historyStack.length > 200) {
-                        state.historyStack = state.historyStack.slice(-200);
-                    }
-                    localStorage.setItem(name, JSON.stringify({ state, version: value.version }));
+                    localStorage.setItem(name, JSON.stringify(value));
                 },
                 removeItem: (name) => localStorage.removeItem(name)
             }
