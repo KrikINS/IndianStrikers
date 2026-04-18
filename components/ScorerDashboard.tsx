@@ -2416,9 +2416,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       });
     });
 
+    // Only include Indian Strikers players in the spotlight
     return Object.values(scores)
+      .filter(p => players.some(hp => String(hp.id) === String(p.id)))
       .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
+      .slice(0, 4);
   };
 
   const downloadHeroPoster = async () => {
@@ -3377,10 +3379,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
               <div style={{ marginBottom: 40 }}>
                 <h3 style={{ fontSize: '0.9rem', fontWeight: 900, marginBottom: 16, borderLeft: '4px solid #FAB005', paddingLeft: 12 }}>TOP PERFORMERS</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {calculateTopPerformers().slice(0, 2).map((p, i) => (
-                    <div key={p.id} style={{ background: '#F8F9FA', padding: 16, borderRadius: 16, border: '1px solid #E9ECEF' }}>
-                      <p style={{ fontWeight: 800, fontSize: '0.9rem', marginBottom: 4 }}>{p.name}</p>
+                    <div key={p.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '14px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: 4, color: '#FFF' }}>{p.name}</p>
                       <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#FAB005' }}>
                         {p.runs > 0 ? `${p.runs} (${p.balls})` : `${p.wickets} Wickets`}
                       </p>
@@ -3429,8 +3431,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <div style={{ background: 'rgba(250, 176, 5, 0.1)', width: 64, height: 64, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                   <Trophy size={32} color="#FAB005" />
                 </div>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: 4 }}>PERFORMER SPOTLIGHT</h1>
-                <p style={{ opacity: 0.6, fontSize: '0.9rem' }}>Select the Man of the Match based on performance</p>
+                <h1 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 4 }}>PERFORMER SPOTLIGHT</h1>
+                <p style={{ opacity: 0.6, fontSize: '0.85rem' }}>Select the Man of the Match based on performance</p>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 24 }}>
@@ -3439,24 +3441,24 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     key={p.id}
                     onClick={() => store.updateMatchSettings({ manOfTheMatch: p.id })}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16,
+                      display: 'flex', alignItems: 'center', gap: 14, padding: '14px', borderRadius: 14,
                       background: idx === 0 ? 'rgba(250, 176, 5, 0.08)' : 'rgba(255,255,255,0.03)',
                       border: `1px solid ${idx === 0 ? 'rgba(250, 176, 5, 0.2)' : 'rgba(255,255,255,0.05)'}`,
                       color: '#FFF', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s'
                     }}
                   >
-                    <div style={{ background: idx === 0 ? '#FAB005' : 'rgba(255,255,255,0.1)', color: idx === 0 ? '#000' : '#FFF', width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.8rem' }}>
+                    <div style={{ background: idx === 0 ? '#FAB005' : 'rgba(255,255,255,0.1)', color: idx === 0 ? '#000' : '#FFF', width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.75rem' }}>
                       #{idx + 1}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 800, fontSize: '1rem', color: idx === 0 ? '#FAB005' : '#FFF' }}>{p.name}</div>
-                      <div style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: 2 }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFF' }}>{p.name}</div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: 2 }}>
                         {p.runs > 0 && <span>{p.runs} Runs • </span>}
                         {p.wickets > 0 && <span>{p.wickets} Wickets • </span>}
                         {p.maidens > 0 && <span>{p.maidens} Maidens</span>}
                       </div>
                     </div>
-                    <Zap size={18} color={idx === 0 ? '#FAB005' : 'rgba(255,255,255,0.2)'} fill={idx === 0 ? '#FAB005' : 'none'} />
+                    <Zap size={16} color={idx === 0 ? '#FAB005' : 'rgba(255,255,255,0.2)'} fill={idx === 0 ? '#FAB005' : 'none'} />
                   </button>
                 ))}
               </div>

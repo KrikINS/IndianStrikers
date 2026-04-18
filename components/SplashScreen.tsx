@@ -212,7 +212,10 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
               <img src="/INS%20LOGO.PNG" className="w-24 h-24 object-contain" alt="INS" />
             )}
           </div>
-          <h2 className="text-4xl md:text-6xl text-blue-100 font-cursive min-h-[70px] drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+          <h2 
+            className="text-3xl md:text-5xl text-blue-100 min-h-[70px] drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+            style={{ fontFamily: "'Dancing Script', 'Pacifico', cursive", fontWeight: 700 }}
+          >
             {loadingText}
             <span className="animate-blink text-blue-400">|</span>
           </h2>

@@ -95,13 +95,13 @@ function WeeklyPerformerCarousel({
   
   const getCardWidth = () => {
     if (typeof window === 'undefined') return 300;
-    if (window.innerWidth < 380) return 280;
-    if (window.innerWidth < 420) return 300;
-    return 320;
+    if (window.innerWidth < 380) return 250;
+    if (window.innerWidth < 420) return 270;
+    return 290;
   };
 
   const CARD_WIDTH = getCardWidth();
-  const CARD_GAP = 24;
+  const CARD_GAP = 20;
   const TOTAL_WIDTH = CARD_WIDTH + CARD_GAP;
 
   useEffect(() => {
@@ -132,7 +132,7 @@ function WeeklyPerformerCarousel({
 
   return (
     <div
-      className="relative w-full h-[480px] flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
+      className="relative w-full h-[500px] flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
@@ -165,12 +165,12 @@ function WeeklyPerformerCarousel({
                   x: 0
                 }}
                 animate={{
-                  scale: isActive ? 1.05 : Math.max(0.85, 1 - distance * 0.1),
+                  scale: isActive ? 1 : Math.max(0.8, 1 - distance * 0.15),
                   opacity: isActive ? 1 : Math.max(0.4, 1 - distance * 0.3),
                   filter: isActive ? "blur(0px)" : `blur(${Math.min(3, distance * 1.5)}px)`,
                   zIndex: 10 - distance,
                   rotateY: isActive ? 0 : (virtualPos < index ? 15 : -15),
-                  y: isActive ? -15 : 0
+                  y: isActive ? -5 : 0
                 }}
                 transition={{ type: "spring", stiffness: 200, damping: 25 }}
                 className={isActive ? 'pointer-events-auto' : 'pointer-events-none'}
@@ -192,18 +192,18 @@ function WeeklyPerformerCarousel({
                       isSuperStriker: player.isSuperStriker
                     });
                   }}
-                  className={`bg-[#0f172a] rounded-[3rem] p-8 border ${isActive ? 'border-sky-500/50 shadow-[0_0_50px_rgba(56,189,248,0.3)]' : 'border-white/10'} relative overflow-hidden group transition-all duration-500`}
+                  className={`bg-[#0f172a] rounded-[2.5rem] p-6 border ${isActive ? 'border-sky-500/50 shadow-[0_0_50px_rgba(56,189,248,0.3)]' : 'border-white/10'} relative overflow-hidden group transition-all duration-500`}
                 >
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-sky-600/20 to-transparent"></div>
                   <div className="relative z-10 flex flex-col items-center">
-                    <div className="relative mb-6">
-                      <div className={`absolute inset-0 bg-sky-400 blur-[40px] ${isActive ? 'opacity-20' : 'opacity-10'} transition-opacity`}></div>
-                      <img src={player.avatarUrl} className="w-32 h-40 rounded-[2rem] object-cover border-2 border-white/20 shadow-2xl relative z-10" alt={player.name} />
-                      <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 ${player.isSuperStriker ? 'bg-orange-500 text-white' : 'bg-sky-400 text-slate-950'} text-[9px] font-black px-5 py-1 rounded-full border-[2px] border-slate-950 uppercase z-20 whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.3)]`}>
-                        {player.isSuperStriker ? '🚀 Super Striker' : (player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer')}
+                    <div className="relative mb-4">
+                      <div className={`absolute inset-0 bg-sky-400 blur-[40px] ${isActive ? 'opacity-20' : 'opacity-10'} transition-opacityauto`}></div>
+                      <img src={player.avatarUrl} className="w-28 h-36 rounded-[1.5rem] object-cover border-2 border-white/20 shadow-2xl relative z-10" alt={player.name} />
+                      <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${player.isSuperStriker ? 'bg-orange-500 text-white' : 'bg-sky-400 text-slate-950'} text-[8px] font-black px-4 py-1 rounded-full border-[2px] border-slate-950 uppercase z-20 whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.3)]`}>
+                        {player.isSuperStriker ? '🚀 Super' : (player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer')}
                       </div>
                     </div>
-                    <h4 className="font-black text-2xl uppercase tracking-[0.2rem] italic text-center mb-1 leading-none">{player.name}</h4>
+                    <h4 className="font-black text-2xl uppercase tracking-[0.2rem] italic text-center mb-1 leading-none text-white">{player.name}</h4>
                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-4">{player.role}</p>
                     <div className="mb-6 text-center">
                       <p className="text-4xl font-black text-sky-400 italic">
@@ -568,10 +568,20 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     .slice(0, 5);
 
   const filteredSpotlightPerformers = useMemo(() => {
-    return performerData.performers.filter(perf => 
-      players.some(p => String(p.id) === String(perf.playerId || perf.id))
-    );
-  }, [performerData.performers, players]);
+    if (!performerData.performers || !players) return [];
+    
+    // Create a set of all opponent player IDs for O(1) lookup
+    const opponentPlayerIds = new Set();
+    (opponents || []).forEach(team => {
+      (team.players || []).forEach(p => opponentPlayerIds.add(String(p.id)));
+    });
+
+    return performerData.performers.filter(perf => {
+      const pId = String(perf.playerId || perf.id);
+      // Must be in the main players list AND NOT in the opponent list
+      return players.some(p => String(p.id) === pId) && !opponentPlayerIds.has(pId);
+    });
+  }, [performerData.performers, players, opponents]);
 
   const handleGenerateHeroPoster = async () => {
     if (!heroPosterRef.current || !selectedHero) return;
@@ -606,18 +616,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         </div>
       </div>
 
-      {/* New Match Performance Ticker (Second Header) */}
-      <AnimatePresence mode="wait">
-        {carouselMatches.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full relative z-20 mt-4 mb-2"
-          >
-            <MatchCarousel matches={carouselMatches} opponents={opponents} teamLogo={teamLogo || ''} grounds={grounds || []} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+
 
       {/* Hero Poster Modal */}
       <AnimatePresence>
@@ -833,7 +832,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           </div>
           {nextMatch?.status === 'live' ? (
             <Link to={`/live/${nextMatch.id}?tab=commentary`} className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black rounded-xl flex items-center justify-center gap-2 uppercase tracking-widest mt-4 transition-all animate-pulse shadow-lg shadow-red-600/20">
-              <Activity size={14} /> View Live Scorecard
+              <Activity size={14} /> VIEW LIVE FEED
             </Link>
           ) : (
             <Link to="/match-center" className="text-[10px] font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 uppercase tracking-widest mt-4">
@@ -844,13 +843,13 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       </div>
 
       {/* Performer Spotlight Section */}
-      <div className="bg-slate-900 p-8 rounded-[3rem] border border-slate-800 shadow-2xl relative overflow-hidden">
+      <div className="bg-slate-900 p-4 rounded-[1.5rem] border border-slate-800 shadow-2xl relative overflow-hidden">
         {/* Background Gradients */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 relative z-10">
-          <h3 className="text-2xl font-black text-white flex items-center gap-3 uppercase tracking-tighter italic">
-            <Zap className="text-sky-400 fill-sky-400" size={28} /> Performer Spotlight
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-2 relative z-10">
+          <h3 className="text-xl font-black text-white flex items-center gap-2 uppercase tracking-tighter italic">
+            <Zap className="text-sky-400 fill-sky-400" size={24} /> Performer Spotlight
           </h3>
           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-400/80 bg-sky-400/10 px-4 py-2 rounded-full border border-sky-400/20">
             Weekly Highlights

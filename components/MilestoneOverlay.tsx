@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import styled from 'styled-components';
 import confetti from 'canvas-confetti';
-import { Trophy, Star, Zap, Flame, Target } from 'lucide-react';
+import { Trophy, Star, Zap, Flame, Target, Users } from 'lucide-react';
 
 // --- TYPES ---
 export type MilestoneType = 
