@@ -243,15 +243,27 @@ function WeeklyPerformerCarousel({
 // --- Modern Spotlight Carousel ---
 function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: ScheduledMatch[], opponents: any[], teamLogo: string, grounds: Ground[] }) {
   const [index, setIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   if (!matches.length) return null;
 
   const next = () => setIndex((prev) => (prev + 1) % matches.length);
   const prev = () => setIndex((prev) => (prev - 1 + matches.length) % matches.length);
 
+  // Auto-switch every 2 seconds
+  useEffect(() => {
+    if (isPaused) return;
+    const interval = setInterval(next, 2000);
+    return () => clearInterval(interval);
+  }, [isPaused, index]);
+
   return (
-    <div className="relative w-full max-w-5xl mx-auto px-4 py-12">
-      <div className="flex items-center justify-between overflow-visible relative min-h-[140px]">
+    <div 
+      className="relative w-full max-w-4xl mx-auto px-4 py-8"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div className="flex items-center justify-between overflow-visible relative min-h-[120px]">
         {/* Navigation Buttons */}
         <button 
           onClick={prev}
@@ -265,43 +277,57 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
             {[-1, 0, 1].map((offset) => {
               const matchIdx = (index + offset + matches.length) % matches.length;
               const match = matches[matchIdx];
-              const opponent = opponents.find(o => o.id === match.opponentId);
+              const opponent = opponents.find(o => String(o.id) === String(match.opponentId));
               const isLive = match.status === 'live';
               const isCenter = offset === 0;
 
               const ground = grounds.find(g => g.id === match.groundId);
               const groundNum = ground?.name.match(/\d+/)?.[0];
 
+              // Robust Opponent Mapping
+              const oppName = (match.opponentName || opponent?.name || 'OPP').toUpperCase();
+              const oppLogo = opponent?.logoUrl || match.opponentLogo;
+
               // Score Logic: Use finalScore for completed, innings for live
+              const getScoreStr = (scoreObj: any, inningsObj: any) => {
+                if (scoreObj && typeof scoreObj.runs !== 'undefined') {
+                  return `${scoreObj.runs}/${scoreObj.wickets ?? 0}`;
+                }
+                if (inningsObj && typeof inningsObj.totalRuns !== 'undefined') {
+                  return `${inningsObj.totalRuns}/${inningsObj.totalWickets ?? 0}`;
+                }
+                return '0/0';
+              };
+
               const homeScore = isLive 
                 ? (match.innings1 ? `${match.innings1.totalRuns}/${match.innings1.wickets}` : '0/0')
-                : (match.finalScoreHome ? `${match.finalScoreHome.runs}/${match.finalScoreHome.wickets}` : (match.innings1 ? `${match.innings1.totalRuns}/${match.innings1.wickets}` : 'N/A'));
+                : getScoreStr(match.finalScoreHome, match.innings1);
               
               const awayScore = isLive
                 ? (match.innings2 ? `${match.innings2.totalRuns}/${match.innings2.wickets}` : '0/0')
-                : (match.finalScoreAway ? `${match.finalScoreAway.runs}/${match.finalScoreAway.wickets}` : (match.innings2 ? `${match.innings2.totalRuns}/${match.innings2.wickets}` : 'N/A'));
+                : getScoreStr(match.finalScoreAway, match.innings2);
 
               const isZeroZero = homeScore === '0/0' && awayScore === '0/0';
 
               return (
                 <motion.div
                   key={`${match.id}-${matchIdx}`}
-                  initial={{ opacity: 0, scale: 0.8, x: offset * 300 }}
+                  initial={{ opacity: 0, scale: 0.8, x: offset * 250 }}
                   animate={{ 
-                    opacity: isCenter ? 1 : 0.4, 
-                    scale: isCenter ? 1 : 0.85,
-                    x: offset * (window.innerWidth < 768 ? 240 : 340),
+                    opacity: isCenter ? 1 : offset === 1 ? 0.3 : offset === -1 ? 0.3 : 0, 
+                    scale: isCenter ? 1 : 0.8,
+                    x: offset * (window.innerWidth < 768 ? 192 : 272),
                     zIndex: isCenter ? 10 : 0
                   }}
                   exit={{ opacity: 0, scale: 0.5 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 40 }}
                   className="absolute"
                 >
                   <Link 
                     to={isLive ? `/live/${match.id}` : `/scorecard/${match.id}`}
-                    className={`block w-[280px] md:w-[320px] rounded-2xl p-6 border transition-all duration-500 overflow-hidden relative group ${
+                    className={`block w-[224px] md:w-[256px] rounded-2xl p-4 md:p-5 border transition-all duration-500 overflow-hidden relative group ${
                       isLive 
-                        ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500/50 shadow-[0_0_40px_rgba(239,68,68,0.2)]' 
+                        ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)]' 
                         : 'bg-slate-900/60 backdrop-blur-md border-white/10 hover:border-sky-500/40'
                     }`}
                   >
@@ -316,46 +342,46 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
 
                     <div className="relative z-10">
                       {/* Top Bar: Tournament & Status */}
-                      <div className="flex justify-between items-center mb-5">
-                        <span className="text-[10px] font-black uppercase text-sky-400 tracking-[0.2em]">
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-[8px] font-black uppercase text-sky-400 tracking-[0.2em] truncate flex-1 mr-2">
                           {match.tournament || 'Exhibition'}
                         </span>
                         {isLive ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#FF0000] animate-pulse"></span>
-                            <span className="text-[10px] font-black uppercase text-[#FF0000] tracking-widest">Live</span>
+                          <div className="flex items-center gap-1">
+                            <span className="h-1 w-1 rounded-full bg-[#FF0000] animate-pulse"></span>
+                            <span className="text-[8px] font-black uppercase text-[#FF0000] tracking-widest">Live</span>
                           </div>
                         ) : (
-                          <span className="text-[10px] font-bold text-slate-500 uppercase">
+                          <span className="text-[8px] font-bold text-slate-500 uppercase">
                             {new Date(match.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                           </span>
                         )}
                       </div>
 
                       {/* Main Fixture Display */}
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 flex flex-col items-center gap-2">
-                          <img src={teamLogo || "/INS%20LOGO.PNG"} alt="Home" className="w-10 h-10 object-contain drop-shadow-md" />
-                          <span className="text-xs font-black text-white">INS</span>
-                          {!isZeroZero && <span className="text-lg font-black text-white">{homeScore}</span>}
+                      <div className="flex items-center justify-between gap-2 md:gap-3">
+                        <div className="flex-1 flex flex-col items-center gap-1.5">
+                          <img src={teamLogo || "/INS%20LOGO.PNG"} alt="Home" className="w-8 h-8 object-contain drop-shadow-md" />
+                          <span className="text-[10px] font-black text-white">INS</span>
+                          {!isZeroZero && <span className="text-sm font-black text-white">{homeScore}</span>}
                         </div>
 
                         <div className="flex flex-col items-center">
-                           <div className="text-[10px] font-black text-white/20 italic">VS</div>
+                           <div className="text-[8px] font-black text-white/20 italic">VS</div>
                         </div>
 
-                        <div className="flex-1 flex flex-col items-center gap-2">
-                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 p-1.5">
-                            {opponent?.logoUrl ? (
-                              <img src={opponent.logoUrl} alt="Away" className="w-full h-full object-contain" />
+                        <div className="flex-1 flex flex-col items-center gap-1.5">
+                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 p-1">
+                            {oppLogo ? (
+                              <img src={oppLogo} alt="Away" className="w-full h-full object-contain" />
                             ) : (
-                              <Shield size={20} className="text-slate-500" />
+                              <Shield size={16} className="text-slate-500" />
                             )}
                           </div>
-                          <span className="text-xs font-black text-white uppercase truncate">
-                            {match.opponentName?.substring(0, 3) || opponent?.name?.substring(0, 3) || 'OPP'}
+                          <span className="text-[10px] font-black text-white uppercase truncate">
+                            {oppName.substring(0, 3)}
                           </span>
-                          {!isZeroZero && <span className="text-lg font-black text-white">{awayScore}</span>}
+                          {!isZeroZero && <span className="text-sm font-black text-white">{awayScore}</span>}
                         </div>
                       </div>
 
