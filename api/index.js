@@ -547,13 +547,54 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
 
   try {
     // 1. Update match status/data
+    // Map matchData fields to DB columns
+    const scorecard = matchData.scorecard;
+    const finalScoreHome = matchData.finalScoreHome || (scorecard?.innings1 ? { runs: scorecard.innings1.totalRuns, wickets: scorecard.innings1.totalWickets, overs: scorecard.innings1.totalOvers } : null);
+    const finalScoreAway = matchData.finalScoreAway || (scorecard?.innings2 ? { runs: scorecard.innings2.totalRuns, wickets: scorecard.innings2.totalWickets, overs: scorecard.innings2.totalOvers } : null);
+    
+    // Toss Handling
+    let tossWinnerId = matchData.toss_winner_id;
+    if (!tossWinnerId && matchData.toss?.winner) {
+      if (matchData.toss.winner === 'Indian Strikers') {
+        tossWinnerId = '00000000-0000-0000-0000-000000000000';
+      } else {
+        // Find opponent ID for this match
+        const { data: m } = await db.getOne('SELECT opponent_id FROM matches WHERE id = $1', [id]);
+        tossWinnerId = m?.opponent_id;
+      }
+    }
+
     const { error: matchError } = await db.query(
-      `INSERT INTO matches (id, status, is_hero_synced, is_career_synced, updated_at) 
-       VALUES ($1, $2, $3, $4, NOW()) 
+      `INSERT INTO matches (
+        id, status, is_hero_synced, is_career_synced, updated_at, 
+        scorecard, final_score_home, final_score_away, 
+        result_summary, result_note, toss_winner_id, toss_choice, max_overs
+      ) 
+       VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8, $9, $10, $11, $12) 
        ON CONFLICT (id) DO UPDATE SET 
-         status=EXCLUDED.status, is_hero_synced=EXCLUDED.is_hero_synced, 
-         is_career_synced=EXCLUDED.is_career_synced, updated_at=EXCLUDED.updated_at`,
-      [id, 'completed', !is_test, !is_test]
+         status=EXCLUDED.status, 
+         is_hero_synced=EXCLUDED.is_hero_synced, 
+         is_career_synced=EXCLUDED.is_career_synced, 
+         updated_at=EXCLUDED.updated_at,
+         scorecard=EXCLUDED.scorecard,
+         final_score_home=EXCLUDED.final_score_home,
+         final_score_away=EXCLUDED.final_score_away,
+         result_summary=EXCLUDED.result_summary,
+         result_note=EXCLUDED.result_note,
+         toss_winner_id=EXCLUDED.toss_winner_id,
+         toss_choice=EXCLUDED.toss_choice,
+         max_overs=EXCLUDED.max_overs`,
+      [
+        id, 'completed', !is_test, !is_test,
+        JSON.stringify(scorecard || {}),
+        JSON.stringify(finalScoreHome),
+        JSON.stringify(finalScoreAway),
+        matchData.resultSummary || matchData.result_summary || null,
+        matchData.resultNote || matchData.result_note || null,
+        tossWinnerId || null,
+        matchData.toss?.choice || matchData.toss_choice || 'Bat',
+        parseInt(matchData.maxOvers || matchData.max_overs || 20)
+      ]
     );
 
     if (matchError) throw matchError;

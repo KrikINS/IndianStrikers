@@ -245,7 +245,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   // Helper: Normalize data from different formats
   const normalizedData = useMemo(() => {
     const transform = (inn: any): Innings | null => {
-      if (!inn || (!inn.battingStats && !inn.batting && !inn.bowlingStats && !inn.bowling)) return null;
+      if (!inn || (!inn.battingStats && !inn.batting && !inn.bowlingStats && !inn.bowling && !inn.extras)) return null;
 
       // Handle Store format (Map)
       let batting: BattingStat[] = [];
@@ -532,7 +532,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     <span style={{ fontWeight: 900 }}>
                       {Object.values(currentInningsData.extras).reduce((a, b) => a + b, 0)}{' '}
                       <span style={{ opacity: 0.4, fontSize: '0.65rem', marginLeft: 4 }}>
-                        (wd {currentInningsData.extras.wides}, nb {currentInningsData.extras.noBalls}, b {currentInningsData.extras.byes}, lb {currentInningsData.extras.legByes})
+                        (wd {currentInningsData?.extras?.wides || 0}, nb {currentInningsData?.extras?.noBalls || 0}, b {currentInningsData?.extras?.byes || 0}, lb {currentInningsData?.extras?.legByes || 0})
                       </span>
                     </span>
                   </ExtrasRow>

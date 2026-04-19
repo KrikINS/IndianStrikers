@@ -147,19 +147,19 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             innings1: { 
                 batting: [], 
                 bowling: [], 
-                extras: { wide: summary.awayScore.wides || 0, no_ball: 0, legByes: 0, byes: 0 }, 
-                totalRuns: summary.homeScore.runs, 
-                totalWickets: summary.homeScore.wickets, 
-                totalOvers: summary.homeScore.overs,
+                extras: { wide: summary.homeScore?.wides || 0, no_ball: 0, legByes: 0, byes: 0 }, 
+                totalRuns: summary.homeScore?.runs || 0, 
+                totalWickets: summary.homeScore?.wickets || 0, 
+                totalOvers: summary.homeScore?.overs || 0,
                 history: []
             }, 
             innings2: { 
                 batting: [], 
                 bowling: [], 
-                extras: { wide: summary.homeScore.wides || 0, no_ball: 0, legByes: 0, byes: 0 }, 
-                totalRuns: summary.awayScore.runs, 
-                totalWickets: summary.awayScore.wickets, 
-                totalOvers: summary.awayScore.overs,
+                extras: { wide: summary.awayScore?.wides || 0, no_ball: 0, legByes: 0, byes: 0 }, 
+                totalRuns: summary.awayScore?.runs || 0, 
+                totalWickets: summary.awayScore?.wickets || 0, 
+                totalOvers: summary.awayScore?.overs || 0,
                 history: []
             } 
         };
@@ -376,8 +376,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
         try {
             const canvas = await html2canvas(element, {
-                backgroundColor: '#020617', // Slate 950
-                scale: 3, // Higher quality
+                backgroundColor: '#020617', // Explicitly use Hex for html2canvas to avoid oklch errors
+                scale: 3, 
                 useCORS: true,
                 logging: false,
                 onclone: (doc) => {
@@ -1096,8 +1096,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
                 {/* Hidden Graphic for Capture (Independent of Modal Open State) */}
                 {xiModalConfig.matchId && matches.find(m => m.id === xiModalConfig.matchId) && (
-                    <div className="fixed -left-[2000px] top-0 pointer-events-none">
-                        <div id="team-sheet-graphic" className="w-[1080px] min-h-[1350px] bg-slate-950 p-12 text-white border-[1px] border-white/10 shadow-2xl relative overflow-hidden flex flex-col">
+                    <div className="fixed -left-[5000px] top-0 pointer-events-none">
+                        <div 
+                            id="team-sheet-graphic" 
+                            style={{ backgroundColor: '#020617', minHeight: '1350px' }} // Bypass oklch with inline Hex
+                            className="w-[1080px] p-12 text-white border-[1px] border-white/10 shadow-2xl relative overflow-hidden flex flex-col"
+                        >
                             {/* Background Branding */}
                             <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-600/5 rounded-full blur-[150px] -translate-y-1/2 translate-x-1/2"></div>
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
