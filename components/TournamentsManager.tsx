@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
 import { Tournament } from '../types';
-import { useMasterData } from './masterDataStore';
-import { useOpponentStore } from '../store/opponentStore';
 import { Plus, Trash2, Edit2, Trophy, X, ChevronDown, ChevronUp, ExternalLink, Calendar as CalendarIcon, Shield, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useMatchCenter } from '../store/matchStore';
+import { useStore } from '../store/StoreProvider';
 
 interface TournamentsManagerProps {
   isAdmin?: boolean;
 }
 
 const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false }) => {
-  const { tournaments, addTournament: addTourneyStore, updateTournament: updateTourneyStore, removeTournament } = useMasterData();
-  const { matches } = useMatchCenter();
-  const { opponents } = useOpponentStore();
+  const store = useStore();
+  
+  if (!store) {
+    return <div className="p-12 text-center text-white/20 uppercase font-black text-[10px] tracking-widest animate-pulse">Initializing Hub...</div>;
+  }
+
+  const { tournaments, addTournament: addTourneyStore, updateTournament: updateTourneyStore, removeTournament } = store.masterData;
+  const { matches } = store.matchCenter;
+  const { opponents } = store.opponents;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Tournament | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);

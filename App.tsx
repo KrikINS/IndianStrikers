@@ -28,6 +28,7 @@ import { useMatchCenter } from './store/matchStore';
 import { useMasterData } from './components/masterDataStore';
 import { usePlayerStore } from './store/playerStore';
 import { useOpponentStore } from './store/opponentStore';
+import { StoreProvider, useStore } from './store/StoreProvider';
 import GroundsManager from './components/GroundsManager';
 import TournamentsManager from './components/TournamentsManager';
 import LeagueCenter from './components/LeagueCenter';
@@ -270,19 +271,37 @@ const AppContent: React.FC<{
 };
 
 const App: React.FC = () => {
-  const { players, fetchPlayers, addPlayer: storeAddPlayer, updatePlayer: storeUpdatePlayer, deletePlayer: storeDeletePlayer } = usePlayerStore();
-  const { opponents, fetchOpponents, addOpponent: handleAddOpponent, updateOpponent: handleUpdateOpponent, deleteOpponent: handleDeleteOpponent } = useOpponentStore();
+  return (
+    <StoreProvider>
+      <AppInternal />
+    </StoreProvider>
+  );
+};
+
+const AppInternal: React.FC = () => {
+  const store = useStore();
+  
+  if (!store || !store.isHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-950">
+        <StrikersLoader />
+      </div>
+    );
+  }
+
+  const { players, fetchPlayers, addPlayer: storeAddPlayer, updatePlayer: storeUpdatePlayer, deletePlayer: storeDeletePlayer } = store.players;
+  const { opponents, fetchOpponents, addOpponent: storeAddOpponent, updateOpponent: storeUpdateOpponent, deleteOpponent: storeDeleteOpponent } = store.opponents;
   const [showSplash, setShowSplash] = useState(true);
   const [userRole, setUserRole] = useState<UserRole>('guest');
   const [isAdminView, setIsAdminView] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }>();
   const [teamLogo, setTeamLogo] = useState<string>('');
   const [isOffline, setIsOffline] = useState(false);
-  const resetZombieMatches = useMatchCenter(state => state.resetZombieMatches);
-  const syncWithCloud = useMatchCenter(state => state.syncWithCloud);
-  const isOfflineStore = useMasterData(state => state.isOffline);
-  const setOfflineStore = useMasterData(state => state.setOffline);
-  const syncMasterData = useMasterData(state => state.syncMasterData);
+  const resetZombieMatches = store.matchCenter.resetZombieMatches;
+  const syncWithCloud = store.matchCenter.syncWithCloud;
+  const isOfflineStore = store.masterData.isOffline;
+  const setOfflineStore = store.masterData.setOffline;
+  const syncMasterData = store.masterData.syncMasterData;
 
   useEffect(() => {
     resetZombieMatches();
@@ -291,18 +310,11 @@ const App: React.FC = () => {
   const loadData = async () => {
     try {
       console.log("Fetching data from backend...");
-      // Fetch data via stores
-      const syncCheck = async () => {
-          if (syncWithCloud) {
-              return await syncWithCloud();
-          }
-      };
-
       await Promise.allSettled([
         fetchPlayers(),
         fetchOpponents(),
         syncMasterData(),
-        syncCheck(),
+        syncWithCloud(),
         getTeamLogo().then(l => setTeamLogo(l || ''))
       ]);
 
@@ -320,7 +332,6 @@ const App: React.FC = () => {
     
     // Ensure store is rehydrated before first data fetch
     const initApp = async () => {
-      await usePlayerStore.persist.rehydrate();
       loadData();
     };
     initApp();
@@ -392,6 +403,36 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAddOpponent = async (opponent: OpponentTeam) => {
+    if (userRole !== 'admin') return;
+    try {
+      await storeAddOpponent(opponent);
+    } catch (e: any) {
+      console.error(e);
+      alert(`Failed to add opponent: ${e.message || 'Unknown Error'}`);
+    }
+  };
+
+  const handleUpdateOpponent = async (updatedOpponent: OpponentTeam) => {
+    if (userRole !== 'admin') return;
+    try {
+      await storeUpdateOpponent(updatedOpponent);
+    } catch (e: any) {
+      console.error(e);
+      alert(`Failed to update opponent: ${e.message || 'Unknown Error'}`);
+    }
+  };
+
+  const handleDeleteOpponent = async (id: string) => {
+    if (userRole !== 'admin') return;
+    try {
+      await storeDeleteOpponent(id);
+    } catch (e: any) {
+      console.error(e);
+      alert(`Failed to delete opponent: ${e.message || 'Unknown Error'}`);
+    }
+  };
+
   const handleDeletePlayer = async (id: string) => {
     if (userRole !== 'admin') return;
     try {
@@ -436,3 +477,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

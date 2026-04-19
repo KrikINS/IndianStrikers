@@ -375,15 +375,22 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
         </div>
 
         <div className="modal-footer">
+          {match.isLocked ? (
+            <div className="flex-1 flex items-center gap-2 text-rose-500 font-bold bg-rose-500/10 px-4 py-2 rounded-lg border border-rose-500/20 mr-4">
+              <span className="animate-pulse">🔒</span>
+              MATCH IS LOCKED. CONTACT ADMIN TO EDIT.
+            </div>
+          ) : null}
           <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
           <button 
             type="button" 
             className="btn-save" 
             onClick={handleSave} 
-            disabled={isSaving}
+            disabled={isSaving || match.isLocked}
+            style={match.isLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
-            {isSaving ? 'Finalizing...' : 'Finalize & Sync Career'}
+            {isSaving ? 'Finalizing...' : (match.isLocked ? 'LOCKED' : 'Finalize & Sync Career')}
           </button>
         </div>
       </div>

@@ -20,3 +20,5 @@ Data Migration: When creating new top-level columns, always provide a migration 
 Security: Ensure all queries are optimized for the GCP Cloud SQL environment and follow 'Least Privilege' access for the application user.
 
 Real-time: Ensure the database structure supports 'Delta Syncing' so individual balls can be pushed without re-uploading the entire match state."
+
+Attached File: C:\Users\Anees Ahad\Desktop\Desktop PVT\INS REPO\IndianStrikers\.agents\rules\mcp_config.json

@@ -30,11 +30,8 @@ import {
   CloudDownload,
   CloudOff
 } from 'lucide-react';
-import { useCricketScorer } from './matchStore';
-import { useMatchCenter } from '../store/matchStore';
+import { useStore } from '../store/StoreProvider';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useMasterData } from './masterDataStore';
-import { usePlayerStore } from '../store/playerStore';
 import { UniversalScorecard } from './UniversalScorecard';
 import _ from 'lodash';
 import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
@@ -940,10 +937,21 @@ import {
 import MatchSummaryModal from './MatchSummaryModal';
 
 const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ matchId: propMatchId, teamLogo }) => {
-  const { players, fetchPlayers } = usePlayerStore();
-  const store = useCricketScorer();
+  const rootStore = useStore();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
+  if (!rootStore) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8">
+        <div className="w-12 h-12 border-t-2 border-sky-500 border-solid rounded-full animate-spin mb-4" />
+        <span className="text-white/40 uppercase font-black text-[10px] tracking-widest animate-pulse">Initializing Scoring Engine...</span>
+      </div>
+    );
+  }
+
+  const { players, fetchPlayers } = rootStore.players;
+  const store = rootStore.scorer;
   const [showWicketModal, setShowWicketModal] = useState(false);
   const [showBowlerModal, setShowBowlerModal] = useState(false);
   const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_home' | 'squad_away' | 'openers_bat' | 'openers_bowl' | null>(store.innings1 ? null : 'preview');
@@ -1118,8 +1126,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }, [store.isWaitingForBowler, showInningsReview, showMatchSummaryModal, showBowlerModal]);
 
   // Get metadata from MatchCenterStore
-  const { matches, syncWithCloud, updateMatchStatus, finalizeMatch, updateMatch } = useMatchCenter();
-  const { grounds, syncMasterData } = useMasterData();
+  const { matches, syncWithCloud, updateMatchStatus, finalizeMatch, updateMatch } = rootStore.matchCenter;
+  const { grounds, syncMasterData } = rootStore.masterData;
   const activeMatchId = id || propMatchId || store.matchId;
 
   useEffect(() => {

@@ -50,6 +50,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
     } = useMatchCenter();
     const { grounds, tournaments, syncMasterData } = useMasterData();
     const initializeMatch = useCricketScorer(state => state.initializeMatch);
+    const isAdmin = userRole === 'admin';
 
     // Filters and Search
     const [activeTab, setActiveTab] = useState<'list' | 'standings' | 'tournaments'>('list');
@@ -81,6 +82,26 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         // Optional: Pre-select active tournament only if no search/other filters are active
         // For now, let's keep 'All' to ensure transparency of data.
     }, [tournaments]);
+
+    const handleToggleLock = async (matchId: string, currentStatus: boolean) => {
+        if (!isAdmin) return;
+        
+        try {
+            const match = matches.find(m => m.id === matchId);
+            if (!match) return;
+
+            // Optimistic update
+            await updateMatch(matchId, { isLocked: !currentStatus } as any);
+            
+            // If the store/API uses snake_case internally for sync
+            // await updateMatch(matchId, { is_locked: !currentStatus } as any);
+            
+            console.log(`[Admin] Match ${matchId} ${!currentStatus ? 'locked' : 'unlocked'}.`);
+        } catch (err) {
+            console.error("Failed to toggle lock:", err);
+            alert("Failed to update lock status. Please check your connection.");
+        }
+    };
 
     const handleManualScoreSubmit = async (data: any, options: { skipCareerSync?: boolean } = {}) => {
         if (!manualScoreConfig) return;
@@ -958,9 +979,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                 </span>
                                                             </td>
                                                             <td>
-                                                                <span className={`badge-type ${m.status === 'live' ? 'badge-status-live' : m.status === 'completed' ? 'badge-status-done' : 'badge-status-up'}`}>
-                                                                    {(m.status || "Unknown").toUpperCase()}
-                                                                </span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`badge-type ${m.status === 'live' ? 'badge-status-live' : m.status === 'completed' ? 'badge-status-done' : 'badge-status-up'}`}>
+                                                                        {(m.status || "Unknown").toUpperCase()}
+                                                                    </span>
+                                                                    {(m.isLocked || (m as any).is_locked) && (
+                                                                        <Lock size={12} className="text-emerald-500" title="This scorecard is locked" />
+                                                                    )}
+                                                                </div>
                                                             </td>
                                                             {userRole === 'admin' && (
                                                                 <td onClick={(e) => e.stopPropagation()}>
@@ -1336,6 +1362,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                     canScore={currentUser?.canScore}
                                     grounds={grounds}
                                     isCarouselActive={true} // Always active look in modal
+                                    onToggleLock={handleToggleLock}
                                 />
                             </motion.div>
                         </div>

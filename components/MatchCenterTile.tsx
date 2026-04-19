@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Check, Share2, Lock, RefreshCcw } from 'lucide-react';
+import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Check, Share2, Lock, Unlock, RefreshCcw } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {
@@ -13,6 +13,7 @@ interface MatchCenterTileProps {
     onViewScorecard: (match: ScheduledMatch) => void;
     onUpdateManualScore: (matchId: string, mode?: 'summary' | 'full') => void;
     onDeleteMatch: (matchId: string) => void;
+    onToggleLock?: (matchId: string, currentStatus: boolean) => void;
     userRole: UserRole;
     isAdmin: boolean;
     canScore?: boolean;
@@ -31,6 +32,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     onViewScorecard,
     onUpdateManualScore,
     onDeleteMatch,
+    onToggleLock,
     userRole,
     isAdmin,
     canScore,
@@ -96,8 +98,16 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             <div className="bg-blue-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-blue-500/10 uppercase tracking-wider">Upcoming</div>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg uppercase tracking-wider flex items-center gap-1.5 ${match.is_locked ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-white shadow-black/10'}`}>
-                                    {match.is_locked && <Lock size={10} />}
+                                <div 
+                                    onClick={isAdmin && onToggleLock ? () => onToggleLock(match.id, !!match.is_locked) : undefined}
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg uppercase tracking-wider flex items-center gap-1.5 transition-all
+                                        ${match.is_locked 
+                                            ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' + (isAdmin ? ' cursor-pointer hover:bg-emerald-600/40' : '')
+                                            : 'bg-slate-800 text-white shadow-black/10' + (isAdmin ? ' cursor-pointer hover:bg-slate-700' : '')
+                                        }`}
+                                    title={isAdmin ? (match.is_locked ? "Click to Unlock Match" : "Click to Lock Match") : ""}
+                                >
+                                    {match.is_locked ? <Lock size={10} /> : <Unlock size={10} />}
                                     {match.is_locked ? 'LOCKED' : 'Completed'}
                                 </div>
                                 {(match as any).is_local_only_override && (
