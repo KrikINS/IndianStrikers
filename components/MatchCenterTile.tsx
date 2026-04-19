@@ -267,7 +267,9 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                 <button onClick={() => onViewScorecard(match)} className="btn-primary-bold">
                                     VIEW MATCH INFO
                                     {(match.isLocked) && (
-                                        <LockIcon size={12} className="text-emerald-500" title="This scorecard is locked" />
+                                        <span title="This scorecard is locked">
+                                            <LockIcon size={12} className="text-emerald-500" />
+                                        </span>
                                     )}
                                 </button>
                             )}

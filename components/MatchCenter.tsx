@@ -984,7 +984,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                         {(m.status || "Unknown").toUpperCase()}
                                                                     </span>
                                                                     {(m.isLocked || (m as any).is_locked) && (
-                                                                        <LockIcon size={12} className="text-emerald-500" title="This scorecard is locked" />
+                                                                        <span title="This scorecard is locked">
+                                                                            <LockIcon size={12} className="text-emerald-500" />
+                                                                        </span>
                                                                     )}
                                                                 </div>
                                                             </td>
