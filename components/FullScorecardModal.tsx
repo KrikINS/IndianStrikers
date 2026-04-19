@@ -17,7 +17,21 @@ interface FullScorecardModalProps {
 export default function FullScorecardModal({ match, homeSquad, opponentSquad, opponentName, homeTeamLogo, opponentLogo, onSave, onClose }: FullScorecardModalProps) {
   const [activeInnings, setActiveInnings] = useState<1 | 2>(1);
 
-  // 1. Logic to determine which team bats in which Innings based on Toss
+  // 1. Strict Squad Filtering (Match Day XI Rule)
+  // Narrow down the squads to either the selected XI OR the full roster if no XI is set.
+  const filteredHomeSquad = useMemo(() => {
+    const xi = match.homeTeamXI || [];
+    if (!Array.isArray(xi) || xi.length === 0) return homeSquad;
+    return homeSquad.filter(p => xi.some(id => String(id) === String(p.id)));
+  }, [homeSquad, match.homeTeamXI]);
+
+  const filteredOpponentSquad = useMemo(() => {
+    const xi = match.opponentTeamXI || [];
+    if (!Array.isArray(xi) || xi.length === 0) return opponentSquad;
+    return opponentSquad.filter(p => xi.some(id => String(id) === String(p.id)));
+  }, [opponentSquad, match.opponentTeamXI]);
+
+  // 2. Logic to determine which team bats in which Innings based on Toss
   const isHomeBattingFirst = useMemo(() => {
     if (!match.toss) return true;
     const homeWon = match.toss.winner === 'Indian Strikers';
@@ -26,11 +40,11 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
 
   const opponentDisplay = opponentName || match.opponentName || 'Opponent';
 
-  const innings1Team = isHomeBattingFirst ? { name: 'INDIAN STRIKERS', squad: homeSquad, type: 'home' as const, logo: homeTeamLogo || match.homeLogo } 
-                                          : { name: opponentDisplay.toUpperCase(), squad: opponentSquad, type: 'away' as const, logo: opponentLogo || match.opponentLogo };
+  const innings1Team = isHomeBattingFirst ? { name: 'INDIAN STRIKERS', squad: filteredHomeSquad, type: 'home' as const, logo: homeTeamLogo || match.homeLogo } 
+                                          : { name: opponentDisplay.toUpperCase(), squad: filteredOpponentSquad, type: 'away' as const, logo: opponentLogo || match.opponentLogo };
   
-  const innings2Team = isHomeBattingFirst ? { name: opponentDisplay.toUpperCase(), squad: opponentSquad, type: 'away' as const, logo: opponentLogo || match.opponentLogo } 
-                                          : { name: 'INDIAN STRIKERS', squad: homeSquad, type: 'home' as const, logo: homeTeamLogo || match.homeLogo };
+  const innings2Team = isHomeBattingFirst ? { name: opponentDisplay.toUpperCase(), squad: filteredOpponentSquad, type: 'away' as const, logo: opponentLogo || match.opponentLogo } 
+                                          : { name: 'INDIAN STRIKERS', squad: filteredHomeSquad, type: 'home' as const, logo: homeTeamLogo || match.homeLogo };
 
   const initialInnings: InningsData = {
     batting: [],
@@ -50,10 +64,10 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
     if (!base.innings1 || !base.innings1.batting) base.innings1 = { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } };
     if (!base.innings2 || !base.innings2.batting) base.innings2 = { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } };
 
-    if (!base.innings1.batting || !base.innings1.batting.length) base.innings1.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '' }));
-    if (!base.innings1.bowling || !base.innings1.bowling.length) base.innings1.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0 }));
-    if (!base.innings2.batting || !base.innings2.batting.length) base.innings2.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '' }));
-    if (!base.innings2.bowling || !base.innings2.bowling.length) base.innings2.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0 }));
+    if (!base.innings1.batting || !base.innings1.batting.length) base.innings1.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '', is_hero: false }));
+    if (!base.innings1.bowling || !base.innings1.bowling.length) base.innings1.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0, is_hero: false }));
+    if (!base.innings2.batting || !base.innings2.batting.length) base.innings2.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '', is_hero: false }));
+    if (!base.innings2.bowling || !base.innings2.bowling.length) base.innings2.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0, is_hero: false }));
 
     return base;
   });
@@ -74,7 +88,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
         ...prev,
         [key]: {
           ...prev[key],
-          bowling: [...prev[key].bowling, { playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0 }]
+          bowling: [...prev[key].bowling, { playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0, is_hero: false }]
         }
       };
     });
@@ -87,7 +101,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
       const squad = inn === 1 ? innings1Team.squad : innings2Team.squad;
       if (field === 'playerId') {
         const player = squad.find((p: any) => String(p.id) === String(value));
-        newBatting[idx] = { ...newBatting[idx], playerId: value, name: player?.name || '' };
+        newBatting[idx] = { ...newBatting[idx], playerId: value, name: player?.name || '', is_hero: false };
       } else {
         newBatting[idx] = { ...newBatting[idx], [field]: value };
       }
@@ -102,7 +116,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
       const squad = inn === 1 ? innings2Team.squad : innings1Team.squad;
       if (field === 'playerId') {
         const player = squad.find((p: any) => String(p.id) === String(value));
-        newBowling[idx] = { ...newBowling[idx], playerId: value, name: player?.name || '' };
+        newBowling[idx] = { ...newBowling[idx], playerId: value, name: player?.name || '', is_hero: false };
       } else {
         newBowling[idx] = { ...newBowling[idx], [field]: value };
       }
@@ -110,7 +124,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
     });
   };
 
-  const updateExtras = (field: 'legByes' | 'byes', value: number) => {
+  const updateExtras = (field: keyof InningsExtras, value: number) => {
     setScorecard(prev => {
       const key = activeInnings === 1 ? 'innings1' : 'innings2';
       return {
@@ -129,22 +143,27 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
 
   const calculateInningsTotal = (inn: InningsData) => {
     const batSum = (inn?.batting || []).reduce((acc: number, b) => acc + (b.runs || 0), 0);
-    const bowlExtras = (inn?.bowling || []).reduce((acc: number, b: any) => acc + (b.wides || 0) + (b.no_balls || 0), 0);
-    return batSum + bowlExtras + (inn?.extras?.legByes || 0) + (inn?.extras?.byes || 0);
+    // Source of truth for Wide/NB is now the extras object, which is synced from bowling but can be overridden
+    return batSum + (Number(inn?.extras?.wide || 0)) + (Number(inn?.extras?.no_ball || 0)) + (inn?.extras?.legByes || 0) + (inn?.extras?.byes || 0);
   };
 
   const calculateInningsWickets = (inn: InningsData) => {
-    return (inn?.batting || []).filter(b => b.outHow !== 'Not Out' && b.outHow !== 'Did Not Bat' && b.outHow !== 'Retired Hurt' && b.playerId).length;
+    // Count all non-not-out dismissals, regardless of whether player has an ID (important for opponent squads)
+    return (inn?.batting || []).filter(b => b.playerId && !['Not Out', 'Did Not Bat', 'Retired Hurt', 'Absent'].includes(b.outHow)).length;
   };
 
   const handleSave = async () => {
-    if (isSaving) return; // Guard against rapid-clicks
+    if (isSaving) return; 
     setIsSaving(true);
+
+    const homeInnings = isHomeBattingFirst ? scorecard.innings1 : scorecard.innings2;
+    const awayInnings = isHomeBattingFirst ? scorecard.innings2 : scorecard.innings1;
+
     const performerMap = new Map<string, Performer>();
     
     // Process home batting
     const homeBattingInnings = isHomeBattingFirst ? scorecard.innings1 : scorecard.innings2;
-    homeBattingInnings.batting.filter(b => b.playerId && homeSquad.some(p => String(p.id) === String(b.playerId))).forEach(b => {
+    homeBattingInnings.batting.filter(b => b.playerId && filteredHomeSquad.some(p => String(p.id) === String(b.playerId))).forEach(b => {
       performerMap.set(b.playerId, {
         playerId: b.playerId,
         playerName: b.name,
@@ -153,15 +172,17 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
         fours: b.fours,
         sixes: b.sixes,
         isNotOut: b.outHow === 'Not Out',
+        is_hero: !!b.is_hero,
         wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0
       });
     });
 
     // Process home bowling
     const homeBowlingInnings = isHomeBattingFirst ? scorecard.innings2 : scorecard.innings1;
-    homeBowlingInnings.bowling.filter(b => b.playerId && homeSquad.some(p => String(p.id) === String(b.playerId))).forEach(b => {
+    homeBowlingInnings.bowling.filter(b => b.playerId && filteredHomeSquad.some(p => String(p.id) === String(b.playerId))).forEach(b => {
       const existing = performerMap.get(b.playerId) || {
         playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false,
+        is_hero: !!b.is_hero,
         wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0
       };
       performerMap.set(b.playerId, {
@@ -171,7 +192,8 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
         bowlingOvers: b.overs,
         maidens: b.maidens,
         wides: b.wides || 0,
-        no_balls: b.no_balls || 0
+        no_balls: b.no_balls || 0,
+        is_hero: existing.is_hero || !!b.is_hero
       });
     });
 
@@ -201,27 +223,52 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
       resultSummary: resultText,
       resultNote: resultText,
       status: 'completed',
-      isLocked: true
+      isLocked: true,
+      isCareerSynced: true
     };
-    
-    console.log('Players to Sync:', syncData.performers);
     
     onSave(syncData);
   };
 
   const calculateInningsOvers = (innings: any) => {
-    return innings.bowling.reduce((max: number, b: any) => Math.max(max, b.overs || 0), 0);
+    return (innings?.bowling || []).reduce((max: number, b: any) => Math.max(max, b.overs || 0), 0);
   };
 
-  const autoWides = inningsData.bowling.reduce((acc: number, b: any) => acc + (Number(b.wides || b.wide || 0)), 0);
-  const autoNBs = inningsData.bowling.reduce((acc: number, b: any) => acc + (Number(b.no_balls || b.noBall || b.nb || 0)), 0);
-
+  // Derived values for summary bar (Live Reactive)
   const homeInnings = isHomeBattingFirst ? scorecard.innings1 : scorecard.innings2;
   const awayInnings = isHomeBattingFirst ? scorecard.innings2 : scorecard.innings1;
   const homeRuns = calculateInningsTotal(homeInnings);
   const homeWkts = calculateInningsWickets(homeInnings);
   const awayRuns = calculateInningsTotal(awayInnings);
   const awayWkts = calculateInningsWickets(awayInnings);
+
+  const activeInningsTeamType = activeInnings === 1 ? innings1Team.type : innings2Team.type;
+  const activeBowlingTeamType = activeInnings === 1 ? innings2Team.type : innings1Team.type;
+
+  const autoWides = inningsData.bowling.reduce((acc: number, b: any) => acc + (Number(b.wides || 0)), 0);
+  const autoNBs = inningsData.bowling.reduce((acc: number, b: any) => acc + (Number(b.no_balls || 0)), 0);
+
+  // Synchronize auto-calculated extras into the extras object periodically to maintain consistency
+  // but allow the overrides to take precedence if they differ.
+  React.useEffect(() => {
+    // If auto values have changed, update the extras if they match the previous auto
+    // This is a subtle way to keep them in sync without breaking manual overrides.
+    setScorecard(prev => {
+        const key = activeInnings === 1 ? 'innings1' : 'innings2';
+        const currentExtras = prev[key].extras;
+        return {
+            ...prev,
+            [key]: {
+                ...prev[key],
+                extras: {
+                    ...currentExtras,
+                    wide: currentExtras.wide || autoWides,
+                    no_ball: currentExtras.no_ball || autoNBs
+                }
+            }
+        };
+    });
+  }, [autoWides, autoNBs, activeInnings]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in">
@@ -441,11 +488,6 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
           border-radius: 20px;
           font-size: 10px;
         }
-          background: #064e3b;
-          padding: 2px 8px;
-          border-radius: 20px;
-          font-size: 10px;
-        }
 
         .fow-input {
           width: 80%;
@@ -456,6 +498,17 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
           outline: none;
           font-size: 11px;
         }
+
+        .hero-star { 
+          transition: all 0.2s; 
+          cursor: pointer;
+          color: #94a3b8;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .hero-star:hover { transform: scale(1.15); color: #3b82f6; }
+        .hero-star.active { color: #f59e0b; fill: #f59e0b; filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.4)); }
 
         .modal-footer {
           padding: 12px 20px;
@@ -538,18 +591,30 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                   const squad = activeInnings === 1 ? innings1Team.squad : innings2Team.squad;
                   return (
                     <tr key={i}>
-                      <td>
-                        <select title="Select Batter" className="player-dropdown" value={data.playerId} onChange={(e) => updateBatting(activeInnings, i, 'playerId', e.target.value)}>
-                          <option value=""></option>
-                          {squad.map((p: any) => {
-                            const isSelectedElsewhere = inningsData.batting.some((b, idx) => b.playerId && String(b.playerId) === String(p.id) && idx !== i);
-                            return (
-                              <option key={p.id} value={p.id} disabled={isSelectedElsewhere}>
-                                {p.name} {isSelectedElsewhere ? '(Already Selected)' : ''}
-                              </option>
-                            );
-                          })}
-                        </select>
+                      <td className="relative">
+                        <div className="flex items-center gap-1.5">
+                          {activeInningsTeamType === 'home' && (
+                            <button
+                              type="button"
+                              onClick={() => updateBatting(activeInnings, i, 'is_hero', !data.is_hero)}
+                              className={`hero-star ${data.is_hero ? 'active' : ''}`}
+                              title="Mark as Match Hero (Home Team Only)"
+                            >
+                                <Award size={14} fill={data.is_hero ? "currentColor" : "none"} />
+                            </button>
+                          )}
+                          <select title="Select Batter" className="player-dropdown" value={data.playerId} onChange={(e) => updateBatting(activeInnings, i, 'playerId', e.target.value)}>
+                            <option value=""></option>
+                            {squad.map((p: any) => {
+                              const isSelectedElsewhere = inningsData.batting.some((b, idx) => b.playerId && String(b.playerId) === String(p.id) && idx !== i);
+                              return (
+                                <option key={p.id} value={p.id} disabled={isSelectedElsewhere}>
+                                  {p.name} {isSelectedElsewhere ? '(Already Selected)' : ''}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
                       </td>
                       <td>
                         <select 
@@ -611,12 +676,24 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
               
               <div className="extra-item">
                 <span className="tiny-label">WD:</span>
-                <div className="read-only-extra-box">{autoWides}</div>
+                <input 
+                  title="Wides"
+                  type="number" 
+                  className="extra-input" 
+                  value={inningsData.extras.wide ?? autoWides}
+                  onChange={(e) => updateExtras('wide', parseInt(e.target.value) || 0)} 
+                />
               </div>
 
               <div className="extra-item">
                 <span className="tiny-label">NB:</span>
-                <div className="read-only-extra-box">{autoNBs}</div>
+                <input 
+                  title="No Balls"
+                  type="number" 
+                  className="extra-input" 
+                  value={inningsData.extras.no_ball ?? autoNBs}
+                  onChange={(e) => updateExtras('no_ball', parseInt(e.target.value) || 0)} 
+                />
               </div>
 
               <div className="extra-item">
@@ -683,17 +760,29 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                   return (
                     <tr key={i}>
                       <td>
-                        <select title="Select Bowler" className="player-dropdown" value={data.playerId} onChange={(e) => updateBowling(activeInnings, i, 'playerId', e.target.value)}>
-                          <option value=""></option>
-                          {squad.map((p: any) => {
-                            const isSelectedElsewhere = inningsData.bowling.some((b, idx) => b.playerId && String(b.playerId) === String(p.id) && idx !== i);
-                            return (
-                              <option key={p.id} value={p.id} disabled={isSelectedElsewhere}>
-                                {p.name} {isSelectedElsewhere ? '(Already Selected)' : ''}
-                              </option>
-                            );
-                          })}
-                        </select>
+                        <div className="flex items-center gap-1.5">
+                          {activeBowlingTeamType === 'home' && (
+                            <button
+                              type="button"
+                              onClick={() => updateBowling(activeInnings, i, 'is_hero', !data.is_hero)}
+                              className={`hero-star ${data.is_hero ? 'active' : ''}`}
+                              title="Mark as Match Hero (Home Team Only)"
+                            >
+                                <Award size={14} fill={data.is_hero ? "currentColor" : "none"} />
+                            </button>
+                          )}
+                          <select title="Select Bowler" className="player-dropdown" value={data.playerId} onChange={(e) => updateBowling(activeInnings, i, 'playerId', e.target.value)}>
+                            <option value=""></option>
+                            {squad.map((p: any) => {
+                              const isSelectedElsewhere = inningsData.bowling.some((b, idx) => b.playerId && String(b.playerId) === String(p.id) && idx !== i);
+                              return (
+                                <option key={p.id} value={p.id} disabled={isSelectedElsewhere}>
+                                  {p.name} {isSelectedElsewhere ? '(Already Selected)' : ''}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
                       </td>
                       <td><input title="Overs" type="number" step="0.1" className="cell-input" style={{ width: '45px' }} value={data.overs ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'overs', parseFloat(e.target.value) || 0)} /></td>
                       <td><input title="Maidens" type="number" className="cell-input" style={{ width: '35px' }} value={data.maidens ?? 0} onChange={(e) => updateBowling(activeInnings, i, 'maidens', parseInt(e.target.value) || 0)} /></td>

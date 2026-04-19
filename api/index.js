@@ -1054,6 +1054,8 @@ async function recalculateCareerStats(playerId) {
     
     const maxScore = Math.max(...m.map(row => Number(row.runs) || 0), Number(l.highest_score) || 0);
 
+    const totalHeroCount = m.filter(row => !!row.is_hero).length;
+
     // Update the players table profile
     const { error: upErr } = await db.query(
         `UPDATE players SET 
@@ -1072,7 +1074,7 @@ async function recalculateCareerStats(playerId) {
                 matches: totalMatches, innings: totalInnings, runs: totalRuns, balls: totalBalls,
                 fours: totalFours, sixes: totalSixes, notOuts: totalNO, highestScore: String(maxScore),
                 average: parseFloat(batAvg.toFixed(2)), strikeRate: parseFloat(batSR.toFixed(2)),
-                hundreds: total100s, fifties: total50s, ducks: totalDucks
+                hundreds: total100s, fifties: total50s, ducks: totalDucks, heroCount: totalHeroCount
             }),
             JSON.stringify({
                 matches: totalMatches, innings: totalBowlInnings, overs: parseFloat(totalBowlOvers.toFixed(1)), runs: totalBowlRuns, 
@@ -1764,6 +1766,22 @@ app.post('/api/league/tournaments', authGuard(), async (req, res) => {
   res.status(201).json(data[0]);
 });
 
+app.put('/api/league/tournaments/:id', authGuard(), async (req, res) => {
+  const { name, year, format, type, is_home_away, status } = req.body;
+  const { error } = await db.query(
+    'UPDATE league_tournaments SET name=$1, year=$2, format=$3, type=$4, is_home_away=$5, status=$6 WHERE id=$7',
+    [name, year, format, type, is_home_away, status, req.params.id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+app.delete('/api/league/tournaments/:id', authGuard(), async (req, res) => {
+  const { error } = await db.query('DELETE FROM league_tournaments WHERE id = $1', [req.params.id]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 app.get('/api/league/groups', authGuard(), async (req, res) => {
   const { tournament_id } = req.query;
   const { data, error } = await db.query('SELECT * FROM league_groups WHERE tournament_id = $1', [tournament_id]);
@@ -1781,6 +1799,12 @@ app.post('/api/league/groups', authGuard(), async (req, res) => {
   res.status(201).json(data[0]);
 });
 
+app.delete('/api/league/groups/:id', authGuard(), async (req, res) => {
+  const { error } = await db.query('DELETE FROM league_groups WHERE id = $1', [req.params.id]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 app.get('/api/league/teams', authGuard(), async (req, res) => {
   const { tournament_id } = req.query;
   const { data, error } = await db.query('SELECT * FROM league_teams WHERE tournament_id = $1', [tournament_id]);
@@ -1796,6 +1820,22 @@ app.post('/api/league/teams', authGuard(), async (req, res) => {
   );
   if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(data[0]);
+});
+
+app.put('/api/league/teams/:id', authGuard(), async (req, res) => {
+  const { team_name, logo_url, group_id } = req.body;
+  const { error } = await db.query(
+    'UPDATE league_teams SET team_name=$1, logo_url=$2, group_id=$3 WHERE id=$4',
+    [team_name, logo_url, group_id, req.params.id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+app.delete('/api/league/teams/:id', authGuard(), async (req, res) => {
+  const { error } = await db.query('DELETE FROM league_teams WHERE id = $1', [req.params.id]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
 });
 
 app.get('/api/league/fixtures', authGuard(), async (req, res) => {

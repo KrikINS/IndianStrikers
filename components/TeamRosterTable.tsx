@@ -10,7 +10,8 @@ import {
   Search,
   CheckCircle2,
   XCircle,
-  Link as LinkIcon
+  Link as LinkIcon,
+  ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -23,7 +24,7 @@ interface TeamRosterTableProps {
   onTeamDeleted?: (id: string) => void;
 }
 
-const TeamRosterTable: React.FC<TeamRosterTableProps> = ({ 
+export const TeamRosterTable: React.FC<TeamRosterTableProps> = ({ 
   tournamentId, 
   groups, 
   isAdmin = false,
@@ -151,6 +152,7 @@ const TeamRosterTable: React.FC<TeamRosterTableProps> = ({
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-1">Group (If Applicable)</label>
                   <div className="flex gap-2">
                     <select 
+                      title="Select Group"
                       value={newTeam.group_id}
                       onChange={e => setNewTeam({...newTeam, group_id: e.target.value})}
                       className="flex-1 h-12 bg-white/5 border border-white/10 rounded-2xl px-4 text-sm font-bold text-white outline-none focus:border-blue-500 transition-all appearance-none"
@@ -207,6 +209,7 @@ const TeamRosterTable: React.FC<TeamRosterTableProps> = ({
 
             {isAdmin && (
               <button 
+                title="Delete Team"
                 onClick={() => handleDeleteTeam(team.id)}
                 className="absolute top-4 right-4 p-2 text-slate-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
               >

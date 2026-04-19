@@ -8,10 +8,12 @@ import {
   Image as ImageIcon, 
   Shield, 
   Search,
-  ArrowRight
+  ArrowRight,
+  Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { updateLeagueTeam, deleteLeagueTeam } from '../services/storageService';
 
 interface LeagueTeamManagerProps {
   tournamentId: string;
@@ -36,6 +38,7 @@ const LeagueTeamManager: React.FC<LeagueTeamManagerProps> = ({
     logo_url: '',
     group_id: ''
   });
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTeams();
@@ -56,18 +59,47 @@ const LeagueTeamManager: React.FC<LeagueTeamManagerProps> = ({
   const handleAddTeam = async () => {
     if (!newTeam.team_name) return toast.error('Team name is required');
     try {
-      const res = await addLeagueTeam({
-        ...newTeam,
-        tournament_id: tournamentId
-      });
-      setTeams([...teams, res]);
-      if (onTeamAdded) onTeamAdded(res);
+      if (editingTeamId) {
+        await updateLeagueTeam(editingTeamId, newTeam);
+        setTeams(teams.map(t => t.id === editingTeamId ? { ...t, ...newTeam } as LeagueTeam : t));
+        toast.success('Team updated successfully');
+      } else {
+        const res = await addLeagueTeam({
+          ...newTeam,
+          tournament_id: tournamentId
+        });
+        setTeams([...teams, res]);
+        if (onTeamAdded) onTeamAdded(res);
+        toast.success('Team registered successfully');
+      }
       setShowAddForm(false);
+      setEditingTeamId(null);
       setNewTeam({ team_name: '', logo_url: '', group_id: '' });
-      toast.success('Team registered successfully');
     } catch (e) {
-      toast.error('Failed to register team');
+      toast.error(editingTeamId ? 'Failed to update team' : 'Failed to register team');
     }
+  };
+
+  const handleDeleteTeam = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this team? This action cannot be undone.')) return;
+    try {
+      await deleteLeagueTeam(id);
+      setTeams(teams.filter(t => t.id !== id));
+      toast.success('Team deleted');
+    } catch (e) {
+      toast.error('Failed to delete team');
+    }
+  };
+
+  const startEditing = (team: LeagueTeam) => {
+    setEditingTeamId(team.id);
+    setNewTeam({
+      team_name: team.team_name,
+      logo_url: team.logo_url,
+      group_id: team.group_id
+    });
+    setShowAddForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const filteredTeams = teams.filter(t => 
@@ -136,6 +168,7 @@ const LeagueTeamManager: React.FC<LeagueTeamManagerProps> = ({
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-1">Group (If Applicable)</label>
                   <div className="flex gap-2">
                     <select 
+                      title="Select Group"
                       value={newTeam.group_id}
                       onChange={e => setNewTeam({...newTeam, group_id: e.target.value})}
                       className="flex-1 h-12 bg-white/5 border border-white/10 rounded-2xl px-4 text-sm font-bold text-white outline-none focus:border-blue-500 transition-all appearance-none"
@@ -149,7 +182,7 @@ const LeagueTeamManager: React.FC<LeagueTeamManagerProps> = ({
                       onClick={handleAddTeam}
                       className="bg-blue-600 text-white px-6 rounded-2xl flex items-center justify-center font-black uppercase text-[10px] tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-500/20"
                     >
-                      Add
+                      {editingTeamId ? 'Update' : 'Add'}
                     </button>
                   </div>
                 </div>
@@ -188,6 +221,25 @@ const LeagueTeamManager: React.FC<LeagueTeamManagerProps> = ({
                 </h3>
                 <p className="text-[10px] font-bold text-slate-400 uppercase mt-2">Team Registered</p>
               </div>
+
+              {isAdmin && (
+                <div className="absolute top-4 right-4 flex gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => startEditing(team)}
+                    className="p-2 bg-slate-100 hover:bg-blue-50 rounded-full text-slate-400 hover:text-blue-600 transition-colors border border-slate-200"
+                    title="Edit Team"
+                  >
+                    <Shield size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTeam(team.id)}
+                    className="p-2 bg-slate-100 hover:bg-rose-50 rounded-full text-slate-400 hover:text-rose-600 transition-colors border border-slate-200"
+                    title="Delete Team"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">

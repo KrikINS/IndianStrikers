@@ -1061,11 +1061,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     <FullScorecardModal
                         match={matches.find(m => m.id === manualScoreConfig.matchId)!}
                         homeSquad={players}
-                        opponentSquad={(opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.players || []).filter(p => {
-                            const m = matches.find(match => match.id === manualScoreConfig.matchId);
-                            const xi = m?.opponentTeamXI || [];
-                            return (xi.length === 0 || xi.some(pid => String(pid) === String(p.id)));
-                        })}
+                        opponentSquad={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.players || []}
                         opponentName={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.name || 'Opponent'}
                         homeTeamLogo={teamLogo || '/INS%20LOGO.PNG'}
                         opponentLogo={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.logoUrl}

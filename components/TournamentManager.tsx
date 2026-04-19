@@ -39,7 +39,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import TeamRosterTable from './TeamRosterTable';
+import { TeamRosterTable } from './TeamRosterTable';
 import { toast } from 'react-hot-toast';
 
 interface TournamentManagerProps {
@@ -267,7 +267,7 @@ const TournamentManager: React.FC<TournamentManagerProps> = ({ isAdmin = false }
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 italic">Configure Tournament</h3>
-                <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                <button title="Close Modal" onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
               </div>
               <div className="p-8 space-y-5">
                 <div>
@@ -283,6 +283,7 @@ const TournamentManager: React.FC<TournamentManagerProps> = ({ isAdmin = false }
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block px-1">Format</label>
                     <select 
+                      title="Select Format"
                       value={newTourneyForm.format}
                       onChange={e => setNewTourneyForm({ ...newTourneyForm, format: e.target.value })}
                       className="w-full h-12 bg-slate-50 border border-slate-200 rounded-2xl px-4 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
@@ -295,6 +296,7 @@ const TournamentManager: React.FC<TournamentManagerProps> = ({ isAdmin = false }
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block px-1">Type</label>
                     <select 
+                      title="Select Type"
                       value={newTourneyForm.type}
                       onChange={e => setNewTourneyForm({ ...newTourneyForm, type: e.target.value as any })}
                       className="w-full h-12 bg-slate-50 border border-slate-200 rounded-2xl px-4 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none"
@@ -423,7 +425,7 @@ const TournamentManager: React.FC<TournamentManagerProps> = ({ isAdmin = false }
                                 </div>
                                 <span className="text-sm font-bold text-slate-800 uppercase">{g.name}</span>
                               </div>
-                              <button onClick={() => deleteTMGroup(g.id).then(() => setGroups(groups.filter(x => x.id !== g.id)))} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all">
+                              <button title="Delete Group" onClick={() => deleteTMGroup(g.id).then(() => setGroups(groups.filter(x => x.id !== g.id)))} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all">
                                 <Trash2 size={16} />
                               </button>
                             </div>
@@ -507,8 +509,8 @@ const TournamentManager: React.FC<TournamentManagerProps> = ({ isAdmin = false }
                 tournamentId={selectedTourney.id} 
                 groups={groups}
                 isAdmin={isAdmin}
-                onTeamAdded={(team) => setTeams([...teams, team])}
-                onTeamDeleted={(id) => setTeams(teams.filter(t => t.id !== id))}
+                onTeamAdded={(team: TMTeam) => setTeams([...teams, team])}
+                onTeamDeleted={(id: string) => setTeams(teams.filter(t => t.id !== id))}
               />
             </div>
           )}

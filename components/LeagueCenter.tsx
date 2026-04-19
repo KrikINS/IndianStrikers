@@ -191,7 +191,7 @@ const LeagueCenter: React.FC = () => {
 
       const fixtureData: Partial<LeagueFixture> = {
         tournament_id: selectedTournament.id,
-        group_id: newFixture.group_id || null,
+        group_id: newFixture.group_id || undefined,
         home_team_id: newFixture.home_team_id,
         away_team_id: newFixture.away_team_id,
         home_team_name: homeTeam?.team_name || '',
@@ -239,6 +239,7 @@ const LeagueCenter: React.FC = () => {
           <div className="flex items-center gap-3">
              <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 flex items-center gap-3">
                <select 
+                 title="Select Tournament"
                  value={selectedTournament?.id} 
                  onChange={e => setSelectedTournament(tournaments.find(t => t.id === e.target.value) || null)}
                  className="bg-transparent border-none outline-none text-sm font-black text-slate-700 uppercase italic"
@@ -250,6 +251,7 @@ const LeagueCenter: React.FC = () => {
                </select>
              </div>
              <button 
+               title="Create Tournament"
                onClick={() => setShowAddModal(true)}
                className="bg-slate-900 text-white p-3 rounded-2xl flex items-center justify-center hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95"
              >
@@ -573,11 +575,12 @@ const LeagueCenter: React.FC = () => {
                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Format</label>
-                      <select 
-                        value={newTournament.format}
-                        onChange={e => setNewTournament({...newTournament, format: e.target.value as any})}
-                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none"
-                      >
+                       <select 
+                         title="Select Format"
+                         value={newTournament.format}
+                         onChange={e => setNewTournament({...newTournament, format: e.target.value as any})}
+                         className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none"
+                       >
                          <option value="T20">T20</option>
                          <option value="One Day">One Day</option>
                          <option value="T10">T10</option>
@@ -585,11 +588,12 @@ const LeagueCenter: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Structure</label>
-                      <select 
-                        value={newTournament.type}
-                        onChange={e => setNewTournament({...newTournament, type: e.target.value as any})}
-                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none"
-                      >
+                       <select 
+                         title="Select Structure"
+                         value={newTournament.type}
+                         onChange={e => setNewTournament({...newTournament, type: e.target.value as any})}
+                         className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none"
+                       >
                          <option value="League">Single Table</option>
                          <option value="Groups">Split Groups</option>
                       </select>
@@ -633,11 +637,12 @@ const LeagueCenter: React.FC = () => {
                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Home Team</label>
-                      <select 
-                        value={newFixture.home_team_id}
-                        onChange={e => setNewFixture({...newFixture, home_team_id: e.target.value})}
-                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
-                      >
+                       <select 
+                         title="Select Home Team"
+                         value={newFixture.home_team_id}
+                         onChange={e => setNewFixture({...newFixture, home_team_id: e.target.value})}
+                         className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+                       >
                          <option value="">Select Home Team</option>
                          {teams.map(t => (
                            <option key={t.id} value={t.id}>{t.team_name}</option>
@@ -646,11 +651,12 @@ const LeagueCenter: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Away Team</label>
-                      <select 
-                        value={newFixture.away_team_id}
-                        onChange={e => setNewFixture({...newFixture, away_team_id: e.target.value})}
-                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
-                      >
+                       <select 
+                         title="Select Away Team"
+                         value={newFixture.away_team_id}
+                         onChange={e => setNewFixture({...newFixture, away_team_id: e.target.value})}
+                         className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+                       >
                          <option value="">Select Away Team</option>
                          {teams.map(t => (
                            <option key={t.id} value={t.id}>{t.team_name}</option>
@@ -662,12 +668,13 @@ const LeagueCenter: React.FC = () => {
                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Date</label>
-                      <input 
-                        type="date"
-                        value={newFixture.date}
-                        onChange={e => setNewFixture({...newFixture, date: e.target.value})}
-                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
-                      />
+                       <input 
+                         title="Match Date"
+                         type="date"
+                         value={newFixture.date}
+                         onChange={e => setNewFixture({...newFixture, date: e.target.value})}
+                         className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+                       />
                     </div>
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Venue</label>
@@ -683,6 +690,7 @@ const LeagueCenter: React.FC = () => {
                  <div>
                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Group (Optional)</label>
                    <select 
+                    title="Select Group"
                     value={newFixture.group_id}
                     onChange={e => setNewFixture({...newFixture, group_id: e.target.value})}
                     className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -721,6 +729,7 @@ const GroupInput = ({ onAdd }: { onAdd: (name: string) => void }) => {
         className="w-32 h-10 bg-slate-50 border border-slate-100 rounded-xl px-4 text-[10px] font-bold text-slate-700 outline-none"
       />
       <button 
+        title="Add Group"
         onClick={() => { if(val) onAdd(val); setVal(''); }}
         className="bg-slate-900 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-slate-800"
       >

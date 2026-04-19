@@ -960,6 +960,23 @@ export const addLeagueTeam = async (t: Partial<LeagueTeam>): Promise<LeagueTeam>
   return handleResponse(res);
 };
 
+export const updateLeagueTeam = async (id: string, t: Partial<LeagueTeam>) => {
+  const res = await fetch(`${API_URL}/league/teams/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(t)
+  });
+  return handleResponse(res);
+};
+
+export const deleteLeagueTeam = async (id: string) => {
+  const res = await fetch(`${API_URL}/league/teams/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
 export const getLeagueFixtures = async (tournamentId: string): Promise<LeagueFixture[]> => {
   const res = await fetch(`${API_URL}/league/fixtures?tournament_id=${tournamentId}`, { headers: getHeaders() });
   return (await handleResponse(res)) || [];
