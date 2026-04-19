@@ -191,20 +191,12 @@ const LeagueTeamManager: React.FC<LeagueTeamManagerProps> = ({
             </div>
 
             <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">
-              <div className="flex -space-x-2">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center">
-                    <Users size={10} className="text-slate-300" />
-                  </div>
-                ))}
-                <div className="w-6 h-6 rounded-full bg-slate-50 border-2 border-white flex items-center justify-center text-[8px] font-black text-slate-400">
-                  +12
-                </div>
+              <div className="flex items-center gap-2">
+                <Users size={14} className="text-slate-300" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Team Entity Active</span>
               </div>
-              <button className="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1 hover:underline">
-                View Roster <ArrowRight size={12} />
-              </button>
             </div>
+
           </motion.div>
         ))}
 

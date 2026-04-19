@@ -222,10 +222,11 @@ const LeagueCenter: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {[
                 { id: 'overview', icon: <LayoutGrid size={18} />, label: 'Setup Hub', color: 'blue' },
-                { id: 'teams', icon: <Users size={18} />, label: 'Participants', color: 'emerald' },
+                { id: 'teams', icon: <Users size={18} />, label: 'Teams', color: 'emerald' },
                 { id: 'schedule', icon: <Calendar size={18} />, label: 'Match Schedule', color: 'indigo' },
                 { id: 'standings', icon: <TrendingUp size={18} />, label: 'Points Table', color: 'amber' }
               ].map(tab => (
+
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
