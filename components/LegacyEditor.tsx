@@ -106,9 +106,9 @@ const LegacyEditor: React.FC<LegacyEditorProps> = () => {
     }
   };
 
-  const filteredPlayers = (players || []).filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPlayers = (players || [])
+    .filter(p => !!p.isClubPlayer)
+    .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   if (loading) {
     return (

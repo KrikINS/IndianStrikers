@@ -1186,14 +1186,24 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   useEffect(() => {
     if (store.pendingMilestone && milestoneRef.current) {
       const { type, player, subText } = store.pendingMilestone;
-      milestoneRef.current.trigger({ 
-        type: type === 'hundred' ? 'HUNDRED' : (type === 'partnership' ? 'PARTNERSHIP' : 'FIFTY'), 
-        playerName: player,
-        subText: subText
-      });
+      
+      // STRICT FIX: Only trigger milestone celebrations for home team (Indian Strikers) players.
+      // We check if the player involved is part of the players store and marked as a club player.
+      const isClubPlayer = players.some(p => p.name === player && !!p.isClubPlayer);
+      
+      // Partnerships are allowed if at least one striker is a club member (usually true for home team matches)
+      const shouldTrigger = type === 'partnership' || isClubPlayer;
+
+      if (shouldTrigger) {
+        milestoneRef.current.trigger({ 
+          type: type === 'hundred' ? 'HUNDRED' : (type === 'partnership' ? 'PARTNERSHIP' : 'FIFTY'), 
+          playerName: player,
+          subText: subText
+        });
+      }
       // Note: pendingMilestone is reset by the store on the next ball and cleared on UNDO.
     }
-  }, [store.pendingMilestone]);
+  }, [store.pendingMilestone, players]);
 
   // Sync setupStep when store state changes (Rehydration check)
   useEffect(() => {

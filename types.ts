@@ -188,6 +188,8 @@ export interface Player {
   battingStats?: BattingStats;
   bowlingStats?: BowlingStats;
   linkedUserId?: string;
+  isClubPlayer?: boolean; // Default true for Indian Strikers members
+  primaryTeamId?: string; // Link to the opponent team if isClubPlayer is false
   wides?: number;
   no_balls?: number;
 }

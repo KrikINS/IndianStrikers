@@ -204,7 +204,9 @@ export const getPlayers = async (): Promise<Player[]> => {
         linkedUserId: p.linked_user_id,
         jerseyNumber: p.jersey_number,
         dob: p.dob,
-        externalId: p.external_id
+        externalId: p.external_id,
+        isClubPlayer: p.is_club_player,
+        primaryTeamId: p.primary_team_id
       }));
 
     if (players.length > 0) {
@@ -256,7 +258,9 @@ export const addPlayer = async (player: Partial<Player>) => {
     dob: player.dob || null,
     external_id: player.externalId,
     is_active: player.isActive,
-    status: player.status
+    status: player.status,
+    is_club_player: player.isClubPlayer !== false,
+    primary_team_id: player.primaryTeamId || null
   };
   const res = await fetch(`${API_URL}/players`, {
     method: 'POST',
@@ -281,7 +285,9 @@ export const addPlayer = async (player: Partial<Player>) => {
     battingStyle: p.batting_style,
     bowlingStyle: p.bowling_style,
     dob: p.dob,
-    externalId: p.external_id
+    externalId: p.external_id,
+    isClubPlayer: p.is_club_player,
+    primaryTeamId: p.primary_team_id
   };
 };
 
@@ -306,7 +312,9 @@ export const updatePlayer = async (player: Player) => {
     dob: player.dob || null,
     external_id: player.externalId,
     is_active: player.isActive,
-    status: player.status
+    status: player.status,
+    is_club_player: player.isClubPlayer !== false,
+    primary_team_id: player.primaryTeamId || null
   };
   const res = await fetch(`${API_URL}/players/${player.id}`, {
     method: 'PUT',

@@ -478,7 +478,11 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
   const enrichedPlayers = useMemo(() => {
     if (!players) return [];
-    return players.map(p => {
+    
+    // STRICT FIX: Only Indian Strikers (Home Team) players should appear in Dashboard stats
+    return players
+      .filter(p => !!p.isClubPlayer)
+      .map(p => {
       const matchPerf = performerData.performers?.find(perf => 
         String(perf.playerId) === String(p.id) || 
         String(perf.id) === String(p.id)
@@ -564,13 +568,11 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     .slice(0, 5);
 
   const filteredSpotlightPerformers = useMemo(() => {
-    if (!performerData.performers || !players) return [];
-    
-    // Simplification: Any player present in our main roster (Indian Strikers) is eligible.
-    // Opponent players are naturally excluded because they are not in the 'players' store.
+    // STRICT FIX: Any player present in our main roster (Indian Strikers) is eligible.
     return performerData.performers.filter(perf => {
       const pId = String(perf.playerId || perf.id);
-      return players.some(p => String(p.id) === pId);
+      const player = players.find(p => String(p.id) === pId);
+      return player && !!player.isClubPlayer;
     });
   }, [performerData.performers, players]);
 

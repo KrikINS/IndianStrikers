@@ -178,11 +178,11 @@ export const useCricketScorer = create<ScorerStore>()(
             ...INITIAL_STATE,
 
             hardReset: () => {
-                sessionStorage.removeItem('ins-cricket-scorer');
+                localStorage.removeItem('ins-cricket-scorer-storage');
                 set({ ...INITIAL_STATE });
             },
             resetStore: () => {
-                sessionStorage.removeItem('ins-cricket-scorer');
+                localStorage.removeItem('ins-cricket-scorer-storage');
                 set({ ...INITIAL_STATE });
             },
 

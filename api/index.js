@@ -85,8 +85,8 @@ async function ensurePlayersExist(ids) {
 
     for (const id of missingIds) {
       await db.query(
-        `INSERT INTO players (id, name, is_active, status) 
-         VALUES ($1, 'Guest Player', false, 'inactive') 
+        `INSERT INTO players (id, name, is_active, status, is_club_player) 
+         VALUES ($1, 'Guest Player', false, 'inactive', false) 
          ON CONFLICT (id) DO NOTHING`,
         [id]
       );
@@ -100,7 +100,7 @@ async function ensurePlayersExist(ids) {
  * Synchronizes an opponent team's roster with the global players registry.
  * Ensures every player in the JSONB roster exists in the flat 'players' table.
  */
-async function syncPlayersFromOpponent(players) {
+async function syncPlayersFromOpponent(players, teamId) {
   if (!Array.isArray(players) || players.length === 0) return;
   
   try {
@@ -109,11 +109,13 @@ async function syncPlayersFromOpponent(players) {
       if (!player.id || !player.name) continue;
       
       await db.query(
-        `INSERT INTO players (id, name, is_active, status) 
-         VALUES ($1, $2, false, 'inactive') 
+        `INSERT INTO players (id, name, is_active, status, is_club_player, primary_team_id) 
+         VALUES ($1, $2, false, 'inactive', false, $3) 
          ON CONFLICT (id) DO UPDATE SET 
-            name = EXCLUDED.name`,
-        [player.id, player.name]
+            name = EXCLUDED.name,
+            primary_team_id = EXCLUDED.primary_team_id,
+            is_club_player = false`,
+        [player.id, player.name, teamId || null]
       );
     }
   } catch (err) {
@@ -281,15 +283,15 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
   console.log('[POST /api/players] Sanitized Payload:', JSON.stringify(payload));
 
   const { data, error } = await db.getOne(
-    `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, wides, no_balls, linked_user_id, jersey_number, dob, external_id, is_active, status) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) RETURNING *`,
+    `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, wides, no_balls, linked_user_id, jersey_number, dob, external_id, is_active, status, is_club_player) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING *`,
     [
       payload.name, payload.role, payload.batting_style, payload.bowling_style, payload.avatar_url, 
       payload.matches_played, payload.runs_scored, payload.wickets_taken, payload.average, 
       payload.is_captain, payload.is_vice_captain, payload.is_available, 
       payload.batting_stats, payload.bowling_stats, Number(req.body.wides || 0), Number(req.body.no_balls || 0), payload.linked_user_id, 
       payload.jersey_number, payload.dob, payload.external_id,
-      payload.is_active, payload.status
+      payload.is_active, payload.status, req.body.is_club_player !== false
     ]
   );
 
@@ -342,8 +344,9 @@ app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => 
       batting_stats=$13, bowling_stats=$14, 
       wides=$15, no_balls=$16, linked_user_id=$17, 
       jersey_number=$18, dob=$19, external_id=$20, 
-      is_active=$21, status=$22, updated_at=NOW() 
-     WHERE id=$23`,
+      is_active=$21, status=$22, is_club_player=$23, primary_team_id=$24,
+      updated_at=NOW() 
+     WHERE id=$25`,
     [
       payload.name, payload.role, payload.batting_style, payload.bowling_style, 
       payload.avatar_url, payload.matches_played, payload.runs_scored, 
@@ -352,7 +355,8 @@ app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => 
       payload.batting_stats, payload.bowling_stats, 
       Number(wides || 0), Number(no_balls || 0), payload.linked_user_id, 
       payload.jersey_number, payload.dob, payload.external_id,
-      payload.is_active, payload.status, req.params.id
+      payload.is_active, payload.status, req.body.is_club_player !== false, req.body.primary_team_id || null, 
+      req.params.id
     ]
   );
   if (error) {
@@ -519,6 +523,20 @@ app.put('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => 
   if (error) return res.status(400).json({ error: error.message });
   console.log('[PUT matches/:id] DB saved date:', data?.[0]?.date);
   res.json({ ok: true, data: data?.[0] });
+});
+
+app.delete('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => {
+  const { id } = req.params;
+  const { error } = await db.query('DELETE FROM matches WHERE id = $1', [id]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+app.delete('/api/matches/:matchId/stats', authGuard(['admin', 'member']), async (req, res) => {
+  const { matchId } = req.params;
+  const { error } = await db.query('DELETE FROM player_match_stats WHERE match_id = $1', [matchId]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
 });
 
 // FINALIZE MATCH (Update results and player stats)
@@ -732,7 +750,7 @@ app.post('/api/opponents', authGuard(['admin']), async (req, res) => {
 
   // Architect: Sync players immediately so database is 'aware' of them
   if (players && players.length > 0) {
-    syncPlayersFromOpponent(players);
+    syncPlayersFromOpponent(players, data.id);
   }
 
   res.json(data);
@@ -744,6 +762,11 @@ app.put('/api/opponents/:id', authGuard(['admin', 'member']), async (req, res) =
     [name, rank, logo_url, strength || '', weakness || '', JSON.stringify(players || []), color || 'bg-slate-500', req.params.id]
   );
   if (error) return res.status(400).json({ error: error.message });
+  
+  if (players && players.length > 0) {
+    syncPlayersFromOpponent(players, req.params.id);
+  }
+
   res.json({ ok: true });
 });
 app.delete('/api/opponents/:id', authGuard(['admin']), async (req, res) => {

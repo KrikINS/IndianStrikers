@@ -271,19 +271,22 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   // Subscribe to the rosterTab for filtering (active vs inactive vs others)
   const displayedPlayers = useMemo(() => {
     return (searchingPlayers || []).filter((p: Player) => {
-      const opponentData = opponentMap.get(String(p.id));
-      const belongsToOpponent = !!opponentData;
+      // isClubPlayer is now our source of truth for "Home Team" vs "Opponent"
+      const isOpponent = p.isClubPlayer === false;
 
       if (rosterTab === 'others') {
-        if (!belongsToOpponent) return false;
+        if (!isOpponent) return false;
+        
+        // Use opponentMap ONLY for sub-filtering by specific opponent team
         if (selectedOpponentId !== 'all') {
-            return opponentData.team.id === selectedOpponentId;
+            const opponentData = opponentMap.get(String(p.id));
+            return opponentData?.team.id === selectedOpponentId;
         }
         return true;
       }
 
       // Hide opponent players from club member tabs
-      if (belongsToOpponent) return false;
+      if (isOpponent) return false;
 
       // Determine active status accurately for club members
       const isActuallyActive = p.isActive && p.status !== 'inactive';

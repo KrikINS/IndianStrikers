@@ -409,14 +409,23 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
     const [syncStatus, setSyncStatus] = useState<'idle' | 'success'>('idle');
     const handleCloudSync = async () => {
+        if (!window.confirm("This will refresh all matches and live scores from the cloud. Continue?")) return;
+
         setIsSyncing(true);
         setSyncStatus('idle');
         try {
+            console.log("[Sync] Performing Full Cloud Refresh...");
+            // Wipe local first to ensure DB parity (removes deleted matches)
+            wipeLocalMatches();
+            useCricketScorer.getState().resetStore();
+            
             await syncWithCloud();
             setSyncStatus('success');
-            // Revert back to idle after 5 seconds
-            setTimeout(() => setSyncStatus('idle'), 5000);
-            alert("✅ Cloud Sync Complete!");
+            
+            setTimeout(() => {
+                setSyncStatus('idle');
+                window.location.reload(); // Force reload to re-run all dashboard filters
+            }, 1000);
         } catch (e: any) {
             alert("❌ Sync failed: " + e.message);
         } finally {
@@ -771,19 +780,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     {userRole === 'admin' && (
                         <div className="flex items-center gap-2 md:gap-3">
                             <button
-                                onClick={() => {
-                                    if(window.confirm("This will clear all matches from your browser's local cache and re-download from the cloud. Continue?")) {
-                                        wipeLocalMatches();
-                                        useCricketScorer.getState().resetStore(); // Emergency clear for stuck matches
-                                        handleCloudSync();
-                                    }
-                                }}
-                                className="px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-sm"
-                                title="Fix Ghost Matches"
-                            >
-                                <Trash2 size={16} /> <span className="hidden sm:inline">Wipe Cache</span>
-                            </button>
-                            <button
                                 onClick={handleCloudSync}
                                 disabled={isSyncing}
                                 className={`px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${isSyncing
@@ -975,7 +971,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                 <td onClick={(e) => e.stopPropagation()}>
                                                                     <div className="flex items-center gap-2">
                                                                         <button onClick={() => setEditingMatch(m)} className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors" title="Edit Metadata"><Plus size={14} /></button>
-                                                                        <button onClick={() => { if (window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Shield size={14} /></button>
+                                                                        <button onClick={() => { if (window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Trash2 size={14} /></button>
                                                                     </div>
                                                                 </td>
                                                             )}
