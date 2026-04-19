@@ -47,6 +47,7 @@ const LeagueCenter: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'schedule' | 'standings'>('overview');
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddFixtureModal, setShowAddFixtureModal] = useState(false);
 
   // Form states for setup
   const [isSettingUp, setIsSettingUp] = useState(false);
@@ -58,6 +59,15 @@ const LeagueCenter: React.FC = () => {
     is_home_away: false,
     status: 'upcoming'
   });
+
+  const [newFixture, setNewFixture] = useState<Partial<LeagueFixture>>({
+    home_team_id: '',
+    away_team_id: '',
+    date: new Date().toISOString().split('T')[0],
+    venue: '',
+    group_id: ''
+  });
+
 
   useEffect(() => {
     loadTournaments();
@@ -163,8 +173,56 @@ const LeagueCenter: React.FC = () => {
     }
   };
 
+  const handleAddFixture = async () => {
+    if (!selectedTournament) return;
+    if (!newFixture.home_team_id || !newFixture.away_team_id || !newFixture.date) {
+      toast.error('Teams and Date are required');
+      return;
+    }
+    if (newFixture.home_team_id === newFixture.away_team_id) {
+      toast.error('Teams must be different');
+      return;
+    }
+
+    try {
+      const homeTeam = teams.find(t => t.id === newFixture.home_team_id);
+      const awayTeam = teams.find(t => t.id === newFixture.away_team_id);
+      const group = groups.find(g => g.id === newFixture.group_id);
+
+      const fixtureData: Partial<LeagueFixture> = {
+        tournament_id: selectedTournament.id,
+        group_id: newFixture.group_id || null,
+        home_team_id: newFixture.home_team_id,
+        away_team_id: newFixture.away_team_id,
+        home_team_name: homeTeam?.team_name || '',
+        away_team_name: awayTeam?.team_name || '',
+        home_team_logo: homeTeam?.logo_url,
+        away_team_logo: awayTeam?.logo_url,
+        date: newFixture.date,
+        venue: newFixture.venue || 'TBA',
+        group_name: group?.name || ''
+      };
+
+      await batchAddLeagueFixtures([fixtureData]);
+      setShowAddFixtureModal(false);
+      setNewFixture({
+        home_team_id: '',
+        away_team_id: '',
+        date: new Date().toISOString().split('T')[0],
+        venue: '',
+        group_id: ''
+      });
+      loadTournamentData(selectedTournament.id);
+      toast.success('Match scheduled successfully');
+    } catch (e) {
+      toast.error('Failed to schedule match');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+      {/* ... header ... (no changes needed to header) */}
+
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -350,7 +408,17 @@ const LeagueCenter: React.FC = () => {
 
                {activeTab === 'schedule' && (
                  <div className="overflow-x-auto">
+                    <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center px-8">
+                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Match Schedule</h4>
+                       <button 
+                         onClick={() => setShowAddFixtureModal(true)}
+                         className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                       >
+                         <Plus size={14} /> Add Match
+                       </button>
+                    </div>
                     <table className="w-full text-left">
+
                     <thead className="bg-slate-50">
                       <tr>
                         <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date / Time</th>
@@ -538,9 +606,109 @@ const LeagueCenter: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Add Fixture Modal */}
+      <AnimatePresence>
+        {showAddFixtureModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAddFixtureModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-xl bg-white rounded-[3rem] overflow-hidden shadow-2xl"
+            >
+              <div className="bg-blue-600 p-10 text-white relative">
+                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+                 <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-2">Schedule Match</h2>
+                 <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Manual Fixture Entry</p>
+              </div>
+              <div className="p-10 space-y-6">
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Home Team</label>
+                      <select 
+                        value={newFixture.home_team_id}
+                        onChange={e => setNewFixture({...newFixture, home_team_id: e.target.value})}
+                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+                      >
+                         <option value="">Select Home Team</option>
+                         {teams.map(t => (
+                           <option key={t.id} value={t.id}>{t.team_name}</option>
+                         ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Away Team</label>
+                      <select 
+                        value={newFixture.away_team_id}
+                        onChange={e => setNewFixture({...newFixture, away_team_id: e.target.value})}
+                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+                      >
+                         <option value="">Select Away Team</option>
+                         {teams.map(t => (
+                           <option key={t.id} value={t.id}>{t.team_name}</option>
+                         ))}
+                      </select>
+                    </div>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Date</label>
+                      <input 
+                        type="date"
+                        value={newFixture.date}
+                        onChange={e => setNewFixture({...newFixture, date: e.target.value})}
+                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Venue</label>
+                      <input 
+                        value={newFixture.venue}
+                        onChange={e => setNewFixture({...newFixture, venue: e.target.value})}
+                        placeholder="E.G. Ground A"
+                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+                      />
+                    </div>
+                 </div>
+
+                 <div>
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Group (Optional)</label>
+                   <select 
+                    value={newFixture.group_id}
+                    onChange={e => setNewFixture({...newFixture, group_id: e.target.value})}
+                    className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+                   >
+                     <option value="">None</option>
+                     {groups.map(g => (
+                       <option key={g.id} value={g.id}>{g.name}</option>
+                     ))}
+                   </select>
+                 </div>
+
+                 <button 
+                   onClick={handleAddFixture}
+                   className="w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-200 mt-4"
+                 >
+                   Schedule Match
+                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+
 
 const GroupInput = ({ onAdd }: { onAdd: (name: string) => void }) => {
   const [val, setVal] = useState('');
