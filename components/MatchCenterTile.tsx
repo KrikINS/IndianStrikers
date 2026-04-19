@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Check, Share2 } from 'lucide-react';
+import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Check, Share2, Lock, RefreshCcw } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {
@@ -96,7 +96,10 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             <div className="bg-blue-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-blue-500/10 uppercase tracking-wider">Upcoming</div>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <div className="bg-slate-800 text-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-black/10 uppercase tracking-wider">Completed</div>
+                                <div className={`px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg uppercase tracking-wider flex items-center gap-1.5 ${match.is_locked ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-white shadow-black/10'}`}>
+                                    {match.is_locked && <Lock size={10} />}
+                                    {match.is_locked ? 'LOCKED' : 'Completed'}
+                                </div>
                                 {(match as any).is_local_only_override && (
                                     <div className="bg-amber-500 text-black px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-amber-500/10 uppercase tracking-wider flex items-center gap-1">
                                         <RefreshCcw size={10} className="animate-spin" />
@@ -217,8 +220,22 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             >
                                 <Share2 size={12} />
                             </button>
-                            <button onClick={() => onEditMatch(match)} className="hover:text-blue-600 transition-colors" title="Edit Match"><Edit2 size={10} /></button>
-                            <button onClick={() => window.confirm('Delete?') && onDeleteMatch(match.id)} className="hover:text-red-600 transition-colors" title="Delete Match"><Trash2 size={10} /></button>
+                             <button 
+                                onClick={match.is_locked ? undefined : () => onEditMatch(match)} 
+                                className={`transition-colors ${match.is_locked ? 'text-slate-700 cursor-not-allowed' : 'hover:text-blue-600'}`} 
+                                title={match.is_locked ? "Match is Locked" : "Edit Match"}
+                                disabled={match.is_locked}
+                             >
+                                <Edit2 size={10} />
+                             </button>
+                             <button 
+                                onClick={match.is_locked ? undefined : () => window.confirm('Delete?') && onDeleteMatch(match.id)} 
+                                className={`transition-colors ${match.is_locked ? 'text-slate-700 cursor-not-allowed' : 'hover:text-red-600'}`} 
+                                title={match.is_locked ? "Match is Locked" : "Delete Match"}
+                                disabled={match.is_locked}
+                             >
+                                <Trash2 size={10} />
+                             </button>
                         </div>
                     )}
                 </div>
@@ -244,9 +261,17 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         <>
                             {isScorerOrAdmin ? (
                                 <>
-                                    <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">MATCH SUMMARY</button>
-                                    <button onClick={() => onUpdateManualScore(match.id, 'full')} className="btn-action-dark">UPDATE SCORECARD</button>
-                                    <button onClick={() => onViewScorecard(match)} className="btn-primary-bold">VIEW FULL SCORECARD</button>
+                                    {match.is_locked ? (
+                                        <button onClick={() => onViewScorecard(match)} className="btn-primary-full col-span-2 flex items-center justify-center gap-2">
+                                            <Lock size={12} /> VIEW LOCKED SCORECARD
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">MATCH SUMMARY</button>
+                                            <button onClick={() => onUpdateManualScore(match.id, 'full')} className="btn-action-dark">UPDATE SCORECARD</button>
+                                            <button onClick={() => onViewScorecard(match)} className="btn-primary-bold">VIEW FULL SCORECARD</button>
+                                        </>
+                                    )}
                                 </>
                             ) : (
                                 <button onClick={() => onViewScorecard(match)} className="btn-primary-full">VIEW FULL SCORECARD</button>

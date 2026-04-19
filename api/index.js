@@ -511,23 +511,43 @@ app.post('/api/matches', authGuard(['admin', 'member']), async (req, res) => {
 });
 
 app.put('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => {
-  console.log('[PUT matches/:id] Incoming date:', req.body.date);
-  const dbMatch = mapMatchToDB(req.body);
-  console.log('[PUT matches/:id] mapped date:', dbMatch.date);
-  const keys = Object.keys(dbMatch);
-  const values = Object.values(dbMatch);
-  const setClause = keys.map((key, i) => `${key}=$${i + 1}`).join(', ');
-  const query = `UPDATE matches SET ${setClause}, updated_at=NOW() WHERE id=$${keys.length + 1} RETURNING *`;
+  const { id } = req.params;
   
-  const { data, error } = await db.query(query, [...values, req.params.id]);
-  if (error) return res.status(400).json({ error: error.message });
-  console.log('[PUT matches/:id] DB saved date:', data?.[0]?.date);
-  res.json({ ok: true, data: data?.[0] });
+  try {
+    // 0. Check lock status
+    const { data: match } = await db.getOne('SELECT is_locked FROM matches WHERE id = $1', [id]);
+    
+    // Only allow modification if not locked, OR if we are explicitly changing the lock status itself
+    const isChangingLockOnly = Object.keys(req.body).length === 1 && 'isLocked' in req.body;
+    
+    if (match?.is_locked && !req.body.is_locked && !isChangingLockOnly) { 
+      return res.status(403).json({ error: 'This match is LOCKED and cannot be modified.' });
+    }
+
+    const dbMatch = mapMatchToDB(req.body);
+    const keys = Object.keys(dbMatch);
+    if (keys.length === 0) return res.json({ ok: true });
+
+    const values = Object.values(dbMatch);
+    const setClause = keys.map((key, i) => `${key}=$${i + 1}`).join(', ');
+    const queryList = `UPDATE matches SET ${setClause}, updated_at=NOW() WHERE id=$${keys.length + 1} RETURNING *`;
+    
+    const { data, error } = await db.query(queryList, [...values, id]);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ ok: true, data: data?.[0] });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.delete('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => {
   const { id } = req.params;
-  const { error } = await db.query('DELETE FROM matches WHERE id = $1', [id]);
+    const { data: match } = await db.getOne('SELECT is_locked FROM matches WHERE id = $1', [id]);
+    if (match?.is_locked) {
+      return res.status(403).json({ error: 'This match is LOCKED and cannot be deleted.' });
+    }
+
+    const { error } = await db.query('DELETE FROM matches WHERE id = $1', [id]);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
@@ -546,6 +566,12 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
   console.log(`[POST /api/finalize-match] Match ID: ${id}, is_test: ${is_test}`);
 
   try {
+    // 0. Check if match is locked
+    const { data: match } = await db.getOne('SELECT is_locked FROM matches WHERE id = $1', [id]);
+    if (match?.is_locked) {
+      return res.status(403).json({ error: 'This match is LOCKED and cannot be modified.' });
+    }
+
     // 1. Update match status/data
     // Map matchData fields to DB columns
     const scorecard = matchData.scorecard;
@@ -1616,7 +1642,6 @@ app.get('/api/chat', async (req, res) => {
       'SELECT * FROM club_messages ORDER BY created_at DESC LIMIT 50'
     );
     if (error) throw error;
-    // Return messages in chronological order (oldest first for the UI)
     res.json({ messages: (data || []).reverse() });
   } catch (e) {
     console.error('[GET /api/chat] Error:', e);
