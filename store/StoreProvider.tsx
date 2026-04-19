@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useRef, useState, useEffect } from 'react';
+import * as React from 'react';
+import { createContext, useContext, useRef, useState, useEffect } from 'react';
 import { useMatchCenter } from './matchStore';
 import { usePlayerStore } from './playerStore';
 import { useOpponentStore } from './opponentStore';
@@ -6,12 +7,18 @@ import { useMasterData } from '../components/masterDataStore';
 import { useCricketScorer } from '../components/matchStore';
 
 // Define the shape of our unified store state
+import { MatchStore } from './matchStore';
+import { PlayerStore } from './playerStore';
+import { OpponentStore } from './opponentStore';
+import { MasterDataStore } from '../components/masterDataStore';
+import { ScorerStore } from '../components/matchStore';
+
 interface RootStore {
-  matchCenter: ReturnType<typeof useMatchCenter>;
-  players: ReturnType<typeof usePlayerStore>;
-  opponents: ReturnType<typeof useOpponentStore>;
-  masterData: ReturnType<typeof useMasterData>;
-  scorer: ReturnType<typeof useCricketScorer>;
+  matchCenter: MatchStore;
+  players: PlayerStore;
+  opponents: OpponentStore;
+  masterData: MasterDataStore;
+  scorer: ScorerStore;
   isHydrated: boolean;
 }
 
@@ -64,9 +71,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
-export const useStore = () => {
+export const useStore = (): RootStore => {
   const context = useContext(StoreContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useStore must be used within a StoreProvider');
   }
   return context;

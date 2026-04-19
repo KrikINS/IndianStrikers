@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { Player, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats, TMTournament, TMGroup, TMTeam, TMFixture, TMStanding } from '../types';
+import { Player, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats, TMTournament, TMGroup, TMTeam, TMFixture, TMStanding, LeagueTournament, LeagueGroup, LeagueTeam, LeagueFixture, LeagueStanding } from '../types';
 
 // const API_URL = 'https://strikers-app-227875153596.us-central1.run.app/api';
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
@@ -379,6 +379,7 @@ const mapMatch = (m: any): ScheduledMatch => {
         resultNote: m.result_note,
         isLocked: !!m.is_locked,
         isCareerSynced: !!m.is_career_stats_synced,
+        stage: m.stage || (m.tournament ? 'League' : 'League'), // Default to League if missing
     };
 };
 

@@ -5,7 +5,7 @@ import * as api from '../services/storageService';
 
 export type { Performer, MatchStatus, MatchStage, FullScorecardData };
 
-interface MatchStore {
+export interface MatchStore {
   matches: ScheduledMatch[];
   setMatches: (matches: ScheduledMatch[]) => void;
   addMatch: (match: Omit<ScheduledMatch, 'id'>) => Promise<string>;
@@ -46,7 +46,7 @@ export const useMatchCenter = create<MatchStore>()(
       }),
       
       addMatch: async (match) => {
-        const tempId = match.id || crypto.randomUUID();
+        const tempId = (match as any).id || crypto.randomUUID();
         const localMatch = { ...match, id: tempId, status: match.status || 'upcoming' };
         set((state) => ({ matches: [...state.matches, localMatch as ScheduledMatch] }));
         try {

@@ -1141,7 +1141,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     >
                         <div className="p-4 border-b border-white/5 flex items-center justify-between">
                             <h3 className="text-white font-black uppercase tracking-tighter">Match Summary Preview</h3>
-                            <button onClick={() => setSummaryPreviewUrl(null)} className="p-2 hover:bg-white/5 rounded-full text-slate-400">
+                            <button title="Close Preview" onClick={() => setSummaryPreviewUrl(null)} className="p-2 hover:bg-white/5 rounded-full text-slate-400">
                                 <X size={20} />
                             </button>
                         </div>

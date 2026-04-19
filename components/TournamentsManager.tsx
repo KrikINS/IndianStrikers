@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState } from 'react';
 import { Tournament } from '../types';
 import { Plus, Trash2, Edit2, Trophy, X, ChevronDown, ChevronUp, ExternalLink, Calendar as CalendarIcon, Shield, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';

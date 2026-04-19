@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import * as React from 'react';
+import { useState, useMemo } from 'react';
 import { X, Save, Award, Zap, Target, ChevronDown, Star } from 'lucide-react';
 import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types';
 
@@ -285,7 +286,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-500 uppercase">Max Overs</label>
-              <select value={maxOvers} onChange={e => setMaxOvers(parseInt(e.target.value))} className="w-full mt-1 bg-[#0f172a] border border-white/10 rounded-lg py-1 px-2 text-white text-[12px]">
+              <select title="Select Max Overs" value={maxOvers} onChange={e => setMaxOvers(parseInt(e.target.value))} className="w-full mt-1 bg-[#0f172a] border border-white/10 rounded-lg py-1 px-2 text-white text-[12px]">
                 {overOptions.map(o => <option key={o} value={o}>{o} Overs</option>)}
               </select>
             </div>
@@ -311,19 +312,19 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                       <tr key={idx}>
                         <td className="pl-4">
                           <div className="flex items-center gap-2">
-                            <button type="button" onClick={() => updateBatting(activeInnings, pId, p?.name || '', 'is_hero', !entry.is_hero)}
+                            <button title="Toggle Hero Performance" type="button" onClick={() => updateBatting(activeInnings, pId, p?.name || '', 'is_hero', !entry.is_hero)}
                               className={`hero-star ${entry.is_hero ? 'active' : 'text-slate-600'}`} disabled={!pId}><Star size={14} fill={entry.is_hero ? "currentColor" : "none"} /></button>
-                            <select className="player-select-dropdown" value={pId} onChange={e => { updateBattingRowId(activeInnings, idx, e.target.value); if (e.target.value) { const s = battingSquad.find(pl => pl.id === e.target.value); if (s) updateBatting(activeInnings, s.id, s.name, 'runs', entry.runs); } }}>
+                            <select title="Select Batter" className="player-select-dropdown" value={pId} onChange={e => { updateBattingRowId(activeInnings, idx, e.target.value); if (e.target.value) { const s = battingSquad.find(pl => pl.id === e.target.value); if (s) updateBatting(activeInnings, s.id, s.name, 'runs', entry.runs); } }}>
                               <option value="">- Select Batter -</option>
                               {battingSquad.map(pl => <option key={pl.id} value={pl.id} disabled={battingRowIds[activeInnings].includes(pl.id) && pl.id !== pId}>{pl.name}</option>)}
                             </select>
                           </div>
                         </td>
-                        <td><input type="number" className="compact-input" value={entry.runs} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'runs', e.target.valueAsNumber || 0)} /></td>
-                        <td><input type="number" className="compact-input" value={entry.balls} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'balls', e.target.valueAsNumber || 0)} /></td>
-                        <td><input type="number" className="compact-input" value={entry.fours} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fours', e.target.valueAsNumber || 0)} /></td>
-                        <td><input type="number" className="compact-input" value={entry.sixes} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'sixes', e.target.valueAsNumber || 0)} /></td>
-                        <td><select className="player-select-dropdown" style={{ width: '90px' }} value={entry.outHow} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'outHow', e.target.value)}>
+                        <td><input title="Runs" placeholder="0" type="number" className="compact-input" value={entry.runs} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'runs', e.target.valueAsNumber || 0)} /></td>
+                        <td><input title="Balls" placeholder="0" type="number" className="compact-input" value={entry.balls} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'balls', e.target.valueAsNumber || 0)} /></td>
+                        <td><input title="Fours" placeholder="0" type="number" className="compact-input" value={entry.fours} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fours', e.target.valueAsNumber || 0)} /></td>
+                        <td><input title="Sixes" placeholder="0" type="number" className="compact-input" value={entry.sixes} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'sixes', e.target.valueAsNumber || 0)} /></td>
+                        <td><select title="Wicket Type" className="player-select-dropdown" style={{ width: '90px' }} value={entry.outHow} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'outHow', e.target.value)}>
                           {['Not Out', 'Bowled', 'Caught', 'LBW', 'Run Out', 'Stumped', 'Did Not Bat', 'Hit Wicket', 'Retired Hurt', 'Retired Out'].map(o => <option key={o}>{o}</option>)}
                         </select></td>
                       </tr>
@@ -342,13 +343,13 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                 <tbody>
                   {bowlingRows[activeInnings].map((row, idx) => (
                     <tr key={idx}>
-                      <td className="pl-4"><select className="player-select-dropdown" value={row.playerId} onChange={e => updateBowlingRow(activeInnings, idx, 'playerId', e.target.value)}>
+                      <td className="pl-4"><select title="Select Bowler" className="player-select-dropdown" value={row.playerId} onChange={e => updateBowlingRow(activeInnings, idx, 'playerId', e.target.value)}>
                         <option value="">- Select -</option>
                         {bowlingSquad.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
                       </select></td>
-                      <td><input type="number" step="0.1" className="compact-input" value={row.overs} onChange={e => updateBowlingRow(activeInnings, idx, 'overs', e.target.valueAsNumber || 0)} /></td>
-                      <td><input type="number" className="compact-input" value={row.runs} onChange={e => updateBowlingRow(activeInnings, idx, 'runs', e.target.valueAsNumber || 0)} /></td>
-                      <td><input type="number" className="compact-input" value={row.wickets} onChange={e => updateBowlingRow(activeInnings, idx, 'wickets', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="Overs" placeholder="0.0" type="number" step="0.1" className="compact-input" value={row.overs} onChange={e => updateBowlingRow(activeInnings, idx, 'overs', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="Runs" placeholder="0" type="number" className="compact-input" value={row.runs} onChange={e => updateBowlingRow(activeInnings, idx, 'runs', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="Wickets" placeholder="0" type="number" className="compact-input" value={row.wickets} onChange={e => updateBowlingRow(activeInnings, idx, 'wickets', e.target.valueAsNumber || 0)} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -359,8 +360,8 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
             </div>
           </div>
           <div className="p-3 bg-white/[0.05] rounded-xl border border-white/5 flex gap-4 text-[11px] font-black text-slate-400 items-center">
-            <span>BYES: <input type="number" className="compact-input" value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras.byes} onChange={e => updateExtras(activeInnings as 1 | 2, 'byes', e.target.valueAsNumber || 0)} /></span>
-            <span>LEGBYES: <input type="number" className="compact-input" value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras.legByes} onChange={e => updateExtras(activeInnings as 1 | 2, 'legByes', e.target.valueAsNumber || 0)} /></span>
+            <span>BYES: <input title="Byes" placeholder="0" type="number" className="compact-input" value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras.byes} onChange={e => updateExtras(activeInnings as 1 | 2, 'byes', e.target.valueAsNumber || 0)} /></span>
+            <span>LEGBYES: <input title="Leg Byes" placeholder="0" type="number" className="compact-input" value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras.legByes} onChange={e => updateExtras(activeInnings as 1 | 2, 'legByes', e.target.valueAsNumber || 0)} /></span>
             <span className="ml-auto text-sky-400">TOTAL: {liveTotal(activeInnings)}</span>
           </div>
           <div className="flex gap-3 pt-2">

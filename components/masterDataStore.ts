@@ -10,7 +10,7 @@ interface ClubLegacy {
     totalRuns: number;
 }
 
-interface MasterDataState {
+export interface MasterDataStore {
     grounds: Ground[];
     tournaments: Tournament[];
     legacy: ClubLegacy;
@@ -32,7 +32,7 @@ interface MasterDataState {
     syncMasterData: () => Promise<void>;
 }
 
-export const useMasterData = create<MasterDataState>()(
+export const useMasterData = create<MasterDataStore>()(
     persist(
         (set, get) => ({
             // Initialize with empty arrays to prevent .map() crashes

@@ -1,5 +1,6 @@
-import React from 'react';
+import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { OpponentTeam } from '../types';
 import { useMatchCenter } from '../store/matchStore';
 import { useMasterData } from './masterDataStore';
 import { usePlayerStore } from '../store/playerStore';

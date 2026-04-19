@@ -97,7 +97,7 @@ export interface MatchState {
     pendingIntroduction: string | null;
 }
 
-interface ScorerStore extends MatchState {
+export interface ScorerStore extends MatchState {
     initializeMatch: (data: {
         matchId: string;
         matchType: 'T20' | 'One Day';

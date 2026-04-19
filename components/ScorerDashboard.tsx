@@ -2425,7 +2425,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         if (s.runs >= 100) scores[id].score += 100;
       });
       Object.entries(inn.bowlingStats || {}).forEach(([id, s]: [string, any]) => {
-        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, balls: 0, wickets: 0, maidens: 0, runsConceded: 0, overs: 0 };
+        if (!scores[id]) scores[id] = { id, name: getPlayerName(id), score: 0, runs: 0, balls: 0, wickets: 0, maidens: 0, runsConceded: 0, overs: 0, fours: 0, sixes: 0 };
         scores[id].wickets += s.wickets;
         scores[id].runsConceded += s.runs;
         scores[id].overs += s.overs || 0;

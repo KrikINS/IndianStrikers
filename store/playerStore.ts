@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { Player } from '../types';
 import * as api from '../services/storageService';
 
-interface PlayerState {
+export interface PlayerStore {
     players: Player[];
     loading: boolean;
     error: string | null;
@@ -16,7 +16,7 @@ interface PlayerState {
     deletePlayer: (id: string) => Promise<void>;
 }
 
-export const usePlayerStore = create<PlayerState>()(
+export const usePlayerStore = create<PlayerStore>()(
     persist(
         (set, get) => ({
             players: [],

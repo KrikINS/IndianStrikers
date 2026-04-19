@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { OpponentTeam } from '../types';
 import * as api from '../services/storageService';
 
-interface OpponentState {
+export interface OpponentStore {
     opponents: OpponentTeam[];
     loading: boolean;
     error: string | null;
@@ -16,7 +16,7 @@ interface OpponentState {
     deleteOpponent: (id: string) => Promise<void>;
 }
 
-export const useOpponentStore = create<OpponentState>()(
+export const useOpponentStore = create<OpponentStore>()(
     persist(
         (set, get) => ({
             opponents: [],
