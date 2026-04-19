@@ -29,8 +29,10 @@ import { useMasterData } from './components/masterDataStore';
 import { usePlayerStore } from './store/playerStore';
 import { useOpponentStore } from './store/opponentStore';
 import GroundsManager from './components/GroundsManager';
-import TournamentManager from './components/TournamentManager';
+import TournamentsManager from './components/TournamentsManager';
+import LeagueCenter from './components/LeagueCenter';
 import UserManagement from './components/UserManagement';
+
 
 import CommentaryManager from './components/CommentaryManager';
 import LegacyEditor from './components/LegacyEditor';
@@ -184,6 +186,15 @@ const AppContent: React.FC<{
                   } 
                 />
                 <Route 
+                  path="/league-center" 
+                  element={
+                    <Suspense fallback={<StrikersLoader />}>
+                      <LeagueCenter />
+                    </Suspense>
+                  } 
+                />
+
+                <Route 
                   path="/scorer" 
                   element={
                     (effectiveRole === 'admin' || currentUser?.canScore) ? (
@@ -207,7 +218,8 @@ const AppContent: React.FC<{
                 <Route path="/control-panel" element={effectiveRole === 'admin' ? <ControlPanel /> : <Unauthorized />}>
                   <Route index element={<Navigate to="grounds" replace />} />
                   <Route path="grounds" element={<GroundsManager />} />
-                  <Route path="tournaments" element={<TournamentManager isAdmin={true} />} />
+                  <Route path="tournaments" element={<TournamentsManager />} />
+
 
                   <Route path="legacy" element={<LegacyEditor />} />
                   <Route path="users" element={<UserManagement />} />

@@ -917,3 +917,66 @@ export const getTMStandings = async (tournamentId: string): Promise<TMStanding[]
   return (await handleResponse(res)) || [];
 };
 
+// STANDALONE LEAGUE CENTER SERVICES
+export const getLeagueTournaments = async (): Promise<LeagueTournament[]> => {
+  const res = await fetch(`${API_URL}/league/tournaments`, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+
+export const addLeagueTournament = async (t: Partial<LeagueTournament>): Promise<LeagueTournament> => {
+  const res = await fetch(`${API_URL}/league/tournaments`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(t)
+  });
+  return handleResponse(res);
+};
+
+export const getLeagueGroups = async (tournamentId: string): Promise<LeagueGroup[]> => {
+  const res = await fetch(`${API_URL}/league/groups?tournament_id=${tournamentId}`, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+
+export const addLeagueGroup = async (g: Partial<LeagueGroup>): Promise<LeagueGroup> => {
+  const res = await fetch(`${API_URL}/league/groups`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(g)
+  });
+  return handleResponse(res);
+};
+
+export const getLeagueTeams = async (tournamentId: string): Promise<LeagueTeam[]> => {
+  const res = await fetch(`${API_URL}/league/teams?tournament_id=${tournamentId}`, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+
+export const addLeagueTeam = async (t: Partial<LeagueTeam>): Promise<LeagueTeam> => {
+  const res = await fetch(`${API_URL}/league/teams`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(t)
+  });
+  return handleResponse(res);
+};
+
+export const getLeagueFixtures = async (tournamentId: string): Promise<LeagueFixture[]> => {
+  const res = await fetch(`${API_URL}/league/fixtures?tournament_id=${tournamentId}`, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+
+export const batchAddLeagueFixtures = async (fixtures: Partial<LeagueFixture>[]): Promise<LeagueFixture[]> => {
+  const res = await fetch(`${API_URL}/league/fixtures`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(fixtures)
+  });
+  return handleResponse(res);
+};
+
+export const getLeagueStandings = async (tournamentId: string): Promise<LeagueStanding[]> => {
+  const res = await fetch(`${API_URL}/league/standings?tournament_id=${tournamentId}`, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+
+

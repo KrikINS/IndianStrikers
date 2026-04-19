@@ -19,7 +19,8 @@ import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '
 import { useCricketScorer } from './matchStore';
 import { usePlayerStore } from '../store/playerStore';
 import PointsTable from './PointsTable';
-import TournamentManager from './TournamentManager';
+import TournamentsManager from './TournamentsManager';
+
 
 // Responsive constants for Carousel handled inside component
 
@@ -1008,10 +1009,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                         )}
 
                         {activeTab === 'tournaments' && (
-                            <div className="p-6 md:p-8">
-                                <TournamentManager isAdmin={userRole === 'admin'} />
-                            </div>
+                            <TournamentsManager />
                         )}
+
                     </div>
                 </div>
 

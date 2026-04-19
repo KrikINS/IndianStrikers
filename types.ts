@@ -393,3 +393,63 @@ export interface TMStanding {
   tournament_id: string;
   group_id?: string;
 }
+
+// standalone League Center types
+export interface LeagueTournament {
+  id: string;
+  name: string;
+  year: number;
+  format: 'T20' | 'One Day' | 'T10';
+  type: 'League' | 'Groups';
+  is_home_away: boolean;
+  status: 'upcoming' | 'ongoing' | 'completed';
+  created_at?: string;
+}
+
+export interface LeagueGroup {
+  id: string;
+  tournament_id: string;
+  name: string;
+  top_q_count?: number;
+  created_at?: string;
+}
+
+export interface LeagueTeam {
+  id: string;
+  tournament_id: string;
+  group_id?: string;
+  team_name: string;
+  logo_url?: string;
+  created_at?: string;
+}
+
+export interface LeagueFixture {
+  id: string;
+  tournament_id: string;
+  group_id?: string;
+  home_team_id: string;
+  away_team_id: string;
+  home_team_name: string;
+  away_team_name: string;
+  home_team_logo?: string;
+  away_team_logo?: string;
+  date: string;
+  venue: string;
+  status: 'scheduled' | 'live' | 'completed' | 'abandoned';
+  group_name?: string;
+  created_at?: string;
+}
+
+export interface LeagueStanding {
+  team_id: string;
+  team_name: string;
+  logo_url?: string;
+  p: number;
+  w: number;
+  l: number;
+  nr: number;
+  pts: number;
+  nrr: number;
+  tournament_id: string;
+  group_id?: string;
+}

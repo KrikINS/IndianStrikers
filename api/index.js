@@ -1747,6 +1747,86 @@ app.get('/api/tm/standings', authGuard(), async (req, res) => {
   res.json(data);
 });
 
+// STANDALONE LEAGUE CENTER ENDPOINTS
+app.get('/api/league/tournaments', authGuard(), async (req, res) => {
+  const { data, error } = await db.query('SELECT * FROM league_tournaments ORDER BY created_at DESC');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/league/tournaments', authGuard(), async (req, res) => {
+  const { name, year, format, type, is_home_away, status } = req.body;
+  const { data, error } = await db.query(
+    'INSERT INTO league_tournaments (name, year, format, type, is_home_away, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [name, year, format, type, is_home_away, status]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data[0]);
+});
+
+app.get('/api/league/groups', authGuard(), async (req, res) => {
+  const { tournament_id } = req.query;
+  const { data, error } = await db.query('SELECT * FROM league_groups WHERE tournament_id = $1', [tournament_id]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/league/groups', authGuard(), async (req, res) => {
+  const { tournament_id, name, top_q_count } = req.body;
+  const { data, error } = await db.query(
+    'INSERT INTO league_groups (tournament_id, name, top_q_count) VALUES ($1, $2, $3) RETURNING *',
+    [tournament_id, name, top_q_count || 2]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data[0]);
+});
+
+app.get('/api/league/teams', authGuard(), async (req, res) => {
+  const { tournament_id } = req.query;
+  const { data, error } = await db.query('SELECT * FROM league_teams WHERE tournament_id = $1', [tournament_id]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/league/teams', authGuard(), async (req, res) => {
+  const { tournament_id, group_id, team_name, logo_url } = req.body;
+  const { data, error } = await db.query(
+    'INSERT INTO league_teams (tournament_id, group_id, team_name, logo_url) VALUES ($1, $2, $3, $4) RETURNING *',
+    [tournament_id, group_id, team_name, logo_url]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data[0]);
+});
+
+app.get('/api/league/fixtures', authGuard(), async (req, res) => {
+  const { tournament_id } = req.query;
+  const { data, error } = await db.query('SELECT * FROM league_fixtures WHERE tournament_id = $1 ORDER BY date ASC', [tournament_id]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/league/fixtures', authGuard(), async (req, res) => {
+  const fixtures = req.body; // Array
+  const values = fixtures.map(f => `('${f.tournament_id}', ${f.group_id ? `'${f.group_id}'` : 'NULL'}, '${f.home_team_id}', '${f.away_team_id}', '${f.home_team_name}', '${f.away_team_name}', '${f.home_team_logo || ''}', '${f.away_team_logo || ''}', '${f.date}', '${f.venue}', '${f.group_name || ''}')`).join(',');
+  
+  const { data, error } = await db.query(
+    `INSERT INTO league_fixtures (tournament_id, group_id, home_team_id, away_team_id, home_team_name, away_team_name, home_team_logo, away_team_logo, date, venue, group_name) VALUES ${values} RETURNING *`
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data);
+});
+
+app.get('/api/league/standings', authGuard(), async (req, res) => {
+  const { tournament_id } = req.query;
+  const { data, error } = await db.query(
+    'SELECT * FROM league_standings WHERE tournament_id = $1 ORDER BY pts DESC, nrr DESC',
+    [tournament_id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+
 
 // HEALTH
 // Serve static Frontend files

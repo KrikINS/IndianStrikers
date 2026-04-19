@@ -132,7 +132,9 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
   const mainLinks: SidebarLink[] = [
     { to: '/home', icon: <Home size={20} />, label: 'Home' },
     { to: '/match-center', icon: <Calendar size={20} />, label: 'Match Center' },
+    { to: '/league-center', icon: <Trophy size={20} />, label: 'League Center' },
     { to: '/roster', icon: <Users size={20} />, label: 'Squad Roster' },
+
     { to: '/opponents', icon: <Swords size={20} />, label: 'Opponent Teams' },
     { to: '/fielding', icon: <Map size={20} />, label: 'Fielding Board' },
     { to: '/memories', icon: <Image size={20} />, label: 'Memories' },
