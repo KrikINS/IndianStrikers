@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Check, Share2, Lock, Unlock, RefreshCcw } from 'lucide-react';
+import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {
@@ -99,16 +99,16 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         ) : (
                             <div className="flex items-center gap-2">
                                 <div 
-                                    onClick={isAdmin && onToggleLock ? () => onToggleLock(match.id, !!match.is_locked) : undefined}
+                                    onClick={isAdmin && onToggleLock ? () => onToggleLock(match.id, !!match.isLocked) : undefined}
                                     className={`px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg uppercase tracking-wider flex items-center gap-1.5 transition-all
-                                        ${match.is_locked 
+                                        ${match.isLocked 
                                             ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' + (isAdmin ? ' cursor-pointer hover:bg-emerald-600/40' : '')
                                             : 'bg-slate-800 text-white shadow-black/10' + (isAdmin ? ' cursor-pointer hover:bg-slate-700' : '')
                                         }`}
-                                    title={isAdmin ? (match.is_locked ? "Click to Unlock Match" : "Click to Lock Match") : ""}
+                                    title={isAdmin ? (match.isLocked ? "Click to Unlock Match" : "Click to Lock Match") : ""}
                                 >
-                                    {match.is_locked ? <Lock size={10} /> : <Unlock size={10} />}
-                                    {match.is_locked ? 'LOCKED' : 'Completed'}
+                                    {match.isLocked ? <LockIcon size={10} /> : <Unlock size={10} />}
+                                    {match.isLocked ? 'LOCKED' : 'Completed'}
                                 </div>
                                 {(match as any).is_local_only_override && (
                                     <div className="bg-amber-500 text-black px-2.5 py-1 rounded-lg text-[10px] font-black shadow-lg shadow-amber-500/10 uppercase tracking-wider flex items-center gap-1">
@@ -231,18 +231,18 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                 <Share2 size={12} />
                             </button>
                              <button 
-                                onClick={match.is_locked ? undefined : () => onEditMatch(match)} 
-                                className={`transition-colors ${match.is_locked ? 'text-slate-700 cursor-not-allowed' : 'hover:text-blue-600'}`} 
-                                title={match.is_locked ? "Match is Locked" : "Edit Match"}
-                                disabled={match.is_locked}
+                                onClick={match.isLocked ? undefined : () => onEditMatch(match)} 
+                                className={`transition-colors ${match.isLocked ? 'text-slate-700 cursor-not-allowed' : 'hover:text-blue-600'}`} 
+                                title={match.isLocked ? "Match is Locked" : "Edit Match"}
+                                disabled={match.isLocked}
                              >
                                 <Edit2 size={10} />
                              </button>
                              <button 
-                                onClick={match.is_locked ? undefined : () => window.confirm('Delete?') && onDeleteMatch(match.id)} 
-                                className={`transition-colors ${match.is_locked ? 'text-slate-700 cursor-not-allowed' : 'hover:text-red-600'}`} 
-                                title={match.is_locked ? "Match is Locked" : "Delete Match"}
-                                disabled={match.is_locked}
+                                onClick={match.isLocked ? undefined : () => window.confirm('Delete?') && onDeleteMatch(match.id)} 
+                                className={`transition-colors ${match.isLocked ? 'text-slate-700 cursor-not-allowed' : 'hover:text-red-600'}`} 
+                                title={match.isLocked ? "Match is Locked" : "Delete Match"}
+                                disabled={match.isLocked}
                              >
                                 <Trash2 size={10} />
                              </button>
@@ -264,16 +264,21 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                     <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">SUMMARY</button>
                                 </>
                             ) : (
-                                <button onClick={() => onViewScorecard(match)} className="btn-primary-bold">VIEW MATCH INFO</button>
+                                <button onClick={() => onViewScorecard(match)} className="btn-primary-bold">
+                                    VIEW MATCH INFO
+                                    {(match.isLocked) && (
+                                        <LockIcon size={12} className="text-emerald-500" title="This scorecard is locked" />
+                                    )}
+                                </button>
                             )}
                         </>
                     ) : (isPast || isCompleted) ? (
                         <>
                             {isScorerOrAdmin ? (
                                 <>
-                                    {match.is_locked ? (
+                                    {match.isLocked ? (
                                         <button onClick={() => onViewScorecard(match)} className="btn-primary-full col-span-2 flex items-center justify-center gap-2">
-                                            <Lock size={12} /> VIEW LOCKED SCORECARD
+                                            <LockIcon size={10} /> VIEW LOCKED SCORECARD
                                         </button>
                                     ) : (
                                         <>
