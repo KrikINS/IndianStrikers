@@ -1069,7 +1069,7 @@ async function recalculateCareerStats(playerId) {
 }
 
 // LEGACY STATS MANAGEMENT
-app.get('/api/legacy-stats', authGuard(['admin']), async (req, res) => {
+app.get('/api/legacy-stats', async (req, res) => {
   const { data, error } = await db.query('SELECT * FROM player_legacy_stats');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
