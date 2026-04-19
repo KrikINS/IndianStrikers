@@ -95,9 +95,18 @@ const LegacyEditor: React.FC<LegacyEditorProps> = () => {
 
     try {
       setSavingId(playerId);
-      await updateLegacyStats(playerId, stats);
-      setMessage({ text: `Statistics updated for ${players.find(p => p.id === playerId)?.name}`, type: 'success' });
-      setTimeout(() => setMessage(null), 3000);
+      
+      // Sanitization: Ensure only whitelisted fields are sent to the API
+      const sanitizedStats = { ...stats };
+      delete (sanitizedStats as any).player_id;
+      delete (sanitizedStats as any).updated_at;
+      delete (sanitizedStats as any).created_at;
+
+      await updateLegacyStats(playerId, sanitizedStats);
+      setMessage({ text: `Statistics successfully persisted for ${players.find(p => String(p.id) === String(playerId))?.name}`, type: 'success' });
+      
+      // Clear message after 3 seconds
+      setTimeout(() => setMessage(null), 3500);
     } catch (err) {
       console.error('Save failed:', err);
       setMessage({ text: 'Failed to save statistics. Check console for details.', type: 'error' });

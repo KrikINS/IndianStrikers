@@ -11,7 +11,7 @@ import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import FullScorecardModal from './FullScorecardModal';
 import ManualScoreModal from './ManualScoreModal';
-import { Calendar, Shield, Plus, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw } from 'lucide-react';
+import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
 import { useMasterData } from './masterDataStore';
@@ -19,7 +19,7 @@ import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '
 import { useCricketScorer } from './matchStore';
 import { usePlayerStore } from '../store/playerStore';
 import PointsTable from './PointsTable';
-import TournamentsManager from './TournamentsManager';
+import TournamentManager from './TournamentManager';
 
 // Responsive constants for Carousel handled inside component
 
@@ -51,7 +51,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
     const initializeMatch = useCricketScorer(state => state.initializeMatch);
 
     // Filters and Search
-    const [activeTab, setActiveTab] = useState<'list' | 'cards' | 'standings' | 'tournaments'>('list');
+    const [activeTab, setActiveTab] = useState<'list' | 'standings' | 'tournaments'>('list');
+    const [selectedCardMatch, setSelectedCardMatch] = useState<ScheduledMatch | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [formatFilter, setFormatFilter] = useState<'All' | 'T20' | 'One Day'>('All');
     const [tournamentFilter, setTournamentFilter] = useState('All');
@@ -838,13 +839,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                             <List size={16} /> Schedule List
                         </button>
                         <button
-                            onClick={() => setActiveTab('cards')}
-                            className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
-                            ${activeTab === 'cards' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
-                        >
-                            <LayoutIcon size={16} /> Match Cards
-                        </button>
-                        <button
                             onClick={() => setActiveTab('standings')}
                             className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
                             ${activeTab === 'standings' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
@@ -939,7 +933,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                 {filteredMatches?.map(m => {
                                                     const opp = opponents.find(o => o.id === m.opponentId);
                                                     return (
-                                                        <tr key={m.id} onClick={() => setActiveTab('cards')}>
+                                                        <tr key={m.id} onClick={() => setSelectedCardMatch(m)}>
                                                             <td>
                                                                 <div className="date-stack">
                                                                     <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
@@ -1001,43 +995,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                             </div>
                         )}
 
-                        {activeTab === 'cards' && (
-                            <div className="py-12 px-4 bg-slate-950 overflow-hidden relative min-h-[600px] flex items-center justify-center">
-                                {filteredMatches.length === 0 ? (
-                                    <div className="text-center flex flex-col items-center justify-center">
-                                        <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center text-slate-500 mb-4 border border-slate-800">
-                                            <AlertCircle size={32} />
-                                        </div>
-                                        <h3 className="text-white font-black text-lg uppercase tracking-tight">No matches found</h3>
-                                        <p className="text-slate-500 text-sm mt-1">Try adjusting your filters or search criteria.</p>
-                                    </div>
-                                ) : (
-                                    <div className="relative w-full max-w-7xl mx-auto flex items-center justify-center">
-                                        {/* Swipe Guide */}
-                                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-8 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
-                                            <span>Swipe to explore matches</span>
-                                        </div>
-
-                                        <MatchCardCarousel
-                                            matches={filteredMatches}
-                                            teamLogo={teamLogo || '/INS%20LOGO.PNG'}
-                                            opponents={opponents}
-                                            grounds={grounds}
-                                            userRole={userRole}
-                                            canScore={currentUser?.canScore}
-                                            onSelectPlayingXI={handleSelectPlayingXI}
-                                            onEditMatch={(m: ScheduledMatch) => setEditingMatch(m)}
-                                            onStartScoring={handleStartScoring}
-                                            onViewScorecard={(m: ScheduledMatch) => setViewScorecardMatch(m)}
-                                            onUpdateManualScore={(id: string, mode?: 'summary' | 'full') => {
-                                                setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' });
-                                            }}
-                                            onDeleteMatch={deleteMatch}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
 
                         {activeTab === 'standings' && (
                             <div className="px-6 pb-20 pt-4">
@@ -1052,7 +1009,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
                         {activeTab === 'tournaments' && (
                             <div className="p-6 md:p-8">
-                                <TournamentsManager isAdmin={userRole === 'admin'} />
+                                <TournamentManager isAdmin={userRole === 'admin'} />
                             </div>
                         )}
                     </div>
@@ -1316,192 +1273,76 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                         </div>
                     </div>
                 )}
-            </div>
-        </>
-    );
-};
 
-
-// ─── INFINITE CAROUSEL COMPONENT ───
-const MatchCardCarousel = ({ 
-    matches, 
-    teamLogo, 
-    opponents, 
-    grounds, 
-    userRole, 
-    canScore,
-    onSelectPlayingXI, 
-    onEditMatch, 
-    onStartScoring, 
-    onViewScorecard, 
-    onUpdateManualScore, 
-    onDeleteMatch 
-}: any) => {
-    const [index, setIndex] = useState(0);
-    const [isPaused, setIsPaused] = useState(false);
-    const scrollRef = useRef<HTMLDivElement>(null);
-
-    // Responsive width calculation
-    const getCarouselMetrics = () => {
-        if (typeof window === 'undefined') return { width: 340, gap: 24 };
-        if (window.innerWidth < 380) return { width: 280, gap: 16 };
-        if (window.innerWidth < 420) return { width: 310, gap: 20 };
-        return { width: 340, gap: 24 };
-    };
-
-    const { width: CARD_WIDTH, gap: GAP } = getCarouselMetrics();
-    const VISIBLE_COUNT = 3; 
-    const TOTAL_WIDTH = CARD_WIDTH + GAP;
-
-    // Auto-Play Logic
-    useEffect(() => {
-        if (isPaused || matches.length <= 1) return;
-        const interval = setInterval(() => {
-            setIndex(prev => prev + 1);
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [isPaused, matches.length]);
-
-    // Calculate wrapping for data
-    const getMatchIndex = (virtualIndex: number) => {
-        const len = matches.length;
-        if (len === 0) return 0;
-        return ((virtualIndex % len) + len) % len;
-    };
-
-    const handleDragEnd = (_: any, info: any) => {
-        const swipeThreshold = 50;
-        const velocityThreshold = 500;
-        
-        if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
-            setIndex(prev => prev + 1);
-        } else if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
-            setIndex(prev => prev - 1);
-        }
-        
-        // Brief pause after interaction
-        setIsPaused(true);
-        setTimeout(() => setIsPaused(false), 3000);
-    };
-
-    return (
-        <div 
-            className="relative w-full h-[600px] flex items-center justify-center overflow-hidden"
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-        >
-            {/* The "Camera" view - we center this viewport */}
-            <div className="relative w-full h-full flex items-center justify-center">
-                <motion.div
-                    className="flex items-center absolute"
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }} // Elastic drag
-                    onDragStart={() => setIsPaused(true)}
-                    onDragEnd={handleDragEnd}
-                    animate={{ x: -index * TOTAL_WIDTH }}
-                    transition={{ 
-                        type: "spring", 
-                        stiffness: 150, 
-                        damping: 20,
-                        mass: 1
-                    }}
-                >
-                    {/* 
-                        Render a window of 15 virtual cards.
-                        We always render cards at relative positions to the CURRENT index.
-                        By using the 'index' in the key and the position, we avoid jumps.
-                    */}
-                    {Array.from({ length: 15 }).map((_, i) => {
-                        const virtualPos = index + (i - 7);
-                        const matchIdx = getMatchIndex(virtualPos);
-                        const match = matches[matchIdx];
-                        if (!match) return null;
-
-                        const isActive = virtualPos === index;
-                        // Calculate distance from center for scaling/opacity
-                        const distance = Math.abs(virtualPos - index);
-
-                        return (
-                            <motion.div
-                                key={virtualPos}
-                                style={{
-                                    width: CARD_WIDTH,
-                                    position: 'absolute',
-                                    left: virtualPos * TOTAL_WIDTH - (CARD_WIDTH / 2),
-                                    x: 0 // Avoid conflict with parent X
-                                }}
-                                initial={false}
-                                animate={{
-                                    scale: isActive ? 1.1 : Math.max(0.8, 1 - distance * 0.15),
-                                    opacity: isActive ? 1 : Math.max(0.3, 1 - distance * 0.4),
-                                    filter: isActive ? "blur(0px)" : `blur(${Math.min(4, distance * 2)}px)`,
-                                    zIndex: 10 - distance,
-                                    rotateY: isActive ? 0 : (virtualPos < index ? 25 : -25),
-                                    y: isActive ? -20 : 0
-                                }}
-                                transition={{ 
-                                    type: "spring", 
-                                    stiffness: 250, 
-                                    damping: 25 
-                                }}
-                                className={`perspective-1000 ${isActive ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                {/* Match Card Modal */}
+                <AnimatePresence>
+                    {selectedCardMatch && (
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                            <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setSelectedCardMatch(null)}
+                                className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
+                            />
+                            <motion.div 
+                                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                                className="relative w-full max-w-[400px] z-10"
                             >
+                                <div className="absolute -top-12 right-0">
+                                    <button 
+                                        onClick={() => setSelectedCardMatch(null)}
+                                        title="Close"
+                                        aria-label="Close"
+                                        className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all border border-white/10"
+                                    >
+                                        <X size={24} />
+                                    </button>
+                                </div>
                                 <MatchCenterTile
-                                    match={match}
+                                    match={selectedCardMatch}
                                     homeTeamName="Indian Strikers"
                                     homeTeamLogo={teamLogo || '/INS%20LOGO.PNG'}
-                                    opponent={opponents.find((t: any) => t.id === match.opponentId)}
-                                    onSelectPlayingXI={onSelectPlayingXI}
-                                    onEditMatch={onEditMatch}
-                                    onStartScoring={onStartScoring}
-                                    onViewScorecard={onViewScorecard}
-                                    onUpdateManualScore={onUpdateManualScore}
-                                    onDeleteMatch={onDeleteMatch}
+                                    opponent={opponents.find((t: any) => t.id === selectedCardMatch.opponentId)}
+                                    onSelectPlayingXI={(mid, mode) => {
+                                        handleSelectPlayingXI(mid, mode);
+                                        // Optional: keep modal open or close? 
+                                        // If selecting XI, we might want to keep it open to see the update.
+                                    }}
+                                    onEditMatch={(m: ScheduledMatch) => {
+                                        setEditingMatch(m);
+                                        setSelectedCardMatch(null);
+                                    }}
+                                    onStartScoring={(mid) => {
+                                        handleStartScoring(mid);
+                                        setSelectedCardMatch(null);
+                                    }}
+                                    onViewScorecard={(m: ScheduledMatch) => {
+                                        setViewScorecardMatch(m);
+                                        setSelectedCardMatch(null);
+                                    }}
+                                    onUpdateManualScore={(id: string, mode?: 'summary' | 'full') => {
+                                        setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' });
+                                        setSelectedCardMatch(null);
+                                    }}
+                                    onDeleteMatch={(id) => {
+                                        deleteMatch(id);
+                                        setSelectedCardMatch(null);
+                                    }}
                                     userRole={userRole}
                                     isAdmin={userRole === 'admin'}
-                                    canScore={canScore}
+                                    canScore={currentUser?.canScore}
                                     grounds={grounds}
-                                    isCarouselActive={isActive}
+                                    isCarouselActive={true} // Always active look in modal
                                 />
                             </motion.div>
-                        );
-                    })}
-                </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
             </div>
-
-            {/* Navigation Arrows for accessibility */}
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none flex justify-between px-4">
-                <button 
-                    onClick={() => setIndex(prev => prev - 1)}
-                    className="w-12 h-12 rounded-full bg-slate-900/50 backdrop-blur-md border border-slate-700 text-white flex items-center justify-center hover:bg-blue-600 transition-all pointer-events-auto"
-                    title="Previous Match"
-                    aria-label="Previous Match"
-                >
-                    <ChevronLeft size={24} />
-                </button>
-                <button 
-                    onClick={() => setIndex(prev => prev + 1)}
-                    className="w-12 h-12 rounded-full bg-slate-900/50 backdrop-blur-md border border-slate-700 text-white flex items-center justify-center hover:bg-blue-600 transition-all pointer-events-auto"
-                    title="Next Match"
-                    aria-label="Next Match"
-                >
-                    <ChevronRight size={24} />
-                </button>
-            </div>
-            
-            {/* Pagination Dots */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                {matches?.map((_: any, i: number) => {
-                    const activeIdx = ((index % matches.length) + matches.length) % matches.length;
-                    return (
-                        <div 
-                            key={i}
-                            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeIdx === i ? 'bg-blue-500 w-6' : 'bg-slate-700'}`}
-                        />
-                    );
-                })}
-            </div>
-        </div>
+        </>
     );
 };
 

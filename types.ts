@@ -334,3 +334,62 @@ export interface PlayerLegacyStats {
   wides?: number;
   no_balls?: number;
 }
+
+export interface TMTournament {
+  id: string;
+  name: string;
+  format: string; // T20, One Day, etc.
+  type: 'League' | 'Groups';
+  is_home_away: boolean;
+  status: 'upcoming' | 'active' | 'completed';
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TMGroup {
+  id: string;
+  tournament_id: string;
+  name: string;
+  top_q_count?: number; // Configurable qualification count for this group
+  created_at?: string;
+}
+
+
+export interface TMTeam {
+  id: string;
+  tournament_id: string;
+  group_id?: string;
+  name: string;
+  logo_url?: string;
+}
+
+export interface TMFixture {
+  id: string;
+  tournament_id: string;
+  group_id?: string;
+  home_team_id: string;
+  away_team_id: string;
+  date: string;
+  venue: string;
+  status: 'upcoming' | 'live' | 'completed';
+  result?: any;
+  home_team_name?: string;
+  home_team_logo?: string;
+  away_team_name?: string;
+  away_team_logo?: string;
+  group_name?: string;
+}
+
+export interface TMStanding {
+  team_id: string;
+  team_name: string;
+  logo_url?: string;
+  p: number;
+  w: number;
+  l: number;
+  nr: number;
+  pts: number;
+  nrr: number;
+  tournament_id: string;
+  group_id?: string;
+}

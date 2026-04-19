@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { Player, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats } from '../types';
+import { Player, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats, TMTournament, TMGroup, TMTeam, TMFixture, TMStanding } from '../types';
 
 // const API_URL = 'https://strikers-app-227875153596.us-central1.run.app/api';
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
@@ -819,3 +819,101 @@ export const getTournamentPerformers = async (): Promise<any> => {
     }))
   };
 };
+
+// TM MODULE
+export const getTMTournaments = async (): Promise<TMTournament[]> => {
+  const res = await fetch(`${API_URL}/tm/tournaments`, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+
+export const addTMTournament = async (tournament: Partial<TMTournament>): Promise<TMTournament> => {
+  const res = await fetch(`${API_URL}/tm/tournaments`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(tournament)
+  });
+  return handleResponse(res);
+};
+
+export const updateTMTournament = async (id: string, tournament: Partial<TMTournament>) => {
+  const res = await fetch(`${API_URL}/tm/tournaments/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(tournament)
+  });
+  return handleResponse(res);
+};
+
+export const deleteTMTournament = async (id: string) => {
+  const res = await fetch(`${API_URL}/tm/tournaments/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
+export const getTMGroups = async (tournamentId: string): Promise<TMGroup[]> => {
+  const res = await fetch(`${API_URL}/tm/groups?tournament_id=${tournamentId}`, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+
+export const addTMGroup = async (group: Partial<TMGroup>): Promise<TMGroup> => {
+  const res = await fetch(`${API_URL}/tm/groups`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(group)
+  });
+  return handleResponse(res);
+};
+
+export const deleteTMGroup = async (id: string) => {
+  const res = await fetch(`${API_URL}/tm/groups/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
+export const getTMTeams = async (tournamentId: string, groupId?: string): Promise<TMTeam[]> => {
+  let url = `${API_URL}/tm/teams?tournament_id=${tournamentId}`;
+  if (groupId) url += `&group_id=${groupId}`;
+  const res = await fetch(url, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+
+export const addTMTeam = async (team: Partial<TMTeam>): Promise<TMTeam> => {
+  const res = await fetch(`${API_URL}/tm/teams`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(team)
+  });
+  return handleResponse(res);
+};
+
+export const deleteTMTeam = async (id: string) => {
+  const res = await fetch(`${API_URL}/tm/teams/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
+export const getTMFixtures = async (tournamentId: string): Promise<TMFixture[]> => {
+  const res = await fetch(`${API_URL}/tm/fixtures?tournament_id=${tournamentId}`, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+
+export const batchAddTMFixtures = async (fixtures: Partial<TMFixture>[]): Promise<{ ok: boolean; count: number }> => {
+  const res = await fetch(`${API_URL}/tm/fixtures/batch`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ fixtures })
+  });
+  return handleResponse(res);
+};
+
+export const getTMStandings = async (tournamentId: string): Promise<TMStanding[]> => {
+  const res = await fetch(`${API_URL}/tm/standings?tournament_id=${tournamentId}`, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+

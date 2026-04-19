@@ -1356,9 +1356,25 @@ app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) =>
   const stats = req.body;
 
   try {
-    // 1. Update the legacy table
-    const keys = Object.keys(stats);
-    const values = Object.values(stats);
+    // 1. Sanitize payload: only allow valid numeric/string columns to prevent SQL issues
+    const allowedMap = [
+      'runs', 'balls', 'fours', 'sixes', 'hundreds', 'fifties', 'ducks', 
+      'matches', 'innings', 'not_outs', 'highest_score', 'overs_bowled', 
+      'runs_conceded', 'wickets', 'maidens', 'bowling_innings', 
+      'four_wickets', 'five_wickets', 'best_bowling', 'wides', 'no_balls'
+    ];
+    
+    const validStats = {};
+    allowedMap.forEach(key => {
+      if (stats[key] !== undefined) {
+        validStats[key] = stats[key];
+      }
+    });
+
+    const keys = Object.keys(validStats);
+    if (keys.length === 0) return res.status(400).json({ error: 'No valid fields provided' });
+
+    const values = Object.values(validStats);
     const setClause = keys.map((key, i) => `${key}=$${i + 1}`).join(', ');
     const query = `INSERT INTO player_legacy_stats (${keys.join(', ')}, player_id, updated_at) 
                    VALUES (${keys.map((_, i) => '$' + (i + 1)).join(', ')}, $${keys.length + 1}, NOW()) 
@@ -1587,12 +1603,158 @@ app.post('/api/chat', authGuard(), async (req, res) => {
   }
 });
 
+// TM MODULE
+app.get('/api/tm/tournaments', authGuard(), async (req, res) => {
+  const { data, error } = await db.query('SELECT * FROM tm_tournaments ORDER BY created_at DESC');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/tm/tournaments', authGuard(['admin']), async (req, res) => {
+  const { name, format, type, is_home_away, status } = req.body;
+  const { data, error } = await db.getOne(
+    `INSERT INTO tm_tournaments (name, format, type, is_home_away, status) 
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [name, format, type, is_home_away || false, status || 'upcoming']
+  );
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+app.put('/api/tm/tournaments/:id', authGuard(['admin']), async (req, res) => {
+  const { name, format, type, is_home_away, status } = req.body;
+  const { error } = await db.query(
+    `UPDATE tm_tournaments SET name=$1, format=$2, type=$3, is_home_away=$4, status=$5, updated_at=NOW() 
+     WHERE id=$6`,
+    [name, format, type, is_home_away, status, req.params.id]
+  );
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+app.delete('/api/tm/tournaments/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await db.query('DELETE FROM tm_tournaments WHERE id = $1', [req.params.id]);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+app.get('/api/tm/groups', authGuard(), async (req, res) => {
+  const { tournament_id } = req.query;
+  const { data, error } = await db.query('SELECT * FROM tm_groups WHERE tournament_id = $1 ORDER BY name ASC', [tournament_id]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/tm/groups', authGuard(['admin']), async (req, res) => {
+  const { name, tournament_id } = req.body;
+  const { data, error } = await db.getOne(
+    `INSERT INTO tm_groups (name, tournament_id) VALUES ($1, $2) RETURNING *`,
+    [name, tournament_id]
+  );
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/tm_groups/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await db.query('DELETE FROM tm_groups WHERE id = $1', [req.params.id]);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+app.get('/api/tm/teams', authGuard(), async (req, res) => {
+  const { tournament_id, group_id } = req.query;
+  let q = 'SELECT * FROM tm_teams WHERE tournament_id = $1';
+  let params = [tournament_id];
+  if (group_id) {
+    q += ' AND group_id = $2';
+    params.push(group_id);
+  }
+  const { data, error } = await db.query(q + ' ORDER BY name ASC', params);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/tm/teams', authGuard(['admin']), async (req, res) => {
+  const { name, logo_url, tournament_id, group_id } = req.body;
+  const { data, error } = await db.getOne(
+    `INSERT INTO tm_teams (name, logo_url, tournament_id, group_id) 
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [name, logo_url, tournament_id, group_id || null]
+  );
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/tm/teams/:id', authGuard(['admin']), async (req, res) => {
+  const { error } = await db.query('DELETE FROM tm_teams WHERE id = $1', [req.params.id]);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+app.get('/api/tm/fixtures', authGuard(), async (req, res) => {
+  const { tournament_id } = req.query;
+  const { data, error } = await db.query(
+    `SELECT f.*, t1.name as home_team_name, t1.logo_url as home_team_logo,
+            t2.name as away_team_name, t2.logo_url as away_team_logo,
+            g.name as group_name
+     FROM tm_fixtures f
+     JOIN tm_teams t1 ON f.home_team_id = t1.id
+     JOIN tm_teams t2 ON f.away_team_id = t2.id
+     LEFT JOIN tm_groups g ON f.group_id = g.id
+     WHERE f.tournament_id = $1
+     ORDER BY f.date ASC`,
+    [tournament_id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/tm/fixtures/batch', authGuard(['admin']), async (req, res) => {
+  const { fixtures } = req.body;
+  if (!Array.isArray(fixtures) || fixtures.length === 0) return res.status(400).json({ error: 'No fixtures provided' });
+
+  try {
+    const client = await db.pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const f of fixtures) {
+        await client.query(
+          `INSERT INTO tm_fixtures (tournament_id, group_id, home_team_id, away_team_id, date, venue, status) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [f.tournament_id, f.group_id || null, f.home_team_id, f.away_team_id, f.date, f.venue || 'TBD', 'upcoming']
+        );
+      }
+      await client.query('COMMIT');
+      res.json({ ok: true, count: fixtures.length });
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/tm/standings', authGuard(), async (req, res) => {
+  const { tournament_id } = req.query;
+  const { data, error } = await db.query(
+    'SELECT * FROM tm_standings WHERE tournament_id = $1 ORDER BY pts DESC, nrr DESC',
+    [tournament_id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+
 // HEALTH
 // Serve static Frontend files
 const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
 
 // SPA Fallback: Redirect all non-API paths to index.html
 app.get('*', (req, res) => {

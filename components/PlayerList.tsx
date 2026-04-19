@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser } from '../types';
-import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ExternalLink, RefreshCw, Swords } from 'lucide-react';
+import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser, OpponentTeam } from '../types';
+import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ArrowRight, ExternalLink, RefreshCw, Swords } from 'lucide-react';
 import * as api from '../services/storageService';
 import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUsers, getLegacyStats } from '../services/storageService';
 import { usePlayerStore } from '../store/playerStore';
@@ -562,6 +562,57 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     URL.revokeObjectURL(url);
   };
 
+  const renderPlayerRow = (player: Player) => {
+    const oppData = opponentMap.get(String(player.id));
+    
+    return (
+      <div 
+        key={player.id}
+        onClick={() => { setViewingPlayer(player); setActiveStatTab('batting'); }}
+        className="flex items-center gap-4 bg-white p-3 md:p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all cursor-pointer group"
+      >
+        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-slate-100 shrink-0">
+          <img src={player.avatarUrl} alt={player.name} className="w-full h-full object-cover" />
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h4 className="text-[14px] font-bold text-slate-900 truncate">{player.name}</h4>
+            {player.jerseyNumber !== undefined && (
+              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">#{player.jerseyNumber}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 md:gap-3 text-[11px] md:text-[12px] text-slate-500 mt-0.5">
+            <span className="flex items-center gap-1.5 shrink-0">
+              {getRoleIcon(player.role)} {player.role}
+            </span>
+            <span className="w-1 h-1 bg-slate-300 rounded-full shrink-0"></span>
+            <span className="truncate text-indigo-600 font-medium">{oppData?.team.name || (player as any).primaryTeamName || 'Other Team'}</span>
+          </div>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-6 px-4 border-l border-slate-100">
+          <div className="text-center min-w-[40px]">
+            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Runs</p>
+            <p className="text-[13px] font-black text-slate-900">{player.runsScored}</p>
+          </div>
+          <div className="text-center min-w-[40px]">
+            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Wkts</p>
+            <p className="text-[13px] font-black text-slate-900">{player.wicketsTaken}</p>
+          </div>
+          <div className="text-center min-w-[40px]">
+            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Mat</p>
+            <p className="text-[13px] font-black text-slate-700">{player.matchesPlayed}</p>
+          </div>
+        </div>
+
+        <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ArrowRight size={18} className="text-indigo-500" />
+        </div>
+      </div>
+    );
+  };
+
   const renderPlayerCard = (player: Player) => (
     <div
       key={player.id}
@@ -837,8 +888,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
               )}
             </div>
             {displayedPlayers.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                {displayedPlayers?.map(renderPlayerCard)}
+              <div className="flex flex-col gap-3">
+                {displayedPlayers?.map(renderPlayerRow)}
               </div>
             ) : (
               <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">

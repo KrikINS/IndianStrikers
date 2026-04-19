@@ -29,8 +29,9 @@ import { useMasterData } from './components/masterDataStore';
 import { usePlayerStore } from './store/playerStore';
 import { useOpponentStore } from './store/opponentStore';
 import GroundsManager from './components/GroundsManager';
-import TournamentsManager from './components/TournamentsManager';
+import TournamentManager from './components/TournamentManager';
 import UserManagement from './components/UserManagement';
+
 import CommentaryManager from './components/CommentaryManager';
 import LegacyEditor from './components/LegacyEditor';
 import { ScorecardPage } from './components/ScorecardPage';
@@ -206,7 +207,8 @@ const AppContent: React.FC<{
                 <Route path="/control-panel" element={effectiveRole === 'admin' ? <ControlPanel /> : <Unauthorized />}>
                   <Route index element={<Navigate to="grounds" replace />} />
                   <Route path="grounds" element={<GroundsManager />} />
-                  <Route path="tournaments" element={<TournamentsManager isAdmin={true} />} />
+                  <Route path="tournaments" element={<TournamentManager isAdmin={true} />} />
+
                   <Route path="legacy" element={<LegacyEditor />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="commentary" element={<CommentaryManager />} />
