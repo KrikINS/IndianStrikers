@@ -279,79 +279,86 @@ const App: React.FC = () => {
 };
 
 const AppInternal: React.FC = () => {
-  const store = useStore();
-  
-  if (!store || !store.isHydrated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950">
-        <StrikersLoader />
-      </div>
-    );
-  }
+    const store = useStore();
 
-  const { players, fetchPlayers, addPlayer: storeAddPlayer, updatePlayer: storeUpdatePlayer, deletePlayer: storeDeletePlayer } = store.players;
-  const { opponents, fetchOpponents, addOpponent: storeAddOpponent, updateOpponent: storeUpdateOpponent, deleteOpponent: storeDeleteOpponent } = store.opponents;
-  const [showSplash, setShowSplash] = useState(true);
-  const [userRole, setUserRole] = useState<UserRole>('guest');
-  const [isAdminView, setIsAdminView] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }>();
-  const [teamLogo, setTeamLogo] = useState<string>('');
-  const [isOffline, setIsOffline] = useState(false);
-  const resetZombieMatches = store.matchCenter.resetZombieMatches;
-  const syncWithCloud = store.matchCenter.syncWithCloud;
-  const isOfflineStore = store.masterData.isOffline;
-  const setOfflineStore = store.masterData.setOffline;
-  const syncMasterData = store.masterData.syncMasterData;
+    const [showSplash, setShowSplash] = useState(true);
+    const [userRole, setUserRole] = useState<UserRole>('guest');
+    const [isAdminView, setIsAdminView] = useState(false);
+    const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }>();
+    const [teamLogo, setTeamLogo] = useState<string>('');
+    const [isOffline, setIsOffline] = useState(false);
 
-  useEffect(() => {
-    resetZombieMatches();
-  }, [resetZombieMatches]);
-
-  const loadData = async () => {
-    try {
-      console.log("Fetching data from backend...");
-      await Promise.allSettled([
-        fetchPlayers(),
-        fetchOpponents(),
-        syncMasterData(),
-        syncWithCloud(),
-        getTeamLogo().then(l => setTeamLogo(l || ''))
-      ]);
-
-      setIsOffline(false);
-      setOfflineStore(false);
-    } catch (error) {
-      console.error("Failed to load data:", error);
-      setIsOffline(true);
-      setOfflineStore(true);
-    }
-  };
-
-  useEffect(() => {
-    window.refreshAppData = loadData;
+    // Safeguard for store readiness - Moved AFTER state hooks but BEFORE rendering logic that uses store sub-objects
+    // However, to satisfy "Rules of Hooks", ALL hooks (useState, useEffect, etc) must be called UNCONDITIONALLY.
     
-    // Ensure store is rehydrated before first data fetch
-    const initApp = async () => {
-      loadData();
+    // We can extract store values after the check, but useEffect must be called before the check if we want them to run.
+    
+    useEffect(() => {
+        if (store?.isHydrated) {
+            store.matchCenter.resetZombieMatches();
+        }
+    }, [store?.isHydrated, store?.matchCenter.resetZombieMatches]);
+
+    const loadData = async () => {
+        if (!store?.isHydrated) return;
+        try {
+            console.log("Fetching data from backend...");
+            await Promise.allSettled([
+                store.players.fetchPlayers(),
+                store.opponents.fetchOpponents(),
+                store.masterData.syncMasterData(),
+                store.matchCenter.syncWithCloud(),
+                getTeamLogo().then(l => setTeamLogo(l || ''))
+            ]);
+
+            setIsOffline(false);
+            store.masterData.setOffline(false);
+        } catch (error) {
+            console.error("Failed to load data:", error);
+            setIsOffline(true);
+            store.masterData.setOffline(true);
+        }
     };
-    initApp();
 
-    const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
-    if (hasSeenSplash) {
-      const savedRole = sessionStorage.getItem('userRole') as UserRole;
-      if (savedRole) setUserRole(savedRole);
-      
-      const savedAdminView = sessionStorage.getItem('isAdminView');
-      if (savedAdminView === 'true') setIsAdminView(true);
+    useEffect(() => {
+        window.refreshAppData = loadData;
+        
+        if (store?.isHydrated) {
+            loadData();
+            
+            const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
+            if (hasSeenSplash) {
+                const savedRole = sessionStorage.getItem('userRole') as UserRole;
+                if (savedRole) setUserRole(savedRole);
+                
+                const savedAdminView = sessionStorage.getItem('isAdminView');
+                if (savedAdminView === 'true') setIsAdminView(true);
 
-      syncWithCloud();
+                store.matchCenter.syncWithCloud();
 
-      const savedUser = sessionStorage.getItem('currentUser');
-      if (savedUser) setCurrentUser(JSON.parse(savedUser));
+                const savedUser = sessionStorage.getItem('currentUser');
+                if (savedUser) setCurrentUser(JSON.parse(savedUser));
 
-      setShowSplash(false);
+                setShowSplash(false);
+            }
+        }
+    }, [store?.isHydrated]);
+
+    if (!store || !store.isHydrated) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-slate-950">
+                <StrikersLoader />
+            </div>
+        );
     }
-  }, []);
+
+    const { players, addPlayer: storeAddPlayer, updatePlayer: storeUpdatePlayer, deletePlayer: storeDeletePlayer } = store.players;
+    const { opponents, addOpponent: storeAddOpponent, updateOpponent: storeUpdateOpponent, deleteOpponent: storeDeleteOpponent } = store.opponents;
+    const resetZombieMatches = store.matchCenter.resetZombieMatches;
+    const syncWithCloud = store.matchCenter.syncWithCloud;
+    const isOfflineStore = store.masterData.isOffline;
+    const setOfflineStore = store.masterData.setOffline;
+    const syncMasterData = store.masterData.syncMasterData;
 
   const handleLoginComplete = (role: UserRole, user?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }) => {
     setUserRole(role);

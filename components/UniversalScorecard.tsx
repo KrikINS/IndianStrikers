@@ -408,7 +408,13 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
             <IconButton onClick={handleDownloadImage} title="Download Image">
               <ImageIcon size={20} />
             </IconButton>
-            <IconButton onClick={onClose} title="Close">
+            <IconButton 
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }} 
+              title="Close"
+            >
               <X size={24} />
             </IconButton>
           </div>
@@ -542,14 +548,18 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
               {tab === 'commentary' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                   {(() => {
-                    const historyFiltered = [...(currentInningsData?.history || [])].reverse();
+                    const historyData = currentInningsData?.history;
+                    const historyFiltered = (Array.isArray(historyData) ? historyData : [])
+                      .filter(b => b && typeof b === 'object')
+                      .reverse();
+
                     if (historyFiltered.length === 0) {
-                        return <div style={{ padding: '40px', textAlign: 'center', opacity: 0.4 }}>NO COMMENTARY AVAILABLE FOR THIS MATCH SUMMARY</div>;
+                        return <div key="no-comm" style={{ padding: '40px', textAlign: 'center', opacity: 0.4 }}>NO COMMENTARY AVAILABLE FOR THIS MATCH SUMMARY</div>;
                     }
 
                     const overGroups: Record<number, any[]> = {};
                     historyFiltered.forEach(ball => {
-                      const ov = ball.overNumber ?? 0;
+                      const ov = ball.overNumber ?? ball.over_number ?? 0;
                       if (!overGroups[ov]) overGroups[ov] = [];
                       overGroups[ov].push(ball);
                     });
@@ -557,20 +567,22 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
                     return sortedOvers.map(overNum => {
                       const balls = overGroups[overNum];
-                      const historyAtThisPoint = historyFiltered.filter(b => (b.overNumber ?? 0) <= overNum);
+                      if (!balls || balls.length === 0) return null;
+
+                      const historyAtThisPoint = historyFiltered.filter(b => (b.overNumber ?? b.over_number ?? 0) <= overNum);
                       
-                      const runsAtEnd = historyAtThisPoint.reduce((s, b) => s + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                      const runsAtEnd = historyAtThisPoint.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
                       const wktsAtEnd = historyAtThisPoint.filter(b => b.isWicket).length;
                       
-                      const overRuns = balls.reduce((s, b) => s + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                      const overRuns = balls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
                       const overWkts = balls.filter(b => b.isWicket).length;
                       
                       const lastBall = balls[0];
-                      const bName = getPlayerNameResolved(lastBall.bowlerId);
-                      const bBalls = historyAtThisPoint.filter(b => b.bowlerId === lastBall.bowlerId);
-                      const bRuns = bBalls.reduce((s, b) => s + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                      const bName = getPlayerNameResolved(lastBall?.bowlerId || lastBall?.bowler_id);
+                      const bBalls = historyAtThisPoint.filter(b => lastBall && (b.bowlerId === (lastBall.bowlerId || lastBall.bowler_id) || b.bowler_id === (lastBall.bowlerId || lastBall.bowler_id)));
+                      const bRuns = bBalls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
                       const bWkts = bBalls.filter(b => b.isWicket).length;
-                      const bOvers = getOvers(bBalls.filter(b => b.isLegal).length);
+                      const bOvers = getOvers(bBalls.filter(b => b.isLegal || b.is_legal).length);
 
                       return (
                         <div key={overNum}>

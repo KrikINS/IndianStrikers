@@ -334,59 +334,65 @@ export const deletePlayer = async (id: string) => {
 
 
 // MATCHES
+const mapMatch = (m: any): ScheduledMatch => {
+    const rawScorecard = typeof m.scorecard === 'string' ? JSON.parse(m.scorecard) : m.scorecard;
+
+    const normalizeScore = (rawScore: any, inningsData: any): { runs: number; wickets: number; overs: number } => {
+        // Option 1: It's already the new object format
+        if (rawScore && typeof rawScore === 'object' && !Array.isArray(rawScore)) {
+            return {
+                runs: Number(rawScore.runs || 0),
+                wickets: Number(rawScore.wickets || 0),
+                overs: Number(rawScore.overs || 0)
+            };
+        }
+        // Option 2: Fallback to the detailed scorecard object
+        if (inningsData && (inningsData.totalRuns !== undefined || inningsData.totalWickets !== undefined)) {
+            return {
+                runs: Number(inningsData.totalRuns || 0),
+                wickets: Number(inningsData.totalWickets || 0),
+                overs: Number(inningsData.totalOvers || 0)
+            };
+        }
+        // Option 3: Fallback to the legacy integer score (no wickets/overs available)
+        return {
+            runs: Number(rawScore || 0),
+            wickets: 0,
+            overs: 0
+        };
+    };
+
+    return {
+        id: m.id,
+        date: m.date,
+        opponentId: m.opponent_id,
+        groundId: m.ground_id,
+        tournament: m.tournament,
+        matchFormat: m.match_format,
+        status: m.status,
+        maxOvers: m.max_overs,
+        homeTeamXI: Array.isArray(m.home_team_xi) ? m.home_team_xi : [],
+        opponentTeamXI: Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : [],
+        finalScoreHome: normalizeScore(m.final_score_home, rawScorecard?.innings1),
+        finalScoreAway: normalizeScore(m.final_score_away, rawScorecard?.innings2),
+        scorecard: rawScorecard,
+        resultNote: m.result_note,
+        isLocked: !!m.is_locked,
+        isCareerSynced: !!m.is_career_stats_synced,
+    };
+};
+
 export const getMatches = async (): Promise<ScheduledMatch[]> => {
   const res = await fetch(`${API_URL}/matches`);
   const data = await handleResponse(res);
-  return (data || []).map((m: any) => ({
-    ...m,
-    homeTeamXI: Array.isArray(m.home_team_xi) ? m.home_team_xi : (Array.isArray(m.homeTeamXI) ? m.homeTeamXI : []),
-    opponentTeamXI: Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : (Array.isArray(m.opponentTeamXI) ? m.opponentTeamXI : []),
-    opponentId: m.opponentId || m.opponent_id,
-    groundId: m.groundId || m.ground_id,
-    isLiveScored: m.isLiveScored ?? m.is_live_scored ?? false,
-    isLocked: m.isLocked ?? m.is_locked ?? false,
-    isHomeBattingFirst: m.isHomeBattingFirst ?? m.is_home_batting_first ?? true,
-    matchFormat: m.matchFormat || m.match_format,
-    opponentName: m.opponent_name || m.opponentName,
-    opponentLogo: m.opponent_logo || m.opponentLogo,
-    homeLogo: m.homeLogo || m.home_logo,
-    venue: m.ground_name || m.venue,
-    resultSummary: m.resultSummary || m.result_summary,
-    resultNote: m.resultNote || m.result_note,
-    resultType: m.resultType || m.result_type,
-    finalScoreHome: m.finalScoreHome || m.final_score_home,
-    finalScoreAway: m.finalScoreAway || m.final_score_away,
-    tournamentId: m.tournamentId || m.tournament_id,
-    is_test: m.is_test ?? false
-  }));
+  return (data || []).map(mapMatch);
 };
 
 export const getMatch = async (id: string): Promise<ScheduledMatch | null> => {
   const res = await fetch(`${API_URL}/matches/${id}`);
   const m = await handleResponse(res);
   if (!m) return null;
-  return {
-    ...m,
-    homeTeamXI: Array.isArray(m.home_team_xi) ? m.home_team_xi : (Array.isArray(m.homeTeamXI) ? m.homeTeamXI : []),
-    opponentTeamXI: Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : (Array.isArray(m.opponentTeamXI) ? m.opponentTeamXI : []),
-    opponentId: m.opponentId || m.opponent_id,
-    groundId: m.groundId || m.ground_id,
-    isLiveScored: m.isLiveScored ?? m.is_live_scored ?? false,
-    isLocked: m.isLocked ?? m.is_locked ?? false,
-    isHomeBattingFirst: m.isHomeBattingFirst ?? m.is_home_batting_first ?? true,
-    matchFormat: m.matchFormat || m.match_format,
-    opponentName: m.opponent_name || m.opponentName,
-    opponentLogo: m.opponent_logo || m.opponentLogo,
-    homeLogo: m.homeLogo || m.home_logo,
-    venue: m.ground_name || m.venue,
-    resultSummary: m.resultSummary || m.result_summary,
-    resultNote: m.resultNote || m.result_note,
-    resultType: m.resultType || m.result_type,
-    finalScoreHome: m.finalScoreHome || m.final_score_home,
-    finalScoreAway: m.finalScoreAway || m.final_score_away,
-    tournamentId: m.tournamentId || m.tournament_id,
-    is_test: m.is_test ?? false
-  };
+  return mapMatch(m);
 };
 
 export const addMatch = async (match: Partial<ScheduledMatch>) => {

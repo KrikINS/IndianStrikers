@@ -314,11 +314,11 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
               return (
                 <motion.div
                   key={`${match.id}-${matchIdx}`}
-                  initial={{ opacity: 0, scale: 0.8, x: offset * 250 }}
+                  initial={{ opacity: 0, scale: 0.8, x: offset * 350 }}
                   animate={{ 
                     opacity: isCenter ? 1 : offset === 1 ? 0.3 : offset === -1 ? 0.3 : 0, 
                     scale: isCenter ? 1 : 0.8,
-                    x: offset * (window.innerWidth < 768 ? 192 : 272),
+                    x: offset * (window.innerWidth < 768 ? 268 : 380),
                     zIndex: isCenter ? 10 : 0
                   }}
                   exit={{ opacity: 0, scale: 0.5 }}
@@ -327,9 +327,9 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
                 >
                   <Link 
                     to={isLive ? `/live/${match.id}` : `/scorecard/${match.id}`}
-                    className={`block w-[224px] md:w-[256px] rounded-2xl p-4 md:p-5 border transition-all duration-500 overflow-hidden relative group ${
+                    className={`block w-[314px] md:w-[358px] rounded-3xl p-5 md:p-7 border transition-all duration-500 overflow-hidden relative group ${
                       isLive 
-                        ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)]' 
+                        ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.3)]' 
                         : 'bg-slate-900/60 backdrop-blur-md border-white/10 hover:border-sky-500/40'
                     }`}
                   >
@@ -338,65 +338,70 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
                       <motion.div 
                         animate={{ opacity: [0.1, 0.3, 0.1] }}
                         transition={{ repeat: Infinity, duration: 3 }}
-                        className={`absolute -top-24 -right-24 w-48 h-48 blur-[60px] rounded-full ${isLive ? 'bg-red-600' : 'bg-sky-600'}`}
+                        className={`absolute -top-40 -right-40 w-80 h-80 blur-[100px] rounded-full ${isLive ? 'bg-red-600' : 'bg-sky-600'}`}
                       />
                     )}
 
                     <div className="relative z-10">
                       {/* Top Bar: Tournament & Status */}
-                      <div className="flex justify-between items-center mb-4">
-                        <span className="text-[8px] font-black uppercase text-sky-400 tracking-[0.2em] truncate flex-1 mr-2">
+                      <div className="flex justify-between items-center mb-5">
+                        <span className="text-[14px] font-black uppercase text-sky-400 tracking-[0.15em] truncate flex-1 mr-3">
                           {match.tournament || 'Exhibition'}
                         </span>
                         {isLive ? (
-                          <div className="flex items-center gap-1">
-                            <span className="h-1 w-1 rounded-full bg-[#FF0000] animate-pulse"></span>
-                            <span className="text-[8px] font-black uppercase text-[#FF0000] tracking-widest">Live</span>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-[#FF0000] animate-pulse"></span>
+                            <span className="text-[14px] font-black uppercase text-[#FF0000] tracking-widest">Live</span>
                           </div>
                         ) : (
-                          <span className="text-[8px] font-bold text-slate-500 uppercase">
+                          <span className="text-[14px] font-bold text-slate-500 uppercase">
                             {new Date(match.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                           </span>
                         )}
                       </div>
 
                       {/* Main Fixture Display */}
-                      <div className="flex items-center justify-between gap-2 md:gap-3">
-                        <div className="flex-1 flex flex-col items-center gap-1.5">
-                          <img src={teamLogo || "/INS%20LOGO.PNG"} alt="Home" className="w-8 h-8 object-contain drop-shadow-md" />
-                          <span className="text-[10px] font-black text-white">INS</span>
-                          {!isZeroZero && <span className="text-sm font-black text-white">{homeScore}</span>}
+                      <div className="flex items-center justify-between gap-4 md:gap-5">
+                        <div className="flex-1 flex flex-col items-center gap-2">
+                          <img src={teamLogo || "/INS%20LOGO.PNG"} alt="Home" className="w-11 h-11 object-contain drop-shadow-md" />
+                          <span className="text-[14px] font-black text-white">INS</span>
+                          {!isZeroZero && <span className="text-xl font-black text-white">{homeScore}</span>}
                         </div>
 
                         <div className="flex flex-col items-center">
-                           <div className="text-[8px] font-black text-white/20 italic">VS</div>
+                           <div className="text-[14px] font-black text-white/20 italic">VS</div>
                         </div>
 
-                        <div className="flex-1 flex flex-col items-center gap-1.5">
-                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 p-1">
+                        <div className="flex-1 flex flex-col items-center gap-2">
+                          <div className="w-11 h-11 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 p-2">
                             {oppLogo ? (
                               <img src={oppLogo} alt="Away" className="w-full h-full object-contain" />
                             ) : (
-                              <Shield size={16} className="text-slate-500" />
+                              <Shield size={22} className="text-slate-500" />
                             )}
                           </div>
-                          <span className="text-[10px] font-black text-white uppercase truncate">
+                          <span className="text-[14px] font-black text-white uppercase truncate">
                             {oppName.substring(0, 3)}
                           </span>
-                          {!isZeroZero && <span className="text-sm font-black text-white">{awayScore}</span>}
+                          {!isZeroZero && <span className="text-xl font-black text-white">{awayScore}</span>}
                         </div>
                       </div>
 
                       {/* Bottom Info: Fixture or Venue */}
-                      <div className="mt-5 pt-4 border-t border-white/5 flex justify-between items-center">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin size={10} className="text-slate-500" />
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                      <div className="mt-7 pt-5 border-t border-white/5 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <MapPin size={16} className="text-slate-500" />
+                          <span className="text-[14px] font-bold text-slate-400 uppercase">
                             {ground?.name || 'TBD'} {groundNum && <span className="text-sky-400 font-black">#{groundNum}</span>}
                           </span>
                         </div>
-                        <p className="text-[9px] font-black text-white/60 uppercase tracking-tighter">
-                          {match.resultNote || match.resultSummary || 'Match Ongoing'}
+                        <p className={`text-[13px] font-black uppercase tracking-tighter px-3 py-1 rounded-md ${
+                          isLive ? 'text-sky-400 bg-sky-400/10' :
+                          (match.resultNote?.toLowerCase().includes('won') || match.resultSummary?.toLowerCase().includes('won'))
+                            ? (match.resultNote?.includes('Indian Strikers') || match.resultSummary?.includes('Indian Strikers') ? 'text-emerald-400 bg-emerald-400/10' : 'text-rose-400 bg-rose-400/10')
+                            : 'text-white/60 bg-white/5'
+                        }`}>
+                          {isLive ? (match.tossDetails || 'OPEN') : (match.resultNote || match.resultSummary || 'COMPLETED')}
                         </p>
                       </div>
                     </div>

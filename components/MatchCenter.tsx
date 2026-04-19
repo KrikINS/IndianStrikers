@@ -11,8 +11,9 @@ import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import FullScorecardModal from './FullScorecardModal';
 import ManualScoreModal from './ManualScoreModal';
-import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon } from 'lucide-react';
+import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
 import { useMasterData } from './masterDataStore';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
@@ -76,13 +77,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         }
     }, [syncWithCloud, syncMasterData]);
 
-    // Only auto-set tournament filter if it's explicitly 'All' AND user hasn't interacted yet?
-    // Actually, DEFAULT TO 'ALL' for a better overview of the total schedule.
-    React.useEffect(() => {
-        // Optional: Pre-select active tournament only if no search/other filters are active
-        // For now, let's keep 'All' to ensure transparency of data.
-    }, [tournaments]);
-
     const handleToggleLock = async (matchId: string, currentStatus: boolean) => {
         if (!isAdmin) return;
         
@@ -92,10 +86,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
             // Optimistic update
             await updateMatch(matchId, { isLocked: !currentStatus } as any);
-            
-            // If the store/API uses snake_case internally for sync
-            // await updateMatch(matchId, { is_locked: !currentStatus } as any);
-            
             console.log(`[Admin] Match ${matchId} ${!currentStatus ? 'locked' : 'unlocked'}.`);
         } catch (err) {
             console.error("Failed to toggle lock:", err);
@@ -231,6 +221,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         teamType: 'home',
         opponentId: ''
     });
+    const [summaryMatchId, setSummaryMatchId] = useState<string | null>(null);
+    const [summaryPreviewUrl, setSummaryPreviewUrl] = useState<string | null>(null);
 
     const handleSaveMatch = (updatedMatch: ScheduledMatch) => {
         updateMatch(updatedMatch.id, updatedMatch);
@@ -253,7 +245,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 teamType: 'view',
                 opponentId: match.opponentId
             });
-            // Give time for state to update and hidden div to render
             setTimeout(() => {
                 captureGraphic(matchId);
             }, 1000);
@@ -271,56 +262,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
     const handleSaveXI = async (matchId: string, teamType: 'home' | 'opponent', selection: string[]) => {
         const match = matches.find(m => m.id === matchId);
         if (!match) return;
-
-        // RETROACTIVE EDIT LOGIC (Data Architect Rule)
-        // If the match is already completed, we MUST rollback stats for the previous XI 
-        // and sync stats for the new XI to maintain database integrity.
-        if (match.status === 'completed' && (teamType === 'home' || teamType === 'opponent') && match.performers) {
-            const oldXIRaw = teamType === 'home' ? match.homeTeamXI : match.opponentTeamXI;
-            const oldXI = Array.isArray(oldXIRaw) ? oldXIRaw : [];
-            const removedPlayers = oldXI.filter(id => !selection.includes(id));
-            const addedPlayers = selection.filter(id => !oldXI.includes(id));
-
-            // 1. Rollback removed players
-            removedPlayers.forEach(pid => {
-                const perf = match.performers?.find(p => p.playerId === pid);
-                if (perf) {
-                    const player = players.find((p: Player) => p.id === pid);
-                    if (player) {
-                        console.log(`[Rollback] Removing match stats from ${player.name}...`);
-                        const rolledBackPlayer = {
-                            ...player,
-                            matchesPlayed: Math.max(0, player.matchesPlayed - 1),
-                            runsScored: Math.max(0, player.runsScored - perf.runs),
-                            wicketsTaken: Math.max(0, player.wicketsTaken - perf.wickets),
-                            battingStats: player.battingStats ? {
-                                ...player.battingStats,
-                                matches: Math.max(0, player.battingStats.matches - 1),
-                                innings: perf.balls > 0 ? Math.max(0, player.battingStats.innings - 1) : player.battingStats.innings,
-                                runs: Math.max(0, player.battingStats.runs - perf.runs),
-                                balls: Math.max(0, player.battingStats.balls - (perf.balls || 0)),
-                                fours: Math.max(0, (player.battingStats.fours || 0) - (perf.fours || 0)),
-                                sixes: Math.max(0, (player.battingStats.sixes || 0) - (perf.sixes || 0))
-                            } : undefined,
-                            bowlingStats: player.bowlingStats ? {
-                                ...player.bowlingStats,
-                                matches: Math.max(0, player.bowlingStats.matches - 1),
-                                innings: perf.bowlingOvers > 0 ? Math.max(0, player.bowlingStats.innings - 1) : player.bowlingStats.innings,
-                                overs: Math.max(0, player.bowlingStats.overs - (perf.bowlingOvers || 0)),
-                                runs: Math.max(0, player.bowlingStats.runs - (perf.bowlingRuns || 0)),
-                                wickets: Math.max(0, player.bowlingStats.wickets - perf.wickets)
-                            } : undefined
-                        };
-                        onUpdatePlayer(rolledBackPlayer as any);
-                    }
-                }
-            });
-
-            // 2. Apply to added players (if they are now in the XI of a completed match, they get the performer's stats)
-            // Wait, which performer stats? If we swap A for B, B takes A's spot in the performer list too?
-            // Actually, we should probably just update the XI IDs for now, or the user will update the scorecard later.
-            // But the rule says: "their career stats... must be rolled back".
-        }
 
         try {
             await setPlayingXI(matchId, teamType, selection);
@@ -349,7 +290,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             return;
         }
 
-        // Initialize store before navigating. initializeMatch is now non-destructive if IDs match.
         initializeMatch({
             matchId: match.id,
             matchType: match.matchFormat || 'T20',
@@ -381,7 +321,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
     const captureGraphic = async (matchId: string) => {
         setIsGenerating(true);
-        // Robustness: wait specifically for the element to appear if needed
         let element = document.getElementById('team-sheet-graphic');
 
         if (!element) {
@@ -397,7 +336,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
         try {
             const canvas = await html2canvas(element, {
-                backgroundColor: '#020617', // Explicitly use Hex for html2canvas to avoid oklch errors
+                backgroundColor: '#020617',
                 scale: 3, 
                 useCORS: true,
                 logging: false,
@@ -420,16 +359,53 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             setIsGenerating(false);
         }
     };
+    
+    const captureMatchSummary = async (matchId: string) => {
+        try {
+            console.log("[Generator] Starting High-Res Match Summary capture for:", matchId);
+            setSummaryMatchId(matchId);
+            setIsGenerating(true);
+            
+            // Allow time for mount and logo loading
+            await new Promise(r => setTimeout(r, 1200));
+            
+            const element = document.getElementById('match-summary-graphic');
+            if (!element) {
+                console.error("[Generator] ❌ Summary container not found");
+                setIsGenerating(false);
+                return;
+            }
+
+            // Using html-to-image with CORS and Style filters
+            const dataUrl = await toPng(element, {
+                quality: 1.0,
+                pixelRatio: 3, 
+                backgroundColor: '#020617',
+                cacheBust: true,
+                style: {
+                    transform: 'none',
+                    display: 'block'
+                },
+                // Skip problematic external stylesheets that trigger SecurityError
+                filter: (node: any) => {
+                    if (node?.tagName === 'LINK' && node?.href?.includes('fonts.googleapis')) return false;
+                    return true;
+                }
+            });
+
+            // Set the preview URL instead of direct download
+            setSummaryPreviewUrl(dataUrl);
+            console.log("[Generator] ✅ Summary generated successfully via html-to-image.");
+        } catch (err) {
+            console.error("[Generator] ❌ Fatal error during summary capture:", err);
+            alert("Failed to generate image. Please check console for details.");
+        } finally {
+            setIsGenerating(false);
+            setSummaryMatchId(null);
+        }
+    };
 
     const [isSyncing, setIsSyncing] = useState(false);
-    const unsyncedCount = useMemo(() => {
-        // Matches NOT present on server load? 
-        // We can't know for sure without checking, but syncWithCloud does this.
-        // For UI, we could assume anything not yet "fetched" is unsynced?
-        // Actually, let's just show the button if admin.
-        return matches.length;
-    }, [matches.length]);
-
     const [syncStatus, setSyncStatus] = useState<'idle' | 'success'>('idle');
     const handleCloudSync = async () => {
         if (!window.confirm("This will refresh all matches and live scores from the cloud. Continue?")) return;
@@ -438,7 +414,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         setSyncStatus('idle');
         try {
             console.log("[Sync] Performing Full Cloud Refresh...");
-            // Wipe local first to ensure DB parity (removes deleted matches)
             wipeLocalMatches();
             useCricketScorer.getState().resetStore();
             
@@ -447,7 +422,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             
             setTimeout(() => {
                 setSyncStatus('idle');
-                window.location.reload(); // Force reload to re-run all dashboard filters
+                window.location.reload(); 
             }, 1000);
         } catch (e: any) {
             alert("❌ Sync failed: " + e.message);
@@ -578,8 +553,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 24px 20px 16px;
-            gap: 8px;
+            padding: 32px 26px 22px;
+            gap: 12px;
             background: radial-gradient(circle at center, rgba(30,58,138,0.1) 0%, transparent 70%);
           }
           .team-vertical {
@@ -588,7 +563,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             align-items: center;
             flex: 1;
             min-width: 0;
-            gap: 12px;
+            gap: 16px;
           }
 
           /* ─── LOGO + XI OVERLAY ─── */
@@ -597,14 +572,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             display: inline-block;
           }
           .team-logo-md {
-            width: 90px;
-            height: 90px;
-            border-radius: 24px;
+            width: 126px;
+            height: 126px;
+            border-radius: 34px;
             border: 2px solid rgba(255,255,255,0.1);
             background: #0f172a !important;
             object-fit: contain;
             display: block;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            box-shadow: 0 14px 28px rgba(0,0,0,0.4);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
           }
           .team-logo-md:hover {
@@ -617,12 +592,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             font-family: 'Outfit', sans-serif;
             color: #f8fafc;
             font-weight: 900;
-            font-size: 16px;
+            font-size: 22px;
             text-transform: uppercase;
             text-align: center;
             letter-spacing: 0.05em;
             line-height: 1.2;
-            max-width: 120px;
+            max-width: 168px;
             min-height: 2.4em;
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -633,17 +608,17 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
           .team-score-display {
             color: #3b82f6;
             font-weight: 950;
-            font-size: 20px;
+            font-size: 28px;
             text-align: center;
             line-height: 1;
-            text-shadow: 0 0 15px rgba(59,130,246,0.3);
+            text-shadow: 0 0 20px rgba(59,130,246,0.3);
           }
 
           .match-meta-info {
              color: #94a3b8 !important;
              font-weight: 700;
-             padding-top: 8px;
-             font-size: 11px;
+             padding-top: 11px;
+             font-size: 15px;
              text-transform: uppercase;
              letter-spacing: 0.1em;
           }
@@ -654,55 +629,62 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 12px;
             flex-shrink: 0;
           }
           .vs-circle-pulse {
             background: #1e293b;
             color: #f8fafc;
-            width: 32px;
-            height: 32px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
+            font-size: 14px;
             font-weight: 900;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 0 28px rgba(0,0,0,0.5);
           }
           .vs-line {
-            width: 2px;
-            height: 14px;
+            width: 3px;
+            height: 20px;
             background: linear-gradient(to bottom, transparent, #3b82f6, transparent);
           }
 
           /* ─── RESULT RIBBON ─── */
           .result-ribbon-bold {
-            background: linear-gradient(90deg, rgba(30, 58, 138, 0.3), rgba(29, 78, 216, 0.3));
-            color: #bae6fd;
+            background: linear-gradient(90deg, rgba(15, 23, 42, 0.9), rgba(30, 58, 138, 0.9));
+            color: #f8fafc;
             text-align: center;
-            font-size: 11px;
-            font-weight: 800;
-            padding: 8px 12px;
+            font-size: 16px;
+            font-weight: 900;
+            padding: 14px 16px;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.1em;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
           }
+
+          .result-won { border-color: rgba(16, 185, 129, 0.4); color: #34d399 !important; }
+          .result-lost { border-color: rgba(239, 68, 68, 0.4); color: #f87171 !important; }
+          .result-live { border-color: rgba(56, 189, 248, 0.4); color: #7dd3fc !important; }
 
           /* ─── FOOTER BUTTONS ─── */
           .card-footer-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            padding-top: 8px;
+            gap: 12px;
+            padding-top: 12px;
           }
           .btn-action-dark {
-            padding: 9px 6px;
+            padding: 14px 8px;
             background: #f1f5f9;
             color: #1e293b;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 10px;
+            border-radius: 12px;
+            font-size: 14px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -716,33 +698,33 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
           }
           .btn-primary-bold {
             grid-column: span 2;
-            margin-top: 2px;
-            padding: 10px;
+            margin-top: 3px;
+            padding: 14px;
             background: linear-gradient(135deg, #1e3a8a, #2563eb);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 11px;
+            border-radius: 12px;
+            font-size: 16px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.06em;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+            box-shadow: 0 4px 12px rgba(37,99,235,0.25);
           }
           .btn-primary-bold:hover {
             background: linear-gradient(135deg, #1e40af, #2563eb);
-            box-shadow: 0 4px 12px rgba(37,99,235,0.35);
+            box-shadow: 0 6px 14px rgba(37,99,235,0.35);
           }
           .btn-primary-full {
             grid-column: span 2;
-            margin-top: 4px;
-            padding: 10px;
+            margin-top: 6px;
+            padding: 14px;
             background: #e0f2fe;
             color: #0369a1;
             border: 1px solid #bae6fd;
-            border-radius: 8px;
-            font-size: 11px;
+            border-radius: 12px;
+            font-size: 16px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -849,23 +831,22 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     )}
                 </div>
 
-                {/* Standardized Glassmorphism Tabs Container */}
-                <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
-                    {/* Tabs Header */}
-                    <div className="flex overflow-x-auto border-b border-slate-800 no-scrollbar">
+                {/* Tabs / Filter Navigation */}
+                <div className="bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden border border-slate-800">
+                    <div className="flex border-b border-slate-800 overflow-x-auto scroller-hide bg-slate-950/40">
                         <button
                             onClick={() => setActiveTab('list')}
-                            className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
+                            className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap 
                             ${activeTab === 'list' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
                         >
-                            <List size={16} /> Schedule List
+                            <Calendar size={16} /> Schedule List
                         </button>
                         <button
                             onClick={() => setActiveTab('standings')}
                             className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
                             ${activeTab === 'standings' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
                         >
-                            <TableProperties size={16} /> Standings
+                            <TableProperties size={16} /> Points Table
                         </button>
                         <button
                             onClick={() => setActiveTab('tournaments')}
@@ -877,500 +858,383 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     </div>
 
                     {/* Content Area */}
-                    <div className="p-0">
-                        {/* Global Controls - Persist across tabs */}
-                        <div className="table-controls px-6">
-                            <div className="search-wrap relative flex-1">
-                                <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                                <input
-                                    type="text"
-                                    placeholder="Search opponent or tournament..."
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                    className="w-full bg-white border border-slate-200 text-slate-900 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:border-blue-500 transition-all shadow-sm"
-                                />
-                            </div>
-                            <select
-                                value={tournamentFilter}
-                                onChange={e => setTournamentFilter(e.target.value)}
-                                className="filter-select border-blue-200 text-blue-600"
-                                title="Filter by tournament"
-                            >
-                                <option value="All">All Tournaments</option>
-                                {tournaments?.map(t => (
-                                    <option key={t.id} value={t.name}>{t.name}</option>
-                                ))}
-                            </select>
-
-                            <select
-                                value={yearFilter}
-                                onChange={e => setYearFilter(e.target.value)}
-                                className="filter-select border-slate-200 text-slate-600"
-                                title="Filter by year"
-                            >
-                                <option value="All">All Years</option>
-                                {availableYears?.map(year => (
-                                    <option key={year} value={year.toString()}>{year}</option>
-                                ))}
-                            </select>
-
-                            <select
-                                value={formatFilter}
-                                onChange={e => setFormatFilter(e.target.value as any)}
-                                title="Filter by match format"
-                                className="filter-select border-slate-200 text-slate-600"
-                            >
-                                <option value="All">All Formats</option>
-                                <option value="T20">T20</option>
-                                <option value="One Day">One Day</option>
-                            </select>
-                        </div>
-
+                    <AnimatePresence mode="wait">
                         {activeTab === 'list' && (
-                            <div className="schedule-container">
-
-
-                                {/* Table */}
-                                {filteredMatches.length === 0 ? (
-                                    <div className="p-14 text-center text-slate-500 font-medium bg-slate-900/20">
-                                        {searchQuery || formatFilter !== 'All' ? 'No matches found matches your filters.' : 'No matches configured yet.'}
+                            <motion.div
+                                key="list-view"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="divide-y divide-slate-800"
+                            >
+                                {/* Filter Bar */}
+                                <div className="table-controls px-6 py-4 flex flex-col md:flex-row gap-4 items-center bg-slate-900/40">
+                                    <div className="search-wrap w-full md:w-auto flex-1">
+                                        <Activity className="search-icon" size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder="SEARCH BY OPPONENT OR TOURNAMENT..."
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                            className="search-bar w-full bg-slate-950/40 border-slate-800 text-white placeholder-slate-600 uppercase font-black text-[10px] tracking-widest ring-offset-slate-900 focus:ring-2 focus:ring-blue-500/20"
+                                        />
                                     </div>
-                                ) : (
-                                    <div className="overflow-x-auto">
-                                        <table className="schedule-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Date & Time</th>
-                                                    <th>Tournament</th>
-                                                    <th>Fixture</th>
-                                                    <th>Ground</th>
-                                                    <th>Format</th>
-                                                    <th>Status</th>
-                                                    {userRole === 'admin' && <th>Actions</th>}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filteredMatches?.map(m => {
-                                                    const opp = opponents.find(o => o.id === m.opponentId);
-                                                    return (
-                                                        <tr key={m.id} onClick={() => setSelectedCardMatch(m)}>
-                                                            <td>
-                                                                <div className="date-stack">
-                                                                    <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                                                                    <span className="time-sub">{new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="tournament-cell uppercase">{(m.tournament || "No Tournament").toUpperCase()}</td>
-                                                            <td>
-                                                                <div className="team-cell">
-                                                                    <img src="/INS%20LOGO.PNG" alt="INS" className="team-avatar" />
-                                                                    <span>INDIAN STRIKERS</span>
-                                                                    <span className="vs-cell">VS</span>
-                                                                    {opp?.logoUrl ? <img src={opp.logoUrl} alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback text-slate-500">?</div>}
-                                                                    <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="text-slate-500 text-xs font-bold uppercase">{grounds.find(g => g.id === m.groundId)?.name || 'TBD'}</td>
-                                                            <td>
-                                                                <span className={`badge-type ${m.matchFormat === 'T20' ? 'badge-t20' : 'badge-odi'}`}>
-                                                                    {(m.matchFormat || 'T20').toUpperCase()}
-                                                                </span>
-                                                            </td>
-                                                            <td>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className={`badge-type ${m.status === 'live' ? 'badge-status-live' : m.status === 'completed' ? 'badge-status-done' : 'badge-status-up'}`}>
-                                                                        {(m.status || "Unknown").toUpperCase()}
-                                                                    </span>
-                                                                    {(m.isLocked || (m as any).is_locked) && (
-                                                                        <span title="This scorecard is locked">
-                                                                            <LockIcon size={12} className="text-emerald-500" />
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                            {userRole === 'admin' && (
-                                                                <td onClick={(e) => e.stopPropagation()}>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <button onClick={() => setEditingMatch(m)} className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors" title="Edit Metadata"><Plus size={14} /></button>
-                                                                        <button onClick={() => { if (window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Trash2 size={14} /></button>
+
+                                    <div className="flex gap-2 w-full md:w-auto">
+                                        <select
+                                            value={tournamentFilter}
+                                            onChange={e => setTournamentFilter(e.target.value)}
+                                            className="filter-select bg-slate-950/40 border-slate-800 text-white"
+                                            title="Filter by tournament"
+                                        >
+                                            <option value="All">All Tournaments</option>
+                                            {tournaments?.map(t => (
+                                                <option key={t.id} value={t.name}>{t.name}</option>
+                                            ))}
+                                        </select>
+
+                                        <select
+                                            value={yearFilter}
+                                            onChange={e => setYearFilter(e.target.value)}
+                                            className="filter-select bg-slate-950/40 border-slate-800 text-white"
+                                            title="Filter by year"
+                                        >
+                                            <option value="All">All Years</option>
+                                            {availableYears?.map(year => (
+                                                <option key={year} value={year.toString()}>{year}</option>
+                                            ))}
+                                        </select>
+
+                                        <select
+                                            value={formatFilter}
+                                            onChange={e => setFormatFilter(e.target.value as any)}
+                                            title="Filter by match format"
+                                            className="filter-select bg-slate-950/40 border-slate-800 text-white"
+                                        >
+                                            <option value="All">All Formats</option>
+                                            <option value="T20">T20</option>
+                                            <option value="One Day">One Day</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="schedule-container">
+                                    {/* Table */}
+                                    {filteredMatches.length === 0 ? (
+                                        <div className="p-14 text-center text-slate-500 font-medium bg-slate-900/20">
+                                            {searchQuery || formatFilter !== 'All' ? 'No matches found matches your filters.' : 'No matches configured yet.'}
+                                        </div>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="schedule-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Date & Time</th>
+                                                        <th>Tournament</th>
+                                                        <th>Fixture</th>
+                                                        <th>Ground</th>
+                                                        <th>Format</th>
+                                                        <th>Status</th>
+                                                        {userRole === 'admin' && <th>Actions</th>}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {filteredMatches?.map(m => {
+                                                        const opp = opponents.find(o => o.id === m.opponentId);
+                                                        return (
+                                                            <tr key={m.id} onClick={() => setSelectedCardMatch(m)}>
+                                                                <td>
+                                                                    <div className="date-stack">
+                                                                        <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                                                        <span className="time-sub">{new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                                                                     </div>
                                                                 </td>
-                                                            )}
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                                <div className="table-footer px-6">
-                                    <span>{filteredMatches.length} {filteredMatches.length === 1 ? 'fixture' : 'fixtures'} found</span>
-                                    {(searchQuery || formatFilter !== 'All' || tournamentFilter !== 'All' || yearFilter !== 'All') && (
-                                        <button 
-                                            onClick={() => { 
-                                                setSearchQuery(''); 
-                                                setFormatFilter('All'); 
-                                                setTournamentFilter('All');
-                                                setYearFilter('All');
-                                            }} 
-                                            className="text-blue-500 font-bold hover:underline"
-                                        >
-                                            Clear all filters
-                                        </button>
+                                                                <td className="tournament-cell uppercase">{(m.tournament || "No Tournament").toUpperCase()}</td>
+                                                                <td>
+                                                                    <div className="team-cell">
+                                                                        <img src="/INS%20LOGO.PNG" alt="INS" className="team-avatar" />
+                                                                        <span>INDIAN STRIKERS</span>
+                                                                        <span className="vs-cell">VS</span>
+                                                                        {opp?.logoUrl ? <img src={opp.logoUrl} alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback text-slate-500">?</div>}
+                                                                        <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="text-slate-500 text-xs font-bold uppercase">{grounds.find(g => g.id === m.groundId)?.name || 'TBD'}</td>
+                                                                <td>
+                                                                    <span className={`badge-type ${m.matchFormat === 'T20' ? 'badge-t20' : 'badge-odi'}`}>
+                                                                        {(m.matchFormat || 'T20').toUpperCase()}
+                                                                    </span>
+                                                                </td>
+                                                                <td>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`badge-type ${m.status === 'live' ? 'badge-status-live' : m.status === 'completed' ? 'badge-status-done' : 'badge-status-up'}`}>
+                                                                            {(m.status || "Unknown").toUpperCase()}
+                                                                        </span>
+                                                                        {(m.isLocked || (m as any).is_locked) && (
+                                                                            <span title="This scorecard is locked">
+                                                                                <LockIcon size={12} className="text-emerald-500" />
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                {userRole === 'admin' && (
+                                                                    <td onClick={(e) => e.stopPropagation()}>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <button onClick={() => setEditingMatch(m)} className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors" title="Edit Metadata"><Plus size={14} /></button>
+                                                                            <button onClick={() => { if (window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Trash2 size={14} /></button>
+                                                                        </div>
+                                                                    </td>
+                                                                )}
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     )}
+                                    <div className="table-footer px-6">
+                                        <span>{filteredMatches.length} {filteredMatches.length === 1 ? 'fixture' : 'fixtures'} found</span>
+                                        {(searchQuery || formatFilter !== 'All' || tournamentFilter !== 'All' || yearFilter !== 'All') && (
+                                            <button 
+                                                onClick={() => { 
+                                                    setSearchQuery(''); 
+                                                    setFormatFilter('All'); 
+                                                    setTournamentFilter('All');
+                                                    setYearFilter('All');
+                                                }} 
+                                                className="text-blue-500 font-bold hover:underline"
+                                            >
+                                                Clear all filters
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
 
 
                         {activeTab === 'standings' && (
                             <div className="px-6 pb-20 pt-4">
                                 <PointsTable 
-                                    tournaments={tournaments} 
-                                    userRole={userRole} 
+                                    userRole={userRole}
                                     currentUser={currentUser}
-                                    opponents={opponents} 
+                                    tournaments={tournaments}
+                                    opponents={opponents}
                                 />
                             </div>
                         )}
 
                         {activeTab === 'tournaments' && (
-                            <TournamentsManager />
+                            <div className="px-6 pb-20 pt-4">
+                                <TournamentsManager />
+                            </div>
                         )}
-
-                    </div>
+                    </AnimatePresence>
                 </div>
+            </div>
 
-
-
-                {/* Modals & Overlays */}
-                {viewScorecardMatch && (
-                    <UniversalScorecard
-                        match={viewScorecardMatch}
-                        onClose={() => setViewScorecardMatch(null)}
-                        players={players}
-                        opponents={opponents}
-                        isLive={viewScorecardMatch.status === 'live'}
-                    />
+            {/* MODALS (Existing logic preserved) */}
+            <AnimatePresence>
+                {selectedCardMatch && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4"
+                        onClick={() => setSelectedCardMatch(null)}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="w-full max-w-xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <MatchCenterTile
+                                match={selectedCardMatch}
+                                homeTeamName="Indian Strikers"
+                                homeTeamLogo={teamLogo || '/INS%20LOGO.PNG'}
+                                opponent={opponents.find(o => o.id === selectedCardMatch.opponentId)}
+                                onSelectPlayingXI={handleSelectPlayingXI}
+                                onShareSummary={captureMatchSummary}
+                                onEditMatch={setEditingMatch}
+                                onStartScoring={handleStartScoring}
+                                onViewScorecard={setViewScorecardMatch}
+                                onUpdateManualScore={(id, mode) => setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' })}
+                                onDeleteMatch={deleteMatch}
+                                userRole={userRole}
+                                isAdmin={isAdmin}
+                                canScore={currentUser?.canScore}
+                                grounds={grounds}
+                                onToggleLock={handleToggleLock}
+                            />
+                        </motion.div>
+                    </motion.div>
                 )}
-                {editingMatch && (
-                    <EditMatchModal
-                        match={editingMatch}
-                        allOpponents={opponents}
-                        isOpen={!!editingMatch}
-                        onClose={() => setEditingMatch(null)}
-                        onSave={handleSaveMatch}
-                    />
-                )}
+            </AnimatePresence>
 
-                {showAddModal && (
-                    <AddMatchModal
-                        opponents={opponents}
-                        onClose={() => setShowAddModal(false)}
-                    />
-                )}
-
-                {manualScoreConfig && !manualScoreConfig.showPlayers && (
-                    <MatchSummaryModal
-                        match={{
-                            ...matches.find(m => m.id === manualScoreConfig.matchId)!,
-                            homeLogo: teamLogo || '/INS%20LOGO.PNG',
-                            opponentLogo: opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.logoUrl
-                        }}
-                        opponentName={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.name || 'Opponent'}
-                        onSave={handleSummaryUpdate}
-                        onClose={() => setManualScoreConfig(null)}
-                    />
-                )}
-
-                {manualScoreConfig && manualScoreConfig.showPlayers && (
-                    <FullScorecardModal
-                        match={matches.find(m => m.id === manualScoreConfig.matchId)!}
-                        homeSquad={players}
-                        opponentSquad={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.players || []}
-                        opponentName={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.name || 'Opponent'}
-                        homeTeamLogo={teamLogo || '/INS%20LOGO.PNG'}
-                        opponentLogo={opponents.find(o => o.id === matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId)?.logoUrl}
-                        onClose={() => setManualScoreConfig(null)}
-                        onSave={handleManualScoreSubmit}
-                    />
-                )}
-
-                {/* Playing XI Modal Rendering */}
+            {/* Other Modals */}
+            <AnimatePresence>
                 {xiModalConfig.isOpen && (
-                    <div id="team-sheet-container">
-                        <PlayingXIModal
-                            matchId={xiModalConfig.matchId}
-                            homePlayers={players.filter((p: Player) => p.isActive !== false && p.isAvailable !== false)}
-                            opponentTeams={opponents}
-                            opponentId={xiModalConfig.opponentId}
-                            teamType={xiModalConfig.teamType}
-                            initialSelection={
-                                xiModalConfig.teamType === 'home'
-                                    ? (matches.find(m => m.id === xiModalConfig.matchId)?.homeTeamXI || [])
-                                    : (xiModalConfig.teamType === 'opponent'
-                                        ? (matches.find(m => m.id === xiModalConfig.matchId)?.opponentTeamXI || [])
-                                        : (matches.find(m => m.id === xiModalConfig.matchId)?.homeTeamXI || []))
-                            }
-                            onClose={() => setXiModalConfig({ ...xiModalConfig, isOpen: false })}
-                            onSave={handleSaveXI}
-                            onShare={(id) => handleSelectPlayingXI(id, 'view')}
-                            onQuickAddPlayer={handleQuickAddOpponentPlayer}
+                    <PlayingXIModal
+                        onClose={() => setXiModalConfig(prev => ({ ...prev, isOpen: false }))}
+                        matchId={xiModalConfig.matchId}
+                        teamType={xiModalConfig.teamType as any}
+                        homePlayers={players}
+                        opponentTeams={opponents}
+                        onSave={handleSaveXI}
+                        initialSelection={xiModalConfig.teamType === 'home' ? matches.find(m => m.id === xiModalConfig.matchId)?.homeTeamXI || [] : matches.find(m => m.id === xiModalConfig.matchId)?.opponentTeamXI || []}
+                        opponentId={xiModalConfig.opponentId}
+                        onQuickAddPlayer={handleQuickAddOpponentPlayer}
+                    />
+                )}
+            </AnimatePresence>
+
+            {editingMatch && (
+                <EditMatchModal
+                    isOpen={!!editingMatch}
+                    onClose={() => setEditingMatch(null)}
+                    match={editingMatch}
+                    onSave={handleSaveMatch}
+                    allOpponents={opponents}
+                />
+            )}
+
+            {showAddModal && (
+                <AddMatchModal
+                    onClose={() => setShowAddModal(false)}
+                    opponents={opponents}
+                />
+            )}
+
+            {manualScoreConfig && (
+                <ManualScoreModal
+                    onClose={() => setManualScoreConfig(null)}
+                    match={matches.find(m => m.id === manualScoreConfig.matchId)!}
+                    onSubmit={handleSummaryUpdate}
+                    opponent={opponents.find(o => o.id === (matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId))}
+                    players={players}
+                />
+            )}
+
+            {viewScorecardMatch && (
+                <FullScorecardModal
+                    match={viewScorecardMatch}
+                    onClose={() => setViewScorecardMatch(null)}
+                    homeSquad={players}
+                    opponentSquad={opponents.find(o => o.id === viewScorecardMatch.opponentId)?.players || []}
+                    opponentName={viewScorecardMatch.opponentName || 'Opponent'}
+                    opponentLogo={viewScorecardMatch.opponentLogo}
+                    onSave={(finalData) => {
+                        updateMatch(viewScorecardMatch.id, finalData);
+                        setViewScorecardMatch(null);
+                    }}
+                />
+            )}
+
+            {summaryPreviewUrl && (
+                <div className="fixed inset-0 z-[10001] bg-slate-950/90 flex items-center justify-center p-4 backdrop-blur-xl transition-all">
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="bg-slate-900 border border-white/10 rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl"
+                    >
+                        <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                            <h3 className="text-white font-black uppercase tracking-tighter">Match Summary Preview</h3>
+                            <button onClick={() => setSummaryPreviewUrl(null)} className="p-2 hover:bg-white/5 rounded-full text-slate-400">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 bg-slate-950/50 flex justify-center overflow-y-auto max-h-[70vh]">
+                            <img src={summaryPreviewUrl} alt="Match Summary" className="rounded-xl shadow-2xl border border-white/10 max-w-full h-auto" />
+                        </div>
+                        <div className="p-6 grid grid-cols-2 gap-4">
+                            <button 
+                                onClick={() => setSummaryPreviewUrl(null)}
+                                className="py-4 rounded-2xl bg-white/5 text-white font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
+                            >
+                                Close
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    const link = document.createElement('a');
+                                    link.download = `Match_Summary.png`;
+                                    link.href = summaryPreviewUrl;
+                                    link.click();
+                                }}
+                                className="py-4 rounded-2xl bg-blue-600 text-white font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+                            >
+                                <Download size={18} /> Download
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Sync Success Toast */}
+            {showSyncSuccess && (
+                <div className="success-toast">
+                    <CheckCircle2 size={20} />
+                    <span>DATABASE SYNC SUCCESSFUL</span>
+                </div>
+            )}
+
+            {/* Hidden Graphic Generator */}
+            <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+                {xiModalConfig.matchId && (
+                   <div id="team-sheet-graphic" style={{ width: '1080px', height: '1920px' }}>
+                       <UniversalScorecard 
+                         match={matches.find(m => m.id === xiModalConfig.matchId)!}
+                         opponents={opponents}
+                         players={players}
+                         onClose={() => {}}
+                       />
+                   </div>
+                )}
+
+                {summaryMatchId && (
+                    <div id="match-summary-graphic" style={{ width: '450px', background: '#020617' }}>
+                        <MatchCenterTile 
+                            match={matches.find(m => m.id === summaryMatchId)!}
+                            homeTeamName="Indian Strikers"
+                            homeTeamLogo={teamLogo || '/INS%20LOGO.PNG'}
+                            opponent={opponents.find(o => o.id === matches.find(m => m.id === summaryMatchId)?.opponentId)}
+                            isGraphic={true}
+                            grounds={grounds}
+                            userRole={userRole}
+                            isAdmin={isAdmin}
+                            onSelectPlayingXI={() => {}}
+                            onEditMatch={() => {}}
+                            onStartScoring={() => {}}
+                            onViewScorecard={() => {}}
+                            onUpdateManualScore={() => {}}
+                            onDeleteMatch={() => {}}
                         />
                     </div>
                 )}
-
-                {/* Hidden Graphic for Capture (Independent of Modal Open State) */}
-                {xiModalConfig.matchId && matches.find(m => m.id === xiModalConfig.matchId) && (
-                    <div className="fixed -left-[5000px] top-0 pointer-events-none">
-                        <div 
-                            id="team-sheet-graphic" 
-                            style={{ backgroundColor: '#020617', minHeight: '1350px' }} // Bypass oklch with inline Hex
-                            className="w-[1080px] p-12 text-white border-[1px] border-white/10 shadow-2xl relative overflow-hidden flex flex-col"
-                        >
-                            {/* Background Branding */}
-                            <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-600/5 rounded-full blur-[150px] -translate-y-1/2 translate-x-1/2"></div>
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-
-                            {/* BROADCAST HEADER */}
-                            {(() => {
-                                const currentMatch = matches.find(m => m.id === xiModalConfig.matchId);
-                                if (!currentMatch) return null;
-                                const opp = opponents.find((o: OpponentTeam) => o.id === currentMatch.opponentId);
-                                const oppName = (opp?.name || currentMatch.opponentName || 'Opponent').toUpperCase();
-                                const matchYear = new Date(currentMatch.date).getFullYear();
-                                
-                                return (
-                                    <div className="relative z-10 flex flex-col gap-6 mb-8">
-                                        <div className="flex items-center gap-12 bg-slate-900/60 p-8 rounded-[40px] border border-white/5 backdrop-blur-2xl shadow-2xl">
-                                            {/* Left: Logo Only */}
-                                            <div className="flex items-center justify-center p-1 w-28 h-28 shrink-0">
-                                                {xiModalConfig.teamType === 'opponent' && opp?.logoUrl ? (
-                                                    <img src={opp.logoUrl} className="w-full h-full object-contain" alt="Opponent" />
-                                                ) : (
-                                                    <img src="/INS%20LOGO.PNG" className="w-full h-full object-contain" alt="INS" />
-                                                )}
-                                            </div>
-
-                                            {/* Extended Center: Tournament Info */}
-                                            <div className="flex flex-col items-center flex-1 text-center border-l border-white/10 pl-12 pr-6">
-                                                <div className="text-sky-400 text-lg font-black uppercase tracking-[0.5em] mb-3 drop-shadow-sm">
-                                                    {(currentMatch.tournament || 'Official Tournament').toUpperCase()} — {matchYear}
-                                                </div>
-                                                <div className="text-white text-4xl font-black uppercase tracking-[0.2em] italic leading-tight graduate">
-                                                    MATCH DAY XI <span className="mx-3 text-white/20">|</span> {currentMatch.matchFormat?.toUpperCase() || 'T20'}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* REFINED: Match Detail Bar (Date, Time, Ground, VS) */}
-                                        <div className="flex items-center justify-between gap-6 bg-slate-100/5 backdrop-blur-md px-10 py-6 rounded-3xl border border-white/10 shadow-lg">
-                                            <div className="flex items-center gap-12">
-                                                <div className="flex items-center gap-4">
-                                                    <Calendar size={22} className="text-sky-500 shrink-0" />
-                                                    <span className="text-sm font-black uppercase tracking-[0.2em] text-white/90 whitespace-nowrap">
-                                                        {new Date(currentMatch.date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-4 border-l border-white/10 pl-12">
-                                                    <Cloud size={22} className="text-sky-500 shrink-0" />
-                                                    <span className="text-sm font-black uppercase tracking-[0.2em] text-white/90 whitespace-nowrap">
-                                                        {new Date(currentMatch.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-4 border-l border-white/10 pl-12 flex-1">
-                                                    <MapPin size={22} className="text-sky-500 shrink-0" />
-                                                    <span className="text-sm font-black uppercase tracking-[0.2em] text-white/90 min-w-fit">
-                                                        {grounds.find(g => g.id === currentMatch.groundId)?.name || 'Stadium Outfield'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="flex items-center gap-5 bg-sky-500/10 px-8 py-3 rounded-2xl border border-sky-500/30 shadow-inner">
-                                                <span className="text-[10px] font-black text-sky-400 uppercase tracking-[0.3em]">VERSUS</span>
-                                                <div className="flex items-center gap-4">
-                                                    <span className="text-base font-black text-white uppercase italic tracking-tight">{xiModalConfig.teamType === 'opponent' ? 'INDIAN STRIKERS' : oppName}</span>
-                                                    <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center bg-white/5 border border-white/10">
-                                                        {xiModalConfig.teamType === 'opponent' ? (
-                                                            <img src="/INS%20LOGO.PNG" className="w-full h-full object-contain" alt="INS" />
-                                                        ) : (
-                                                            opp?.logoUrl ? <img src={opp.logoUrl} className="w-full h-full object-contain" alt="Opp" /> : <Activity size={20} className="text-sky-500" />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-
-                            {/* ROSTER GRID with Refined Player Cards & Background */}
-                            <div className="relative z-10 flex-1 bg-slate-900/50 rounded-[45px] p-12 border border-white/5 backdrop-blur-xl grid grid-cols-2 gap-x-20 gap-y-12 overflow-hidden">
-                                {/* Ground Background Overlay */}
-                                <div className="absolute inset-0 z-0 opacity-20 pointer-events-none mix-blend-overlay">
-                                    <img 
-                                        src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=2070" 
-                                        className="w-full h-full object-cover scale-110"
-                                        alt="Cricket Ground" 
-                                    />
-                                </div>
-                                {(() => {
-                                    const match = matches.find(m => m.id === xiModalConfig.matchId);
-                                    if (!match) return null;
-                                    
-                                    const isOpponent = xiModalConfig.teamType === 'opponent';
-                                    const opp = opponents.find(o => o.id === match.opponentId);
-                                    const xiIdsRaw = (isOpponent ? match.opponentTeamXI : match.homeTeamXI) || [];
-                                    const xiIds = Array.isArray(xiIdsRaw) ? xiIdsRaw : [];
-                                    const roster = isOpponent ? (opp?.players || []) : players;
-
-                                    return roster
-                                        .filter((p: any) => xiIds.includes(String(p.id || p.name)))
-                                        ?.map((player: any, idx: number) => (
-                                            <div key={player.id || player.name} className="flex items-center gap-10 group">
-                                                <div className="relative shrink-0">
-                                                    {/* Round Profile Picture - Reduced size by approx 25% from original rect container area */}
-                                                    <div className="w-28 h-28 rounded-full border-[3px] border-white/10 overflow-hidden bg-slate-950 shadow-2xl transition-all duration-500 group-hover:border-sky-500/50 group-hover:scale-105">
-                                                        {(player.avatarUrl || player.photo) ? (
-                                                            <img src={player.avatarUrl || player.photo} className="w-full h-full object-cover object-top" alt={player.name} />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center bg-slate-900/50">
-                                                                <span className="text-slate-700 font-black text-4xl italic opacity-50">{idx + 1}</span>
-                                                            </div>
-                                                        )}
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent"></div>
-                                                    </div>
-                                                    <span className="absolute -top-1 -right-1 bg-sky-500 text-blue-950 font-black w-10 h-10 rounded-full border-[5px] border-[#0a0f1d] flex items-center justify-center text-sm shadow-2xl z-20">
-                                                        {idx + 1}
-                                                    </span>
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className="font-black text-2xl uppercase tracking-tight text-white leading-none graduate group-hover:text-sky-400 transition-colors duration-300">{player.name}</p>
-                                                    {(player.isCaptain || (typeof player.designation === 'string' && player.designation.includes('Captain'))) && (
-                                                        <div className="mt-3 flex items-center gap-2 bg-yellow-500/10 w-fit px-4 py-1.5 rounded-xl border border-yellow-500/30 shadow-lg shadow-yellow-500/5">
-                                                            <Award size={14} className="text-yellow-500" />
-                                                            <span className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em]">Captain</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ));
-                                })()}
-                            </div>
-
-                            {/* CLEAN DETAILED FOOTER */}
-                            {(() => {
-                                const currentMatch = matches.find(m => m.id === xiModalConfig.matchId);
-                                if (!currentMatch) return null;
-                                
-                                return (
-                                    <div className="relative z-10 mt-10 flex justify-end items-center px-4">
-                                        <div className="flex flex-col items-end gap-1 text-right">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-[2px] w-12 bg-sky-500"></div>
-                                                <div className="text-lg font-black text-white tracking-[0.2em] italic graduate">WWW.INDIANSTRIKERS.CLUB</div>
-                                            </div>
-                                            <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em] opacity-50 pr-1">
-                                                IMAGE GENERATED BY INS TEAM MANAGEMENT SYSTEM
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-                        </div>
-                    </div>
-                )}
-
-                {isGenerating && (
-                    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                        <div className="bg-slate-950 p-8 rounded-3xl border border-blue-500/30 text-center">
-                            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p className="text-white font-black uppercase tracking-widest italic">Generating Graphic...</p>
-                        </div>
-                    </div>
-                )}
-
-                {showSyncSuccess && (
-                    <div className="success-toast">
-                        <CheckCircle2 size={24} className="text-white" />
-                        <div>
-                            <p className="text-white font-black uppercase tracking-widest text-[10px]">Success</p>
-                            <p className="text-blue-50 text-[13px]">Match details updated and saved successfully</p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Match Card Modal */}
-                <AnimatePresence>
-                    {selectedCardMatch && (
-                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-                            <motion.div 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setSelectedCardMatch(null)}
-                                className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
-                            />
-                            <motion.div 
-                                initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                                animate={{ scale: 1, opacity: 1, y: 0 }}
-                                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                                className="relative w-full max-w-[400px] z-10"
-                            >
-                                <div className="absolute -top-12 right-0">
-                                    <button 
-                                        onClick={() => setSelectedCardMatch(null)}
-                                        title="Close"
-                                        aria-label="Close"
-                                        className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all border border-white/10"
-                                    >
-                                        <X size={24} />
-                                    </button>
-                                </div>
-                                <MatchCenterTile
-                                    match={selectedCardMatch}
-                                    homeTeamName="Indian Strikers"
-                                    homeTeamLogo={teamLogo || '/INS%20LOGO.PNG'}
-                                    opponent={opponents.find((t: any) => t.id === selectedCardMatch.opponentId)}
-                                    onSelectPlayingXI={(mid, mode) => {
-                                        handleSelectPlayingXI(mid, mode);
-                                        // Optional: keep modal open or close? 
-                                        // If selecting XI, we might want to keep it open to see the update.
-                                    }}
-                                    onEditMatch={(m: ScheduledMatch) => {
-                                        setEditingMatch(m);
-                                        setSelectedCardMatch(null);
-                                    }}
-                                    onStartScoring={(mid) => {
-                                        handleStartScoring(mid);
-                                        setSelectedCardMatch(null);
-                                    }}
-                                    onViewScorecard={(m: ScheduledMatch) => {
-                                        setViewScorecardMatch(m);
-                                        setSelectedCardMatch(null);
-                                    }}
-                                    onUpdateManualScore={(id: string, mode?: 'summary' | 'full') => {
-                                        setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' });
-                                        setSelectedCardMatch(null);
-                                    }}
-                                    onDeleteMatch={(id) => {
-                                        deleteMatch(id);
-                                        setSelectedCardMatch(null);
-                                    }}
-                                    userRole={userRole}
-                                    isAdmin={userRole === 'admin'}
-                                    canScore={currentUser?.canScore}
-                                    grounds={grounds}
-                                    isCarouselActive={true} // Always active look in modal
-                                    onToggleLock={handleToggleLock}
-                                />
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>
             </div>
+
+            {isGenerating && (
+                <div className="fixed inset-0 z-[10000] bg-slate-950/90 flex flex-col items-center justify-center gap-6 backdrop-blur-xl">
+                    <motion.div 
+                        animate={{ 
+                            scale: [1, 1.1, 1],
+                            rotate: [0, 5, -5, 0]
+                        }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="w-24 h-24 bg-blue-600 rounded-[2.5rem] flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.5)]"
+                    >
+                        <Shield size={48} className="text-white" />
+                    </motion.div>
+                    <div className="text-center">
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-2 italic">GENERATING ASSET</h2>
+                        <div className="flex items-center justify-center gap-2">
+                            <RefreshCw size={16} className="text-blue-500 animate-spin" />
+                            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none">Finalizing Team Sheet Data...</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

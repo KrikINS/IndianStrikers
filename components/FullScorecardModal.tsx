@@ -535,7 +535,16 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-2 bg-slate-900 border-b border-white/5">
            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Match Day Scorecard</h3>
-           <button title="Close Modal" onClick={onClose} className="p-1 hover:bg-white/5 rounded-full text-slate-500"><X size={16} /></button>
+           <button 
+             title="Close Modal" 
+             onClick={(e) => {
+               e.stopPropagation();
+               onClose();
+             }} 
+             className="p-1 hover:bg-white/5 rounded-full text-slate-500"
+           >
+             <X size={16} />
+           </button>
         </div>
 
         {/* 1. READ-ONLY SUMMARY BAR */}
@@ -808,7 +817,15 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
         </div>
 
         <div className="modal-footer">
-          <button onClick={onClose} className="btn-cancel text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-400">Discard Changes</button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }} 
+            className="btn-cancel text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-400"
+          >
+            Discard Changes
+          </button>
           
           {hasChanged ? (
             <button onClick={handleSave} className="btn-save" disabled={isSaving}>
@@ -816,7 +833,13 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                 {isSaving ? 'Saving...' : 'Save & Close'}
             </button>
           ) : (
-            <button onClick={onClose} className="btn-close">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }} 
+              className="btn-close"
+            >
                 Close
             </button>
           )}
