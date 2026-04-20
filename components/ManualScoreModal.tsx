@@ -153,7 +153,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
 
   const getBattingEntry = (inn: 1 | 2, pId: string) =>
     scorecard[inn === 1 ? 'innings1' : 'innings2'].batting.find(b => b.playerId === pId)
-    || { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false };
+    || { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false, fielderId: '', bowlerId: '' };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,8 +164,8 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
             : (innings1BattingTeam === 'home' ? awaySquad : homeSquad);
         return squad.map(p => {
              const entry = scorecard[innKey].batting.find(b => b.playerId === p.id);
-             if (entry) return entry;
-             return { playerId: p.id, name: p.name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', is_hero: false };
+             if (entry) return { ...entry, fielderId: entry.fielderId || '', bowlerId: entry.bowlerId || '' };
+             return { playerId: p.id, name: p.name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', is_hero: false, fielderId: '', bowlerId: '' };
         });
     };
     const buildBowling = (inn: 1 | 2) => bowlingRows[inn]
@@ -303,7 +303,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
             <div className="flex-[0_1_55%] w-full rounded-xl bg-white/[0.01] border border-white/5">
               <div className="px-4 py-2 border-b border-white/5 font-black text-[10px] uppercase tracking-wider text-white">Batting: {currentBatLabel}</div>
               <table className="compact-score-table">
-                <thead><tr><th className="text-left pl-4">Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>Out</th></tr></thead>
+                <thead><tr><th className="text-left pl-4">Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>Out</th><th>F</th><th>B</th></tr></thead>
                 <tbody>
                   {battingRowIds[activeInnings].map((pId, idx) => {
                     const entry = getBattingEntry(activeInnings, pId);
@@ -324,9 +324,33 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                         <td><input title="Balls" placeholder="0" type="number" className="compact-input" value={entry.balls} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'balls', e.target.valueAsNumber || 0)} /></td>
                         <td><input title="Fours" placeholder="0" type="number" className="compact-input" value={entry.fours} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fours', e.target.valueAsNumber || 0)} /></td>
                         <td><input title="Sixes" placeholder="0" type="number" className="compact-input" value={entry.sixes} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'sixes', e.target.valueAsNumber || 0)} /></td>
-                        <td><select title="Wicket Type" className="player-select-dropdown" style={{ width: '90px' }} value={entry.outHow} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'outHow', e.target.value)}>
+                        <td><select title="Wicket Type" className="player-select-dropdown" style={{ width: '90px' }} value={entry.outHow} disabled={!pId} onChange={e => {
+                          const val = e.target.value;
+                          updateBatting(activeInnings, pId, p?.name || '', 'outHow', val);
+                          // Reset F/B if not applicable
+                          if (val === 'Not Out' || val === 'Did Not Bat') {
+                            updateBatting(activeInnings, pId, p?.name || '', 'fielderId', '');
+                            updateBatting(activeInnings, pId, p?.name || '', 'bowlerId', '');
+                          }
+                        }}>
                           {['Not Out', 'Bowled', 'Caught', 'LBW', 'Run Out', 'Stumped', 'Did Not Bat', 'Hit Wicket', 'Retired Hurt', 'Retired Out'].map(o => <option key={o}>{o}</option>)}
                         </select></td>
+                        <td>
+                          <select title="Fielder" className="player-select-dropdown" style={{ width: '80px' }} value={entry.fielderId || ''} 
+                            disabled={!pId || ['Not Out', 'Did Not Bat', 'Bowled', 'LBW', 'Hit Wicket'].includes(entry.outHow)}
+                            onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fielderId', e.target.value)}>
+                            <option value="">-</option>
+                            {bowlingSquad.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
+                          </select>
+                        </td>
+                        <td>
+                          <select title="Bowler" className="player-select-dropdown" style={{ width: '80px' }} value={entry.bowlerId || ''} 
+                            disabled={!pId || ['Not Out', 'Did Not Bat', 'Run Out'].includes(entry.outHow)}
+                            onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'bowlerId', e.target.value)}>
+                            <option value="">-</option>
+                            {bowlingSquad.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
+                          </select>
+                        </td>
                       </tr>
                     );
                   })}

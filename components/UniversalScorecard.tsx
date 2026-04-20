@@ -190,6 +190,8 @@ interface BattingStat {
   sixes: number;
   status: 'batting' | 'out' | 'did-not-bat';
   outHow?: string;
+  fielderId?: string;
+  bowlerId?: string;
   index?: number;
 }
 
@@ -259,6 +261,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           sixes: stat.sixes || 0,
           status: stat.status || 'out',
           outHow: stat.outHow,
+          fielderId: stat.fielderId,
+          bowlerId: stat.bowlerId,
           index: stat.index
         }));
       } else if (Array.isArray(inn.batting)) {
@@ -272,6 +276,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           sixes: b.sixes,
           status: b.outHow === 'Not Out' ? 'batting' : 'out',
           outHow: b.outHow,
+          fielderId: b.fielderId,
+          bowlerId: b.bowlerId,
           index: b.index
         }));
       }
@@ -493,8 +499,22 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     <tbody>
                       {currentInningsData.batting.map(stat => (
                         <tr key={stat.playerId}>
-                          <Td>{getPlayerNameResolved(stat.playerId, stat.name)}</Td>
-                          <Td style={{ fontSize: '0.65rem', opacity: 0.6 }}>{stat.status === 'batting' ? 'not out' : (stat.outHow || 'out')}</Td>
+                           <Td>{getPlayerNameResolved(stat.playerId, stat.name)}</Td>
+                           <Td style={{ fontSize: '0.65rem', opacity: 0.6 }}>
+                             {stat.status === 'batting' ? 'not out' : (() => {
+                               const outHow = stat.outHow || 'out';
+                               const fName = stat.fielderId ? getPlayerNameResolved(stat.fielderId) : '';
+                               const bName = stat.bowlerId ? getPlayerNameResolved(stat.bowlerId) : '';
+                               
+                               if (outHow === 'Caught') return `ct ${fName} b ${bName}`;
+                               if (outHow === 'Bowled') return `b ${bName}`;
+                               if (outHow === 'LBW') return `lbw b ${bName}`;
+                               if (outHow === 'Run Out') return `run out (${fName})`;
+                               if (outHow === 'Stumped') return `st ${fName} b ${bName}`;
+                               if (outHow === 'Hit Wicket') return `hit wicket b ${bName}`;
+                               return outHow.toLowerCase();
+                             })()}
+                           </Td>
                           <Td style={{ textAlign: 'center', color: '#FAB005' }}>{stat.runs}</Td>
                           <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.balls}</Td>
                           <Td style={{ textAlign: 'right', opacity: 0.8 }}>
