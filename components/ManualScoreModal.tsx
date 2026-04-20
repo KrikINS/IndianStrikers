@@ -381,7 +381,6 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                   ))}
                 </tbody>
               </table>
->
               <div className="p-3 border-t border-white/5">
                 <button type="button" onClick={() => addBowlingRow(activeInnings)} className="text-[10px] text-sky-400 font-black">+ ADD BOWLER</button>
               </div>
