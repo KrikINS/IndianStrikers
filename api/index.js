@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 4001;
 
 const allowedOrigins = [
   process.env.FRONTEND_LOCAL || 'http://localhost:3000',
+  'http://localhost:5173',
   process.env.FRONTEND_PROD || 'https://indianstrikers.club',
   'https://www.indianstrikers.club',
   'https://strikers-app-227875153596.us-central1.run.app'

@@ -190,39 +190,29 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
       innings2: { ...scorecard.innings2, batting: buildBatting(2), bowling: buildBowling(2), extras: { ...scorecard.innings2.extras, wide: autoWides(2), no_ball: autoNoBalls(2) } },
     };
 
-    const performerMap = new Map<string, any>();
-    const homeInningsKey = innings1BattingTeam === 'home' ? 'innings1' : 'innings2';
-    const homeBowlingKey = innings1BattingTeam === 'home' ? 'innings2' : 'innings1';
+    const inn1Runs = buildBatting(1).reduce((s, b) => s + (b.runs || 0), 0) + (scorecard.innings1.extras.legByes || 0) + (scorecard.innings1.extras.byes || 0) + autoWides(1) + autoNoBalls(1);
+    const inn1Wickets = buildBatting(1).filter(b => !['Not Out', 'Did Not Bat', 'Retired Hurt'].includes(b.outHow)).length;
+    const inn1Overs = buildBowling(1).reduce((s, b) => s + (b.overs || 0), 0); // simplistic over sum
 
-    finalScorecard[homeInningsKey].batting.forEach(b => {
-      performerMap.set(b.playerId, { playerId: b.playerId, playerName: b.name, runs: b.runs, balls: b.balls, fours: b.fours, sixes: b.sixes, isNotOut: b.outHow === 'Not Out', is_hero: !!b.is_hero, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0 });
-    });
-    finalScorecard[homeBowlingKey].bowling.forEach(b => {
-      const ex = performerMap.get(b.playerId) || { playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, is_hero: false, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0 };
-      performerMap.set(b.playerId, { 
-        ...ex, 
-        wickets: b.wickets, 
-        bowlingRuns: b.runsConceded, 
-        bowlingOvers: b.overs, 
-        maidens: b.maidens,
-        wides: b.wides || 0,
-        no_balls: b.no_balls || 0,
-        is_hero: ex.is_hero || !!b.is_hero 
-      });
-    });
+    const inn2Runs = buildBatting(2).reduce((s, b) => s + (b.runs || 0), 0) + (scorecard.innings2.extras.legByes || 0) + (scorecard.innings2.extras.byes || 0) + autoWides(2) + autoNoBalls(2);
+    const inn2Wickets = buildBatting(2).filter(b => !['Not Out', 'Did Not Bat', 'Retired Hurt'].includes(b.outHow)).length;
+    const inn2Overs = buildBowling(2).reduce((s, b) => s + (b.overs || 0), 0);
 
-    const diff = Math.abs(homeScore.runs - awayScore.runs);
+    const fScoreHome = innings1BattingTeam === 'home' ? { runs: inn1Runs, wickets: inn1Wickets, overs: inn1Overs } : { runs: inn2Runs, wickets: inn2Wickets, overs: inn2Overs };
+    const fScoreAway = innings1BattingTeam === 'home' ? { runs: inn2Runs, wickets: inn2Wickets, overs: inn2Overs } : { runs: inn1Runs, wickets: inn1Wickets, overs: inn1Overs };
+
+    const diff = Math.abs(fScoreHome.runs - fScoreAway.runs);
     const resultSummary = resultType === 'Abandoned' ? 'Match Abandoned'
       : resultType === 'Tie' ? 'Match Tied'
         : resultType === 'Forfeit-Home' ? `${opponentName} won (Indian Strikers Forfeit)`
           : resultType === 'Forfeit-Away' ? `Indian Strikers won (${opponentName} Forfeit)`
-            : homeScore.runs > awayScore.runs ? `Indian Strikers won by ${diff} runs`
-              : awayScore.runs > homeScore.runs ? `${opponentName} won by ${diff} runs`
+            : fScoreHome.runs > fScoreAway.runs ? `Indian Strikers won by ${diff} runs`
+              : fScoreAway.runs > fScoreHome.runs ? `${opponentName} won by ${diff} runs`
                 : 'Match Tied';
 
     onSubmit({
-      finalScoreHome: homeScore,
-      finalScoreAway: awayScore,
+      finalScoreHome: fScoreHome,
+      finalScoreAway: fScoreAway,
       resultNote: resultSummary,
       resultSummary,
       scorecard: finalScorecard,
@@ -386,10 +376,12 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
               </div>
             </div>
           </div>
-          <div className="p-3 bg-white/[0.05] rounded-xl border border-white/5 flex gap-4 text-[11px] font-black text-slate-400 items-center">
+          <div className="p-3 bg-white/[0.05] rounded-xl border border-white/5 flex gap-4 text-[11px] font-black text-slate-400 items-center overflow-x-auto">
             <span>BYES: <input title="Byes" placeholder="0" type="number" className="compact-input" value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras.byes} onChange={e => updateExtras(activeInnings as 1 | 2, 'byes', e.target.valueAsNumber || 0)} /></span>
             <span>LEGBYES: <input title="Leg Byes" placeholder="0" type="number" className="compact-input" value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras.legByes} onChange={e => updateExtras(activeInnings as 1 | 2, 'legByes', e.target.valueAsNumber || 0)} /></span>
-            <span className="ml-auto text-sky-400">TOTAL: {liveTotal(activeInnings)}</span>
+            <span>WIDES: <input title="Wides" placeholder="0" type="number" className="compact-input opacity-60" value={autoWides(activeInnings)} disabled /></span>
+            <span>NO BALLS: <input title="No Balls" placeholder="0" type="number" className="compact-input opacity-60" value={autoNoBalls(activeInnings)} disabled /></span>
+            <span className="ml-auto text-sky-400 whitespace-nowrap">TOTAL: {liveTotal(activeInnings)}</span>
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold">Cancel</button>
