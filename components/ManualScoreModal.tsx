@@ -201,6 +201,27 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     const fScoreHome = innings1BattingTeam === 'home' ? { runs: inn1Runs, wickets: inn1Wickets, overs: inn1Overs } : { runs: inn2Runs, wickets: inn2Wickets, overs: inn2Overs };
     const fScoreAway = innings1BattingTeam === 'home' ? { runs: inn2Runs, wickets: inn2Wickets, overs: inn2Overs } : { runs: inn1Runs, wickets: inn1Wickets, overs: inn1Overs };
 
+    const performerMap = new Map<string, any>();
+    const homeInningsKey = innings1BattingTeam === 'home' ? 'innings1' : 'innings2';
+    const homeBowlingKey = innings1BattingTeam === 'home' ? 'innings2' : 'innings1';
+
+    finalScorecard[homeInningsKey].batting.forEach(b => {
+      performerMap.set(b.playerId, { playerId: b.playerId, playerName: b.name, runs: b.runs, balls: b.balls, fours: b.fours, sixes: b.sixes, isNotOut: b.outHow === 'Not Out', is_hero: !!b.is_hero, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0 });
+    });
+    finalScorecard[homeBowlingKey].bowling.forEach(b => {
+      const ex = performerMap.get(b.playerId) || { playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, is_hero: false, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0 };
+      performerMap.set(b.playerId, { 
+        ...ex, 
+        wickets: b.wickets, 
+        bowlingRuns: b.runsConceded, 
+        bowlingOvers: b.overs, 
+        maidens: b.maidens,
+        wides: b.wides || 0,
+        no_balls: b.no_balls || 0,
+        is_hero: ex.is_hero || !!b.is_hero 
+      });
+    });
+
     const diff = Math.abs(fScoreHome.runs - fScoreAway.runs);
     const resultSummary = resultType === 'Abandoned' ? 'Match Abandoned'
       : resultType === 'Tie' ? 'Match Tied'
