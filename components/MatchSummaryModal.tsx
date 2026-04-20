@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Trophy, Target, Calendar, Users, Loader2 } from 'lucide-react';
 import { ScheduledMatch } from '../types';
-import MatchResultCard from './MatchResultCard';
 
 interface MatchSummaryModalProps {
   match: ScheduledMatch;
@@ -328,37 +327,6 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
 
         {/* 3. Result Section */}
         <div className="result-selector">
-          <label>MATCH RESULT PREVIEW</label>
-          <div style={{ marginBottom: 20 }}>
-            <MatchResultCard 
-              match={match}
-              homeTeam={{ 
-                name: 'Indian Strikers', 
-                score: summary.homeScore.runs, 
-                wickets: summary.homeScore.wickets, 
-                overs: String(summary.homeScore.overs) 
-              }}
-              awayTeam={{ 
-                name: opponentName, 
-                score: summary.awayScore.runs, 
-                wickets: summary.awayScore.wickets, 
-                overs: String(summary.awayScore.overs) 
-              }}
-              result={(() => {
-                if (summary.resultType !== 'Normal Result') return summary.resultType.toUpperCase();
-                const hScore = summary.homeScore.runs;
-                const aScore = summary.awayScore.runs;
-                if (hScore > aScore) return `Indian Strikers won by ${hScore - aScore} runs`;
-                if (aScore > hScore) return `${opponentName} won by ${aScore - hScore} runs`;
-                return "Match Tied";
-              })()}
-              topPerformer={{ 
-                name: "Calculate on Finalize", 
-                stat: "Top performance will be synced" 
-              }}
-            />
-          </div>
-          
           <label>MATCH STATUS / RESULT TYPE</label>
           <div className="btn-group-row">
             {['Normal Result', 'Abandoned', 'Tie', 'Forfeit (Home)', 'Forfeit (Opponent)'].map(res => (
@@ -390,7 +358,7 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
             style={match.isLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
-            {isSaving ? 'Finalizing...' : (match.isLocked ? 'LOCKED' : 'Finalize & Sync Career')}
+            {isSaving ? 'Updating...' : (match.isLocked ? 'LOCKED' : 'UPDATE')}
           </button>
         </div>
       </div>

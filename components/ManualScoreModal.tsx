@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useState, useMemo } from 'react';
-import { X, Save, Award, Zap, Target, ChevronDown, Star } from 'lucide-react';
+import { X, Save, Award, Zap, Target, ChevronDown, Star, Loader2 } from 'lucide-react';
 import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types';
 
 interface ManualScoreModalProps {
@@ -27,6 +27,8 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
   const [tossChoice, setTossChoice] = useState<'Bat' | 'Field'>(match.toss?.choice as any || 'Bat');
   const [maxOvers, setMaxOvers] = useState<number>(match.maxOvers || (match.matchFormat === 'One Day' ? 50 : 20));
   const [resultType, setResultType] = useState(match.resultType || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const innings1BattingTeam: 'home' | 'away' = useMemo(() => {
     const homeWon = tossWinner === 'Indian Strikers';
@@ -110,12 +112,21 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     return battingRuns + extrasTotal;
   };
 
-  const homeSquad = players.filter(p =>
-    Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0 ? match.homeTeamXI.includes(p.id) : true
-  );
-  const awaySquad = (opponent?.players || []).filter(p =>
-    Array.isArray(match.opponentTeamXI) && match.opponentTeamXI.length > 0 ? match.opponentTeamXI.includes(p.id) : true
-  );
+  const homeSquad = players.filter(p => {
+    if (Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0) {
+      return match.homeTeamXI.includes(p.id);
+    }
+    // If no XI selected, show all INS players (isClubPlayer check)
+    return p.isClubPlayer;
+  });
+
+  const awaySquad = (opponent?.players || []).filter(p => {
+    if (Array.isArray(match.opponentTeamXI) && match.opponentTeamXI.length > 0) {
+      return match.opponentTeamXI.includes(p.id);
+    }
+    // If no XI selected, show all opponent players
+    return true;
+  });
 
   const battingSquad = activeInnings === 1
     ? (innings1BattingTeam === 'home' ? homeSquad : awaySquad)
@@ -176,8 +187,10 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     scorecard[inn === 1 ? 'innings1' : 'innings2'].batting.find(b => b.playerId === pId)
     || { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false, fielderId: '', bowlerId: '' };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
+    setSyncError(null);
     const buildBatting = (inn: 1 | 2) => {
         const innKey = inn === 1 ? 'innings1' : 'innings2';
         const squad = inn === 1 
@@ -252,17 +265,23 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
               : fScoreAway.runs > fScoreHome.runs ? `${opponentName} won by ${diff} runs`
                 : 'Match Tied';
 
-    onSubmit({
-      finalScoreHome: fScoreHome,
-      finalScoreAway: fScoreAway,
-      resultNote: resultSummary,
-      resultSummary,
-      scorecard: finalScorecard,
-      performers: Array.from(performerMap.values()),
-      isLiveScored: false,
-      toss: { winner: tossWinner, choice: tossChoice },
-      maxOvers,
-    });
+    try {
+      await onSubmit({
+        finalScoreHome: fScoreHome,
+        finalScoreAway: fScoreAway,
+        resultNote: resultSummary,
+        resultSummary,
+        scorecard: finalScorecard,
+        performers: Array.from(performerMap.values()),
+        isLiveScored: false,
+        toss: { winner: tossWinner, choice: tossChoice },
+        maxOvers,
+      });
+    } catch (err: any) {
+      console.error("[ManualScoreModal] ❌ Submission failed:", err);
+      setSyncError(err.message || 'Sync Failed. Data is preserved locally.');
+      setIsSaving(false);
+    }
   };
 
   const inn1BatLabel = innings1BattingTeam === 'home' ? 'Indian Strikers' : opponentName;
@@ -425,9 +444,32 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
             <span>NO BALLS: <input title="No Balls" placeholder="0" type="number" className="compact-input opacity-60" value={autoNoBalls(activeInnings)} disabled /></span>
             <span className="ml-auto text-sky-400 whitespace-nowrap">TOTAL: {liveTotal(activeInnings)}</span>
           </div>
+          {syncError && (
+            <div className="mx-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-400 text-xs font-bold animate-in slide-in-from-top-2">
+              <Zap size={14} className="shrink-0" />
+              <span>{syncError}</span>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold">Cancel</button>
-            <button type="submit" className="flex-[2] bg-blue-700 text-white py-3 rounded-xl font-black shadow-lg">SYNC SCORECARD</button>
+            <button type="button" onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold hover:bg-white/10 transition-colors">Cancel</button>
+            <button 
+              type="submit" 
+              disabled={isSaving}
+              className={`flex-[2] py-3 rounded-xl font-black shadow-lg transition-all flex items-center justify-center gap-2 ${isSaving ? 'bg-blue-800 cursor-not-allowed opacity-80' : 'bg-blue-700 hover:bg-blue-600 active:scale-[0.98]'}`}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  <span>SYNCING...</span>
+                </>
+              ) : (
+                <>
+                  <Save size={18} />
+                  <span>SYNC SCORECARD</span>
+                </>
+              )}
+            </button>
           </div>
         </form>
       </div>

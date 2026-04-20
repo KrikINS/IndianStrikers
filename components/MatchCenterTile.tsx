@@ -165,7 +165,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         }
                         {!isGraphic && (
                             <button
-                                onClick={() => onSelectPlayingXI(match.id, 'home')}
+                                onClick={(e) => { e.stopPropagation(); onSelectPlayingXI(match.id, 'home'); }}
                                 className={`xi-overlay-btn ${match.homeTeamXI?.length ? 'bg-emerald-500 border-white ring-4 ring-emerald-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
                                 title="Playing XI"
                                 data-html2canvas-ignore="true"
@@ -199,7 +199,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         }
                         {!isGraphic && (
                             <button
-                                onClick={() => onSelectPlayingXI(match.id, 'opponent')}
+                                onClick={(e) => { e.stopPropagation(); onSelectPlayingXI(match.id, 'opponent'); }}
                                 className={`xi-overlay-btn ${match.opponentTeamXI?.length ? 'bg-emerald-500 border-white ring-4 ring-emerald-500/20' : 'bg-rose-500 border-white hover:bg-rose-600'}`}
                                 title="Playing XI"
                                 data-html2canvas-ignore="true"
@@ -274,25 +274,25 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     {!isGraphic && isAdmin && (
                         <div className="flex gap-3">
                             <button 
-                                onClick={() => onSelectPlayingXI(match.id, 'view')} 
+                                onClick={(e) => { e.stopPropagation(); onSelectPlayingXI(match.id, 'view'); }} 
                                 className="hover:text-blue-500 transition-colors text-slate-400" 
                                 title="Share Squad Graphic"
                             >
                                 <Share2 size={16} />
                             </button>
                              <button 
-                                onClick={match.isLocked ? undefined : () => onEditMatch(match)} 
-                                className={`transition-colors ${match.isLocked ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-blue-600'}`} 
-                                title={match.isLocked ? "Match is Locked" : "Edit Match"}
-                                disabled={match.isLocked}
+                                onClick={(match.isLocked || (match as any).is_locked) ? undefined : (e) => { e.stopPropagation(); onEditMatch(match); }} 
+                                className={`transition-colors ${(match.isLocked || (match as any).is_locked) ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-blue-600'}`} 
+                                title={(match.isLocked || (match as any).is_locked) ? "Match is Locked" : "Edit Match"}
+                                disabled={!!(match.isLocked || (match as any).is_locked)}
                              >
                                 <Edit2 size={14} />
                              </button>
                              <button 
-                                onClick={match.isLocked ? undefined : () => window.confirm('Delete?') && onDeleteMatch(match.id)} 
-                                className={`transition-colors ${match.isLocked ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-red-600'}`} 
-                                title={match.isLocked ? "Match is Locked" : "Delete Match"}
-                                disabled={match.isLocked}
+                                onClick={(match.isLocked || (match as any).is_locked) ? undefined : (e) => { e.stopPropagation(); if (window.confirm('Delete?')) onDeleteMatch(match.id); }} 
+                                className={`transition-colors ${(match.isLocked || (match as any).is_locked) ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-red-600'}`} 
+                                title={(match.isLocked || (match as any).is_locked) ? "Match is Locked" : "Delete Match"}
+                                disabled={!!(match.isLocked || (match as any).is_locked)}
                              >
                                 <Trash2 size={14} />
                              </button>

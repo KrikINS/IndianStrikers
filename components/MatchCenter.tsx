@@ -6,6 +6,7 @@ import { useMatchCenter } from '../store/matchStore';
 import MatchCenterTile from './MatchCenterTile';
 import { UniversalScorecard } from './UniversalScorecard';
 import { PlayingXIModal } from './PlayingXIModal';
+import { LineupGraphic } from './LineupGraphic';
 import EditMatchModal from './EditMatchModal';
 import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
@@ -84,9 +85,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             const match = matches.find(m => m.id === matchId);
             if (!match) return;
 
-            // Optimistic update
-            await updateMatch(matchId, { isLocked: !currentStatus } as any);
-            console.log(`[Admin] Match ${matchId} ${!currentStatus ? 'locked' : 'unlocked'}.`);
+            // Use explicitly negated status to ensure toggle works even if database/UI are out of sync
+            const targetStatus = !currentStatus;
+            await updateMatch(matchId, { isLocked: targetStatus } as any);
+            console.log(`[Admin] Match ${matchId} ${targetStatus ? 'locked' : 'unlocked'}.`);
         } catch (err) {
             console.error("Failed to toggle lock:", err);
             alert("Failed to update lock status. Please check your connection.");
@@ -128,10 +130,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
         } catch (err: any) {
             console.error('[Sync] ❌ Finalize failed:', err);
-            alert('⚠️ Sync failed: ' + (err.message || 'Check console.'));
+            // Re-throw so the modal can handle it and stay open
+            throw err;
         }
 
-        setManualScoreConfig(null);
     };
 
     const handleSummaryUpdate = async (summary: any) => {
@@ -617,10 +619,11 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
           .match-meta-info {
              color: #94a3b8 !important;
              font-weight: 700;
-             padding-top: 11px;
-             font-size: 15px;
+             padding-top: 2px;
+             font-size: 11px;
              text-transform: uppercase;
-             letter-spacing: 0.1em;
+             letter-spacing: 0.05em;
+             opacity: 0.8;
           }
 
           /* ─── INTERACTIVE VS ─── */
@@ -930,7 +933,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                 <thead>
                                                     <tr>
                                                         <th>Date & Time</th>
-                                                        <th>Tournament</th>
                                                         <th>Fixture</th>
                                                         <th>Ground</th>
                                                         <th>Format</th>
@@ -943,20 +945,24 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                         const opp = opponents.find(o => o.id === m.opponentId);
                                                         return (
                                                             <tr key={m.id} onClick={() => setSelectedCardMatch(m)}>
-                                                                <td>
+                                                                 <td>
                                                                     <div className="date-stack">
                                                                         <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                                                                         <span className="time-sub">{new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                                                                     </div>
                                                                 </td>
-                                                                <td className="tournament-cell uppercase">{(m.tournament || "No Tournament").toUpperCase()}</td>
                                                                 <td>
-                                                                    <div className="team-cell">
-                                                                        <img src="/INS%20LOGO.PNG" alt="INS" className="team-avatar" />
-                                                                        <span>INDIAN STRIKERS</span>
-                                                                        <span className="vs-cell">VS</span>
-                                                                        {opp?.logoUrl ? <img src={opp.logoUrl} alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback text-slate-500">?</div>}
-                                                                        <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
+                                                                    <div className="flex flex-col gap-1 py-1">
+                                                                        <div className="team-cell">
+                                                                            <img src="/INS%20LOGO.PNG" alt="INS" className="team-avatar" />
+                                                                            <span>INDIAN STRIKERS</span>
+                                                                            <span className="vs-cell">VS</span>
+                                                                            {opp?.logoUrl ? <img src={opp.logoUrl} alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback text-slate-500">?</div>}
+                                                                            <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
+                                                                        </div>
+                                                                        <div className="match-meta-info pl-1.5 opacity-70">
+                                                                            {m.tournament || 'Exhibition Match'}
+                                                                        </div>
                                                                     </div>
                                                                 </td>
                                                                 <td className="text-slate-500 text-xs font-bold uppercase">{grounds.find(g => g.id === m.groundId)?.name || 'TBD'}</td>
@@ -967,11 +973,11 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                 </td>
                                                                 <td>
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className={`badge-type ${m.status === 'live' ? 'badge-status-live' : m.status === 'completed' ? 'badge-status-done' : 'badge-status-up'}`}>
+                                                                        <span className={`badge-type ${m.status === 'live' ? 'badge-status-live' : m.status === 'completed' ? 'badge-status-done' : 'badge-status-completed' ? 'badge-status-done' : 'badge-status-up'}`}>
                                                                             {(m.status || "Unknown").toUpperCase()}
                                                                         </span>
-                                                                        {(m.isLocked || (m as any).is_locked) && (
-                                                                            <span title="This scorecard is locked">
+                                                                        {m.isLocked && (
+                                                                            <span title="This scorecard is locked" onClick={(e) => e.stopPropagation()}>
                                                                                 <LockIcon size={12} className="text-emerald-500" />
                                                                             </span>
                                                                         )}
@@ -981,14 +987,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                     <td onClick={(e) => e.stopPropagation()}>
                                                                         <div className="flex items-center gap-2">
                                                                             <button 
-                                                                                onClick={() => handleToggleLock(m.id, !!m.isLocked)} 
-                                                                                className={`p-1.5 transition-colors ${m.isLocked ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-500 hover:text-amber-500'}`} 
-                                                                                title={m.isLocked ? "Unlock Match (Now Internal)" : "Lock Match (Finalize Stats)"}
+                                                                                onClick={(e) => { e.stopPropagation(); handleToggleLock(m.id, !!(m.isLocked || (m as any).is_locked)); }} 
+                                                                                className={`p-1.5 transition-colors ${(m.isLocked || (m as any).is_locked) ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-500 hover:text-amber-500'}`} 
+                                                                                title={(m.isLocked || (m as any).is_locked) ? "Unlock Match (Now Internal)" : "Lock Match (Finalize Stats)"}
                                                                             >
-                                                                                {m.isLocked ? <LockIcon size={14} /> : <Unlock size={14} />}
+                                                                                {(m.isLocked || (m as any).is_locked) ? <LockIcon size={14} /> : <Unlock size={14} />}
                                                                             </button>
-                                                                            <button onClick={() => setEditingMatch(m)} className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors" title="Edit Metadata"><Plus size={14} /></button>
-                                                                            <button onClick={() => { if (window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Trash2 size={14} /></button>
+                                                                            <button onClick={(e) => { e.stopPropagation(); setEditingMatch(m); }} className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors" title="Edit Metadata"><Plus size={14} /></button>
+                                                                            <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Trash2 size={14} /></button>
                                                                         </div>
                                                                     </td>
                                                                 )}
@@ -1090,6 +1096,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                         homePlayers={players}
                         opponentTeams={opponents}
                         onSave={handleSaveXI}
+                        onShare={(id) => handleSelectPlayingXI(id, 'view')}
                         initialSelection={xiModalConfig.teamType === 'home' ? matches.find(m => m.id === xiModalConfig.matchId)?.homeTeamXI || [] : matches.find(m => m.id === xiModalConfig.matchId)?.opponentTeamXI || []}
                         opponentId={xiModalConfig.opponentId}
                         onQuickAddPlayer={handleQuickAddOpponentPlayer}
@@ -1199,11 +1206,11 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
                 {xiModalConfig.matchId && (
                    <div id="team-sheet-graphic" style={{ width: '1080px', height: '1920px' }}>
-                       <UniversalScorecard 
+                       <LineupGraphic 
                          match={matches.find(m => m.id === xiModalConfig.matchId)!}
                          opponents={opponents}
                          players={players}
-                         onClose={() => {}}
+                         grounds={grounds}
                        />
                    </div>
                 )}
