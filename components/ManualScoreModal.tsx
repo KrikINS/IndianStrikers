@@ -363,7 +363,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
             <div className="flex-[0_1_40%] w-full rounded-xl bg-white/[0.01] border border-white/5">
               <div className="px-4 py-2 border-b border-white/5 font-black text-[10px] uppercase tracking-wider text-white">Bowling: {currentBowlLabel}</div>
               <table className="compact-score-table">
-                <thead><tr><th className="text-left pl-4">Bowler</th><th>O</th><th>R</th><th>W</th></tr></thead>
+                <thead><tr><th className="text-left pl-4">Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>WD</th><th>NB</th></tr></thead>
                 <tbody>
                   {bowlingRows[activeInnings].map((row, idx) => (
                     <tr key={idx}>
@@ -372,12 +372,16 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                         {bowlingSquad.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
                       </select></td>
                       <td><input title="Overs" placeholder="0.0" type="number" step="0.1" className="compact-input" value={row.overs} onChange={e => updateBowlingRow(activeInnings, idx, 'overs', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="Maidens" placeholder="0" type="number" className="compact-input" value={row.maidens} onChange={e => updateBowlingRow(activeInnings, idx, 'maidens', e.target.valueAsNumber || 0)} /></td>
                       <td><input title="Runs" placeholder="0" type="number" className="compact-input" value={row.runs} onChange={e => updateBowlingRow(activeInnings, idx, 'runs', e.target.valueAsNumber || 0)} /></td>
                       <td><input title="Wickets" placeholder="0" type="number" className="compact-input" value={row.wickets} onChange={e => updateBowlingRow(activeInnings, idx, 'wickets', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="Wides" placeholder="0" type="number" className="compact-input" value={row.wd} onChange={e => updateBowlingRow(activeInnings, idx, 'wd', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="No Balls" placeholder="0" type="number" className="compact-input" value={row.nb} onChange={e => updateBowlingRow(activeInnings, idx, 'nb', e.target.valueAsNumber || 0)} /></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+>
               <div className="p-3 border-t border-white/5">
                 <button type="button" onClick={() => addBowlingRow(activeInnings)} className="text-[10px] text-sky-400 font-black">+ ADD BOWLER</button>
               </div>

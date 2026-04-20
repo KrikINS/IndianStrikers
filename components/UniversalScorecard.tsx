@@ -202,6 +202,8 @@ interface BowlingStat {
   maidens: number;
   runs: number;
   wickets: number;
+  wides?: number;
+  no_balls?: number;
   index?: number;
 }
 
@@ -291,6 +293,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           maidens: stat.maidens || 0,
           runs: stat.runs || 0,
           wickets: stat.wickets || 0,
+          wides: stat.wides || 0,
+          no_balls: stat.no_balls || 0,
           index: stat.index
         }));
       } else if (Array.isArray(inn.bowling)) {
@@ -301,6 +305,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           maidens: b.maidens || 0,
           runs: b.runsConceded || b.runs,
           wickets: b.wickets,
+          wides: b.wides || 0,
+          no_balls: b.no_balls || 0,
           index: b.index
         }));
       }
@@ -534,6 +540,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                         <Th style={{ textAlign: 'center' }}>M</Th>
                         <Th style={{ textAlign: 'center' }}>R</Th>
                         <Th style={{ textAlign: 'center' }}>W</Th>
+                        <Th style={{ textAlign: 'center' }}>WD</Th>
+                        <Th style={{ textAlign: 'center' }}>NB</Th>
                         <Th style={{ textAlign: 'right' }}>Econ</Th>
                       </tr>
                     </thead>
@@ -545,6 +553,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.maidens}</Td>
                           <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
                           <Td style={{ textAlign: 'center', color: '#38BDF8' }}>{stat.wickets}</Td>
+                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.wides || 0}</Td>
+                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.no_balls || 0}</Td>
                           <Td style={{ textAlign: 'right', opacity: 0.8 }}>
                             {stat.overs > 0 ? (stat.runs / stat.overs).toFixed(2) : '0.00'}
                           </Td>
