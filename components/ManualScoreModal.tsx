@@ -49,9 +49,15 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     history: []
   };
 
-  const [scorecard, setScorecard] = useState<FullScorecardData>({
-    innings1: { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } },
-    innings2: { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } },
+  const [scorecard, setScorecard] = useState<FullScorecardData>(() => {
+    const base = match.scorecard || {
+      innings1: { ...initialInnings },
+      innings2: { ...initialInnings },
+    };
+    // Ensure extras exists for both innings
+    if (base.innings1 && !base.innings1.extras) base.innings1.extras = { wide: 0, no_ball: 0, legByes: 0, byes: 0 };
+    if (base.innings2 && !base.innings2.extras) base.innings2.extras = { wide: 0, no_ball: 0, legByes: 0, byes: 0 };
+    return base;
   });
 
   const [battingRowIds, setBattingRowIds] = useState<Record<1 | 2, string[]>>({
@@ -398,8 +404,8 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
             </div>
           </div>
           <div className="p-3 bg-white/[0.05] rounded-xl border border-white/5 flex gap-4 text-[11px] font-black text-slate-400 items-center overflow-x-auto">
-            <span>BYES: <input title="Byes" placeholder="0" type="number" className="compact-input" value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras.byes} onChange={e => updateExtras(activeInnings as 1 | 2, 'byes', e.target.valueAsNumber || 0)} /></span>
-            <span>LEGBYES: <input title="Leg Byes" placeholder="0" type="number" className="compact-input" value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras.legByes} onChange={e => updateExtras(activeInnings as 1 | 2, 'legByes', e.target.valueAsNumber || 0)} /></span>
+            <span>BYES: <input title="Byes" placeholder="0" type="number" className="compact-input" value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras?.byes || 0} onChange={e => updateExtras(activeInnings as 1 | 2, 'byes', e.target.valueAsNumber || 0)} /></span>
+            <span>LEGBYES: <input title="Leg Byes" placeholder="0" type="number" className="compact-input" value={scorecard[activeInnings === 1 ? 'innings1' : 'innings2'].extras?.legByes || 0} onChange={e => updateExtras(activeInnings as 1 | 2, 'legByes', e.target.valueAsNumber || 0)} /></span>
             <span>WIDES: <input title="Wides" placeholder="0" type="number" className="compact-input opacity-60" value={autoWides(activeInnings)} disabled /></span>
             <span>NO BALLS: <input title="No Balls" placeholder="0" type="number" className="compact-input opacity-60" value={autoNoBalls(activeInnings)} disabled /></span>
             <span className="ml-auto text-sky-400 whitespace-nowrap">TOTAL: {liveTotal(activeInnings)}</span>

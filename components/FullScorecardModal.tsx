@@ -58,17 +58,20 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
   // 2. Scorecard State
   const [scorecard, setScorecard] = useState<FullScorecardData>(() => {
     const base = match.scorecard || {
-      innings1: { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } },
-      innings2: { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } },
+      innings1: { ...initialInnings },
+      innings2: { ...initialInnings },
     };
 
-    if (!base.innings1 || !base.innings1.batting) base.innings1 = { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } };
-    if (!base.innings2 || !base.innings2.batting) base.innings2 = { ...initialInnings, extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 } };
-
-    if (!base.innings1.batting || !base.innings1.batting.length) base.innings1.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '', is_hero: false }));
-    if (!base.innings1.bowling || !base.innings1.bowling.length) base.innings1.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0, is_hero: false }));
-    if (!base.innings2.batting || !base.innings2.batting.length) base.innings2.batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '', is_hero: false }));
-    if (!base.innings2.bowling || !base.innings2.bowling.length) base.innings2.bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0, is_hero: false }));
+    // Ensure structures exist for both innings
+    ['innings1', 'innings2'].forEach((innKey) => {
+      const key = innKey as keyof FullScorecardData;
+      if (!base[key]) {
+        base[key] = { ...initialInnings };
+      }
+      if (!base[key].batting) base[key].batting = [...Array(11)].map(() => ({ playerId: '', name: '', runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', fielderId: '', bowlerId: '', is_hero: false }));
+      if (!base[key].bowling) base[key].bowling = [...Array(6)].map(() => ({ playerId: '', name: '', overs: 0, maidens: 0, runsConceded: 0, wickets: 0, wides: 0, no_balls: 0, dotBalls: 0, is_hero: false }));
+      if (!base[key].extras) base[key].extras = { wide: 0, no_ball: 0, legByes: 0, byes: 0 };
+    });
 
     return base;
   });
@@ -690,7 +693,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                   title="Wides"
                   type="number" 
                   className="extra-input" 
-                  value={inningsData.extras.wide ?? autoWides}
+                  value={inningsData.extras?.wide ?? autoWides}
                   onChange={(e) => updateExtras('wide', parseInt(e.target.value) || 0)} 
                 />
               </div>
@@ -701,7 +704,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                   title="No Balls"
                   type="number" 
                   className="extra-input" 
-                  value={inningsData.extras.no_ball ?? autoNBs}
+                  value={inningsData.extras?.no_ball ?? autoNBs}
                   onChange={(e) => updateExtras('no_ball', parseInt(e.target.value) || 0)} 
                 />
               </div>
@@ -712,7 +715,7 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                   title="Byes"
                   type="number" 
                   className="extra-input" 
-                  value={inningsData.extras.byes ?? 0}
+                  value={inningsData.extras?.byes ?? 0}
                   onChange={(e) => updateExtras('byes', parseInt(e.target.value) || 0)} 
                 />
               </div>
@@ -723,13 +726,13 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
                   title="Leg Byes"
                   type="number" 
                   className="extra-input" 
-                  value={inningsData.extras.legByes ?? 0}
+                  value={inningsData.extras?.legByes ?? 0}
                   onChange={(e) => updateExtras('legByes', parseInt(e.target.value) || 0)} 
                 />
               </div>
 
               <span className="total-extras">
-                Total: {(Number(autoWides || 0) + Number(autoNBs || 0) + Number(inningsData.extras.legByes || 0) + Number(inningsData.extras.byes || 0))}
+                Total: {(Number(autoWides || 0) + Number(autoNBs || 0) + Number(inningsData.extras?.legByes || 0) + Number(inningsData.extras?.byes || 0))}
               </span>
             </div>
             
