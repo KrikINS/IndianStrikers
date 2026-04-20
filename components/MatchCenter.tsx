@@ -1114,11 +1114,20 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 />
             )}
 
-            {manualScoreConfig && (
+            {manualScoreConfig && !manualScoreConfig.showPlayers && (
+                <MatchSummaryModal
+                    onClose={() => setManualScoreConfig(null)}
+                    match={matches.find(m => m.id === manualScoreConfig.matchId)!}
+                    opponentName={opponents.find(o => o.id === (matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId))?.name || 'Opponent'}
+                    onSave={handleSummaryUpdate}
+                />
+            )}
+
+            {manualScoreConfig && manualScoreConfig.showPlayers && (
                 <ManualScoreModal
                     onClose={() => setManualScoreConfig(null)}
                     match={matches.find(m => m.id === manualScoreConfig.matchId)!}
-                    onSubmit={handleSummaryUpdate}
+                    onSubmit={(data) => handleManualScoreSubmit(data)}
                     opponent={opponents.find(o => o.id === (matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId))}
                     players={players}
                 />

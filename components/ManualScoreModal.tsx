@@ -22,10 +22,11 @@ const RESULT_OPTIONS = [
 export default function ManualScoreModal({ match, opponent, players = [], onClose, onSubmit }: ManualScoreModalProps) {
   const opponentName = opponent?.name || 'Opponent';
 
-  const [tossWinner, setTossWinner] = useState<string>('Indian Strikers');
-  const [tossChoice, setTossChoice] = useState<'Bat' | 'Field'>('Bat');
-  const [maxOvers, setMaxOvers] = useState<number>(match.matchFormat === 'One Day' ? 50 : 20);
-  const [resultType, setResultType] = useState('');
+  const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
+  const [tossWinner, setTossWinner] = useState<string>(match.toss?.winner || 'Indian Strikers');
+  const [tossChoice, setTossChoice] = useState<'Bat' | 'Field'>(match.toss?.choice as any || 'Bat');
+  const [maxOvers, setMaxOvers] = useState<number>(match.maxOvers || (match.matchFormat === 'One Day' ? 50 : 20));
+  const [resultType, setResultType] = useState(match.resultType || '');
 
   const innings1BattingTeam: 'home' | 'away' = useMemo(() => {
     const homeWon = tossWinner === 'Indian Strikers';
@@ -44,15 +45,29 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
   const initialInnings: InningsData = {
     batting: [],
     bowling: [],
-    extras: { wide: 0, no_ball: 0, legByes: 0, byes: 1 },
+    extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 },
     totalRuns: 0, totalWickets: 0, totalOvers: 0,
     history: []
   };
 
   const [scorecard, setScorecard] = useState<FullScorecardData>(() => {
+    // Determine if we bat first or second to align summary totals
+    const homeInningsKey = innings1BattingTeam === 'home' ? 'innings1' : 'innings2';
+    const awayInningsKey = innings1BattingTeam === 'away' ? 'innings1' : 'innings2';
+
     const base = match.scorecard || {
-      innings1: { ...initialInnings },
-      innings2: { ...initialInnings },
+      innings1: { 
+        ...initialInnings,
+        totalRuns: (innings1BattingTeam === 'home' ? match.finalScoreHome?.runs : match.finalScoreAway?.runs) || 0,
+        totalWickets: (innings1BattingTeam === 'home' ? match.finalScoreHome?.wickets : match.finalScoreAway?.wickets) || 0,
+        totalOvers: (innings1BattingTeam === 'home' ? match.finalScoreHome?.overs : match.finalScoreAway?.overs) || 0
+      },
+      innings2: { 
+        ...initialInnings,
+        totalRuns: (innings1BattingTeam === 'home' ? match.finalScoreAway?.runs : match.finalScoreHome?.runs) || 0,
+        totalWickets: (innings1BattingTeam === 'home' ? match.finalScoreAway?.wickets : match.finalScoreHome?.wickets) || 0,
+        totalOvers: (innings1BattingTeam === 'home' ? match.finalScoreAway?.overs : match.finalScoreHome?.overs) || 0
+      },
     };
     // Ensure extras exists for both innings
     if (base.innings1 && !base.innings1.extras) base.innings1.extras = { wide: 0, no_ball: 0, legByes: 0, byes: 0 };
