@@ -111,19 +111,13 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             ) : (
                                 <div className="flex items-center gap-2.5">
                                     <div 
-                                        onClick={isAdmin && onToggleLock ? () => onToggleLock(match.id, !!match.isLocked) : undefined}
-                                        className={`px-3 py-1.5 rounded-xl text-[14px] font-black uppercase tracking-wider flex items-center gap-2 transition-all`}
+                                        className={`px-3 py-1.5 rounded-xl text-[14px] font-black uppercase tracking-wider flex items-center gap-2 shadow-sm`}
                                         style={{ 
-                                            backgroundColor: match.isLocked ? 'rgba(16, 185, 129, 0.2)' : '#1e3a8a',
-                                            color: match.isLocked ? '#34d399' : '#ffffff',
-                                            border: match.isLocked ? '1px solid rgba(16, 185, 129, 0.3)' : 'none',
-                                            cursor: isAdmin ? 'pointer' : 'default',
-                                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                            backgroundColor: '#1e3a8a',
+                                            color: '#ffffff'
                                         }}
-                                        title={isAdmin ? (match.isLocked ? "Click to Unlock Match" : "Click to Lock Match") : ""}
                                     >
-                                        {match.isLocked ? <LockIcon size={14} /> : <Unlock size={14} />}
-                                        {match.isLocked ? 'LOCKED' : 'Completed'}
+                                        Completed
                                     </div>
                                     {(match as any).is_local_only_override && (
                                         <div className="bg-amber-500 text-black px-3 py-1.5 rounded-xl text-[14px] font-black shadow-lg shadow-amber-500/10 uppercase tracking-wider flex items-center gap-1.5">

@@ -11,7 +11,7 @@ import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import FullScorecardModal from './FullScorecardModal';
 import ManualScoreModal from './ManualScoreModal';
-import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Download } from 'lucide-react';
+import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Unlock, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
@@ -980,6 +980,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                 {userRole === 'admin' && (
                                                                     <td onClick={(e) => e.stopPropagation()}>
                                                                         <div className="flex items-center gap-2">
+                                                                            <button 
+                                                                                onClick={() => handleToggleLock(m.id, !!m.isLocked)} 
+                                                                                className={`p-1.5 transition-colors ${m.isLocked ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-500 hover:text-amber-500'}`} 
+                                                                                title={m.isLocked ? "Unlock Match (Now Internal)" : "Lock Match (Finalize Stats)"}
+                                                                            >
+                                                                                {m.isLocked ? <LockIcon size={14} /> : <Unlock size={14} />}
+                                                                            </button>
                                                                             <button onClick={() => setEditingMatch(m)} className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors" title="Edit Metadata"><Plus size={14} /></button>
                                                                             <button onClick={() => { if (window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Trash2 size={14} /></button>
                                                                         </div>
