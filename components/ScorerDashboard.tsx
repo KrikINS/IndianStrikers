@@ -1161,13 +1161,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     }
   };
 
-  const resolveGroundName = (gid: string, gname: string) => {
+  const resolveGroundName = (gid: string | undefined, gname: string | undefined) => {
+    if (!gid) return gname || 'RCA GROUND';
     const fromMaster = (grounds || []).find(g => String(g.id) === String(gid))?.name;
     return fromMaster || METADATA_LAW.grounds[gid] || gname || 'RCA GROUND';
   };
 
-  const resolveTournament = (tid: string, tname: string) => {
-    const fromMaster = (tournaments || []).find(t => String(t.id) === String(tid))?.name;
+  const resolveTournament = (tid: string | undefined, tname: string | undefined) => {
+    if (!tid && !tname) return METADATA_LAW.tournaments['default'];
+    const fromMaster = (tournaments || []).find(t => tid && String(t.id) === String(tid))?.name;
     if (fromMaster && fromMaster !== 'RCA T20 TOURNAMENT') return fromMaster;
     if (tname === 'RCA T20 TOURNAMENT') return METADATA_LAW.tournaments['RCA T20 TOURNAMENT'];
     return tname || METADATA_LAW.tournaments['default'];
@@ -4409,12 +4411,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               finalScoreHome: {
                 runs: store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalRuns : store.innings2?.totalRuns || 0,
                 wickets: store.innings1?.battingTeamId === 'HOME' ? store.innings1.wickets : store.innings2?.wickets || 0,
-                overs: store.getOvers(store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0)
+                overs: Number(store.getOvers(store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0))
               },
               finalScoreAway: {
                 runs: store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalRuns : store.innings2?.totalRuns || 0,
                 wickets: store.innings1?.battingTeamId === 'AWAY' ? store.innings1.wickets : store.innings2?.wickets || 0,
-                overs: store.getOvers(store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0)
+                overs: Number(store.getOvers(store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0))
               }
             }}
             opponentName={matchMeta.opponentName || 'Opponent'}
