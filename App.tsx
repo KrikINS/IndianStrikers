@@ -9,8 +9,20 @@ import FieldingMap from './components/FieldingMap';
 import OpponentTeams from './components/OpponentTeams';
 import Memories from './components/Memories';
 import SplashScreen from './components/SplashScreen';
-const ScorerDashboard = lazy(() => import('./components/ScorerDashboard'));
-const MatchCenter = lazy(() => import('./components/MatchCenter'));
+const ScorerDashboard = lazy(() => 
+  import('./components/ScorerDashboard').catch(err => {
+    console.error("[ChunkLoad] Failed to fetch ScorerDashboard, refreshing...", err);
+    window.location.reload();
+    return { default: () => null };
+  })
+);
+const MatchCenter = lazy(() => 
+  import('./components/MatchCenter').catch(err => {
+    console.error("[ChunkLoad] Failed to fetch MatchCenter, refreshing...", err);
+    window.location.reload();
+    return { default: () => null };
+  })
+);
 
 // Themed Loader for Suspense
 const StrikersLoader = () => (
