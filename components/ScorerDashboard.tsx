@@ -1176,10 +1176,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const isActuallyLive = meta.status === 'live';
       console.log(`[Scorer] Sync Check: Cloud Total Balls: ${(meta.live_data?.innings1?.totalBalls || 0) + (meta.live_data?.innings2?.totalBalls || 0)} | Local Total Balls: ${(store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)}`);
 
-      // PERMANENT V2 RESOLUTION: Resolve names from master lists during initialization
+      // PERMANENT V4 MIRROR RESOLUTION: Replicate the reliable MatchCard logic
       const groundMeta = (grounds || []).find(g => g.id === meta.groundId);
       const opponentMeta = (allOpponents || []).find(o => o.id === meta.opponentId || o.name === meta.opponentName);
+      const tournamentMeta = (tournaments || []).find(t => t.id === meta.tournamentId || t.name === meta.tournament);
       
+      const resolvedTournament = tournamentMeta?.name || meta.tournament || 'Live Match';
       const resolvedGroundName = groundMeta?.name || meta.venue || 'Local Ground';
       const resolvedOpponentName = opponentMeta?.name || meta.opponentName || 'OPPONENT';
       const resolvedAwayLogo = meta.opponentLogo || opponentMeta?.logoUrl || '';
@@ -1187,7 +1189,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       store.initializeMatch({
         matchId: meta.id,
         matchType: meta.matchFormat || 'T20',
-        tournament: meta.tournament || 'Live Match',
+        tournament: resolvedTournament,
         ground: resolvedGroundName,
         opponentName: resolvedOpponentName,
         maxOvers: meta.maxOvers || 20,
@@ -1774,16 +1776,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         <SetupCard>
           {setupStep === 'preview' ? (
             <>
-              <MatchTitle>{store.tournament || matchMeta?.tournament || 'LIVE MATCH'}</MatchTitle>
               {(() => {
-                  // V3 HARDENED IDENTITY RESOLUTION
-                  const KNOWN_GROUNDS: Record<string, string> = {
-                    'a2903265-670b-4886-8699-661b0546e46c': 'RCA Ground'
-                  };
+                  // V4 MIRROR RESOLUTION: Match Card Equality logic
+                  // Resolve ID to Name for Tournament
+                  const tournamentMeta = (tournaments || []).find(t => t.id === matchMeta?.tournamentId || t.name === matchMeta?.tournament);
+                  const displayTournament = tournamentMeta?.name || store.tournament || matchMeta?.tournament || 'LIVE MATCH';
 
-                  const currentGroundId = matchMeta?.groundId || store.ground;
-                  const groundMeta = (grounds || []).find(g => (g.id === currentGroundId));
-                  const displayGround = groundMeta?.name || KNOWN_GROUNDS[currentGroundId as string] || (store.ground?.length > 30 ? 'Resolving Ground...' : store.ground) || matchMeta?.venue || 'Local Ground';
+                  // Resolve ID to Name for Ground
+                  const groundMeta = (grounds || []).find(g => (g.id === matchMeta?.groundId || g.id === store.ground));
+                  const displayGround = groundMeta?.name || (store.ground?.length > 30 ? 'Resolving Ground...' : store.ground) || matchMeta?.venue || 'Local Ground';
                   
                   // Resolve Opponent Details
                   const opponentMeta = (allOpponents || []).find(o => (o.id === matchMeta?.opponentId || o.name === store.opponentName));
@@ -1792,6 +1793,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
                   return (
                     <>
+                      <MatchTitle>{displayTournament}</MatchTitle>
                       <GroundText>
                         <MapPin size={14} /> {String(displayGround).toUpperCase()}
                       </GroundText>
