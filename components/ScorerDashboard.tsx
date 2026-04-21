@@ -4211,7 +4211,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
         {showMatchSummaryModal && matchMeta && (
           <MatchSummaryModal
-            match={matchMeta}
+            match={{
+              ...matchMeta,
+              finalScoreHome: {
+                runs: store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalRuns : store.innings2?.totalRuns || 0,
+                wickets: store.innings1?.battingTeamId === 'HOME' ? store.innings1.wickets : store.innings2?.wickets || 0,
+                overs: store.getOvers(store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0)
+              },
+              finalScoreAway: {
+                runs: store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalRuns : store.innings2?.totalRuns || 0,
+                wickets: store.innings1?.battingTeamId === 'AWAY' ? store.innings1.wickets : store.innings2?.wickets || 0,
+                overs: store.getOvers(store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0)
+              }
+            }}
             opponentName={matchMeta.opponentName || 'Opponent'}
             onClose={() => setShowMatchSummaryModal(false)}
             onSave={async (summary) => {
