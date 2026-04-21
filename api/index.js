@@ -40,7 +40,6 @@ app.use((req, _res, next) => {
 app.use(express.json({ limit: '10mb' }));
 
 console.log(`[Database Config] URL: ${process.env.DATABASE_URL ? 'Found' : 'MISSING'}`);
-// Supabase is now replaced by 'db' utility using PostgreSQL pool
 cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET });
 const upload = multer({ storage: multer.memoryStorage() });
 

@@ -10,7 +10,7 @@ const pool = new Pool({
   idleTimeoutMillis: 30000
 });
 
-// Helper for Supabase-like response
+// Helper for unified response format
 async function query(text, params) {
   const start = Date.now();
   try {

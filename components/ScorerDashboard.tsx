@@ -31,6 +31,7 @@ import {
   CloudOff
 } from 'lucide-react';
 import { useStore } from '../store/StoreProvider';
+import { useCricketScorer } from './matchStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { UniversalScorecard } from './UniversalScorecard';
 import _ from 'lodash';
@@ -1360,10 +1361,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Trigger Review Modal when innings condition is met
   useEffect(() => {
-    if (isBattingFinishing && !showInningsReview && !store.isFinished && !isFinalizingInnings) {
+    if (isBattingFinishing && !showInningsReview && !store.isFinished && !isFinalizingInnings && setupStep === null) {
       setShowInningsReview(true);
     }
-  }, [isBattingFinishing, store.isFinished, isFinalizingInnings]);
+  }, [isBattingFinishing, store.isFinished, isFinalizingInnings, setupStep, showInningsReview]);
 
   // Trigger Bowler Selection at start of innings or if bowler missing
   React.useEffect(() => {
@@ -1644,11 +1645,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
       // Persist the toss outcome and match status to the metadata store
       if (activeMatchId) {
+        // Fetch fresh state to ensure new innings is included
+        const freshStore = useCricketScorer.getState();
         updateMatch(activeMatchId, {
           isHomeBattingFirst: startBatTeamId === 'HOME',
           status: 'live',
           homeTeamXI: homeXI,
-          opponentTeamXI: awayXI
+          opponentTeamXI: awayXI,
+          live_data: {
+            ...freshStore,
+            strikerId: selStriker!,
+            nonStrikerId: selNonStriker!,
+            currentBowlerId: selBowler!,
+            currentInnings: freshStore.innings1 ? 2 : 1
+          } as any
         });
       }
 
