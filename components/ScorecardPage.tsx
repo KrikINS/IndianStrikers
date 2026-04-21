@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { OpponentTeam } from '../types';
 import { useMatchCenter } from '../store/matchStore';
-import { useMasterData } from './masterDataStore';
+import { useMasterData } from '../store/tournamentStore';
 import { usePlayerStore } from '../store/playerStore';
 import { UniversalScorecard } from './UniversalScorecard';
 import { ArrowLeft, Share2, Download } from 'lucide-react';

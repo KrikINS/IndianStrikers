@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMasterData } from './masterDataStore';
+import { useMasterData } from '../store/tournamentStore';
 import { useMatchCenter } from '../store/matchStore';
 import { OpponentTeam, ScheduledMatch, MatchStatus, MatchStage } from '../types';
 import { X, Calendar, MapPin, Trophy, Shield, Save, Zap, Loader2 } from 'lucide-react';

@@ -1,24 +1,21 @@
 import * as React from 'react';
 import { createContext, useContext, useRef, useState, useEffect } from 'react';
-import { useMatchCenter } from './matchStore';
+import { useMatchCenter, useCricketScorer } from './matchStore';
 import { usePlayerStore } from './playerStore';
 import { useOpponentStore } from './opponentStore';
-import { useMasterData } from '../components/masterDataStore';
-import { useCricketScorer } from '../components/matchStore';
+import { useTournamentStore } from './tournamentStore';
 
 // Define the shape of our unified store state
-import { MatchStore } from './matchStore';
+import { UnifiedMatchStore } from './matchStore';
 import { PlayerStore } from './playerStore';
 import { OpponentStore } from './opponentStore';
-import { MasterDataStore } from '../components/masterDataStore';
-import { ScorerStore } from '../components/matchStore';
+import { TournamentStore } from './tournamentStore';
 
 interface RootStore {
-  matchCenter: MatchStore;
+  matchCenter: UnifiedMatchStore;
   players: PlayerStore;
   opponents: OpponentStore;
-  masterData: MasterDataStore;
-  scorer: ScorerStore;
+  tournaments: TournamentStore;
   isHydrated: boolean;
 }
 
@@ -29,8 +26,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const matchCenter = useMatchCenter();
   const players = usePlayerStore();
   const opponents = useOpponentStore();
-  const masterData = useMasterData();
-  const scorer = useCricketScorer();
+  const tournaments = useTournamentStore();
 
   // Track hydration status for persisted stores
   const [isHydrated, setIsHydrated] = useState(false);
@@ -39,10 +35,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Check hydration status of persisted stores
     const checkHydration = () => {
       const hydrated = 
-        usePlayerStore.persist.hasHydrated() && 
-        useOpponentStore.persist.hasHydrated() && 
-        useMatchCenter.persist.hasHydrated() &&
-        useCricketScorer.persist.hasHydrated();
+        usePlayerStore.persist?.hasHydrated() && 
+        useOpponentStore.persist?.hasHydrated() && 
+        useMatchCenter.persist?.hasHydrated() &&
+        useTournamentStore.persist?.hasHydrated();
 
       if (hydrated) {
         setIsHydrated(true);
@@ -59,8 +55,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     matchCenter,
     players,
     opponents,
-    masterData,
-    scorer,
+    tournaments,
     isHydrated
   };
 

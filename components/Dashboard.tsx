@@ -5,7 +5,7 @@ import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Dow
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
-import { useMasterData } from './masterDataStore';
+import { useMasterData } from '../store/tournamentStore';
 import { usePlayerStore } from '../store/playerStore';
 import './Dashboard.css';
 

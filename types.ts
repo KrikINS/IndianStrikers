@@ -96,19 +96,23 @@ export interface InningsBowlingEntry {
 
 export interface BallRecord {
   runs: number;
+  extraRuns: number;
   type: 'legal' | 'wide' | 'no-ball' | 'bye' | 'leg-bye' | 'penalty';
   isWicket: boolean;
   wicketType?: string;
-  bowlerId: string;
-  strikerId: string;
-  nonStrikerId: string;
+  bowlerId?: string;
+  strikerId?: string;
+  nonStrikerId?: string;
   overNumber: number;
-  ballNumber: number; // 1-6 for legal balls
+  ballNumber: number; // 1-6 for the over display
+  ballIndex: number;  // 1-indexed cumulative balls in innings
   isLegal: boolean;
   timestamp: string;
   wagon_wheel_zone?: string;
   commentary?: string;
 }
+
+export type Ball = BallRecord;
 
 export interface InningsExtras {
   wide: number;

@@ -38,7 +38,7 @@ const StrikersLoader = () => (
 );
 import ControlPanel from './components/ControlPanel';
 import { useMatchCenter } from './store/matchStore';
-import { useMasterData } from './components/masterDataStore';
+import { useTournamentStore } from './store/tournamentStore';
 import { usePlayerStore } from './store/playerStore';
 import { useOpponentStore } from './store/opponentStore';
 import { StoreProvider, useStore } from './store/StoreProvider';
@@ -340,17 +340,17 @@ const AppInternal: React.FC = () => {
             await Promise.allSettled([
                 store.players.fetchPlayers(),
                 store.opponents.fetchOpponents(),
-                store.masterData.syncMasterData(),
+                store.tournaments.syncMasterData(),
                 store.matchCenter.syncWithCloud(),
                 getTeamLogo().then(l => setTeamLogo(l || ''))
             ]);
 
             setIsOffline(false);
-            store.masterData.setOffline(false);
+            store.tournaments.setOffline(false);
         } catch (error) {
             console.error("Failed to load data:", error);
             setIsOffline(true);
-            store.masterData.setOffline(true);
+            store.tournaments.setOffline(true);
         }
     };
 
@@ -390,9 +390,9 @@ const AppInternal: React.FC = () => {
     const { opponents, addOpponent: storeAddOpponent, updateOpponent: storeUpdateOpponent, deleteOpponent: storeDeleteOpponent } = store.opponents;
     const resetZombieMatches = store.matchCenter.resetZombieMatches;
     const syncWithCloud = store.matchCenter.syncWithCloud;
-    const isOfflineStore = store.masterData.isOffline;
-    const setOfflineStore = store.masterData.setOffline;
-    const syncMasterData = store.masterData.syncMasterData;
+    const isOfflineStore = store.tournaments.isOffline;
+    const setOfflineStore = store.tournaments.setOffline;
+    const syncMasterData = store.tournaments.syncMasterData;
 
   const handleLoginComplete = (role: UserRole, user?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean }) => {
     setUserRole(role);

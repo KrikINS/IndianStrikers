@@ -16,9 +16,9 @@ import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
-import { useMasterData } from './masterDataStore';
+import { useMasterData } from '../store/tournamentStore';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
-import { useCricketScorer } from './matchStore';
+import { useCricketScorer } from '../store/matchStore';
 import { usePlayerStore } from '../store/playerStore';
 import PointsTable from './PointsTable';
 import TournamentsManager from './TournamentsManager';

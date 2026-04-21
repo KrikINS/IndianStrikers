@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScheduledMatch, MatchStatus, MatchStage, OpponentTeam } from '../types';
-import { useMasterData } from './masterDataStore';
+import { useMasterData } from '../store/tournamentStore';
 import { X, Save, AlertCircle, Shield } from 'lucide-react';
 
 interface EditMatchModalProps {

@@ -16,7 +16,7 @@ const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false
     return <div className="p-12 text-center text-white/20 uppercase font-black text-[10px] tracking-widest animate-pulse">Initializing Hub...</div>;
   }
 
-  const { tournaments, addTournament: addTourneyStore, updateTournament: updateTourneyStore, removeTournament } = store.masterData;
+  const { tournaments, addTournament: addTourneyStore, updateTournament: updateTourneyStore, removeTournament } = store.tournaments;
   const { matches } = store.matchCenter;
   const { opponents } = store.opponents;
 

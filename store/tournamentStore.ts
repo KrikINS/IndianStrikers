@@ -10,7 +10,7 @@ interface ClubLegacy {
     totalRuns: number;
 }
 
-export interface MasterDataStore {
+export interface TournamentStore {
     grounds: Ground[];
     tournaments: Tournament[];
     legacy: ClubLegacy;
@@ -32,7 +32,7 @@ export interface MasterDataStore {
     syncMasterData: () => Promise<void>;
 }
 
-export const useMasterData = create<MasterDataStore>()(
+export const useTournamentStore = create<TournamentStore>()(
     persist(
         (set, get) => ({
             // Initialize with empty arrays to prevent .map() crashes
@@ -87,7 +87,7 @@ export const useMasterData = create<MasterDataStore>()(
                 const timeoutId = setTimeout(() => controller.abort(), 15000);
 
                 try {
-                    console.log("[masterDataStore] Syncing grounds and tournaments (15s patience)...");
+                    console.log("[tournamentStore] Syncing grounds and tournaments (15s patience)...");
 
                     const [grounds, tournaments] = await Promise.all([
                         api.getGrounds(),
@@ -106,14 +106,14 @@ export const useMasterData = create<MasterDataStore>()(
                     // Clear the offline player cache only if we have a successful connection
                     if (Array.isArray(grounds)) {
                         localStorage.removeItem('ins_offline_players');
-                        console.log(`[masterDataStore] Sync successful. Found ${grounds.length} grounds.`);
+                        console.log(`[tournamentStore] Sync successful. Found ${grounds.length} grounds.`);
                     }
                 } catch (e: any) {
                     clearTimeout(timeoutId);
                     if (e.name === 'AbortError') {
-                        console.warn("[masterDataStore] Sync timed out. Keeping current state.");
+                        console.warn("[tournamentStore] Sync timed out. Keeping current state.");
                     } else {
-                        console.error("[masterDataStore] Sync error:", e);
+                        console.error("[tournamentStore] Sync error:", e);
                     }
 
                     // Enter offline mode but keep existing data to avoid crashing the UI
@@ -131,3 +131,6 @@ export const useMasterData = create<MasterDataStore>()(
         }
     )
 );
+
+// Alias for backward compatibility during migration
+export const useMasterData = useTournamentStore;

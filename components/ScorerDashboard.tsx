@@ -42,14 +42,15 @@ import {
   ReferenceLine 
 } from 'recharts';
 import { useStore } from '../store/StoreProvider';
-import { useCricketScorer } from './matchStore';
-import { useMasterData } from './masterDataStore';
+import { useMatchCenter } from '../store/matchStore';
+import { useTournamentStore } from '../store/tournamentStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { UniversalScorecard } from './UniversalScorecard';
 import _ from 'lodash';
 import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
+import { Player, ScheduledMatch, Ball, CommentaryTemplate, BallRecord, CommentaryEventType, MatchStatus } from '../types';
+import { toast } from 'react-hot-toast';
 import html2canvas from 'html2canvas';
-import toast from 'react-hot-toast';
 import { getRandomCommentary } from '../data/commentary';
 import { SyncStatus } from './common/SyncStatus';
 
@@ -940,16 +941,7 @@ const SettingsInput = styled.div`
   }
 `;
 
-import {
-  InningsBattingEntry,
-  InningsBowlingEntry,
-  Player,
-  ScheduledMatch,
-  MatchStatus,
-  OpponentTeam,
-  CommentaryTemplate,
-  CommentaryEventType
-} from '../types';
+// Types already imported at the top
 import MatchSummaryModal from './MatchSummaryModal';
 
 const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ matchId: propMatchId, teamLogo }) => {
@@ -967,7 +959,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }
 
   const { players, fetchPlayers } = rootStore.players;
-  const store = rootStore.scorer;
+  const store = rootStore.matchCenter;
+  const [extraSubType, setExtraSubType] = useState<'bat' | 'bye' | 'lb' | 'keeper'>('bat');
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [showWicketModal, setShowWicketModal] = useState(false);
   const [showBowlerModal, setShowBowlerModal] = useState(false);
   const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_home' | 'squad_away' | 'openers_bat' | 'openers_bowl' | null>(store.innings1 ? null : 'preview');
@@ -1143,7 +1137,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Get metadata from MatchCenterStore
   const { matches, syncWithCloud, updateMatchStatus, finalizeMatch, updateMatch } = rootStore.matchCenter;
-  const { grounds, tournaments, syncMasterData } = rootStore.masterData;
+  const { grounds, tournaments, syncMasterData } = rootStore.tournaments;
   const activeMatchId = id || propMatchId || store.matchId;
 
   // ABSOLUTE METADATA LAW (V5): Guaranteed resolution for active tournament
@@ -1758,7 +1752,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       // Persist the toss outcome and match status to the metadata store
       if (activeMatchId) {
         // Fetch fresh state to ensure new innings is included
-        const freshStore = useCricketScorer.getState();
+        const freshStore = useMatchCenter.getState();
         updateMatch(activeMatchId, {
           isHomeBattingFirst: startBatTeamId === 'HOME',
           status: 'live',
@@ -2191,7 +2185,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         tournament_id: matchMeta?.tournamentId || null
       };
 
-      if (!navigator.onLine || rootStore.masterData.isOffline) {
+      if (!navigator.onLine || rootStore.tournaments.isOffline) {
         store.enqueueOfflineBall(payload);
         toast.error(`Offline: Ball queued (${store.offlineQueue.length + 1}/10)`);
         syncToDatabase(store); // retain local state mirror
@@ -2651,7 +2645,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const bowlerStats = currentInnings?.bowlingStats[store.currentBowlerId || ''] || { overs: 0, runs: 0, wickets: 0 };
 
 
-  const isQueueFull = store.offlineQueue && store.offlineQueue.length >= 10 && rootStore.masterData.isOffline;
+  const isQueueFull = store.offlineQueue && store.offlineQueue.length >= 10 && rootStore.tournaments.isOffline;
 
   return (
     <DashboardContainer>

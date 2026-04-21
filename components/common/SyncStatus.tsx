@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useCricketScorer } from '../matchStore';
+import { useCricketScorer } from '../../store/matchStore';
 import { Cloud, CloudOff, CloudLightning } from 'lucide-react';
 import styled from 'styled-components';
 

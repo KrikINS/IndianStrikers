@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Ground } from '../types';
-import { useMasterData } from './masterDataStore';
+import { useMasterData } from '../store/tournamentStore';
 import { Plus, Trash2, Edit2, MapPin, X } from 'lucide-react';
 
 const GroundsManager: React.FC = () => {

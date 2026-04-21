@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getMatch } from '../services/storageService';
 import { ScheduledMatch, Player, OpponentTeam } from '../types';
 import { UniversalScorecard } from './UniversalScorecard';
-import { useMasterData } from './masterDataStore';
+import { useMasterData } from '../store/tournamentStore';
 import { usePlayerStore } from '../store/playerStore';
 import { Loader2 } from 'lucide-react';
 
