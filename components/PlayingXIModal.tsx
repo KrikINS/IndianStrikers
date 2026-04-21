@@ -82,9 +82,31 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
         onClose();
     };
 
-    // Use home roster for 'home' and 'view' (Indian Strikers), 
-    // for 'away' we use the specific opponent's roster if available
-    const displayPlayers = teamType === 'opponent' ? (opponent?.players || []) : homePlayers;
+    // PERMANENT ENFORCEMENT: Filter selection lists to ONLY show Active players for the relevant team.
+    const displayPlayers = useMemo(() => {
+        if (teamType === 'home' || teamType === 'view') {
+            // Only Active Indian Strikers members
+            return homePlayers.filter(p => p.isClubPlayer && p.isActive);
+        }
+        
+        if (teamType === 'opponent') {
+            // 1. Get players from master list assigned to this specific opponent and marked Active
+            const opponentPlayersFromMaster = homePlayers.filter(p => 
+                !p.isClubPlayer && 
+                String(p.primaryTeamId) === String(opponentId) && 
+                p.isActive
+            );
+
+            // 2. Identify Quick-Add players from the opponent object (historical/temporary entries)
+            const masterIds = new Set(opponentPlayersFromMaster.map(p => String(p.id)));
+            const quickAdded = (opponent?.players || []).filter(p => !masterIds.has(String(p.id)));
+
+            return [...opponentPlayersFromMaster, ...quickAdded];
+        }
+
+        return [];
+    }, [homePlayers, opponent?.players, teamType, opponentId]);
+
     const title = teamType === 'home' ? 'Select Indian Strikers XI' : 
                   teamType === 'opponent' ? `Select ${opponent?.name || 'Opponent'} XI` : 
                   'Match Day Team Sheet';

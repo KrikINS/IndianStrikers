@@ -28,8 +28,19 @@ import {
   Cloud,
   CloudLightning,
   CloudDownload,
-  CloudOff
+  CloudOff,
+  LineChart as ChartIcon
 } from 'lucide-react';
+import { 
+  ResponsiveContainer, 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ReferenceLine 
+} from 'recharts';
 import { useStore } from '../store/StoreProvider';
 import { useCricketScorer } from './matchStore';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -142,13 +153,15 @@ const OverSeparator = styled.div`
 
 const ScoreSection = styled.div`
   background: #ffffffff;
-  padding: 4px 12px;
+  padding: 8px 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: space-between;
   flex-shrink: 0;
+  min-height: 140px;
+  gap: 16px;
 `;
 
 const MainScore = styled.h1`
@@ -1375,6 +1388,49 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   );
   const isMatchComplete = store.isFinished;
   const isInningsBreak = store.currentInnings === 1 && isBattingFinishing && !store.isFinished;
+
+  // WORM CHART CALCULATION
+  const wormData = useMemo(() => {
+    const maxOvers = store.maxOvers || 20;
+    const data = Array.from({ length: maxOvers + 1 }, (_, i) => ({ over: i }));
+    
+    const calculateCumulative = (history: any[]) => {
+      const perOver: number[] = new Array(maxOvers + 1).fill(null);
+      perOver[0] = 0;
+      
+      let cumulativeRuns = 0;
+      let currentOver = 0;
+      
+      (history || []).forEach(ball => {
+        cumulativeRuns += (ball.runs || 0) + (ball.extras || 0);
+        if (ball.isLegal) {
+          const ballsBowled = history.filter((b, idx) => idx <= history.indexOf(ball) && b.isLegal).length;
+          if (ballsBowled % 6 === 0) {
+            currentOver = ballsBowled / 6;
+            if (currentOver <= maxOvers) perOver[currentOver] = cumulativeRuns;
+          }
+        }
+      });
+      
+      // Interpolate current over if incomplete
+      const totalLegalBalls = (history || []).filter(b => b.isLegal).length;
+      const incompleteOver = Math.floor(totalLegalBalls / 6) + 1;
+      if (totalLegalBalls % 6 !== 0 && incompleteOver <= maxOvers) {
+        perOver[incompleteOver] = cumulativeRuns;
+      }
+      
+      return perOver;
+    };
+
+    const inn1Runs = calculateCumulative(store.innings1?.history || []);
+    const inn2Runs = calculateCumulative(store.innings2?.history || []);
+
+    return data.map((d, i) => ({
+      over: d.over,
+      inn1: inn1Runs[i],
+      inn2: inn2Runs[i]
+    }));
+  }, [store.innings1?.history, store.innings2?.history, store.maxOvers]);
 
   // Trigger Review Modal when innings condition is met
   useEffect(() => {
@@ -2767,65 +2823,121 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         </div>
 
         <ScoreSection>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '0 4px', marginBottom: 16 }}>
-            {/* LEFT: CRR */}
-            <div style={{ textAlign: 'left', minWidth: 45 }}>
-              <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>CRR</div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#001F3F' }}>
-                {(() => {
-                  const totalBalls = currentInnings?.totalBalls || 0;
-                  if (totalBalls === 0) return '0.00';
-                  return ((currentInnings?.totalRuns || 0) / (totalBalls / 6)).toFixed(2);
-                })()}
+          {/* LEFT: STATS & SCORE */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid #f1f3f5', paddingRight: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
+              {/* CRR */}
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>CRR</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#001F3F' }}>
+                  {(() => {
+                    const totalBalls = currentInnings?.totalBalls || 0;
+                    if (totalBalls === 0) return '0.00';
+                    return ((currentInnings?.totalRuns || 0) / (totalBalls / 6)).toFixed(2);
+                  })()}
+                </div>
+              </div>
+
+              {/* PROJECTED */}
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>Proj</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#001F3F' }}>
+                  {(() => {
+                    const totalBalls = currentInnings?.totalBalls || 0;
+                    const rr = totalBalls === 0 ? 0 : (currentInnings?.totalRuns || 0) / (totalBalls / 6);
+                    return Math.ceil(rr * (store.maxOvers || 20));
+                  })()}
+                </div>
               </div>
             </div>
 
-            {/* MIDDLE: SCORECARD BUTTON ABOVE SCORE */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <button
-                title="Full Scorecard"
-                onClick={() => setShowScorecardModal(true)}
-                style={{
-                  background: 'hsla(210, 73%, 58%, 0.1)', border: '1px solid hsla(210, 73%, 58%, 0.3)', 
-                  borderRadius: 20, display: 'flex', alignItems: 'center',
-                  gap: 4, padding: '4px 16px', color: '#1a73e8', fontSize: '0.6rem', fontStyle: 'italic', fontWeight: 900, cursor: 'pointer'
-                }}
-              >
-                <LayoutList size={10} /> SCORECARD
-              </button>
-
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <MainScore style={{ fontSize: '2.5rem', marginBottom: -4, lineHeight: 1 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <MainScore style={{ fontSize: '2.4rem', margin: 0 }}>
                   {currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}
                 </MainScore>
-                <OversText style={{ fontSize: '0.85rem', fontWeight: 900, opacity: 0.8, color: '#1a73e8', marginTop: 6 }}>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <OversText style={{ fontSize: '0.8rem', fontWeight: 900, opacity: 0.8, color: '#1a73e8' }}>
                   {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
                 </OversText>
-              </div>
-            </div>
-
-            {/* RIGHT: PROJECTED */}
-            <div style={{ textAlign: 'right', minWidth: 45 }}>
-              <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase' }}>Proj</div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#001F3F' }}>
-                {(() => {
-                  const totalBalls = currentInnings?.totalBalls || 0;
-                  const rr = totalBalls === 0 ? 0 : (currentInnings?.totalRuns || 0) / (totalBalls / 6);
-                  return Math.ceil(rr * (store.maxOvers || 20));
-                })()}
+                <button
+                  onClick={() => setShowScorecardModal(true)}
+                  style={{
+                    background: 'none', border: 'none', padding: '2px 8px', borderRadius: 4,
+                    color: '#1a73e8', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(26,115,232,0.05)'
+                  }}
+                >
+                  <LayoutList size={10} /> S/C
+                </button>
               </div>
             </div>
           </div>
 
-          {store.isFreeHit && (
-            <FreeHitBadge
-              animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
-              style={{ marginTop: 4 }}
-            >
-              FREE HIT
-            </FreeHitBadge>
-          )}
+          {/* RIGHT: WORM CHART */}
+          <div style={{ flex: 1.5, position: 'relative', minWidth: 0 }}>
+             <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={wormData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+                  <XAxis 
+                    dataKey="over" 
+                    fontSize={8} 
+                    fontWeight={700} 
+                    axisLine={false} 
+                    tickLine={false}
+                    tick={{ fill: '#adb5bd' }}
+                  />
+                  <YAxis 
+                    fontSize={8} 
+                    fontWeight={700} 
+                    axisLine={false} 
+                    tickLine={false}
+                    tick={{ fill: '#adb5bd' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '10px', fontWeight: 700 }}
+                    itemStyle={{ padding: '0' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="inn1" 
+                    name="1st Inn" 
+                    stroke="#1a73e8" 
+                    strokeWidth={3} 
+                    dot={false}
+                    activeDot={{ r: 4, strokeWidth: 0 }}
+                    animationDuration={1000}
+                    connectNulls
+                  />
+                  {store.innings2 && (
+                    <Line 
+                      type="monotone" 
+                      dataKey="inn2" 
+                      name="2nd Inn" 
+                      stroke="#FF4B2B" 
+                      strokeWidth={3} 
+                      dot={false}
+                      activeDot={{ r: 4, strokeWidth: 0 }}
+                      animationDuration={1000}
+                      connectNulls
+                    />
+                  )}
+                </LineChart>
+             </ResponsiveContainer>
+
+             {store.isFreeHit && (
+               <div style={{ position: 'absolute', top: 0, left: 0 }}>
+                  <FreeHitBadge
+                    animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                    style={{ fontSize: '8px', padding: '2px 8px' }}
+                  >
+                    FREE HIT
+                  </FreeHitBadge>
+               </div>
+             )}
+          </div>
         </ScoreSection>
 
 
