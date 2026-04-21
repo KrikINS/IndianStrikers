@@ -1176,16 +1176,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const isActuallyLive = meta.status === 'live';
       console.log(`[Scorer] Sync Check: Cloud Total Balls: ${(meta.live_data?.innings1?.totalBalls || 0) + (meta.live_data?.innings2?.totalBalls || 0)} | Local Total Balls: ${(store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)}`);
 
-      // Resolve Opponent Logo from allOpponents if missing in meta
-      const opponentMeta = allOpponents.find(o => o.id === meta.opponentId || o.name === meta.opponentName);
+      // PERMANENT V2 RESOLUTION: Resolve names from master lists during initialization
+      const groundMeta = (grounds || []).find(g => g.id === meta.groundId);
+      const opponentMeta = (allOpponents || []).find(o => o.id === meta.opponentId || o.name === meta.opponentName);
+      
+      const resolvedGroundName = groundMeta?.name || meta.venue || 'Local Ground';
+      const resolvedOpponentName = opponentMeta?.name || meta.opponentName || 'OPPONENT';
       const resolvedAwayLogo = meta.opponentLogo || opponentMeta?.logoUrl || '';
 
       store.initializeMatch({
         matchId: meta.id,
         matchType: meta.matchFormat || 'T20',
         tournament: meta.tournament || 'Live Match',
-        ground: meta.venue || meta.groundId || 'Local Ground',
-        opponentName: meta.opponentName || 'OPPONENT',
+        ground: resolvedGroundName,
+        opponentName: resolvedOpponentName,
         maxOvers: meta.maxOvers || 20,
         homeXI: meta.homeTeamXI || [],
         awayXI: meta.opponentTeamXI || [],
@@ -1772,13 +1776,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             <>
               <MatchTitle>{store.tournament || matchMeta?.tournament || 'LIVE MATCH'}</MatchTitle>
               {(() => {
-                  // Resolve ID to Name for Ground
-                  const groundMeta = grounds.find(g => g.id === matchMeta?.groundId);
-                  const displayGround = groundMeta?.name || store.ground || matchMeta?.venue || 'Local Ground';
+                  // V2 REACTIVE RESOLUTION: Re-resolve IDs to Names every render to catch async load
+                  const groundMeta = (grounds || []).find(g => (g.id === matchMeta?.groundId || g.id === store.ground));
+                  const displayGround = groundMeta?.name || (store.ground?.length > 30 ? 'Loading Ground...' : store.ground) || matchMeta?.venue || 'Local Ground';
                   
                   // Resolve Opponent Details
-                  const opponentMeta = allOpponents.find(o => o.id === matchMeta?.opponentId);
-                  const displayOpponentName = opponentMeta?.name || store.opponentName || matchMeta?.opponentName || 'OPPONENT';
+                  const opponentMeta = (allOpponents || []).find(o => (o.id === matchMeta?.opponentId || o.name === store.opponentName));
+                  const displayOpponentName = (opponentMeta && opponentMeta.name !== 'OPPONENT') ? opponentMeta.name : (store.opponentName || matchMeta?.opponentName || 'OPPONENT');
                   const displayOpponentLogo = (store.awayLogo && !store.awayLogo.includes('null')) ? store.awayLogo : (matchMeta?.opponentLogo || opponentMeta?.logoUrl || '');
 
                   return (
