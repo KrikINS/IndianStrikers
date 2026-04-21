@@ -1215,14 +1215,31 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Sync setupStep when store state changes (Rehydration check)
   useEffect(() => {
-    if (store.innings1) {
+    // Only auto-close setup if we are in initial preview and already have innings data
+    if (store.innings1 && setupStep === 'preview') {
       setSetupStep(null); // Jump straight to scoring if we have innings data
     } else if (activeMatchId === store.matchId && matchMeta?.status === 'live' && matchMeta?.live_data) {
       // --- RESUME LOGIC (Device B): Match is live in DB but local store is empty ---
       // Rehydrate from live_data and skip toss
-      console.log('[Scorer] Match is live in DB. Rehydrating store from live_data...');
       const ld = matchMeta.live_data as any;
       if (ld && ld.innings1) {
+        // PROGRESS LOCK: Prevent rehydration from rolling back match state
+        // If current device is already ahead (more balls or higher innings), skip overwrite
+        const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
+        const cloudBalls = (ld.innings1?.totalBalls || 0) + (ld.innings2?.totalBalls || 0);
+        const localInnings = store.currentInnings || 1;
+        const cloudInnings = ld.currentInnings || 1;
+
+        if (cloudInnings < localInnings) {
+          console.log("[Scorer] Rehydration blocked: Cloud innings is behind local state.");
+          return;
+        }
+        if (cloudInnings === localInnings && cloudBalls < localBalls) {
+          console.log("[Scorer] Rehydration blocked: Cloud ball count is behind local state.");
+          return;
+        }
+
+        console.log('[Scorer] Match is live in DB. Rehydrating store from live_data...');
         // Resolve Opponent Logo from allOpponents if missing in meta
         const opponentMeta = allOpponents.find(o => o.id === matchMeta.opponentId || o.name === matchMeta.opponentName);
         const resolvedAwayLogo = matchMeta.opponentLogo || opponentMeta?.logoUrl || '';
@@ -1351,7 +1368,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       });
     }
   }, [currentInnings?.history?.length]);
-  const isBattingFinishing = currentInnings && currentInnings.totalBalls > 0 && (
+  const isBattingFinishing = currentInnings && (currentInnings.totalBalls || 0) > 0 && (
     currentInnings.wickets === 10 ||
     (currentInnings.totalBalls >= (store.maxOvers || 20) * 6) ||
     (store.currentInnings === 2 && currentInnings.totalRuns > (store.innings1?.totalRuns || 0))
