@@ -1,8 +1,8 @@
-import * as React from 'react';
-import { useState, useMemo } from 'react';
-import { X, Award, Target, Zap, CheckCircle2, Loader2 } from 'lucide-react';
+import { useState, useMemo, useRef } from 'react';
+import { X, Award, Target, Zap, CheckCircle2, Loader2, Share2, Image as ImageIcon, Shield, ChevronRight } from 'lucide-react';
 import { Player, FullScorecardData, InningsData, ScheduledMatch, InningsExtras } from '../types';
 import { Performer } from '../store/matchStore';
+import html2canvas from 'html2canvas';
 
 interface FullScorecardModalProps {
   match: ScheduledMatch;
@@ -17,6 +17,7 @@ interface FullScorecardModalProps {
 
 export default function FullScorecardModal({ match, homeSquad, opponentSquad, opponentName, homeTeamLogo, opponentLogo, onSave, onClose }: FullScorecardModalProps) {
   const [activeInnings, setActiveInnings] = useState<1 | 2>(1);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // 1. Strict Squad Filtering (Match Day XI Rule)
   // Narrow down the squads to either the selected XI OR the full roster if no XI is set.
@@ -274,8 +275,54 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
     });
   }, [autoWides, autoNBs, activeInnings]);
 
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Indian Strikers Match Scorecard',
+      text: `Scorecard for ${match.tournament}: Indian Strikers (${homeRuns}/${homeWkts}) vs ${opponentName} (${awayRuns}/${awayWkts})`,
+      url: window.location.href
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error('Share failed:', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    if (!containerRef.current) return;
+    try {
+      const canvas = await html2canvas(containerRef.current, {
+        backgroundColor: '#0f172a',
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+      const link = document.createElement('a');
+      link.download = `Scorecard_${opponentName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('Image capture failed:', err);
+    }
+  };
+
+  const getTossText = () => {
+    if (!match.toss || !match.toss.winner) return 'Toss: Data pending';
+    return `Toss: ${match.toss.winner} won and elected to ${match.toss.choice || 'bat'}`;
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
       <style>{`
         .scorecard-modal {
           width: 100%;
@@ -535,20 +582,43 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
           }
       `}</style>
 
-      <div className="scorecard-modal">
+      <div className="scorecard-modal" ref={containerRef}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-2 bg-slate-900 border-b border-white/5">
-           <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Match Day Scorecard</h3>
-           <button 
-             title="Close Modal" 
-             onClick={(e) => {
-               e.stopPropagation();
-               onClose();
-             }} 
-             className="p-1 hover:bg-white/5 rounded-full text-slate-500"
-           >
-             <X size={16} />
-           </button>
+        <div className="flex items-center justify-between px-6 py-3 bg-slate-900/50 border-b border-white/10">
+           <div className="flex items-center gap-3">
+             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+               <ImageIcon size={18} className="text-white" />
+             </div>
+             <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white">Match Day Scorecard</h3>
+           </div>
+           
+           <div className="flex items-center gap-2">
+             <button 
+               onClick={handleShare}
+               className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-slate-400 hover:text-white transition-all active:scale-95 border border-white/5"
+               title="Share Scorecard"
+             >
+               <Share2 size={16} />
+             </button>
+             <button 
+               onClick={handleDownloadImage}
+               className="p-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-white transition-all active:scale-95 shadow-lg shadow-blue-600/20"
+               title="Download Scorecard Image"
+             >
+               <ImageIcon size={16} />
+             </button>
+             <div className="w-px h-4 bg-white/10 mx-1" />
+             <button 
+               title="Close Modal" 
+               onClick={(e) => {
+                 e.stopPropagation();
+                 onClose();
+               }} 
+               className="p-2 hover:bg-white/10 rounded-xl text-slate-500 hover:text-white transition-all"
+             >
+               <X size={20} />
+             </button>
+           </div>
         </div>
 
         {/* 1. READ-ONLY SUMMARY BAR */}
@@ -557,19 +627,25 @@ export default function FullScorecardModal({ match, homeSquad, opponentSquad, op
             <span>{match.tournament}</span> • <span>{match.matchFormat || 'T20'}</span> • <span>Max {match.maxOvers} Overs</span>
           </div>
           <div className="toss-result-strip">
-            Toss: {match.toss?.winner} elected to {match.toss?.choice}
+            {getTossText()}
           </div>
           
           <div className="team-score-block">
-            {homeTeamLogo && <img src={homeTeamLogo} alt="Home" className="team-logo-small" />}
-            {!homeTeamLogo && <div className="team-logo-small bg-slate-800 flex items-center justify-center text-[8px]">LOGO</div>}
-            
-            <span className="team-name-big">INDIAN STRIKERS: {homeRuns}/{homeWkts}</span>
-            <span className="vs-divider">VS</span>
-            <span className="team-name-big">{(match as any).opponentName || opponentName}: {awayRuns}/{awayWkts}</span>
-            
-            {opponentLogo && <img src={opponentLogo} alt="Away" className="team-logo-small" />}
-            {!opponentLogo && <div className="team-logo-small bg-slate-800 flex items-center justify-center text-[8px]">LOGO</div>}
+            <div className="flex items-center bg-white/5 rounded-full pl-1 pr-6 py-1 gap-4 border border-white/5">
+              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border-2 border-white/10">
+                {homeTeamLogo ? <img src={homeTeamLogo} alt="Home" className="w-full h-full object-contain" /> : <Shield size={18} className="text-slate-500" />}
+              </div>
+              <span className="team-name-big">INDIAN STRIKERS: {homeRuns}/{homeWkts}</span>
+            </div>
+
+            <div className="vs-divider">VS</div>
+
+            <div className="flex items-center bg-white/5 rounded-full pr-1 pl-6 py-1 gap-4 border border-white/5">
+              <span className="team-name-big">{opponentName.toUpperCase()}: {awayRuns}/{awayWkts}</span>
+              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border-2 border-white/10">
+                {opponentLogo ? <img src={opponentLogo} alt="Away" className="w-full h-full object-contain" /> : <Shield size={18} className="text-slate-500" />}
+              </div>
+            </div>
           </div>
         </div>
 

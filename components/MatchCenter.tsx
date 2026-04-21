@@ -1145,20 +1145,24 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 />
             )}
 
-            {viewScorecardMatch && (
-                <FullScorecardModal
-                    match={viewScorecardMatch}
-                    onClose={() => setViewScorecardMatch(null)}
-                    homeSquad={players}
-                    opponentSquad={opponents.find(o => o.id === viewScorecardMatch.opponentId)?.players || []}
-                    opponentName={viewScorecardMatch.opponentName || 'Opponent'}
-                    opponentLogo={viewScorecardMatch.opponentLogo}
-                    onSave={(finalData) => {
-                        updateMatch(viewScorecardMatch.id, finalData);
-                        setViewScorecardMatch(null);
-                    }}
-                />
-            )}
+            {viewScorecardMatch && (() => {
+                const resolvedOpponent = opponents.find(o => o.id === viewScorecardMatch.opponentId);
+                return (
+                    <FullScorecardModal
+                        match={viewScorecardMatch}
+                        onClose={() => setViewScorecardMatch(null)}
+                        homeSquad={players}
+                        opponentSquad={resolvedOpponent?.players || []}
+                        opponentName={viewScorecardMatch.opponentName || resolvedOpponent?.name || 'Opponent'}
+                        homeTeamLogo={teamLogo}
+                        opponentLogo={viewScorecardMatch.opponentLogo || resolvedOpponent?.logoUrl}
+                        onSave={(finalData) => {
+                            updateMatch(viewScorecardMatch.id, finalData);
+                            setViewScorecardMatch(null);
+                        }}
+                    />
+                );
+            })()}
 
             {summaryPreviewUrl && (
                 <div className="fixed inset-0 z-[10001] bg-slate-950/90 flex items-center justify-center p-4 backdrop-blur-xl transition-all">
