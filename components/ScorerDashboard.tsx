@@ -43,6 +43,7 @@ import {
 } from 'recharts';
 import { useStore } from '../store/StoreProvider';
 import { useCricketScorer } from './matchStore';
+import { useMasterData } from './masterDataStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { UniversalScorecard } from './UniversalScorecard';
 import _ from 'lodash';
@@ -954,7 +955,10 @@ import MatchSummaryModal from './MatchSummaryModal';
 const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ matchId: propMatchId, teamLogo }) => {
   const rootStore = useStore();
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { activeMatchId } = useParams();
+  const { grounds } = useMasterData();
+  const store = useCricketScorer();
+  const { matches, updateMatch } = useMatchCenter();
 
   if (!rootStore) {
     return (
@@ -1253,8 +1257,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         }
 
         console.log('[Scorer] Match is live in DB. Rehydrating store from live_data...');
-        // Resolve Opponent Logo from allOpponents if missing in meta
+        
+        // PERMANENT RESOLUTION LAW: Resolve IDs to Names/Logos from master data
+        const groundMeta = grounds.find(g => g.id === matchMeta.groundId);
         const opponentMeta = allOpponents.find(o => o.id === matchMeta.opponentId || o.name === matchMeta.opponentName);
+        
+        const resolvedGroundName = groundMeta?.name || matchMeta.venue || 'Local Ground';
+        const resolvedOpponentName = opponentMeta?.name || matchMeta.opponentName || 'OPPONENT';
         const resolvedAwayLogo = matchMeta.opponentLogo || opponentMeta?.logoUrl || '';
 
         // live_data has innings - reinitialize the full store state
@@ -1262,8 +1271,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           matchId: matchMeta.id,
           matchType: matchMeta.matchFormat || 'T20',
           tournament: matchMeta.tournament || 'Live Match',
-          ground: matchMeta.venue || 'Local Ground',
-          opponentName: matchMeta.opponentName || 'OPPONENT',
+          ground: resolvedGroundName,
+          opponentName: resolvedOpponentName,
           maxOvers: matchMeta.maxOvers || ld.maxOvers || 20,
           homeXI: matchMeta.homeTeamXI || [],
           awayXI: matchMeta.opponentTeamXI || [],
@@ -1762,30 +1771,45 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           {setupStep === 'preview' ? (
             <>
               <MatchTitle>{store.tournament || matchMeta?.tournament || 'LIVE MATCH'}</MatchTitle>
-              <GroundText>
-                <MapPin size={14} /> {store.ground || matchMeta?.venue || 'Local Ground'}
-              </GroundText>
+              {(() => {
+                  // Resolve ID to Name for Ground
+                  const groundMeta = grounds.find(g => g.id === matchMeta?.groundId);
+                  const displayGround = groundMeta?.name || store.ground || matchMeta?.venue || 'Local Ground';
+                  
+                  // Resolve Opponent Details
+                  const opponentMeta = allOpponents.find(o => o.id === matchMeta?.opponentId);
+                  const displayOpponentName = opponentMeta?.name || store.opponentName || matchMeta?.opponentName || 'OPPONENT';
+                  const displayOpponentLogo = (store.awayLogo && !store.awayLogo.includes('null')) ? store.awayLogo : (matchMeta?.opponentLogo || opponentMeta?.logoUrl || '');
 
-              <TeamRow>
-                <TeamBlock>
-                  <TeamLogoCircle $active>
-                    <img src={store.homeLogo || teamLogo || '/INS%20LOGO.PNG'} alt="H" />
-                  </TeamLogoCircle>
-                  <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>INDIAN STRIKERS</span>
-                </TeamBlock>
-                <TeamBlock>
-                  <TeamLogoCircle>
-                    {store.awayLogo || matchMeta?.opponentLogo ? (
-                      <img src={store.awayLogo || matchMeta?.opponentLogo} alt="A" />
-                    ) : (
-                      <Shield size={40} color="rgba(255,255,255,0.3)" />
-                    )}
-                  </TeamLogoCircle>
-                  <span style={{ fontStyle: 'italic', fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: '#FAB005' }}>
-                    {(store.opponentName || matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
-                  </span>
-                </TeamBlock>
-              </TeamRow>
+                  return (
+                    <>
+                      <GroundText>
+                        <MapPin size={14} /> {displayGround}
+                      </GroundText>
+
+                      <TeamRow>
+                        <TeamBlock>
+                          <TeamLogoCircle $active>
+                            <img src={store.homeLogo || teamLogo || '/INS%20LOGO.PNG'} alt="H" />
+                          </TeamLogoCircle>
+                          <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>INDIAN STRIKERS</span>
+                        </TeamBlock>
+                        <TeamBlock>
+                          <TeamLogoCircle>
+                            {displayOpponentLogo ? (
+                              <img src={displayOpponentLogo} alt="A" />
+                            ) : (
+                              <Shield size={40} color="rgba(255,255,255,0.3)" />
+                            )}
+                          </TeamLogoCircle>
+                          <span style={{ fontStyle: 'italic', fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: '#FAB005' }}>
+                            {displayOpponentName.toUpperCase()}
+                          </span>
+                        </TeamBlock>
+                      </TeamRow>
+                    </>
+                  );
+              })()}
 
               <ActionButton $variant="primary" onClick={() => setSetupStep('toss')}>
                 Go to Toss
