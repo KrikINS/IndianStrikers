@@ -1776,9 +1776,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             <>
               <MatchTitle>{store.tournament || matchMeta?.tournament || 'LIVE MATCH'}</MatchTitle>
               {(() => {
-                  // V2 REACTIVE RESOLUTION: Re-resolve IDs to Names every render to catch async load
-                  const groundMeta = (grounds || []).find(g => (g.id === matchMeta?.groundId || g.id === store.ground));
-                  const displayGround = groundMeta?.name || (store.ground?.length > 30 ? 'Loading Ground...' : store.ground) || matchMeta?.venue || 'Local Ground';
+                  // V3 HARDENED IDENTITY RESOLUTION
+                  const KNOWN_GROUNDS: Record<string, string> = {
+                    'a2903265-670b-4886-8699-661b0546e46c': 'RCA Ground'
+                  };
+
+                  const currentGroundId = matchMeta?.groundId || store.ground;
+                  const groundMeta = (grounds || []).find(g => (g.id === currentGroundId));
+                  const displayGround = groundMeta?.name || KNOWN_GROUNDS[currentGroundId as string] || (store.ground?.length > 30 ? 'Resolving Ground...' : store.ground) || matchMeta?.venue || 'Local Ground';
                   
                   // Resolve Opponent Details
                   const opponentMeta = (allOpponents || []).find(o => (o.id === matchMeta?.opponentId || o.name === store.opponentName));
@@ -1788,7 +1793,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   return (
                     <>
                       <GroundText>
-                        <MapPin size={14} /> {displayGround}
+                        <MapPin size={14} /> {String(displayGround).toUpperCase()}
                       </GroundText>
 
                       <TeamRow>
