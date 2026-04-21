@@ -441,8 +441,21 @@ const mapMatchToDB = (m) => {
 
   // 4. Final cleaning: keep ONLY valid columns and remove null IDs
   const final = {};
-  const jsonColumns = ['home_team_xi', 'opponent_team_xi', 'performers', 'scorecard', 'final_score_home', 'final_score_away', 'live_data'];
+  const jsonColumns = ['home_team_xi', 'opponent_team_xi', 'performers', 'scorecard', 'live_data'];
   
+  // Extra: If finalScore objects are present, extract runs/wickets to top-level columns
+  if (mapped.finalScoreHome && typeof mapped.finalScoreHome === 'object') {
+    dbReady.final_score_home = mapped.finalScoreHome.runs;
+    dbReady.total_runs = mapped.finalScoreHome.runs;
+    dbReady.total_wickets = mapped.finalScoreHome.wickets;
+    if (mapped.finalScoreHome.overs) {
+       // Convert overs (e.g. 18.2) to total balls for the DB
+       const parts = String(mapped.finalScoreHome.overs).split('.');
+       const totalBalls = (parseInt(parts[0]) * 6) + (parseInt(parts[1]) || 0);
+       dbReady.total_balls = totalBalls;
+    }
+  }
+
   validColumns.forEach(col => {
     if (col in dbReady) {
       let val = dbReady[col];
@@ -613,9 +626,10 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
       `INSERT INTO matches (
         id, status, is_career_synced, updated_at, 
         scorecard, final_score_home, final_score_away, 
+        total_runs, total_wickets, total_balls,
         result_summary, result_note, toss_winner_id, toss_choice, max_overs
       ) 
-       VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, $9, $10, $11) 
+       VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
        ON CONFLICT (id) DO UPDATE SET 
          status=EXCLUDED.status, 
          is_career_synced=EXCLUDED.is_career_synced, 
@@ -623,6 +637,9 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
          scorecard=EXCLUDED.scorecard,
          final_score_home=EXCLUDED.final_score_home,
          final_score_away=EXCLUDED.final_score_away,
+         total_runs=EXCLUDED.total_runs,
+         total_wickets=EXCLUDED.total_wickets,
+         total_balls=EXCLUDED.total_balls,
          result_summary=EXCLUDED.result_summary,
          result_note=EXCLUDED.result_note,
          toss_winner_id=EXCLUDED.toss_winner_id,
@@ -633,6 +650,9 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
         JSON.stringify(scorecard || {}),
         finalScoreHome?.runs || 0,
         finalScoreAway?.runs || 0,
+        finalScoreHome?.runs || 0,
+        finalScoreHome?.wickets || 0,
+        0, // total_balls
         matchData.resultSummary || matchData.result_summary || null,
         matchData.resultNote || matchData.result_note || null,
         tossWinnerId || null,
