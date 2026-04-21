@@ -57,7 +57,20 @@ export default function GlobalChat({ currentUser }: { currentUser: any }) {
         dragConstraints={{ left: -300, right: 0, top: -600, bottom: 0 }}
         dragElastic={0.1}
         dragTransition={{ bounceStiffness: 200, bounceDamping: 20 }}
-        whileHover={{ scale: 1.1 }}
+        animate={{ 
+          scale: [1, 1.1, 1],
+          boxShadow: [
+            "0 5px 15px -3px rgba(56,189,248,0.5)", 
+            "0 10px 25px -5px rgba(56,189,248,0.7)", 
+            "0 5px 15px -3px rgba(56,189,248,0.5)"
+          ]
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        whileHover={{ scale: 1.25 }}
         whileTap={{ scale: 0.9 }}
         whileDrag={{ scale: 1.15, boxShadow: "0 20px 40px rgba(0,0,0,0.4)" }}
         onClick={() => setIsOpen(!isOpen)}

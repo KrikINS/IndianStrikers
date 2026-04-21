@@ -238,7 +238,7 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
                   <label className="text-[10px] text-slate-500 font-black block mb-1">TOTAL RUNS</label>
                   <input 
                     id="home-runs"
-                    title="Home Runs"
+                    title="Indian Strikers Runs"
                     type="number" 
                     className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-black text-xl focus:border-blue-500 outline-none"
                     value={summary.homeScore.runs}
@@ -250,7 +250,7 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
                   <label className="text-[10px] text-slate-500 font-black block mb-1">WKTS</label>
                   <input 
                     id="home-wickets"
-                    title="Home Wickets"
+                    title="Indian Strikers Wickets"
                     type="number" 
                     className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-black text-xl focus:border-blue-500 outline-none"
                     value={summary.homeScore.wickets}
@@ -262,7 +262,7 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
                 <label className="text-[10px] text-slate-500 font-black block mb-1">OVERS COMPLETED</label>
                 <input 
                   id="home-overs"
-                  title="Home Overs"
+                  title="Indian Strikers Overs"
                   type="number"
                   step="0.1"
                   className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-bold text-base focus:border-blue-500 outline-none max-w-[120px] mx-auto block"
@@ -282,7 +282,7 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
                   <label className="text-[10px] text-emerald-900/50 font-black block mb-1">TOTAL RUNS</label>
                   <input 
                     id="away-runs"
-                    title="Away Runs"
+                    title={`${opponentName} Runs`}
                     type="number" 
                     className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-black text-xl focus:border-emerald-500 outline-none"
                     value={summary.awayScore.runs}
@@ -294,7 +294,7 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
                   <label className="text-[10px] text-emerald-900/50 font-black block mb-1">WKTS</label>
                   <input 
                     id="away-wickets"
-                    title="Away Wickets"
+                    title={`${opponentName} Wickets`}
                     type="number" 
                     className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-black text-xl focus:border-emerald-500 outline-none"
                     value={summary.awayScore.wickets}
@@ -306,7 +306,7 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
                 <label className="text-[10px] text-emerald-900/50 font-black block mb-1">OVERS COMPLETED</label>
                 <input 
                   id="away-overs"
-                  title="Away Overs"
+                  title={`${opponentName} Overs`}
                   type="number"
                   step="0.1"
                   className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-bold text-base focus:border-emerald-500 outline-none max-w-[120px] mx-auto block"

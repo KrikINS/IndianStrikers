@@ -25,7 +25,9 @@ import {
   getLeagueTeams, 
   getLeagueFixtures, 
   batchAddLeagueFixtures,
-  getLeagueStandings 
+  getLeagueStandings,
+  deleteLeagueFixture,
+  updateLeagueFixture 
 } from '../services/storageService';
 import { 
   LeagueTournament, 
@@ -219,6 +221,17 @@ const LeagueCenter: React.FC = () => {
     }
   };
 
+  const handleDeleteFixture = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this match?')) return;
+    try {
+      await deleteLeagueFixture(id);
+      setFixtures(fixtures.filter(f => f.id !== id));
+      toast.success('Match deleted');
+    } catch (e) {
+      toast.error('Failed to delete match');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
       {/* ... header ... (no changes needed to header) */}
@@ -372,10 +385,10 @@ const LeagueCenter: React.FC = () => {
                                <h3 className="text-white text-xl font-black uppercase italic tracking-tighter">Workflow Engine</h3>
                              </div>
                              <div className="space-y-6">
-                               <StepItem icon={<Users />} label="Participants" status={teams.length > 0 ? 'done' : 'next'} text={`${teams.length} Teams Registered`} />
-                               <StepItem icon={<Calendar />} label="Fixtures" status={fixtures.length > 0 ? 'done' : teams.length >= 2 ? 'next' : 'todo'} text={`${fixtures.length} Matches Scheduled`} />
-                               <StepItem icon={<TrendingUp />} label="Standings" status={fixtures.length > 0 ? 'next' : 'todo'} text="Points Table Ready" />
-                             </div>
+                              <StepItem onClick={() => setActiveTab('teams')} icon={<Users />} label="Participants" status={teams.length > 0 ? 'done' : 'next'} text={`${teams.length} Teams Registered`} />
+                              <StepItem onClick={() => setActiveTab('schedule')} icon={<Calendar />} label="Fixtures" status={fixtures.length > 0 ? 'done' : teams.length >= 2 ? 'next' : 'todo'} text={`${fixtures.length} Matches Scheduled`} />
+                              <StepItem onClick={() => setActiveTab('standings')} icon={<TrendingUp />} label="Standings" status={fixtures.length > 0 ? 'next' : 'todo'} text="Points Table Ready" />
+                            </div>
                            </div>
 
                            <div className="mt-12">
@@ -426,7 +439,8 @@ const LeagueCenter: React.FC = () => {
                         <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date / Time</th>
                         <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Matchup</th>
                         <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Venue</th>
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -480,13 +494,24 @@ const LeagueCenter: React.FC = () => {
                               <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">{f.venue}</p>
                               {f.group_name && <p className="text-[9px] font-black text-blue-500 uppercase mt-1">{f.group_name}</p>}
                             </td>
-                            <td className="px-8 py-6 text-right">
-                               <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
-                                 f.status === 'live' ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'
-                               }`}>
-                                 {f.status}
-                               </span>
-                            </td>
+                             <td className="px-8 py-6">
+                                <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
+                                  f.status === 'live' ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'
+                                }`}>
+                                  {f.status}
+                                </span>
+                             </td>
+                             <td className="px-8 py-6 text-right">
+                                <div className="flex justify-end gap-2">
+                                  <button 
+                                    onClick={() => handleDeleteFixture(f.id)}
+                                    title="Delete Match"
+                                    className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all active:scale-95"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                             </td>
                           </tr>
                         );
                       })}
@@ -739,8 +764,11 @@ const GroupInput = ({ onAdd }: { onAdd: (name: string) => void }) => {
   );
 };
 
-const StepItem = ({ icon, label, status, text }: { icon: any, label: string, status: 'done' | 'next' | 'todo', text: string }) => (
-  <div className="flex items-center gap-4 group/item">
+const StepItem = ({ icon, label, status, text, onClick }: { icon: any, label: string, status: 'done' | 'next' | 'todo', text: string, onClick?: () => void }) => (
+  <div 
+    onClick={onClick}
+    className={`flex items-center gap-4 group/item ${onClick ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}
+  >
     <div className={`
       w-12 h-12 rounded-2xl flex items-center justify-center transition-all bg-white/5 border
       ${status === 'done' ? 'border-emerald-500 text-emerald-500 shadow-lg shadow-emerald-500/20' : 
@@ -750,8 +778,15 @@ const StepItem = ({ icon, label, status, text }: { icon: any, label: string, sta
       {status === 'done' ? <CheckCircle2 size={24} /> : React.cloneElement(icon, { size: 24 })}
     </div>
     <div className="flex-1 border-b border-white/5 pb-4">
-      <h4 className={`text-[10px] font-black uppercase tracking-widest mb-1 ${status === 'todo' ? 'text-white/20' : 'text-white'}`}>{label}</h4>
-      <p className={`text-[11px] font-bold ${status === 'todo' ? 'text-white/10' : 'text-white/40'}`}>{text}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className={`text-[10px] font-black uppercase tracking-widest mb-1 ${status === 'todo' ? 'text-white/20' : 'text-white'}`}>{label}</h4>
+          <p className={`text-[11px] font-bold ${status === 'todo' ? 'text-white/10' : 'text-white/40'}`}>{text}</p>
+        </div>
+        {onClick && status !== 'todo' && (
+          <ChevronRight size={14} className="text-white/20 group-hover/item:text-white group-hover/item:translate-x-1 transition-all" />
+        )}
+      </div>
     </div>
   </div>
 );

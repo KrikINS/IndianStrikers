@@ -321,7 +321,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                 {['Indian Strikers', opponentName].map(team => (
                   <button key={team} type="button" onClick={() => setTossWinner(team)}
                     className={`flex-1 py-1 px-3 rounded-lg text-[11px] font-black border ${tossWinner === team ? 'bg-sky-500/20 border-sky-500/50 text-sky-300' : 'bg-white/[0.02] border-white/10 text-white'}`}
-                  >{team === 'Indian Strikers' ? 'Home' : 'Away'}</button>
+                  >{team}</button>
                 ))}
               </div>
             </div>

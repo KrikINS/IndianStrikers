@@ -1003,4 +1003,21 @@ export const getLeagueStandings = async (tournamentId: string): Promise<LeagueSt
   return (await handleResponse(res)) || [];
 };
 
+export const updateLeagueFixture = async (id: string, f: Partial<LeagueFixture>) => {
+  const res = await fetch(`${API_URL}/league/fixtures/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(f)
+  });
+  return handleResponse(res);
+};
+
+export const deleteLeagueFixture = async (id: string) => {
+  const res = await fetch(`${API_URL}/league/fixtures/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
 
