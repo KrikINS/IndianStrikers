@@ -978,7 +978,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                 </td>
                                                                 <td>
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className={`badge-type ${m.status === 'live' ? 'badge-status-live' : m.status === 'completed' ? 'badge-status-done' : 'badge-status-completed' ? 'badge-status-done' : 'badge-status-up'}`}>
+                                                                        <span className={`badge-type ${m.status === 'live' ? 'badge-status-live' : m.status === 'completed' ? 'badge-status-done' : 'badge-status-up'}`}>
                                                                             {(m.status || "Unknown").toUpperCase()}
                                                                         </span>
                                                                         {m.isLocked && (
