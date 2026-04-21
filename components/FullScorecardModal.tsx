@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { X, Award, Target, Zap, CheckCircle2, Loader2, Share2, Image as ImageIcon, Shield, ChevronRight } from 'lucide-react';
 import { Player, FullScorecardData, InningsData, ScheduledMatch, InningsExtras } from '../types';
 import { Performer } from '../store/matchStore';

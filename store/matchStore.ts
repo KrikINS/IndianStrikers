@@ -143,7 +143,9 @@ export const useMatchCenter = create<MatchStore>()(
             if (existingIdx !== -1) {
               const local = merged[existingIdx];
               if (local.status === 'completed' && dbMatch.status !== 'completed') {
-                console.warn(`[Sync] Conflict detected for ${dbMatch.id}. Prioritizing local COMPLETED state.`);
+                console.warn(`[Sync] Stale overwrite prevented for ${dbMatch.id}. Cloud status (${dbMatch.status}) is behind local status (completed).`);
+                // Keep the local version as is to prevent data loss
+                merged[existingIdx] = local;
               } else {
                 merged[existingIdx] = { ...dbMatch, ...local, status: dbMatch.status }; 
                 if (dbMatch.status === 'completed') {
