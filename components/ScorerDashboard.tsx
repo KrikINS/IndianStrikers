@@ -955,10 +955,7 @@ import MatchSummaryModal from './MatchSummaryModal';
 const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ matchId: propMatchId, teamLogo }) => {
   const rootStore = useStore();
   const navigate = useNavigate();
-  const { activeMatchId } = useParams();
-  const { grounds } = useMasterData();
-  const store = useCricketScorer();
-  const { matches, updateMatch } = useMatchCenter();
+  const { id } = useParams<{ id: string }>();
 
   if (!rootStore) {
     return (
@@ -2921,7 +2918,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <button
                   onClick={() => setShowScorecardModal(true)}
                   style={{
-                    background: 'none', border: 'none', padding: '2px 8px', borderRadius: 4,
+                    border: 'none', padding: '2px 8px', borderRadius: 4,
                     color: '#1a73e8', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(26,115,232,0.05)'
                   }}

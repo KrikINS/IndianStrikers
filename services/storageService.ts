@@ -377,8 +377,6 @@ const mapMatch = (m: any): ScheduledMatch => {
         finalScoreAway: normalizeScore(m.final_score_away, rawScorecard?.innings2),
         scorecard: rawScorecard,
         resultNote: m.result_note,
-        scorecard: rawScorecard,
-        resultNote: m.result_note,
         isLocked: !!m.is_locked,
         isCareerSynced: !!m.is_career_stats_synced,
         stage: m.stage || (m.tournament ? 'League' : 'League'),
