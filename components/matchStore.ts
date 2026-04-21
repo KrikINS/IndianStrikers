@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 // --- TYPES ---
 export interface LivePlayer {
@@ -91,10 +91,11 @@ export interface MatchState {
     useWagonWheel: boolean;
     setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
     isWaitingForBowler: boolean;
-    wagonWheelQuickSave: boolean;
+     wagonWheelQuickSave: boolean;
     pendingMilestone: { type: 'fifty' | 'hundred' | 'partnership', player: string, subText?: string } | null;
     partnership_notified: number[];
     pendingIntroduction: string | null;
+    offlineQueue: BallRecord[];
 }
 
 export interface ScorerStore extends MatchState {
@@ -138,6 +139,9 @@ export interface ScorerStore extends MatchState {
     hardReset: () => void;
     resetStore: () => void;
     getOvers: (balls: number) => string;
+    syncOfflineQueue: () => Promise<void>;
+    enqueueOfflineBall: (payload: any) => void;
+    clearOfflineQueue: () => void;
 }
 
 const INITIAL_STATE: MatchState = {
@@ -169,7 +173,8 @@ const INITIAL_STATE: MatchState = {
     isWaitingForBowler: false,
     pendingMilestone: null,
     partnership_notified: [],
-    pendingIntroduction: null
+    pendingIntroduction: null,
+    offlineQueue: []
 };
 
 export const useCricketScorer = create<ScorerStore>()(
@@ -736,33 +741,32 @@ export const useCricketScorer = create<ScorerStore>()(
                 if (!innings || !innings.battingStats[batterId]) return;
 
                 const nextInnings = JSON.parse(JSON.stringify(innings));
-                if (type === 'fifty') nextInnings.battingStats[batterId].fifty_notified = true;
-                if (type === 'hundred') nextInnings.battingStats[batterId].hundred_notified = true;
-
+                if (type === 'fifty') nextInnings.battingStats[batterId].fiftyNotified = true;
+                if (type === 'hundred') nextInnings.battingStats[batterId].hundredNotified = true;
                 set({ [key]: nextInnings });
+            },
+
+            enqueueOfflineBall: (payload) => {
+                const state = get();
+                set({ offlineQueue: [...(state.offlineQueue || []), payload] });
+            },
+
+            clearOfflineQueue: () => {
+                set({ offlineQueue: [] });
+            },
+
+            syncOfflineQueue: async () => {
+                // Handled upstream in ScorerDashboard
             },
             getOvers: (balls) => `${Math.floor(balls / 6)}.${balls % 6}`
         }),
         { 
             name: 'ins-cricket-scorer-storage',
+            storage: createJSONStorage(() => sessionStorage),
             partialize: (state) => {
-                // EXCLUDE historyStack from localStorage to prevent QuotaExceededError
+                // EXCLUDE historyStack from storage to prevent QuotaExceededError
                 const { historyStack, ...rest } = state as any;
                 return rest;
-            },
-            storage: {
-                getItem: (name) => {
-                    const str = localStorage.getItem(name);
-                    try {
-                        return str ? JSON.parse(str) : null;
-                    } catch (e) {
-                        return null;
-                    }
-                },
-                setItem: (name, value) => {
-                    localStorage.setItem(name, JSON.stringify(value));
-                },
-                removeItem: (name) => localStorage.removeItem(name)
             }
         }
     )

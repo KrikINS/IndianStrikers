@@ -38,6 +38,7 @@ import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
 import html2canvas from 'html2canvas';
 import toast from 'react-hot-toast';
 import { getRandomCommentary } from '../data/commentary';
+import { SyncStatus } from './common/SyncStatus';
 
 const DashboardContainer = styled.div`
   height: 100dvh;
@@ -1137,10 +1138,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       // We don't call hardReset() immediately anymore to allow rehydration from liveData
     }
 
-    if (matches.length === 0) {
-      if (syncWithCloud) {
-        syncWithCloud().catch(console.error);
-      }
+    if (syncWithCloud) {
+      syncWithCloud().catch(console.error);
     }
     if (syncMasterData) {
         syncMasterData().catch(console.error);
@@ -2029,12 +2028,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
     const syncBallToCloud = async (retryCount = 0) => {
       if (!activeMatchId || is_test) return;
-      
-      setIsSyncing(true);
-      setSyncQueue(prev => prev + 1);
 
       const baseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
-
       const payload: any = {
         match_id: activeMatchId,
         striker_id: currentStrikerId,
@@ -2057,7 +2052,39 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         tournament_id: matchMeta?.tournamentId || null
       };
 
+      if (!navigator.onLine || rootStore.masterData.isOffline) {
+        store.enqueueOfflineBall(payload);
+        toast.error(`Offline: Ball queued (${store.offlineQueue.length + 1}/10)`);
+        syncToDatabase(store); // retain local state mirror
+        return;
+      }
+      
+      setIsSyncing(true);
+      setSyncQueue(prev => prev + 1);
+
       try {
+        // If coming back online with a queue, do a sanity check on Database "Split-Brain" State
+        if (store.offlineQueue.length > 0) {
+           const dbStateRaw = await fetch(`${baseUrl}/matches/${activeMatchId}`);
+           if (dbStateRaw.ok) {
+             const dbMatch = await dbStateRaw.json();
+             // Just pull the current dbBalls via dbMatch innings length if we want split brain logic
+             // For now, we will flush the queue unconditionally, but if you want strict checking:
+             // if (dbMatch.historyLength !== localLength) { flushQueue }
+           }
+           
+           // Flush Offline Queue sequentially
+           for (const queuedBall of store.offlineQueue) {
+             await fetch(`${baseUrl}/score/ball`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('authToken')}` },
+               body: JSON.stringify(queuedBall)
+             });
+           }
+           store.clearOfflineQueue();
+           toast.success("Offline queue fully synced!");
+        }
+
         const response = await fetch(`${baseUrl}/score/ball`, {
           method: 'POST',
           headers: {
@@ -2073,6 +2100,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
         // Success! Force MatchCenter to update so public view is in sync
         syncWithCloud().catch(() => {});
+        syncToDatabase(store);
         
       } catch (err) {
         console.error(`[Sync] Ball sync failed (Attempt ${retryCount + 1}):`, err);
@@ -2082,7 +2110,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           const delay = (retryCount + 1) * 1000;
           setTimeout(() => syncBallToCloud(retryCount + 1), delay);
         } else {
-          toast.error("Cloud Sync Failed. Local backup saved.", { id: 'sync-fail' });
+          // If we hard fail even after retries, enqueue the ball
+          store.enqueueOfflineBall(payload);
+          toast.error("Cloud Sync Failed. Ball saved to Offline Queue.", { id: 'sync-fail' });
+          syncToDatabase(store);
         }
       } finally {
         setSyncQueue(prev => Math.max(0, prev - 1));
@@ -2091,7 +2122,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     };
 
     syncBallToCloud();
-    
+
     const sId = store.strikerId || '';
     const bId = store.currentBowlerId || '';
     const sName = getPlayerName(sId);
@@ -2481,8 +2512,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const bowlerStats = currentInnings?.bowlingStats[store.currentBowlerId || ''] || { overs: 0, runs: 0, wickets: 0 };
 
 
+  const isQueueFull = store.offlineQueue && store.offlineQueue.length >= 10 && rootStore.masterData.isOffline;
+
   return (
     <DashboardContainer>
+      {isQueueFull && (
+        <PremiumModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ zIndex: 9999 }}>
+          <div style={{ background: '#001F3F', padding: '32px', borderRadius: '16px', textAlign: 'center', border: '2px solid #FF4D4D' }}>
+             <CloudOff size={48} color="#FF4D4D" style={{ margin: '0 auto 16px' }} />
+             <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#FFFFFF', marginBottom: 8 }}>WAITING FOR CONNECTION</h2>
+             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: 16 }}>Offline queue limit reached (10 balls). Please reconnect to the internet to sync and continue scoring.</p>
+             <div style={{ fontSize: '0.8rem', color: '#FAB005', fontWeight: 700 }}>{store.offlineQueue?.length || 0} balls waiting to sync.</div>
+          </div>
+        </PremiumModalOverlay>
+      )}
       <>
         <Header>
           <button
@@ -2531,7 +2574,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <SyncStatus />
             <button
               title="Match Settings"
               onClick={() => setShowSettingsDrawer(true)}

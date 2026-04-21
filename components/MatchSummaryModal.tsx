@@ -28,10 +28,28 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
     return JSON.stringify(summary) !== JSON.stringify(initialSummary);
   }, [summary, initialSummary]);
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleSave = async () => {
     setIsSaving(true);
-    await onSave(summary);
-    // Modal will close via parent
+    setError(null);
+    
+    // Safety timeout: If no response in 10s, show error so user can retry
+    const timer = setTimeout(() => {
+      if (isSaving) {
+        setIsSaving(false);
+        setError("Update is taking longer than expected. Please check your connection and try again.");
+      }
+    }, 12000);
+
+    try {
+      await onSave(summary);
+      clearTimeout(timer);
+    } catch (err: any) {
+      clearTimeout(timer);
+      setIsSaving(false);
+      setError(err.message || "Failed to update match summary.");
+    }
   };
 
   // Generate over options from 20 down to 5
@@ -325,22 +343,21 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
           </div>
         </div>
 
-        {/* 3. Result Section */}
-        <div className="result-selector">
-          <label>MATCH STATUS / RESULT TYPE</label>
-          <div className="btn-group-row">
-            {['Normal Result', 'Abandoned', 'Tie', 'Forfeit (Home)', 'Forfeit (Opponent)'].map(res => (
+        {error && (
+          <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start gap-3 animate-in slide-in-from-top-2">
+            <span className="text-xl">⚠️</span>
+            <div className="flex-1">
+              <div className="text-rose-500 font-bold text-xs uppercase tracking-wider mb-1">Update Failed</div>
+              <div className="text-slate-300 text-sm leading-relaxed">{error}</div>
               <button 
-                key={res}
-                type="button"
-                className={summary.resultType === res ? 'active' : ''}
-                onClick={() => setSummary({...summary, resultType: res})}
+                onClick={() => setError(null)} 
+                className="mt-2 text-[10px] font-black text-rose-500/70 hover:text-rose-500 uppercase tracking-tighter"
               >
-                {res}
+                Dismiss
               </button>
-            ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="modal-footer">
           {match.isLocked ? (

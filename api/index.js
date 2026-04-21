@@ -39,8 +39,7 @@ app.use((req, _res, next) => {
 
 app.use(express.json({ limit: '10mb' }));
 
-const dbUrl = process.env.DATABASE_URL;
-console.log(`[Database Config] URL: ${dbUrl ? 'Found' : 'MISSING'}`);
+console.log(`[Database Config] URL: ${process.env.DATABASE_URL ? 'Found' : 'MISSING'}`);
 // Supabase is now replaced by 'db' utility using PostgreSQL pool
 cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET });
 const upload = multer({ storage: multer.memoryStorage() });
@@ -478,7 +477,13 @@ app.get('/api/matches', async (_req, res) => {
   `);
   if (error) return res.status(500).json({ error: error.message });
   // Exclude legacy match from generic listing
-  const filtered = (data || []).filter(m => m.id !== '00000000-0000-0000-0000-000000000001');
+  const filtered = (data || []).filter(m => m.id !== '00000000-0000-0000-0000-000000000001')
+    .map(m => ({
+      ...m,
+      // Map integer columns to the objects the frontend expects
+      finalScoreHome: m.final_score_home !== null ? { runs: m.final_score_home, wickets: m.total_wickets || 0, overs: 0 } : null,
+      finalScoreAway: m.final_score_away !== null ? { runs: m.final_score_away, wickets: 0, overs: 0 } : null
+    }));
   res.json(filtered);
 });
 
@@ -496,7 +501,15 @@ app.get('/api/matches/:id', async (req, res) => {
   `, [req.params.id]);
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: "Match not found" });
-  res.json(data);
+  
+  // Map integer columns to the objects the frontend expects
+  const formatted = {
+    ...data,
+    finalScoreHome: data.final_score_home !== null ? { runs: data.final_score_home, wickets: data.total_wickets || 0, overs: 0 } : null,
+    finalScoreAway: data.final_score_away !== null ? { runs: data.final_score_away, wickets: 0, overs: 0 } : null
+  };
+  
+  res.json(formatted);
 });
 
 app.post('/api/matches', authGuard(['admin', 'member']), async (req, res) => {
@@ -564,7 +577,12 @@ app.delete('/api/matches/:matchId/stats', authGuard(['admin', 'member']), async 
 app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req, res) => {
   const { id } = req.params;
   const { matchData, updatedPlayers, is_test } = req.body;
-  console.log(`[POST /api/finalize-match] Match ID: ${id}, is_test: ${is_test}`);
+  console.log(`[POST /api/matches/${id}/finalize] Started. is_test: ${is_test}, players: ${updatedPlayers?.length || 0}`);
+  
+  if (!matchData) {
+    console.error(`[POST /api/matches/${id}/finalize] FAILED: Missing matchData in request body`);
+    return res.status(400).json({ error: 'Missing matchData' });
+  }
 
   try {
     // 0. Check if match is locked
@@ -593,14 +611,13 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
 
     const { error: matchError } = await db.query(
       `INSERT INTO matches (
-        id, status, is_hero_synced, is_career_synced, updated_at, 
+        id, status, is_career_synced, updated_at, 
         scorecard, final_score_home, final_score_away, 
         result_summary, result_note, toss_winner_id, toss_choice, max_overs
       ) 
-       VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8, $9, $10, $11, $12) 
+       VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, $9, $10, $11) 
        ON CONFLICT (id) DO UPDATE SET 
          status=EXCLUDED.status, 
-         is_hero_synced=EXCLUDED.is_hero_synced, 
          is_career_synced=EXCLUDED.is_career_synced, 
          updated_at=EXCLUDED.updated_at,
          scorecard=EXCLUDED.scorecard,
@@ -612,10 +629,10 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
          toss_choice=EXCLUDED.toss_choice,
          max_overs=EXCLUDED.max_overs`,
       [
-        id, 'completed', !is_test, !is_test,
+        id, 'completed', !is_test,
         JSON.stringify(scorecard || {}),
-        JSON.stringify(finalScoreHome),
-        JSON.stringify(finalScoreAway),
+        finalScoreHome?.runs || 0,
+        finalScoreAway?.runs || 0,
         matchData.resultSummary || matchData.result_summary || null,
         matchData.resultNote || matchData.result_note || null,
         tossWinnerId || null,

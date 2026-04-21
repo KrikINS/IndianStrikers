@@ -2,12 +2,12 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // Proxy handles SSL/TLS; disable for local connection to proxy
-  ssl: (process.env.DB_HOST === '127.0.0.1' || process.env.DB_HOST === 'localhost') ? false : {
+  // Cloud SQL Proxy over 127.0.0.1 typically doesn't use SSL
+  ssl: (process.env.DB_HOST === '127.0.0.1' || process.env.DB_HOST === 'localhost' || !process.env.DATABASE_URL?.includes('sslmode=require')) ? false : {
     rejectUnauthorized: false
   },
-  connectionTimeoutMillis: 10000, // Resilience for ball-by-ball entry
-  idleTimeoutMillis: 30000        // Maintain stable tunnel
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000
 });
 
 // Helper for Supabase-like response

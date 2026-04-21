@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { Player } from '../types';
 import * as api from '../services/storageService';
 
@@ -80,8 +80,7 @@ export const usePlayerStore = create<PlayerStore>()(
         }),
         {
             name: 'ins-player-storage',
-            // We no longer persist the full players list to localStorage to avoid QuotaExceededError (5MB limit)
-            // Players are fetched fresh via fetchPlayers() on app load
+            storage: createJSONStorage(() => sessionStorage),
             partialize: (state) => ({}),
         }
     )

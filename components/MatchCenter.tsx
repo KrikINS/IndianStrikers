@@ -177,18 +177,23 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             } 
         };
 
-        await handleManualScoreSubmit({
-            finalScoreHome: summary.homeScore,
-            finalScoreAway: summary.awayScore,
-            resultNote: autoResult,
-            resultSummary: autoResult,
-            scorecard: summaryScorecard,
-            performers: match.performers || [],
-            isLiveScored: false,
-            toss: { winner: tossWinnerName, choice: summary.tossChoice },
-            toss_winner_id: summary.tossWinner,
-            maxOvers: summary.maxOvers,
-        }, { skipCareerSync: true });
+        try {
+            await handleManualScoreSubmit({
+                finalScoreHome: summary.homeScore,
+                finalScoreAway: summary.awayScore,
+                resultNote: autoResult,
+                resultSummary: autoResult,
+                scorecard: summaryScorecard,
+                performers: match.performers || [],
+                isLiveScored: false,
+                toss: { winner: tossWinnerName, choice: summary.tossChoice },
+                toss_winner_id: summary.tossWinner,
+                maxOvers: summary.maxOvers,
+            }, { skipCareerSync: true });
+        } catch (err) {
+            console.error('[SummarySync] Error in submission block:', err);
+            throw err;
+        }
     };
 
     const handleQuickAddOpponentPlayer = (name: string) => {

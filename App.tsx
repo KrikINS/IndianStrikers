@@ -53,6 +53,27 @@ declare global {
   }
 }
 
+// Ensure clean slate Database-Authoritative mode
+const clearLegacyStorage = () => {
+    try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes('storage') || key.includes('ins-'))) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => {
+            console.log(`[Clearing Legacy] Removing ${key} from localStorage`);
+            localStorage.removeItem(key);
+        });
+    } catch (e) {
+        console.error("Failed to clear legacy local storage", e);
+    }
+};
+
+clearLegacyStorage();
+
 const Unauthorized = () => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white/[0.02] backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl mx-auto max-w-2xl mt-12 animate-in fade-in zoom-in duration-500">
     <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-8 border border-red-500/20 shadow-[0_0_50px_-12px_rgba(239,68,68,0.5)]">

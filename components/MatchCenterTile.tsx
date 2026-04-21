@@ -260,14 +260,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             <MapPin size={20} style={{ color: '#10b981' }} /> 
                             {(() => {
                                 const ground = grounds.find(g => g.id === match.groundId);
-                                if (!ground) return 'TBD';
-                                // Extract ground number if exists (e.g. Ground 1)
-                                const numMatch = ground.name.match(/\d+/);
-                                return (
-                                    <span>
-                                        {ground.name} {numMatch ? <span style={{ color: '#38bdf8' }} className="font-black ml-1">#{numMatch[0]}</span> : ''}
-                                    </span>
-                                );
+                                return ground?.name || 'TBD';
                             })()}
                         </span>
                     </div>
