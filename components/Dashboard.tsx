@@ -493,18 +493,23 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         String(perf.id) === String(p.id)
       );
       const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
+      const matchPerf = performerData.performers?.find(perf => 
+        String(perf.playerId) === String(p.id) || 
+        String(perf.id) === String(p.id)
+      );
 
-      // Use legacyRow as the definitive baseline if it exists, otherwise fallback to player table summary
-      const baseRuns = Number(legacyRow?.runs || p.runsScored || 0);
-      const baseWickets = Number(legacyRow?.wickets || p.wicketsTaken || 0);
-      const baseMatches = Number(legacyRow?.matches || p.matchesPlayed || 0);
+      // PERMANENT STATS LAW: Max-Inclusion Aggregation (SUM Legacy + Profile + Live)
+      // This ensures that live updates aren't masked by old historical records.
+      const baseRuns = Number(legacyRow?.runs || 0) + Number(p.runsScored || 0) + Number(matchPerf?.runs || 0);
+      const baseWickets = Number(legacyRow?.wickets || 0) + Number(p.wicketsTaken || 0) + Number(matchPerf?.wickets || 0);
+      const baseMatches = Number(legacyRow?.matches || 0) + Number(p.matchesPlayed || 0) + Number(matchPerf?.matches || 0);
 
       const enrichedBatting = {
         ...(p.battingStats || {}),
         matches: baseMatches,
         runs: baseRuns,
-        sixes: Number(legacyRow?.sixes || p.battingStats?.sixes || 0),
-        fours: Number(legacyRow?.fours || p.battingStats?.fours || 0),
+        sixes: Number(legacyRow?.sixes || 0) + Number(p.battingStats?.sixes || 0) + Number(matchPerf?.sixes || 0),
+        fours: Number(legacyRow?.fours || 0) + Number(p.battingStats?.fours || 0) + Number(matchPerf?.fours || 0),
         highestScore: String(legacyRow?.highest_score || p.battingStats?.highestScore || '0')
       };
 
