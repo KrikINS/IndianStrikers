@@ -46,7 +46,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         syncWithCloud,
         getSortedMatches,
         purgeTestData,
-        wipeLocalMatches
+        wipeLocalMatches,
+        isLoading
     } = useMatchCenter();
     const { grounds, tournaments, syncMasterData } = useMasterData();
     const initializeMatch = useCricketScorer(state => state.initializeMatch);
@@ -938,8 +939,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                 </div>
 
                                 <div className="schedule-container">
-                                    {/* Table */}
-                                    {filteredMatches.length === 0 ? (
+                                    {/* Loading State */}
+                                    {isLoading && filteredMatches.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center p-20 space-y-4 bg-slate-900/20">
+                                            <RefreshCcw size={40} className="text-blue-500 animate-spin opacity-50" />
+                                            <div className="text-slate-400 font-black text-xs uppercase tracking-widest animate-pulse">Syncing matches...</div>
+                                        </div>
+                                    ) : filteredMatches.length === 0 ? (
                                         <div className="p-14 text-center text-slate-500 font-medium bg-slate-900/20">
                                             {searchQuery || formatFilter !== 'All' ? 'No matches found matches your filters.' : 'No matches configured yet.'}
                                         </div>

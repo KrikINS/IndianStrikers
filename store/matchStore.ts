@@ -84,6 +84,7 @@ export interface MatchScorerState {
     squadPlayers: Player[];
     opponentPlayers: Player[];
     loading: boolean;
+    isLoading: boolean; // Match Center loading state
     error: string | null;
 }
 
@@ -172,6 +173,7 @@ const INITIAL_SCORER_STATE: MatchScorerState = {
     squadPlayers: [],
     opponentPlayers: [],
     loading: false,
+    isLoading: false,
     error: null
 };
 
@@ -279,12 +281,31 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     },
 
     syncWithCloud: async () => {
+        if (get().isLoading) return;
+        
+        set({ isLoading: true });
+        let attempts = 0;
+        const maxAttempts = 3; // Initial + 2 retries
+        
         try {
-            const rawDbMatches = (await api.getMatches()) || [];
-            const dbMatches = rawDbMatches.filter(m => !m.is_test && m.id !== '00000000-0000-0000-0000-000000000001');
-            set({ matches: dbMatches });
+            while (attempts < maxAttempts) {
+                attempts++;
+                const rawDbMatches = (await api.getMatches()) || [];
+                const dbMatches = rawDbMatches.filter(m => !m.is_test && m.id !== '00000000-0000-0000-0000-000000000001');
+                
+                if (dbMatches.length > 0 || attempts === maxAttempts) {
+                    set({ matches: dbMatches });
+                    break;
+                }
+                
+                // If empty, wait a bit before retry (race condition fix)
+                await new Promise(resolve => setTimeout(resolve, 500 * attempts));
+                console.log(`[Store] Match fetch empty, attempt ${attempts}/${maxAttempts}...`);
+            }
         } catch (e: any) {
             console.error("Cloud sync failed:", e);
+        } finally {
+            set({ isLoading: false });
         }
     },
 
