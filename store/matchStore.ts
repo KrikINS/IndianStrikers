@@ -82,6 +82,12 @@ export interface MatchScorerState {
     partnership_notified: number[];
     pendingIntroduction: string | null;
     offlineQueue: BallRecord[];
+    
+    // Player Management State
+    squadPlayers: Player[];
+    opponentPlayers: Player[];
+    loading: boolean;
+    error: string | null;
 }
 
 export interface UnifiedMatchStore extends MatchScorerState {
@@ -128,6 +134,12 @@ export interface UnifiedMatchStore extends MatchScorerState {
     enqueueOfflineBall: (payload: any) => void;
     clearOfflineQueue: () => void;
     setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
+
+    // Player Management Actions
+    fetchPlayers: () => Promise<void>;
+    addPlayer: (player: Player) => Promise<void>;
+    updatePlayer: (player: Player) => Promise<void>;
+    deletePlayer: (id: string) => Promise<void>;
 }
 
 const INITIAL_SCORER_STATE: MatchScorerState = {
@@ -159,7 +171,13 @@ const INITIAL_SCORER_STATE: MatchScorerState = {
     pendingMilestone: null,
     partnership_notified: [],
     pendingIntroduction: null,
-    offlineQueue: []
+    offlineQueue: [],
+
+    // Player Management Initial State
+    squadPlayers: [],
+    opponentPlayers: [],
+    loading: false,
+    error: null
 };
 
 export const useMatchCenter = create<UnifiedMatchStore>()(
@@ -604,6 +622,73 @@ export const useMatchCenter = create<UnifiedMatchStore>()(
                     if (type === 'hundred') nextInnings.battingStats[batterId].hundred_notified = true;
                 }
                 set({ [key]: nextInnings });
+            },
+
+            // PLAYER MANAGEMENT IMPLEMENTATION
+            fetchPlayers: async () => {
+                set({ loading: true, error: null });
+                try {
+                    const players = await api.getPlayers();
+                    const allPlayers = players || [];
+                    
+                    // Partition players based on teamId
+                    set({
+                        squadPlayers: allPlayers.filter(p => p.teamId === 'IND_STRIKERS'),
+                        opponentPlayers: allPlayers.filter(p => p.teamId !== 'IND_STRIKERS'),
+                        loading: false
+                    });
+                } catch (err: any) {
+                    console.error("[MatchCenter] Failed to fetch players:", err);
+                    set({
+                        error: err.message || 'Failed to fetch players',
+                        loading: false
+                    });
+                }
+            },
+
+            addPlayer: async (player) => {
+                try {
+                    const newPlayer = await api.addPlayer(player);
+                    if (newPlayer.teamId === 'IND_STRIKERS') {
+                        set((state) => ({ squadPlayers: [newPlayer, ...state.squadPlayers] }));
+                    } else {
+                        set((state) => ({ opponentPlayers: [newPlayer, ...state.opponentPlayers] }));
+                    }
+                } catch (err: any) {
+                    console.error("[MatchCenter] Failed to add player:", err);
+                    throw err;
+                }
+            },
+
+            updatePlayer: async (updatedPlayer) => {
+                try {
+                    await api.updatePlayer(updatedPlayer);
+                    if (updatedPlayer.teamId === 'IND_STRIKERS') {
+                        set((state) => ({
+                            squadPlayers: state.squadPlayers.map(p => p.id === updatedPlayer.id ? updatedPlayer : p)
+                        }));
+                    } else {
+                        set((state) => ({
+                            opponentPlayers: state.opponentPlayers.map(p => p.id === updatedPlayer.id ? updatedPlayer : p)
+                        }));
+                    }
+                } catch (err: any) {
+                    console.error("[MatchCenter] Failed to update player:", err);
+                    throw err;
+                }
+            },
+
+            deletePlayer: async (id) => {
+                try {
+                    await api.deletePlayer(id);
+                    set((state) => ({
+                        squadPlayers: state.squadPlayers.filter(p => p.id !== id),
+                        opponentPlayers: state.opponentPlayers.filter(p => p.id !== id)
+                    }));
+                } catch (err: any) {
+                    console.error("[MatchCenter] Failed to delete player:", err);
+                    throw err;
+                }
             }
         }),
         { 

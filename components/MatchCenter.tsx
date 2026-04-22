@@ -19,7 +19,7 @@ import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/
 import { useMasterData } from '../store/tournamentStore';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
 import { useCricketScorer } from '../store/matchStore';
-import { usePlayerStore } from '../store/playerStore';
+import { useStore } from '../store/StoreProvider';
 import PointsTable from './PointsTable';
 import TournamentsManager from './TournamentsManager';
 
@@ -36,7 +36,7 @@ interface MatchCenterProps {
 }
 
 const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo, currentUser, onUpdateOpponent, onRefresh }) => {
-    const { players, updatePlayer: onUpdatePlayer } = usePlayerStore();
+    const { squadPlayers, updatePlayer: onUpdatePlayer } = useStore();
     const navigate = useNavigate();
     const {
         matches,

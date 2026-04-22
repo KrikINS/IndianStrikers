@@ -4,11 +4,12 @@ import { getMatch } from '../services/storageService';
 import { ScheduledMatch, Player, OpponentTeam } from '../types';
 import { UniversalScorecard } from './UniversalScorecard';
 import { useMasterData } from '../store/tournamentStore';
-import { usePlayerStore } from '../store/playerStore';
+import { useStore } from '../store/StoreProvider';
 import { Loader2 } from 'lucide-react';
 
 const LiveScorecardPage: React.FC<{ opponents?: OpponentTeam[] }> = ({ opponents = [] }) => {
-    const { players } = usePlayerStore();
+    const { squadPlayers, opponentPlayers } = useStore();
+    const allPlayers = React.useMemo(() => [...squadPlayers, ...opponentPlayers], [squadPlayers, opponentPlayers]);
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [match, setMatch] = useState<ScheduledMatch | null>(null);
@@ -57,7 +58,7 @@ const LiveScorecardPage: React.FC<{ opponents?: OpponentTeam[] }> = ({ opponents
         <UniversalScorecard 
             match={match}
             onClose={() => navigate('/')}
-            players={players}
+            players={allPlayers}
             opponents={opponents}
             isLive={match.status === 'live'}
         />

@@ -5,7 +5,8 @@ import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats,
 import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ArrowRight, ExternalLink, RefreshCw, Swords } from 'lucide-react';
 import * as api from '../services/storageService';
 import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUsers, getLegacyStats } from '../services/storageService';
-import { usePlayerStore } from '../store/playerStore';
+import { getPlayerDetailedStats, getAppUsers, getLegacyStats } from '../services/storageService';
+import { useStore } from '../store/StoreProvider';
 import { useOpponentStore } from '../store/opponentStore';
 import styles from './PlayerList.module.css';
 
@@ -68,7 +69,9 @@ const PasswordConfirmModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean;
 };
 
 const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
-  const { players, loading, fetchPlayers, addPlayer: onAddPlayer, updatePlayer: onUpdatePlayer, deletePlayer: onDeletePlayer } = usePlayerStore();
+  const { squadPlayers, opponentPlayers, loading, fetchPlayers, addPlayer: onAddPlayer, updatePlayer: onUpdatePlayer, deletePlayer: onDeletePlayer } = useStore();
+  // Combined list for general searches/profile deep-links
+  const allPlayers = useMemo(() => [...squadPlayers, ...opponentPlayers], [squadPlayers, opponentPlayers]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false); // New State
@@ -96,8 +99,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   // Handle deep-linking to player profile
   useEffect(() => {
     const playerId = searchParams.get('id');
-    if (playerId && players.length > 0) {
-      const player = players.find((p: Player) => p.id === playerId);
+    if (playerId && allPlayers.length > 0) {
+      const player = allPlayers.find((p: Player) => p.id === playerId);
       if (player) {
         setViewingPlayer(player);
         setActiveStatTab('batting');
@@ -111,17 +114,17 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
   // Force re-fetch if we are stuck in mock data (length < 5)
   useEffect(() => {
-    if (players.length > 0 && players.length < 5) {
+    if (allPlayers.length > 0 && allPlayers.length < 5) {
       console.warn("[PlayerList] Detected mock/low player count. Forcing re-sync...");
       if (window.refreshAppData) {
         window.refreshAppData();
       }
     }
     // Cleanup offline cache if we have real data
-    if (players.length > 2) {
+    if (allPlayers.length > 2) {
       localStorage.removeItem('ins_offline_players');
     }
-  }, [players.length]);
+  }, [allPlayers.length]);
 
   useEffect(() => {
     const fetchMasters = async () => {
@@ -143,8 +146,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   }, [fetchOpponents]);
 
   const enrichedPlayers = useMemo(() => {
-    if (!players) return [];
-    return players.map(p => {
+    if (!allPlayers) return [];
+    return allPlayers.map(p => {
       const matchPerf = performerData.find(perf => 
         String(perf.playerId) === String(p.id) || 
         String(perf.id) === String(p.id)
@@ -178,7 +181,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         bowlingStats: enrichedBowling as any
       };
     });
-  }, [players, performerData, legacyStats]);
+  }, [allPlayers, performerData, legacyStats]);
 
   const statsSyncHandler = async () => {
     setIsSyncing(true);
@@ -270,37 +273,34 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
   // Subscribe to the rosterTab for filtering (active vs inactive vs others)
   const displayedPlayers = useMemo(() => {
-    return (searchingPlayers || []).filter((p: Player) => {
-      // isClubPlayer is now our source of truth for "Home Team" vs "Opponent"
-      const isOpponent = p.isClubPlayer === false;
+    // 1. First partition by the "Strikers Lock"
+    const squad = enrichedPlayers.filter(p => p.teamId === 'IND_STRIKERS');
+    const opponents = enrichedPlayers.filter(p => p.teamId !== 'IND_STRIKERS');
 
-      if (rosterTab === 'others') {
-        if (!isOpponent) return false;
-        
-        // Use opponentMap ONLY for sub-filtering by specific opponent team
-        if (selectedOpponentId !== 'all') {
-            const opponentData = opponentMap.get(String(p.id));
-            return opponentData?.team.id === selectedOpponentId;
-        }
-        return true;
+    if (rosterTab === 'others') {
+      // "Other Teams" tab strictly pulls from the opponent partition
+      if (selectedOpponentId !== 'all') {
+        return opponents.filter(p => {
+          const opponentData = opponentMap.get(String(p.id));
+          return opponentData?.team.id === selectedOpponentId;
+        });
       }
+      return opponents;
+    }
 
-      // Hide opponent players from club member tabs
-      if (isOpponent) return false;
+    // "Active" and "Inactive" tabs strictly pull from the squad partition
+    const isActuallyActive = (p: Player) => p.isActive && p.status !== 'inactive';
 
-      // Determine active status accurately for club members
-      const isActuallyActive = p.isActive && p.status !== 'inactive';
-
-      if (rosterTab === 'active') {
-        return isActuallyActive;
-      }
-      // Inactive tab shows everyone else who isn't an opponent
-      return !isActuallyActive;
-    });
-  }, [searchingPlayers, rosterTab, opponentMap, selectedOpponentId]);
+    if (rosterTab === 'active') {
+      return squad.filter(p => isActuallyActive(p));
+    }
+    
+    // Inactive tab
+    return squad.filter(p => !isActuallyActive(p));
+  }, [enrichedPlayers, rosterTab, opponentMap, selectedOpponentId]);
 
   // TEMP DEBUG: Log this to see if players exist but are filtered out
-  console.log("[PlayerList] Total in Store:", players.length);
+  console.log("[PlayerList] Total in Store:", allPlayers.length);
   console.log("[PlayerList] Filtered for UI:", displayedPlayers.length);
   console.log("[PlayerList] Current Tab:", rosterTab);
 
@@ -507,7 +507,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   };
 
   const handleExportExcel = () => {
-    if (players.length === 0) return;
+    if (allPlayers.length === 0) return;
     
     const headers = [
       'Player Name', 'Primary Role', 'Batting Style', 'Bowling Style', 'Jersey #', 'Matches Played', 
@@ -516,7 +516,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     ];
 
 
-    const rows = (players || []).map((p: Player) => {
+    const rows = (allPlayers || []).map((p: Player) => {
       const b = p.battingStats || defaultBattingStats;
       const w = p.bowlingStats || defaultBowlingStats;
       return [

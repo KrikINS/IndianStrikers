@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { OpponentTeam } from '../types';
 import { useMatchCenter } from '../store/matchStore';
 import { useMasterData } from '../store/tournamentStore';
-import { usePlayerStore } from '../store/playerStore';
+import { useStore } from '../store/StoreProvider';
 import { UniversalScorecard } from './UniversalScorecard';
 import { ArrowLeft, Share2, Download } from 'lucide-react';
 
@@ -13,7 +13,8 @@ interface ScorecardPageProps {
 }
 
 export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTeamName }) => {
-    const { players } = usePlayerStore();
+    const { squadPlayers, opponentPlayers } = useStore();
+    const allPlayers = React.useMemo(() => [...squadPlayers, ...opponentPlayers], [squadPlayers, opponentPlayers]);
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const matches = useMatchCenter(state => state.matches);
@@ -41,7 +42,7 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTea
             <UniversalScorecard 
                 match={match}
                 onClose={() => navigate('/match-center')}
-                players={players}
+                players={allPlayers}
                 opponents={opponents}
                 isLive={match.status === 'live'}
             />

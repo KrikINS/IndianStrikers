@@ -958,7 +958,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     );
   }
 
-  const { players, fetchPlayers } = rootStore.players;
+  const { squadPlayers: players, fetchPlayers } = rootStore;
   const store = rootStore.matchCenter;
   const [extraSubType, setExtraSubType] = useState<'bat' | 'bye' | 'lb' | 'keeper'>('bat');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -1238,7 +1238,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       
       // STRICT FIX: Only trigger milestone celebrations for home team (Indian Strikers) players.
       // We check if the player involved is part of the players store and marked as a club player.
-      const isClubPlayer = players.some(p => p.name === player && !!p.isClubPlayer);
+      const isClubPlayer = players.some((p: Player) => p.name === player && !!p.isClubPlayer);
       
       // Partnerships are allowed if at least one striker is a club member (usually true for home team matches)
       const shouldTrigger = type === 'partnership' || isClubPlayer;
@@ -2600,7 +2600,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
     // Only include Indian Strikers players in the spotlight
     return Object.values(scores)
-      .filter(p => players.some(hp => String(hp.id) === String(p.id)))
+      .filter(p => players.some((hp: Player) => String(hp.id) === String(p.id)))
       .sort((a, b) => b.score - a.score)
       .slice(0, 4);
   };

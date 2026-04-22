@@ -39,7 +39,6 @@ const StrikersLoader = () => (
 import ControlPanel from './components/ControlPanel';
 import { useMatchCenter } from './store/matchStore';
 import { useTournamentStore } from './store/tournamentStore';
-import { usePlayerStore } from './store/playerStore';
 import { useOpponentStore } from './store/opponentStore';
 import { StoreProvider, useStore } from './store/StoreProvider';
 import GroundsManager from './components/GroundsManager';
@@ -338,7 +337,7 @@ const AppInternal: React.FC = () => {
         try {
             console.log("Fetching data from backend...");
             await Promise.allSettled([
-                store.players.fetchPlayers(),
+                store.fetchPlayers(),
                 store.opponents.fetchOpponents(),
                 store.tournaments.syncMasterData(),
                 store.matchCenter.syncWithCloud(),
@@ -386,7 +385,7 @@ const AppInternal: React.FC = () => {
         );
     }
 
-    const { players, addPlayer: storeAddPlayer, updatePlayer: storeUpdatePlayer, deletePlayer: storeDeletePlayer } = store.players;
+    const { squadPlayers, addPlayer: storeAddPlayer, updatePlayer: storeUpdatePlayer, deletePlayer: storeDeletePlayer } = store;
     const { opponents, addOpponent: storeAddOpponent, updateOpponent: storeUpdateOpponent, deleteOpponent: storeDeleteOpponent } = store.opponents;
     const resetZombieMatches = store.matchCenter.resetZombieMatches;
     const syncWithCloud = store.matchCenter.syncWithCloud;
@@ -508,7 +507,7 @@ const AppInternal: React.FC = () => {
           teamLogo={teamLogo}
           onUpdateLogo={handleUpdateLogo}
           currentUser={currentUser}
-          linkedPlayer={currentUser?.id ? players.find(p => String(p.linkedUserId) === String(currentUser?.id)) : undefined}
+          linkedPlayer={currentUser?.id ? squadPlayers.find(p => String(p.linkedUserId) === String(currentUser?.id)) : undefined}
           onRefresh={loadData}
           isOffline={isOffline}
         />

@@ -176,6 +176,7 @@ export interface Player {
   role: PlayerRole;
   battingStyle: BattingStyle;
   bowlingStyle: BowlingStyle;
+  teamId: string; // Mandatory: 'IND_STRIKERS' for our squad
   matchesPlayed: number;
   runsScored: number;
   wicketsTaken: number;

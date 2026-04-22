@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { useMasterData } from '../store/tournamentStore';
-import { usePlayerStore } from '../store/playerStore';
+import { StoreProvider, useStore } from '../store/StoreProvider';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -426,7 +426,7 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
 
 // --- Main Dashboard Component ---
 export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }: DashboardProps) {
-  const { players, fetchPlayers } = usePlayerStore();
+  const { squadPlayers, fetchPlayers } = useStore();
   const { legacy, tournaments, grounds } = useMasterData();
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [selectedHero, setSelectedHero] = useState<any>(null);
@@ -482,11 +482,11 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   }, [fetchPlayers]);
 
   const enrichedPlayers = useMemo(() => {
-    if (!players) return [];
+    if (!squadPlayers) return [];
     
     // STRICT FIX: Only Indian Strikers (Home Team) players should appear in Dashboard stats
-    return players
-      .filter(p => !!p.isClubPlayer)
+    return squadPlayers
+      .filter(p => p.teamId === 'IND_STRIKERS')
       .map(p => {
       const matchPerf = performerData.performers?.find(perf => 
         String(perf.playerId) === String(p.id) || 
@@ -521,7 +521,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         bowlingStats: enrichedBowling as any
       };
     });
-  }, [players, performerData.performers, legacyStats]);
+  }, [squadPlayers, performerData.performers, legacyStats]);
 
   const topRunScorers = [...enrichedPlayers]
     .sort((a, b) => (b.battingStats?.runs || 0) - (a.battingStats?.runs || 0))
@@ -577,10 +577,10 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     // STRICT FIX: Any player present in our main roster (Indian Strikers) is eligible.
     return performerData.performers.filter(perf => {
       const pId = String(perf.playerId || perf.id);
-      const player = players.find(p => String(p.id) === pId);
-      return player && !!player.isClubPlayer;
+      const player = squadPlayers.find(p => String(p.id) === pId);
+      return player && player.teamId === 'IND_STRIKERS';
     });
-  }, [performerData.performers, players]);
+  }, [performerData.performers, squadPlayers]);
 
   const handleGenerateHeroPoster = async () => {
     if (!heroPosterRef.current || !selectedHero) return;

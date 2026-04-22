@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Player, PlayerLegacyStats } from '../types';
 import { getPlayers, getLegacyStats, updateLegacyStats } from '../services/storageService';
-import { usePlayerStore } from '../store/playerStore';
+import { useStore } from '../store/StoreProvider';
 import { Save, AlertCircle, CheckCircle2, Search, Filter, User } from 'lucide-react';
 
 interface LegacyEditorProps {}
 
 const LegacyEditor: React.FC<LegacyEditorProps> = () => {
-  const { players: initialPlayers, updatePlayer: onUpdatePlayer } = usePlayerStore();
+  const { squadPlayers: initialPlayers, updatePlayer: onUpdatePlayer } = useStore();
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [legacyStats, setLegacyStats] = useState<Record<string, PlayerLegacyStats>>({});
   const [loading, setLoading] = useState(true);
@@ -116,7 +116,7 @@ const LegacyEditor: React.FC<LegacyEditorProps> = () => {
   };
 
   const filteredPlayers = (players || [])
-    .filter(p => !!p.isClubPlayer)
+    .filter(p => p.teamId === 'IND_STRIKERS')
     .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   if (loading) {

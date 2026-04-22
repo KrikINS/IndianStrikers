@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Player, FieldingStrategy, PlayerRole, FieldPosition, UserRole } from '../types';
 import { getPlayers, getStrategies, addStrategy, deleteStrategy } from '../services/storageService';
-import { usePlayerStore } from '../store/playerStore';
+import { useStore } from '../store/StoreProvider';
 import { Save, RefreshCcw, Target, GripVertical, Plus, Zap, Flame, Clock, Trash2, Users, ChevronRight, CornerUpLeft, Activity, X } from 'lucide-react';
 import './FieldingMap.css';
 
@@ -11,7 +11,7 @@ interface FieldingMapProps {
 }
 
 const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest', currentUser }) => {
-  const { players } = usePlayerStore();
+  const { squadPlayers: players } = useStore();
   const isReadOnly = userRole === 'guest';
   const [strategies, setStrategies] = useState<FieldingStrategy[]>([]);
   const [currentPositions, setCurrentPositions] = useState<Map<string, FieldPosition>>(new Map());
