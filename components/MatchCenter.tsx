@@ -941,12 +941,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                 <div className="schedule-container">
                                     {/* Loading State */}
                                     {isLoading && filteredMatches.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center p-20 space-y-4 bg-slate-900/20">
+                                        <div className="flex flex-col items-center justify-center p-20 space-y-4 bg-slate-900/20 rounded-xl">
                                             <RefreshCcw size={40} className="text-blue-500 animate-spin opacity-50" />
-                                            <div className="text-slate-400 font-black text-xs uppercase tracking-widest animate-pulse">Syncing matches...</div>
+                                            <div className="text-slate-400 font-black text-xs uppercase tracking-widest animate-pulse">Synchronizing matches...</div>
                                         </div>
-                                    ) : filteredMatches.length === 0 ? (
-                                        <div className="p-14 text-center text-slate-500 font-medium bg-slate-900/20">
+                                    ) : !isLoading && filteredMatches.length === 0 ? (
+                                        <div className="p-14 text-center text-slate-500 font-medium bg-slate-900/20 rounded-xl border border-dashed border-slate-800">
                                             {searchQuery || formatFilter !== 'All' ? 'No matches found matches your filters.' : 'No matches configured yet.'}
                                         </div>
                                     ) : (

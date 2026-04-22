@@ -631,12 +631,11 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   };
 
   const renderPlayerCard = (player: Player) => {
-    // Live calculation for RUNS and WKTS to ensure "Last Match" is always included
-    // stats refers to all tournament performances for this player
-    const stats = performerData.filter(perf => String(perf.playerId) === String(player.id) || String(perf.id) === String(player.id));
-    const totalMatchRuns = stats.reduce((sum, s) => sum + (Number(s.runs) || 0), 0);
-    const totalMatchWkts = stats.reduce((sum, s) => sum + (Number(s.wickets) || 0), 0);
-    const totalMatchGames = stats.reduce((sum, s) => sum + (Number(s.matches) || 1), 0);
+    // tournament_stats refers to all tournament performances for this player
+    const tournament_stats = performerData.filter(perf => String(perf.playerId) === String(player.id) || String(perf.id) === String(player.id));
+    const totalMatchRuns = tournament_stats.reduce((sum, s) => sum + (Number(s.runs) || 0), 0);
+    const totalMatchWkts = tournament_stats.reduce((sum, s) => sum + (Number(s.wickets) || 0), 0);
+    const totalMatchGames = tournament_stats.reduce((sum, s) => sum + (Number(s.matches) || 1), 0);
 
     const legacyRow = legacyStats.find(l => String(l.player_id) === String(player.id));
     const baseRuns = Number(legacyRow?.runs || player.runsScored || 0);
@@ -1410,15 +1409,15 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                         return (
                           <div 
                             key={i} 
-                            className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex flex-col items-center justify-center font-black shadow-sm transition-transform hover:scale-110 cursor-help ${
-                              match.bowling.wickets >= 3 ? 'bg-emerald-600 text-white' : 
-                              match.bowling.wickets >= 1 ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 
-                              'bg-slate-50 text-slate-500 border border-slate-200'
+                            className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex flex-col items-center justify-center font-black shadow-sm transition-transform hover:scale-110 cursor-help border ${
+                              match.bowling.wickets >= 3 ? 'bg-emerald-600 text-white border-emerald-700' : 
+                              match.bowling.wickets >= 1 ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
+                              'bg-slate-50 text-slate-500 border-slate-200'
                             }`}
                             title={`${match.bowling.wickets}-${match.bowling.runs} in ${match.bowling.overs} ov`}
                           >
                             <span className="text-[10px] leading-none">{match.bowling.wickets}-{match.bowling.runs}</span>
-                            <span className="text-[8px] opacity-70 mt-0.5 uppercase tracking-tighter">W-R</span>
+                            <span className="text-[7px] opacity-70 uppercase tracking-tighter">W-R</span>
                           </div>
                         );
                       })
@@ -1591,10 +1590,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                       <td className="p-2 md:p-3 text-center">{detailedStats.legacy.maidens}</td>
                                       <td className="p-2 md:p-3 text-center font-bold text-black">{detailedStats.legacy.runs_conceded}</td>
                                       <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.wickets}</td>
-                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
+                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_strikeRate || '-'}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_average || '-'}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.economy || '-'}</td>
-                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_strikeRate || '-'}</td>
+                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.four_wickets}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.five_wickets}</td>
                                     </tr>
