@@ -85,6 +85,25 @@ const clearLegacyStorage = () => {
 
 clearLegacyStorage();
 
+// Add global QuotaExceededError handler to recover from storage limit issues
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason?.name === 'QuotaExceededError' || 
+      (event.reason?.message && event.reason.message.includes('quota'))) {
+    console.error('Critical Storage Failure: Quota exceeded. Clearing storage to recover.');
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.reload();
+  }
+});
+
+window.onerror = function(message, source, lineno, colno, error) {
+  if (message && typeof message === 'string' && (message.includes('QuotaExceededError') || message.includes('quota'))) {
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.reload();
+  }
+};
+
 const Unauthorized = () => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white/[0.02] backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl mx-auto max-w-2xl mt-12 animate-in fade-in zoom-in duration-500">
     <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-8 border border-red-500/20 shadow-[0_0_50px_-12px_rgba(239,68,68,0.5)]">

@@ -36,7 +36,7 @@ interface MatchCenterProps {
 }
 
 const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo, currentUser, onUpdateOpponent, onRefresh }) => {
-    const { squadPlayers, updatePlayer: onUpdatePlayer } = useStore();
+    const { squadPlayers: players, updatePlayer: onUpdatePlayer } = useStore();
     const navigate = useNavigate();
     const {
         matches,

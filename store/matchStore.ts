@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { ScheduledMatch, Performer, MatchStatus, MatchStage, FullScorecardData, BallRecord } from '../types';
+import { Player, ScheduledMatch, Performer, MatchStatus, MatchStage, FullScorecardData, BallRecord } from '../types';
 import * as api from '../services/storageService';
 
 // --- Types from Live Scorer ---
@@ -694,6 +694,26 @@ export const useMatchCenter = create<UnifiedMatchStore>()(
         { 
             name: 'ins-match-center-storage',
             storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({
+                matchId: state.matchId,
+                matchType: state.matchType,
+                tournament: state.tournament,
+                ground: state.ground,
+                opponentName: state.opponentName,
+                maxOvers: state.maxOvers,
+                toss: state.toss,
+                currentInnings: state.currentInnings,
+                strikerId: state.strikerId,
+                nonStrikerId: state.nonStrikerId,
+                currentBowlerId: state.currentBowlerId,
+                homeXI: state.homeXI,
+                awayXI: state.awayXI,
+                isFinished: state.isFinished,
+                // We persist the scorecard state but EXCLUDE the heavy ball-by-ball history
+                // to stay within the 5MB localStorage quota.
+                innings1: state.innings1 ? { ...state.innings1, history: [] } : null,
+                innings2: state.innings2 ? { ...state.innings2, history: [] } : null,
+            })
         }
     )
 );

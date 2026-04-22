@@ -110,7 +110,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         setSearchParams(searchParams, { replace: true });
       }
     }
-  }, [searchParams, players, setSearchParams]);
+  }, [searchParams, allPlayers, setSearchParams]);
 
   // Force re-fetch if we are stuck in mock data (length < 5)
   useEffect(() => {
