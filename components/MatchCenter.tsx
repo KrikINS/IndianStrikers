@@ -4,14 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { Player, OpponentTeam, UserRole, ScheduledMatch } from '../types';
 import { useMatchCenter } from '../store/matchStore';
 import MatchCenterTile from './MatchCenterTile';
-import { UniversalScorecard } from './UniversalScorecard';
 import { PlayingXIModal } from './PlayingXIModal';
 import { LineupGraphic } from './LineupGraphic';
 import EditMatchModal from './EditMatchModal';
 import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
-import FullScorecardModal from './FullScorecardModal';
-import ManualScoreModal from './ManualScoreModal';
+import MatchScorecardEntry from './MatchScorecardEntry';
 import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Unlock, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
@@ -1136,27 +1134,22 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             )}
 
             {manualScoreConfig && manualScoreConfig.showPlayers && (
-                <ManualScoreModal
+                <MatchScorecardEntry
                     onClose={() => setManualScoreConfig(null)}
                     match={matches.find(m => m.id === manualScoreConfig.matchId)!}
                     onSubmit={(data) => handleManualScoreSubmit(data)}
                     opponent={opponents.find(o => o.id === (matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId))}
-                    players={players}
                 />
             )}
 
             {viewScorecardMatch && (() => {
                 const resolvedOpponent = opponents.find(o => o.id === viewScorecardMatch.opponentId);
                 return (
-                    <FullScorecardModal
+                    <MatchScorecardEntry
                         match={viewScorecardMatch}
                         onClose={() => setViewScorecardMatch(null)}
-                        homeSquad={players}
-                        opponentSquad={resolvedOpponent?.players || []}
-                        opponentName={viewScorecardMatch.opponentName || resolvedOpponent?.name || 'Opponent'}
-                        homeTeamLogo={teamLogo}
-                        opponentLogo={viewScorecardMatch.opponentLogo || resolvedOpponent?.logoUrl}
-                        onSave={(finalData) => {
+                        opponent={resolvedOpponent}
+                        onSubmit={(finalData) => {
                             updateMatch(viewScorecardMatch.id, finalData);
                             setViewScorecardMatch(null);
                         }}

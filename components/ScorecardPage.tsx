@@ -2,10 +2,9 @@ import * as React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { OpponentTeam } from '../types';
 import { useMatchCenter } from '../store/matchStore';
-import { useMasterData } from '../store/tournamentStore';
 import { useStore } from '../store/StoreProvider';
-import { UniversalScorecard } from './UniversalScorecard';
-import { ArrowLeft, Share2, Download } from 'lucide-react';
+import MatchScorecardEntry from './MatchScorecardEntry';
+import { ArrowLeft } from 'lucide-react';
 
 interface ScorecardPageProps {
     opponents: OpponentTeam[];
@@ -13,14 +12,12 @@ interface ScorecardPageProps {
 }
 
 export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTeamName }) => {
-    const { squadPlayers, opponentPlayers } = useStore();
-    const allPlayers = React.useMemo(() => [...squadPlayers, ...opponentPlayers], [squadPlayers, opponentPlayers]);
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const matches = useMatchCenter(state => state.matches);
-    const grounds = useMasterData(state => state.grounds);
+    const { matches, updateMatch } = useMatchCenter();
     
     const match = matches.find(m => m.id === id);
+    const resolvedOpponent = opponents.find(o => o.id === match?.opponentId);
 
     if (!match) {
         return (
@@ -37,15 +34,14 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTea
     }
 
     return (
-        <div className="pb-20">
-            {/* The Main Scorecard */}
-            <UniversalScorecard 
-                match={match}
-                onClose={() => navigate('/match-center')}
-                players={allPlayers}
-                opponents={opponents}
-                isLive={match.status === 'live'}
-            />
-        </div>
+        <MatchScorecardEntry 
+            match={match}
+            opponent={resolvedOpponent}
+            onClose={() => navigate('/match-center')}
+            onSubmit={async (finalData) => {
+                await updateMatch(match.id, finalData);
+                navigate('/match-center');
+            }}
+        />
     );
 };

@@ -3,10 +3,11 @@ import { useState, useMemo } from 'react';
 import { X, Save, Award, Zap, Target, ChevronDown, Star, Loader2 } from 'lucide-react';
 import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types';
 
-interface ManualScoreModalProps {
+import { useStore } from '../store/StoreProvider';
+
+interface MatchScorecardEntryProps {
   match: ScheduledMatch;
-  opponent?: { name: string; logoUrl?: string; players?: any[] };
-  players?: Player[];
+  opponent?: { name: string; logoUrl?: string };
   onClose: () => void;
   onSubmit: (finalData: any) => void;
 }
@@ -19,8 +20,9 @@ const RESULT_OPTIONS = [
   { value: 'Forfeit-Away', label: 'Forfeit (Opponent)' },
 ];
 
-export default function ManualScoreModal({ match, opponent, players = [], onClose, onSubmit }: ManualScoreModalProps) {
-  const opponentName = opponent?.name || 'Opponent';
+export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit }: MatchScorecardEntryProps) {
+  const { squadPlayers: masterHomePlayers, opponentPlayers: masterOpponentPlayers } = useStore();
+  const opponentName = opponent?.name || match.opponentName || 'Opponent';
 
   const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
   const [tossWinner, setTossWinner] = useState<string>(match.toss?.winner || 'Indian Strikers');
@@ -112,21 +114,23 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     return battingRuns + extrasTotal;
   };
 
-  const homeSquad = players.filter(p => {
+  const homeSquad = useMemo(() => {
+    // 1. Strict Filter: Only show players assigned to the Match Day XI if it exists
     if (Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0) {
-      return match.homeTeamXI.includes(p.id);
+      return masterHomePlayers.filter(p => match.homeTeamXI!.includes(p.id));
     }
-    // If no XI selected, show all INS players (isClubPlayer check)
-    return p.isClubPlayer;
-  });
+    // 2. Fallback: Show all active club players
+    return masterHomePlayers.filter(p => p.teamId === 'IND_STRIKERS' && p.isActive);
+  }, [masterHomePlayers, match.homeTeamXI]);
 
-  const awaySquad = (opponent?.players || []).filter(p => {
+  const awaySquad = useMemo(() => {
+    // 1. Strict Filter: Only show players assigned to the Match Day XI if it exists
     if (Array.isArray(match.opponentTeamXI) && match.opponentTeamXI.length > 0) {
-      return match.opponentTeamXI.includes(p.id);
+        return masterOpponentPlayers.filter(p => match.opponentTeamXI!.includes(p.id));
     }
-    // If no XI selected, show all opponent players
-    return true;
-  });
+    // 2. Fallback: Show players assigned to this specific opponent
+    return masterOpponentPlayers.filter(p => p.teamId === match.opponentId);
+  }, [masterOpponentPlayers, match.opponentTeamXI, match.opponentId]);
 
   const battingSquad = activeInnings === 1
     ? (innings1BattingTeam === 'home' ? homeSquad : awaySquad)
@@ -193,13 +197,9 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     setSyncError(null);
     const buildBatting = (inn: 1 | 2) => {
         const innKey = inn === 1 ? 'innings1' : 'innings2';
-        const squad = inn === 1 
-            ? (innings1BattingTeam === 'home' ? homeSquad : awaySquad)
-            : (innings1BattingTeam === 'home' ? awaySquad : homeSquad);
-        return squad.map(p => {
-             const entry = scorecard[innKey].batting.find(b => b.playerId === p.id);
-             if (entry) return { ...entry, fielderId: entry.fielderId || '', bowlerId: entry.bowlerId || '' };
-             return { playerId: p.id, name: p.name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Did Not Bat', is_hero: false, fielderId: '', bowlerId: '' };
+        // Only return players who actually have an entry in the scorecard
+        return scorecard[innKey].batting.map(entry => {
+             return { ...entry, fielderId: entry.fielderId || '', bowlerId: entry.bowlerId || '' };
         });
     };
     const buildBowling = (inn: 1 | 2) => bowlingRows[inn]
@@ -240,9 +240,31 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
     const homeBowlingKey = innings1BattingTeam === 'home' ? 'innings2' : 'innings1';
 
     finalScorecard[homeInningsKey].batting.forEach(b => {
-      performerMap.set(b.playerId, { playerId: b.playerId, playerName: b.name, runs: b.runs, balls: b.balls, fours: b.fours, sixes: b.sixes, isNotOut: b.outHow === 'Not Out', is_hero: !!b.is_hero, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0 });
+      // Database Sync: Do not create a performer row for DNB players
+      if (b.outHow === 'Did Not Bat' && (b.balls || 0) === 0) return;
+      
+      performerMap.set(b.playerId, { 
+        playerId: b.playerId, 
+        playerName: b.name, 
+        runs: b.runs, 
+        balls: b.balls, 
+        fours: b.fours, 
+        sixes: b.sixes, 
+        isNotOut: b.outHow === 'Not Out', 
+        outHow: b.outHow, // Include outHow for better stat tracking
+        is_hero: !!b.is_hero, 
+        wickets: 0, 
+        bowlingRuns: 0, 
+        bowlingOvers: 0, 
+        maidens: 0, 
+        wides: 0, 
+        no_balls: 0 
+      });
     });
     finalScorecard[homeBowlingKey].bowling.forEach(b => {
+      // Skip if they didn't actually bowl any balls
+      if ((b.overs || 0) === 0) return;
+      
       const ex = performerMap.get(b.playerId) || { playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, is_hero: false, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0 };
       performerMap.set(b.playerId, { 
         ...ex, 
@@ -278,7 +300,7 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
         maxOvers,
       });
     } catch (err: any) {
-      console.error("[ManualScoreModal] ❌ Submission failed:", err);
+      console.error("[MatchScorecardEntry] ❌ Submission failed:", err);
       setSyncError(err.message || 'Sync Failed. Data is preserved locally.');
       setIsSaving(false);
     }
@@ -306,12 +328,20 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
         </div>
         <style>{`
           .compact-input { background:#000; border:1px solid #334155; color:#38bdf8; width:35px; text-align:center; font-size:12px; border-radius:3px; padding:2px; }
-          .player-select-dropdown { background:#0f172a; border:1px solid #334155; color:white; font-size:12px; padding:3px; width:100%; border-radius:4px; }
+          .player-select-dropdown { background:#0f172a; border:1px solid #334155; color:white; font-size:12px; padding:3px; width:100%; border-radius:4px; min-width: 100px; }
           .hero-star { transition: all 0.2s; cursor: pointer; }
           .hero-star.active { color: #0ea5e9; fill: #0ea5e9; }
           .compact-score-table { width:100%; border-collapse:collapse; }
           .compact-score-table th { font-size:10px; color:#64748b; padding:4px; text-align:center; border-bottom:1px solid #1e293b; text-transform:uppercase; font-weight:700; white-space:nowrap; }
           .compact-score-table td { padding:2px 4px; border-bottom:1px solid rgba(255,255,255,0.02); vertical-align:middle; }
+          
+          /* iPad Mini 7 Responsiveness */
+          @media (max-width: 1024px) {
+            .scorecard-grid { flex-direction: column !important; }
+            .batting-section { flex: 1 1 100% !important; }
+            .bowling-section { flex: 1 1 100% !important; }
+            .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          }
         `}</style>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
@@ -350,9 +380,10 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
               </button>
             ))}
           </div>
-          <div className="flex flex-col xl:flex-row gap-6">
-            <div className="flex-[0_1_55%] w-full rounded-xl bg-white/[0.01] border border-white/5">
+          <div className="flex flex-col lg:flex-row gap-6 scorecard-grid">
+            <div className="flex-[0_1_60%] w-full rounded-xl bg-white/[0.01] border border-white/5 batting-section">
               <div className="px-4 py-2 border-b border-white/5 font-black text-[10px] uppercase tracking-wider text-white">Batting: {currentBatLabel}</div>
+              <div className="table-container">
               <table className="compact-score-table">
                 <thead><tr><th className="text-left pl-4">Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>Out</th><th>F</th><th>B</th></tr></thead>
                 <tbody>
@@ -371,10 +402,10 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                             </select>
                           </div>
                         </td>
-                        <td><input title="Runs" placeholder="0" type="number" className="compact-input" value={entry.runs} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'runs', e.target.valueAsNumber || 0)} /></td>
-                        <td><input title="Balls" placeholder="0" type="number" className="compact-input" value={entry.balls} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'balls', e.target.valueAsNumber || 0)} /></td>
-                        <td><input title="Fours" placeholder="0" type="number" className="compact-input" value={entry.fours} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fours', e.target.valueAsNumber || 0)} /></td>
-                        <td><input title="Sixes" placeholder="0" type="number" className="compact-input" value={entry.sixes} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'sixes', e.target.valueAsNumber || 0)} /></td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Runs" placeholder="0" type="number" className="compact-input" value={entry.runs} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'runs', e.target.valueAsNumber || 0)} />}</td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Balls" placeholder="0" type="number" className="compact-input" value={entry.balls} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'balls', e.target.valueAsNumber || 0)} />}</td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Fours" placeholder="0" type="number" className="compact-input" value={entry.fours} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fours', e.target.valueAsNumber || 0)} />}</td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Sixes" placeholder="0" type="number" className="compact-input" value={entry.sixes} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'sixes', e.target.valueAsNumber || 0)} />}</td>
                         <td><select title="Wicket Type" className="player-select-dropdown" style={{ width: '90px' }} value={entry.outHow} disabled={!pId} onChange={e => {
                           const val = e.target.value;
                           updateBatting(activeInnings, pId, p?.name || '', 'outHow', val);
@@ -407,12 +438,14 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                   })}
                 </tbody>
               </table>
+              </div>
               <div className="p-3 border-t border-white/5">
-                <button type="button" onClick={() => setBattingRowIds(prev => ({ ...prev, [activeInnings]: [...prev[activeInnings], ''] }))} className="text-[10px] text-sky-400 font-black">+ ADD BATSMAN</button>
+                <button type="button" onClick={() => setBattingRowIds(prev => ({ ...prev, [activeInnings]: [...prev[activeInnings], ''] }))} className="text-[10px] text-sky-400 font-black tracking-widest">+ ADD BATSMAN</button>
               </div>
             </div>
-            <div className="flex-[0_1_40%] w-full rounded-xl bg-white/[0.01] border border-white/5">
+            <div className="flex-[0_1_40%] w-full rounded-xl bg-white/[0.01] border border-white/5 bowling-section">
               <div className="px-4 py-2 border-b border-white/5 font-black text-[10px] uppercase tracking-wider text-white">Bowling: {currentBowlLabel}</div>
+              <div className="table-container">
               <table className="compact-score-table">
                 <thead><tr><th className="text-left pl-4">Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>WD</th><th>NB</th></tr></thead>
                 <tbody>
@@ -432,8 +465,9 @@ export default function ManualScoreModal({ match, opponent, players = [], onClos
                   ))}
                 </tbody>
               </table>
+              </div>
               <div className="p-3 border-t border-white/5">
-                <button type="button" onClick={() => addBowlingRow(activeInnings)} className="text-[10px] text-sky-400 font-black">+ ADD BOWLER</button>
+                <button type="button" onClick={() => addBowlingRow(activeInnings)} className="text-[10px] text-sky-400 font-black tracking-widest">+ ADD BOWLER</button>
               </div>
             </div>
           </div>

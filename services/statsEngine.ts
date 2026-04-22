@@ -73,7 +73,8 @@ export const updateBattingCareerStats = (current: BattingStats, perf: Performer)
   updated.matches = syncMatchValue(current.matches, 1);
 
   // Only count as an innings if the player actually batted:
-  const didBat = Number(perf.balls) > 0 || (Number(perf.runs) === 0 && !perf.isNotOut);
+  // (Faced at least one ball OR was out/not-out at the crease)
+  const didBat = Number(perf.balls) > 0 || (perf.outHow && !['Did Not Bat', 'DNB', 'dnb'].includes(perf.outHow));
 
   if (didBat) {
     const matchRuns = Number(perf.runs || 0);

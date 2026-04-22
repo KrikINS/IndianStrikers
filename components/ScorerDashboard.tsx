@@ -2465,18 +2465,21 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         let wides = 0;
         let no_balls = 0;
         let bowledInnings = false;
+        let lastBStat: any = null;
 
         [store.innings1, store.innings2].forEach((inn) => {
           if (!inn) return;
           
           const bStat = inn.battingStats[pid];
           if (bStat) {
+            lastBStat = bStat;
             runs += (bStat.runs || 0);
             balls += (bStat.balls || 0);
             fours += (bStat.fours || 0);
             sixes += (bStat.sixes || 0);
             if (bStat.status === 'batting') isNotOut = true;
-            if (bStat.status !== 'dnb') playedInnings = true;
+            // Only count as an innings if the player actually faced a ball or was at the crease (not DNB)
+            if ((bStat.balls || 0) > 0 || bStat.status !== 'dnb') playedInnings = true;
           }
 
           const bwStat = inn.bowlingStats[pid];
@@ -2510,7 +2513,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             maidens,
             wides,
             no_balls,
-            isNotOut
+            isNotOut,
+            outHow: lastBStat?.outHow || (lastBStat?.status === 'dnb' ? 'Did Not Bat' : isNotOut ? 'Not Out' : 'Out')
           });
         }
       });

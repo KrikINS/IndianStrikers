@@ -5,7 +5,6 @@ import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats,
 import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ArrowRight, ExternalLink, RefreshCw, Swords } from 'lucide-react';
 import * as api from '../services/storageService';
 import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUsers, getLegacyStats } from '../services/storageService';
-import { getPlayerDetailedStats, getAppUsers, getLegacyStats } from '../services/storageService';
 import { useStore } from '../store/StoreProvider';
 import { useOpponentStore } from '../store/opponentStore';
 import styles from './PlayerList.module.css';
@@ -449,10 +448,11 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
       const playerData: Player = {
         id: editingPlayer ? editingPlayer.id : Date.now().toString(),
-        name: formData.name,
+        name: formData.name!,
         role: formData.role as PlayerRole,
         battingStyle: (formData.battingStyle as BattingStyle) || BattingStyle.RIGHT_HAND,
         bowlingStyle: (formData.bowlingStyle as BowlingStyle) || BowlingStyle.NONE,
+        teamId: formData.teamId || 'IND_STRIKERS', // Ensure teamId is provided
         matchesPlayed: summaryMatches,
         runsScored: summaryRuns,
         wicketsTaken: summaryWickets,
