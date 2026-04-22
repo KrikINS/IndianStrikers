@@ -147,10 +147,16 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const enrichedPlayers = useMemo(() => {
     if (!allPlayers) return [];
     return allPlayers.map(p => {
-      const matchPerf = performerData.find(perf => 
+      // Find ALL performances for this player to sum them up
+      const playerPerformances = performerData.filter(perf => 
         String(perf.playerId) === String(p.id) || 
         String(perf.id) === String(p.id)
       );
+
+      const totalMatchRuns = playerPerformances.reduce((sum, perf) => sum + (Number(perf.runs) || 0), 0);
+      const totalMatchWickets = playerPerformances.reduce((sum, perf) => sum + (Number(perf.wickets) || 0), 0);
+      const totalMatchMatches = playerPerformances.reduce((sum, perf) => sum + (Number(perf.matches) || 1), 0);
+
       const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
 
       // Use legacy stats as the baseline, falling back to player summary columns if legacy missing
@@ -160,24 +166,35 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
       const enrichedBatting = {
         ...(p.battingStats || {}),
-        matches: baseMatches + (matchPerf?.matches || 0),
-        runs: baseRuns + (matchPerf?.runs || 0),
-        highestScore: (matchPerf?.runs || 0) > parseInt((legacyRow?.highest_score || p.battingStats?.highestScore || '0').toString().replace('*','')) 
-          ? String(matchPerf.runs) 
-          : String(legacyRow?.highest_score || p.battingStats?.highestScore || '0')
+        matches: baseMatches + totalMatchMatches,
+        runs: baseRuns + totalMatchRuns,
+        highestScore: playerPerformances.reduce((max, perf) => {
+          const runs = Number(perf.runs || 0);
+          const currentMax = parseInt(max.toString().replace('*','')) || 0;
+          return runs > currentMax ? `${runs}${perf.isNotOut ? '*' : ''}` : max;
+        }, (legacyRow?.highest_score || p.battingStats?.highestScore || '0'))
       };
 
       const enrichedBowling = {
         ...(p.bowlingStats || {}),
-        wickets: baseWickets + (matchPerf?.wickets || 0),
-        bestBowling: (matchPerf?.wickets || 0) > parseInt((legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0').split('/')[0])
-           ? `${matchPerf.wickets}/${matchPerf.bowlingRuns}`
-           : (legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0')
+        wickets: baseWickets + totalMatchWickets,
+        bestBowling: playerPerformances.reduce((best, perf) => {
+          const wkts = Number(perf.wickets || 0);
+          const runs = Number(perf.bowlingRuns || 0);
+          const [bestWkts, bestRuns] = best.toString().split('/').map(Number);
+          if (wkts > bestWkts || (wkts === bestWkts && runs < bestRuns)) {
+            return `${wkts}/${runs}`;
+          }
+          return best;
+        }, (legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0'))
       };
       return {
         ...p,
         battingStats: enrichedBatting as any,
-        bowlingStats: enrichedBowling as any
+        bowlingStats: enrichedBowling as any,
+        runsScored: enrichedBatting.runs,
+        wicketsTaken: enrichedBowling.wickets,
+        matchesPlayed: enrichedBatting.matches
       };
     });
   }, [allPlayers, performerData, legacyStats]);
@@ -1330,20 +1347,63 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                   </div>
                   <div className="flex gap-2 items-center">
                     {(detailedStats as any)?.recentForm?.length > 0 ? (
-                      (detailedStats as any)?.recentForm?.map((match: any, i: number) => (
-                        <div 
-                          key={i} 
-                          className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center font-black text-xs shadow-sm transition-transform hover:scale-110 cursor-help ${
-                            match.runs >= 50 ? 'bg-yellow-400 text-yellow-900 ring-2 ring-yellow-200' : 
-                            match.runs >= 30 ? 'bg-sky-500 text-white' : 
-                            match.runs === 0 && !match.isNotOut ? 'bg-slate-800 text-white ring-2 ring-red-400' :
-                            'bg-slate-50 text-slate-700 border border-slate-200'
-                          }`}
-                          title={match.isNotOut ? `${match.runs}* (Not Out)` : `${match.runs} Runs`}
-                        >
-                          {match.runs}{match.isNotOut ? '*' : ''}
-                        </div>
-                      ))
+                      (detailedStats as any)?.recentForm?.map((match: any, i: number) => {
+                        const hasBatting = Number(match.batting?.balls || 0) > 0;
+                        const hasBowling = Number(match.bowling?.overs || 0) > 0;
+                        
+                        if (!hasBatting && !hasBowling) {
+                          return (
+                            <div key={i} className="w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center font-black text-[10px] bg-slate-100 text-slate-400 border border-slate-200 shadow-sm" title="Did Not Bat / Bowl">
+                              DNB
+                            </div>
+                          );
+                        }
+
+                        if (hasBatting && hasBowling) {
+                          return (
+                            <div key={i} className="w-9 h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex flex-col shadow-sm transition-transform hover:scale-110 cursor-help border border-slate-200" title={`${match.batting.runs}${match.batting.isNotOut ? '*' : ''} Runs & ${match.bowling.wickets}/${match.bowling.runs} Wickets`}>
+                              <div className={`flex-1 flex items-center justify-center text-[10px] font-black ${match.batting.runs >= 30 ? 'bg-sky-500 text-white' : 'bg-white text-slate-700'}`}>
+                                {match.batting.runs}{match.batting.isNotOut ? '*' : ''}
+                              </div>
+                              <div className={`flex-1 flex items-center justify-center text-[10px] font-black ${match.bowling.wickets >= 2 ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                {match.bowling.wickets}w
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (hasBatting) {
+                          return (
+                            <div 
+                              key={i} 
+                              className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center font-black text-xs shadow-sm transition-transform hover:scale-110 cursor-help ${
+                                match.batting.runs >= 50 ? 'bg-yellow-400 text-yellow-900 ring-2 ring-yellow-200' : 
+                                match.batting.runs >= 30 ? 'bg-sky-500 text-white' : 
+                                match.batting.runs === 0 && !match.batting.isNotOut ? 'bg-slate-800 text-white ring-2 ring-red-400' :
+                                'bg-slate-50 text-slate-700 border border-slate-200'
+                              }`}
+                              title={match.batting.isNotOut ? `${match.batting.runs}* (Not Out)` : `${match.batting.runs} Runs`}
+                            >
+                              {match.batting.runs}{match.batting.isNotOut ? '*' : ''}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div 
+                            key={i} 
+                            className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex flex-col items-center justify-center font-black shadow-sm transition-transform hover:scale-110 cursor-help ${
+                              match.bowling.wickets >= 3 ? 'bg-emerald-600 text-white' : 
+                              match.bowling.wickets >= 1 ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 
+                              'bg-slate-50 text-slate-500 border border-slate-200'
+                            }`}
+                            title={`${match.bowling.wickets}/${match.bowling.runs} in ${match.bowling.overs} ov`}
+                          >
+                            <span className="text-[10px] leading-none">{match.bowling.wickets}w</span>
+                            <span className="text-[8px] opacity-70 leading-none">{match.bowling.runs}</span>
+                          </div>
+                        );
+                      })
                     ) : (
                       <span className="text-slate-400 italic text-[10px]">No recent matches played</span>
                     )}
@@ -1513,10 +1573,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                     <td className="p-2 md:p-3 text-center">{detailedStats.legacy.maidens}</td>
                                     <td className="p-2 md:p-3 text-center font-bold text-black">{detailedStats.legacy.runs_conceded}</td>
                                     <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.wickets}</td>
+                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
                                     <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_average || '-'}</td>
                                     <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.economy || '-'}</td>
                                     <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_strikeRate || '-'}</td>
-                                    <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
                                     <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.four_wickets}</td>
                                     <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.five_wickets}</td>
                                   </tr>
