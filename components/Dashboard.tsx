@@ -724,11 +724,12 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           >
             <motion.div 
               className="w-44 h-44 flex items-center justify-center relative cursor-pointer group overflow-hidden rounded-[2.5rem]"
+              initial={{ filter: "drop-shadow(0px 0px 0px rgba(0,0,0,0)) brightness(1)" }}
               whileHover={{ 
                 scale: 1.1,
                 rotateY: 15,
                 rotateX: -10,
-                filter: "drop-shadow(0 0 30px rgba(56, 189, 248, 0.6)) brightness(1.1)",
+                filter: "drop-shadow(0px 0px 30px rgba(56, 189, 248, 0.6)) brightness(1.1)",
               }}
               whileTap={{ scale: 0.95, rotateY: 0, rotateX: 0 }}
               transition={{ type: "spring", stiffness: 400, damping: 15 }}

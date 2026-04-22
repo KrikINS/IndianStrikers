@@ -70,14 +70,17 @@ const clearLegacyStorage = () => {
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && (key.includes('storage') || key.includes('ins-'))) {
+            if (key && (key.startsWith('ins-') || key.includes('storage'))) {
                 keysToRemove.push(key);
             }
         }
         keysToRemove.forEach(key => {
-            console.log(`[Clearing Legacy] Removing ${key} from localStorage`);
+            console.log(`[Stateless Migration] Clearing ${key}`);
             localStorage.removeItem(key);
         });
+        
+        // Specifically target the large match store persist key
+        localStorage.removeItem('ins-match-center-storage');
     } catch (e) {
         console.error("Failed to clear legacy local storage", e);
     }
@@ -346,13 +349,10 @@ const AppInternal: React.FC = () => {
     // We can extract store values after the check, but useEffect must be called before the check if we want them to run.
     
     useEffect(() => {
-        if (store?.isHydrated) {
-            store.matchCenter.resetZombieMatches();
-        }
-    }, [store?.isHydrated, store?.matchCenter.resetZombieMatches]);
+        store.matchCenter.resetZombieMatches();
+    }, [store.matchCenter.resetZombieMatches]);
 
     const loadData = async () => {
-        if (!store?.isHydrated) return;
         try {
             console.log("Fetching data from backend...");
             await Promise.allSettled([
@@ -375,28 +375,26 @@ const AppInternal: React.FC = () => {
     useEffect(() => {
         window.refreshAppData = loadData;
         
-        if (store?.isHydrated) {
-            loadData();
+        loadData();
+        
+        const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
+        if (hasSeenSplash) {
+            const savedRole = sessionStorage.getItem('userRole') as UserRole;
+            if (savedRole) setUserRole(savedRole);
             
-            const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
-            if (hasSeenSplash) {
-                const savedRole = sessionStorage.getItem('userRole') as UserRole;
-                if (savedRole) setUserRole(savedRole);
-                
-                const savedAdminView = sessionStorage.getItem('isAdminView');
-                if (savedAdminView === 'true') setIsAdminView(true);
+            const savedAdminView = sessionStorage.getItem('isAdminView');
+            if (savedAdminView === 'true') setIsAdminView(true);
 
-                store.matchCenter.syncWithCloud();
+            store.matchCenter.syncWithCloud();
 
-                const savedUser = sessionStorage.getItem('currentUser');
-                if (savedUser) setCurrentUser(JSON.parse(savedUser));
+            const savedUser = sessionStorage.getItem('currentUser');
+            if (savedUser) setCurrentUser(JSON.parse(savedUser));
 
-                setShowSplash(false);
-            }
+            setShowSplash(false);
         }
-    }, [store?.isHydrated]);
+    }, []);
 
-    if (!store || !store.isHydrated) {
+    if (!store) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-slate-950">
                 <StrikersLoader />

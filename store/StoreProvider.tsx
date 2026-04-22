@@ -29,35 +29,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const opponents = useOpponentStore();
   const tournaments = useTournamentStore();
 
-  // Track hydration status for persisted stores
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect(() => {
-    // Check hydration status of persisted stores
-    const checkHydration = () => {
-      const hydrated = 
-        useOpponentStore.persist?.hasHydrated() && 
-        useMatchCenter.persist?.hasHydrated() &&
-        useTournamentStore.persist?.hasHydrated();
-
-      if (hydrated) {
-        setIsHydrated(true);
-      } else {
-        // Retry if not yet hydrated
-        setTimeout(checkHydration, 50);
-      }
-    };
-
-    checkHydration();
-  }, []);
-
   const value = {
     ...matchCenter,
     matchCenter,
 
     opponents,
     tournaments,
-    isHydrated
+    isHydrated: true // Always true in stateless mode
   };
 
   return (

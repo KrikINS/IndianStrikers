@@ -29,8 +29,10 @@ import {
   CloudLightning,
   CloudDownload,
   CloudOff,
-  LineChart as ChartIcon
+  LineChart as ChartIcon,
+  Lock as LockIcon
 } from 'lucide-react';
+import MatchSummaryModal from './MatchSummaryModal';
 import { 
   ResponsiveContainer, 
   LineChart, 
@@ -942,7 +944,6 @@ const SettingsInput = styled.div`
 `;
 
 // Types already imported at the top
-import MatchSummaryModal from './MatchSummaryModal';
 
 const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ matchId: propMatchId, teamLogo }) => {
   const rootStore = useStore();
@@ -2642,6 +2643,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   };
 
 
+  const isLocked = store.matches.find(m => m.id === activeMatchId)?.isLocked;
+
   if (!currentInnings) return null;
 
   const strikerStats = currentInnings?.battingStats[store.strikerId || ''] || { runs: 0, balls: 0 };
@@ -3002,8 +3005,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               <NameLabel>Striker*</NameLabel>
               <button
                 title="Switch Striker"
-                onClick={() => store.switchStriker()}
-                style={{ color: '#070707ff', background: 'rgba(51,154,240,0.1)', border: 'none', borderRadius: '50%', padding: '4px', cursor: 'pointer' }}
+                onClick={() => {
+                  if (isLocked) return;
+                  store.switchStriker();
+                }}
+                style={{ 
+                  color: '#070707ff', 
+                  background: 'rgba(51,154,240,0.1)', 
+                  border: 'none', 
+                  borderRadius: '50%', 
+                  padding: '4px', 
+                  cursor: isLocked ? 'not-allowed' : 'pointer',
+                  opacity: isLocked ? 0.5 : 1
+                }}
               >
                 <RefreshCcw size={12} />
               </button>
@@ -3023,7 +3037,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bowler</span>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <button
-                  onClick={() => setShowBowlerModal(true)}
+                  onClick={() => {
+                    if (isLocked) return;
+                    setShowBowlerModal(true);
+                  }}
                   style={{
                     background: 'rgba(51,154,240,0.1)',
                     border: 'none',
@@ -3032,7 +3049,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     color: '#339AF0',
                     fontSize: '0.6rem',
                     fontWeight: 800,
-                    cursor: 'pointer'
+                    cursor: isLocked ? 'not-allowed' : 'pointer',
+                    opacity: isLocked ? 0.5 : 1
                   }}
                 >
                   CHANGE
@@ -3113,9 +3131,25 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             </div>
 
             <button
-              onClick={() => { store.undoLastBall(); setIsOverComplete(false); }}
+              onClick={() => { 
+                if (isLocked) return;
+                store.undoLastBall(); 
+                setIsOverComplete(false); 
+              }}
               title="Undo Last Ball"
-              style={{ background: 'rgba(239, 68, 68, 0.2)', border: 'none', borderRadius: 6, padding: '6px 12px', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: 1, visibility: 'visible' }}
+              style={{ 
+                background: 'rgba(239, 68, 68, 0.2)', 
+                border: 'none', 
+                borderRadius: 6, 
+                padding: '6px 12px', 
+                color: '#ef4444', 
+                cursor: isLocked ? 'not-allowed' : 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 6, 
+                opacity: isLocked ? 0.5 : 1, 
+                visibility: 'visible' 
+              }}
             >
               <div style={{ pointerEvents: 'none' }}><RotateCcw size={14} /></div>
               <span style={{ fontSize: '11px', fontWeight: 900 }}>UNDO</span>
@@ -3156,18 +3190,42 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </div>
 
           <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {store.isWaitingForBowler && (
-              <div style={{ position: 'absolute', inset: -4, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)', borderRadius: 12 }}>
-                <button
-                  onClick={() => setShowBowlerModal(true)}
-                  style={{ background: '#FAB005', color: '#000', border: 'none', padding: '10px 20px', borderRadius: 10, fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
-                >
-                  SELECT NEXT BOWLER
-                </button>
+            {(store.isWaitingForBowler || isLocked) && (
+              <div style={{ 
+                position: 'absolute', 
+                inset: -4, 
+                zIndex: 10, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                background: 'rgba(0,0,0,0.6)', 
+                backdropFilter: 'blur(2px)', 
+                borderRadius: 12 
+              }}>
+                {isLocked ? (
+                  <div style={{ 
+                    background: 'rgba(255,255,255,0.05)', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    padding: '12px 24px', 
+                    borderRadius: 16, 
+                    textAlign: 'center' 
+                  }}>
+                    <LockIcon size={24} color="#FAB005" style={{ marginBottom: 8 }} />
+                    <div style={{ color: '#FFF', fontWeight: 900, fontSize: '0.9rem', letterSpacing: 1 }}>MATCH LOCKED</div>
+                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', fontWeight: 700, marginTop: 4 }}>READ-ONLY MODE ACTIVE</div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowBowlerModal(true)}
+                    style={{ background: '#FAB005', color: '#000', border: 'none', padding: '10px 20px', borderRadius: 10, fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
+                  >
+                    SELECT NEXT BOWLER
+                  </button>
+                )}
               </div>
             )}
 
-            <div style={{ opacity: store.isWaitingForBowler ? 0.3 : 1, pointerEvents: store.isWaitingForBowler ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ opacity: (store.isWaitingForBowler || isLocked) ? 0.3 : 1, pointerEvents: (store.isWaitingForBowler || isLocked) ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <RunGrid>
                 <ScoringBtn onClick={() => attemptRecord(0, 'legal')}>0</ScoringBtn>
                 <ScoringBtn onClick={() => attemptRecord(1, 'legal')}>1</ScoringBtn>

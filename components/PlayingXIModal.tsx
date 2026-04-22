@@ -98,7 +98,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
             // Only Active Indian Strikers members (Case-insensitive teamId check)
             return homePlayers.filter(p => 
                 p.isActive && 
-                (p.isClubPlayer || String(p.teamId || '').toUpperCase() === 'IND_STRIKERS')
+                String(p.teamId || '').toUpperCase() === 'IND_STRIKERS'
             );
         }
         

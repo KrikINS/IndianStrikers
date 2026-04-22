@@ -83,10 +83,23 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             const match = matches.find(m => m.id === matchId);
             if (!match) return;
 
-            // Use explicitly negated status to ensure toggle works even if database/UI are out of sync
             const targetStatus = !currentStatus;
-            await updateMatch(matchId, { isLocked: targetStatus } as any);
-            console.log(`[Admin] Match ${matchId} ${targetStatus ? 'locked' : 'unlocked'}.`);
+            
+            if (targetStatus) {
+                // LOCKING: Use finalize endpoint to "cement" the state if match is completed
+                if (match.status === 'completed' && match.live_data) {
+                    const performers = match.performers || [];
+                    await finalizeMatch(matchId, { ...match, isLocked: true }, performers);
+                } else {
+                    // Fallback to simple update if no live_data or not completed
+                    await updateMatch(matchId, { isLocked: true } as any);
+                }
+                console.log(`[Admin] Match ${matchId} locked via finalize.`);
+            } else {
+                // UNLOCKING: Simple update
+                await updateMatch(matchId, { isLocked: false } as any);
+                console.log(`[Admin] Match ${matchId} unlocked.`);
+            }
         } catch (err) {
             console.error("Failed to toggle lock:", err);
             alert("Failed to update lock status. Please check your connection.");

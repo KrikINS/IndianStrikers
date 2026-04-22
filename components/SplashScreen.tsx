@@ -276,11 +276,12 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
           >
             <motion.div 
               className="w-36 h-36 md:w-44 md:h-44 flex items-center justify-center relative cursor-pointer group overflow-hidden rounded-3xl"
+              initial={{ filter: "drop-shadow(0px 0px 0px rgba(0,0,0,0)) brightness(1)" }}
               whileHover={{ 
                 scale: 1.15,
                 rotateY: 20,
                 rotateX: -10,
-                filter: "drop-shadow(0 0 40px rgba(59, 130, 246, 0.7)) brightness(1.1)",
+                filter: "drop-shadow(0px 0px 40px rgba(59, 130, 246, 0.7)) brightness(1.1)",
               }}
               whileTap={{ scale: 0.9, rotateY: 0, rotateX: 0 }}
               transition={{ type: "spring", stiffness: 400, damping: 15 }}
