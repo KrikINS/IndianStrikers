@@ -31,6 +31,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   const [resultType, setResultType] = useState(match.resultType || '');
   const [isSaving, setIsSaving] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const isLocked = !!(match.isLocked || (match as any).is_locked);
 
   const innings1BattingTeam: 'home' | 'away' = useMemo(() => {
     const homeWon = tossWinner === 'Indian Strikers';
@@ -314,11 +315,18 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 bg-black/85 backdrop-blur-sm">
-      <div className="bg-[#020617] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[96vh] overflow-hidden flex flex-col shadow-2xl">
+      <div className="bg-[#020617] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[96vh] overflow-hidden flex flex-col shadow-2xl relative">
+        {isSaving && (
+          <div className="absolute inset-0 z-[200] bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-4">
+            <Loader2 size={48} className="text-blue-500 animate-spin" />
+            <div className="text-white font-black uppercase tracking-widest animate-pulse">Syncing to Cloud SQL...</div>
+            <div className="text-slate-400 text-[10px] uppercase font-bold tracking-tighter">Writing atomic record to database</div>
+          </div>
+        )}
         <div className="px-5 py-3 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-blue-900/40 to-transparent shrink-0">
           <div>
             <h2 className="text-lg font-black text-white flex items-center gap-2">
-              <Award className="text-sky-400" size={18} /> Match Scorecard Entry
+              <Award className="text-sky-400" size={18} /> {isLocked ? 'VIEW LOCKED SCORECARD' : 'Match Scorecard Entry'}
             </h2>
             <p className="text-slate-400 text-[11px]">vs {opponentName} · {match.matchFormat || 'T20'} · Max {maxOvers} overs</p>
           </div>
@@ -349,8 +357,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
               <label className="text-[10px] font-black text-slate-500 uppercase">Toss Won By</label>
               <div className="flex gap-2 mt-1">
                 {['Indian Strikers', opponentName].map(team => (
-                  <button key={team} type="button" onClick={() => setTossWinner(team)}
-                    className={`flex-1 py-1 px-3 rounded-lg text-[11px] font-black border ${tossWinner === team ? 'bg-sky-500/20 border-sky-500/50 text-sky-300' : 'bg-white/[0.02] border-white/10 text-white'}`}
+                  <button key={team} type="button" onClick={() => !isLocked && setTossWinner(team)}
+                    className={`flex-1 py-1 px-3 rounded-lg text-[11px] font-black border ${tossWinner === team ? 'bg-sky-500/20 border-sky-500/50 text-sky-300' : 'bg-white/[0.02] border-white/10 text-white'} ${isLocked ? 'cursor-default opacity-80' : ''}`}
                   >{team}</button>
                 ))}
               </div>
@@ -359,15 +367,15 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
               <label className="text-[10px] font-black text-slate-500 uppercase">Chose To</label>
               <div className="flex gap-2 mt-1">
                 {(['Bat', 'Field'] as const).map(c => (
-                  <button key={c} type="button" onClick={() => setTossChoice(c)}
-                    className={`flex-1 py-1 rounded-lg text-[11px] font-black border ${tossChoice === c ? 'bg-blue-600/30 border-blue-500/50 text-blue-300' : 'bg-white/[0.02] border-white/10 text-white'}`}
+                  <button key={c} type="button" onClick={() => !isLocked && setTossChoice(c)}
+                    className={`flex-1 py-1 rounded-lg text-[11px] font-black border ${tossChoice === c ? 'bg-blue-600/30 border-blue-500/50 text-blue-300' : 'bg-white/[0.02] border-white/10 text-white'} ${isLocked ? 'cursor-default opacity-80' : ''}`}
                   >{c}</button>
                 ))}
               </div>
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-500 uppercase">Max Overs</label>
-              <select title="Select Max Overs" value={maxOvers} onChange={e => setMaxOvers(parseInt(e.target.value))} className="w-full mt-1 bg-[#0f172a] border border-white/10 rounded-lg py-1 px-2 text-white text-[12px]">
+              <select disabled={isLocked} title="Select Max Overs" value={maxOvers} onChange={e => setMaxOvers(parseInt(e.target.value))} className="w-full mt-1 bg-[#0f172a] border border-white/10 rounded-lg py-1 px-2 text-white text-[12px] disabled:opacity-50">
                 {overOptions.map(o => <option key={o} value={o}>{o} Overs</option>)}
               </select>
             </div>
@@ -394,19 +402,19 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                       <tr key={idx}>
                         <td className="pl-4">
                           <div className="flex items-center gap-2">
-                            <button title="Toggle Hero Performance" type="button" onClick={() => updateBatting(activeInnings, pId, p?.name || '', 'is_hero', !entry.is_hero)}
-                              className={`hero-star ${entry.is_hero ? 'active' : 'text-slate-600'}`} disabled={!pId}><Star size={14} fill={entry.is_hero ? "currentColor" : "none"} /></button>
-                            <select title="Select Batter" className="player-select-dropdown" value={pId} onChange={e => { updateBattingRowId(activeInnings, idx, e.target.value); if (e.target.value) { const s = battingSquad.find(pl => pl.id === e.target.value); if (s) updateBatting(activeInnings, s.id, s.name, 'runs', entry.runs); } }}>
+                            <button title="Toggle Hero Performance" type="button" onClick={() => !isLocked && updateBatting(activeInnings, pId, p?.name || '', 'is_hero', !entry.is_hero)}
+                              className={`hero-star ${entry.is_hero ? 'active' : 'text-slate-600'} ${isLocked ? 'cursor-default' : ''}`} disabled={!pId || isLocked}><Star size={14} fill={entry.is_hero ? "currentColor" : "none"} /></button>
+                            <select disabled={isLocked} title="Select Batter" className="player-select-dropdown disabled:opacity-50" value={pId} onChange={e => { updateBattingRowId(activeInnings, idx, e.target.value); if (e.target.value) { const s = battingSquad.find(pl => pl.id === e.target.value); if (s) updateBatting(activeInnings, s.id, s.name, 'runs', entry.runs); } }}>
                               <option value="">- Select Batter -</option>
                               {battingSquad.map(pl => <option key={pl.id} value={pl.id} disabled={battingRowIds[activeInnings].includes(pl.id) && pl.id !== pId}>{pl.name}</option>)}
                             </select>
                           </div>
                         </td>
-                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Runs" placeholder="0" type="number" className="compact-input" value={entry.runs} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'runs', e.target.valueAsNumber || 0)} />}</td>
-                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Balls" placeholder="0" type="number" className="compact-input" value={entry.balls} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'balls', e.target.valueAsNumber || 0)} />}</td>
-                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Fours" placeholder="0" type="number" className="compact-input" value={entry.fours} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fours', e.target.valueAsNumber || 0)} />}</td>
-                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Sixes" placeholder="0" type="number" className="compact-input" value={entry.sixes} disabled={!pId} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'sixes', e.target.valueAsNumber || 0)} />}</td>
-                        <td><select title="Wicket Type" className="player-select-dropdown" style={{ width: '90px' }} value={entry.outHow} disabled={!pId} onChange={e => {
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Runs" placeholder="0" type="number" className="compact-input" value={entry.runs} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'runs', e.target.valueAsNumber || 0)} />}</td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Balls" placeholder="0" type="number" className="compact-input" value={entry.balls} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'balls', e.target.valueAsNumber || 0)} />}</td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Fours" placeholder="0" type="number" className="compact-input" value={entry.fours} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fours', e.target.valueAsNumber || 0)} />}</td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Sixes" placeholder="0" type="number" className="compact-input" value={entry.sixes} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'sixes', e.target.valueAsNumber || 0)} />}</td>
+                        <td><select title="Wicket Type" className="player-select-dropdown" style={{ width: '90px' }} value={entry.outHow} disabled={!pId || isLocked} onChange={e => {
                           const val = e.target.value;
                           updateBatting(activeInnings, pId, p?.name || '', 'outHow', val);
                           // Reset F/B if not applicable
@@ -419,7 +427,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                         </select></td>
                         <td>
                           <select title="Fielder" className="player-select-dropdown" style={{ width: '80px' }} value={entry.fielderId || ''} 
-                            disabled={!pId || ['Not Out', 'Did Not Bat', 'Bowled', 'LBW', 'Hit Wicket'].includes(entry.outHow)}
+                            disabled={!pId || isLocked || ['Not Out', 'Did Not Bat', 'Bowled', 'LBW', 'Hit Wicket'].includes(entry.outHow)}
                             onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fielderId', e.target.value)}>
                             <option value="">-</option>
                             {bowlingSquad.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
@@ -427,7 +435,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                         </td>
                         <td>
                           <select title="Bowler" className="player-select-dropdown" style={{ width: '80px' }} value={entry.bowlerId || ''} 
-                            disabled={!pId || ['Not Out', 'Did Not Bat', 'Run Out'].includes(entry.outHow)}
+                            disabled={!pId || isLocked || ['Not Out', 'Did Not Bat', 'Run Out'].includes(entry.outHow)}
                             onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'bowlerId', e.target.value)}>
                             <option value="">-</option>
                             {bowlingSquad.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
@@ -439,9 +447,11 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                 </tbody>
               </table>
               </div>
-              <div className="p-3 border-t border-white/5">
-                <button type="button" onClick={() => setBattingRowIds(prev => ({ ...prev, [activeInnings]: [...prev[activeInnings], ''] }))} className="text-[10px] text-sky-400 font-black tracking-widest">+ ADD BATSMAN</button>
-              </div>
+              {!isLocked && (
+                <div className="p-3 border-t border-white/5">
+                  <button type="button" onClick={() => setBattingRowIds(prev => ({ ...prev, [activeInnings]: [...prev[activeInnings], ''] }))} className="text-[10px] text-sky-400 font-black tracking-widest">+ ADD BATSMAN</button>
+                </div>
+              )}
             </div>
             <div className="flex-[0_1_40%] w-full rounded-xl bg-white/[0.01] border border-white/5 bowling-section">
               <div className="px-4 py-2 border-b border-white/5 font-black text-[10px] uppercase tracking-wider text-white">Bowling: {currentBowlLabel}</div>
@@ -451,24 +461,26 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                 <tbody>
                   {bowlingRows[activeInnings].map((row, idx) => (
                     <tr key={idx}>
-                      <td className="pl-4"><select title="Select Bowler" className="player-select-dropdown" value={row.playerId} onChange={e => updateBowlingRow(activeInnings, idx, 'playerId', e.target.value)}>
+                      <td className="pl-4"><select disabled={isLocked} title="Select Bowler" className="player-select-dropdown disabled:opacity-50" value={row.playerId} onChange={e => updateBowlingRow(activeInnings, idx, 'playerId', e.target.value)}>
                         <option value="">- Select -</option>
                         {bowlingSquad.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
                       </select></td>
-                      <td><input title="Overs" placeholder="0.0" type="number" step="0.1" className="compact-input" value={row.overs} onChange={e => updateBowlingRow(activeInnings, idx, 'overs', e.target.valueAsNumber || 0)} /></td>
-                      <td><input title="Maidens" placeholder="0" type="number" className="compact-input" value={row.maidens} onChange={e => updateBowlingRow(activeInnings, idx, 'maidens', e.target.valueAsNumber || 0)} /></td>
-                      <td><input title="Runs" placeholder="0" type="number" className="compact-input" value={row.runs} onChange={e => updateBowlingRow(activeInnings, idx, 'runs', e.target.valueAsNumber || 0)} /></td>
-                      <td><input title="Wickets" placeholder="0" type="number" className="compact-input" value={row.wickets} onChange={e => updateBowlingRow(activeInnings, idx, 'wickets', e.target.valueAsNumber || 0)} /></td>
-                      <td><input title="Wides" placeholder="0" type="number" className="compact-input" value={row.wd} onChange={e => updateBowlingRow(activeInnings, idx, 'wd', e.target.valueAsNumber || 0)} /></td>
-                      <td><input title="No Balls" placeholder="0" type="number" className="compact-input" value={row.nb} onChange={e => updateBowlingRow(activeInnings, idx, 'nb', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="Overs" placeholder="0.0" type="number" step="0.1" className="compact-input" value={row.overs} disabled={isLocked} onChange={e => updateBowlingRow(activeInnings, idx, 'overs', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="Maidens" placeholder="0" type="number" className="compact-input" value={row.maidens} disabled={isLocked} onChange={e => updateBowlingRow(activeInnings, idx, 'maidens', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="Runs" placeholder="0" type="number" className="compact-input" value={row.runs} disabled={isLocked} onChange={e => updateBowlingRow(activeInnings, idx, 'runs', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="Wickets" placeholder="0" type="number" className="compact-input" value={row.wickets} disabled={isLocked} onChange={e => updateBowlingRow(activeInnings, idx, 'wickets', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="Wides" placeholder="0" type="number" className="compact-input" value={row.wd} disabled={isLocked} onChange={e => updateBowlingRow(activeInnings, idx, 'wd', e.target.valueAsNumber || 0)} /></td>
+                      <td><input title="No Balls" placeholder="0" type="number" className="compact-input" value={row.nb} disabled={isLocked} onChange={e => updateBowlingRow(activeInnings, idx, 'nb', e.target.valueAsNumber || 0)} /></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               </div>
-              <div className="p-3 border-t border-white/5">
-                <button type="button" onClick={() => addBowlingRow(activeInnings)} className="text-[10px] text-sky-400 font-black tracking-widest">+ ADD BOWLER</button>
-              </div>
+              {!isLocked && (
+                <div className="p-3 border-t border-white/5">
+                  <button type="button" onClick={() => addBowlingRow(activeInnings)} className="text-[10px] text-sky-400 font-black tracking-widest">+ ADD BOWLER</button>
+                </div>
+              )}
             </div>
           </div>
           <div className="p-3 bg-white/[0.05] rounded-xl border border-white/5 flex gap-4 text-[11px] font-black text-slate-400 items-center overflow-x-auto">
@@ -486,24 +498,26 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
           )}
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold hover:bg-white/10 transition-colors">Cancel</button>
-            <button 
-              type="submit" 
-              disabled={isSaving}
-              className={`flex-[2] py-3 rounded-xl font-black shadow-lg transition-all flex items-center justify-center gap-2 ${isSaving ? 'bg-blue-800 cursor-not-allowed opacity-80' : 'bg-blue-700 hover:bg-blue-600 active:scale-[0.98]'}`}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="animate-spin" size={18} />
-                  <span>SYNCING...</span>
-                </>
-              ) : (
-                <>
-                  <Save size={18} />
-                  <span>SYNC SCORECARD</span>
-                </>
-              )}
-            </button>
+            <button type="button" onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold hover:bg-white/10 transition-colors">Close</button>
+            {!isLocked && (
+              <button 
+                type="submit" 
+                disabled={isSaving}
+                className={`flex-[2] py-3 rounded-xl font-black shadow-lg transition-all flex items-center justify-center gap-2 ${isSaving ? 'bg-blue-800 cursor-not-allowed opacity-80' : 'bg-blue-700 hover:bg-blue-600 active:scale-[0.98]'}`}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>SYNCING...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    <span>SYNC SCORECARD</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </form>
       </div>

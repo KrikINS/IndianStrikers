@@ -1311,11 +1311,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }, [!!store.innings1, store.matchId, matchMeta?.status, matchMeta?.live_data]);
 
   const syncToDatabase = useCallback(
-    _.debounce((state: any) => {
+    async (state: any) => {
       if (!activeMatchId) return;
 
       // GUARDED SYNC: Only push if local totalBalls >= Cloud totalBalls
-      // This prevents a stale desktop tab from overwriting mobile progress
       const localBalls = (state.innings1?.totalBalls || 0) + (state.innings2?.totalBalls || 0);
       const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
 
@@ -1324,8 +1323,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         return;
       }
 
-      updateMatch(activeMatchId, { live_data: state, last_updated: new Date().toISOString() });
-    }, 3000),
+      try {
+        setIsSyncing(true);
+        await updateMatch(activeMatchId, { live_data: state, last_updated: new Date().toISOString() });
+        setIsSyncing(false);
+      } catch (err) {
+        console.error("[Sync] Failed to update match:", err);
+        setIsSyncing(false);
+      }
+    },
     [activeMatchId, matchMeta?.live_data]
   );
 

@@ -10,6 +10,7 @@ import EditMatchModal from './EditMatchModal';
 import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import MatchScorecardEntry from './MatchScorecardEntry';
+import { UniversalScorecard } from './UniversalScorecard';
 import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Unlock, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
@@ -1161,20 +1162,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 />
             )}
 
-            {viewScorecardMatch && (() => {
-                const resolvedOpponent = opponents.find(o => o.id === viewScorecardMatch.opponentId);
-                return (
-                    <MatchScorecardEntry
-                        match={viewScorecardMatch}
-                        onClose={() => setViewScorecardMatch(null)}
-                        opponent={resolvedOpponent}
-                        onSubmit={(finalData) => {
-                            updateMatch(viewScorecardMatch.id, finalData);
-                            setViewScorecardMatch(null);
-                        }}
-                    />
-                );
-            })()}
+            {viewScorecardMatch && (
+                <UniversalScorecard
+                    match={viewScorecardMatch}
+                    players={players}
+                    opponents={opponents}
+                    onClose={() => setViewScorecardMatch(null)}
+                />
+            )}
 
             {summaryPreviewUrl && (
                 <div className="fixed inset-0 z-[10001] bg-slate-950/90 flex items-center justify-center p-4 backdrop-blur-xl transition-all">
