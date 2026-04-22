@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Player, OpponentTeam } from '../types';
 import { X, Users, Check, Save, Plus, Loader2, Share2 } from 'lucide-react';
+import { useMatchCenter } from '../store/matchStore';
 
 interface PlayingXIModalProps {
     matchId: string;
@@ -32,6 +33,15 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>(initialSelection.map(id => String(id)));
     const [isSaving, setIsSaving] = useState(false);
     const [quickAddName, setQuickAddName] = useState('');
+    const { fetchPlayers } = useMatchCenter();
+
+    // Emergency: If roster is empty, force a re-fetch from store
+    React.useEffect(() => {
+        if ((teamType === 'home' || teamType === 'view') && homePlayers.length === 0) {
+            console.log("[PlayingXI] Squad roster empty, forcing re-fetch...");
+            fetchPlayers();
+        }
+    }, [homePlayers.length, teamType, fetchPlayers]);
 
     // Sync state with props if initial selection changes (e.g. data load lag or background sync)
     React.useEffect(() => {
@@ -85,8 +95,11 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     // PERMANENT ENFORCEMENT: Filter selection lists to ONLY show Active players for the relevant team.
     const displayPlayers = useMemo(() => {
         if (teamType === 'home' || teamType === 'view') {
-            // Only Active Indian Strikers members
-            return homePlayers.filter(p => p.isClubPlayer && p.isActive);
+            // Only Active Indian Strikers members (Case-insensitive teamId check)
+            return homePlayers.filter(p => 
+                p.isActive && 
+                (p.isClubPlayer || String(p.teamId || '').toUpperCase() === 'IND_STRIKERS')
+            );
         }
         
         if (teamType === 'opponent') {

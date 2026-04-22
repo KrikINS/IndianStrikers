@@ -630,7 +630,24 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     );
   };
 
-  const renderPlayerCard = (player: Player) => (
+  const renderPlayerCard = (player: Player) => {
+    // Live calculation for RUNS and WKTS to ensure "Last Match" is always included
+    // stats refers to all tournament performances for this player
+    const stats = performerData.filter(perf => String(perf.playerId) === String(player.id) || String(perf.id) === String(player.id));
+    const totalMatchRuns = stats.reduce((sum, s) => sum + (Number(s.runs) || 0), 0);
+    const totalMatchWkts = stats.reduce((sum, s) => sum + (Number(s.wickets) || 0), 0);
+    const totalMatchGames = stats.reduce((sum, s) => sum + (Number(s.matches) || 1), 0);
+
+    const legacyRow = legacyStats.find(l => String(l.player_id) === String(player.id));
+    const baseRuns = Number(legacyRow?.runs || player.runsScored || 0);
+    const baseWkts = Number(legacyRow?.wickets || player.wicketsTaken || 0);
+    const baseMatches = Number(legacyRow?.matches || player.matchesPlayed || 0);
+
+    const displayRuns = baseRuns + totalMatchRuns;
+    const displayWkts = baseWkts + totalMatchWkts;
+    const displayMatches = baseMatches + totalMatchGames;
+
+    return (
     <div
       key={player.id}
       onClick={() => { setViewingPlayer(player); setActiveStatTab('batting'); }}
@@ -728,25 +745,26 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
             <span className="text-slate-400 block uppercase text-[10px]">MTCH</span>
             <span className="font-bold text-slate-700 text-sm">
-              {player.battingStats?.matches || player.matchesPlayed || 0}
+              {displayMatches}
             </span>
           </div>
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
             <span className="text-slate-400 block uppercase text-[10px]">Runs</span>
             <span className="font-bold text-slate-700 text-sm">
-              {player.battingStats?.runs || player.runsScored || 0}
+              {displayRuns}
             </span>
           </div>
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
             <span className="text-slate-400 block uppercase text-[10px]">Wkts</span>
             <span className="font-bold text-slate-700 text-sm">
-              {player.bowlingStats?.wickets || player.wicketsTaken || 0}
+              {displayWkts}
             </span>
           </div>
         </div>
       </div>
     </div>
   );
+};
 
   return (
     <div className="space-y-6 animate-fade-in pb-12 w-full">
@@ -1353,20 +1371,20 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                         
                         if (!hasBatting && !hasBowling) {
                           return (
-                            <div key={i} className="w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center font-black text-[10px] bg-slate-100 text-slate-400 border border-slate-200 shadow-sm" title="Did Not Bat / Bowl">
-                              DNB
+                            <div key={i} className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center font-black text-[9px] bg-slate-100 text-slate-400 border border-slate-200 shadow-sm leading-tight text-center" title="Did Not Bat / Bowl">
+                              DNB<br/>DNB
                             </div>
                           );
                         }
 
                         if (hasBatting && hasBowling) {
                           return (
-                            <div key={i} className="w-9 h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex flex-col shadow-sm transition-transform hover:scale-110 cursor-help border border-slate-200" title={`${match.batting.runs}${match.batting.isNotOut ? '*' : ''} Runs & ${match.bowling.wickets}/${match.bowling.runs} Wickets`}>
-                              <div className={`flex-1 flex items-center justify-center text-[10px] font-black ${match.batting.runs >= 30 ? 'bg-sky-500 text-white' : 'bg-white text-slate-700'}`}>
+                            <div key={i} className="w-10 h-10 md:w-12 md:h-12 rounded-lg overflow-hidden flex flex-col shadow-sm transition-transform hover:scale-110 cursor-help border border-slate-200 bg-white" title={`${match.batting.runs}${match.batting.isNotOut ? '*' : ''} Runs & ${match.bowling.wickets}/${match.bowling.runs} Wkts`}>
+                              <div className={`flex-1 flex items-center justify-center text-[10px] font-black border-b border-slate-100 ${match.batting.runs >= 30 ? 'bg-sky-500 text-white' : 'text-slate-700'}`}>
                                 {match.batting.runs}{match.batting.isNotOut ? '*' : ''}
                               </div>
-                              <div className={`flex-1 flex items-center justify-center text-[10px] font-black ${match.bowling.wickets >= 2 ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                                {match.bowling.wickets}w
+                              <div className={`flex-1 flex items-center justify-center text-[10px] font-black ${match.bowling.wickets >= 2 ? 'bg-emerald-500 text-white' : 'text-slate-600'}`}>
+                                {match.bowling.wickets}/{match.bowling.runs}
                               </div>
                             </div>
                           );
@@ -1376,7 +1394,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                           return (
                             <div 
                               key={i} 
-                              className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex items-center justify-center font-black text-xs shadow-sm transition-transform hover:scale-110 cursor-help ${
+                              className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center font-black text-xs shadow-sm transition-transform hover:scale-110 cursor-help ${
                                 match.batting.runs >= 50 ? 'bg-yellow-400 text-yellow-900 ring-2 ring-yellow-200' : 
                                 match.batting.runs >= 30 ? 'bg-sky-500 text-white' : 
                                 match.batting.runs === 0 && !match.batting.isNotOut ? 'bg-slate-800 text-white ring-2 ring-red-400' :
@@ -1392,15 +1410,15 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                         return (
                           <div 
                             key={i} 
-                            className={`w-9 h-9 md:w-10 md:h-10 rounded-lg flex flex-col items-center justify-center font-black shadow-sm transition-transform hover:scale-110 cursor-help ${
+                            className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex flex-col items-center justify-center font-black shadow-sm transition-transform hover:scale-110 cursor-help ${
                               match.bowling.wickets >= 3 ? 'bg-emerald-600 text-white' : 
                               match.bowling.wickets >= 1 ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 
                               'bg-slate-50 text-slate-500 border border-slate-200'
                             }`}
                             title={`${match.bowling.wickets}/${match.bowling.runs} in ${match.bowling.overs} ov`}
                           >
-                            <span className="text-[10px] leading-none">{match.bowling.wickets}w</span>
-                            <span className="text-[8px] opacity-70 leading-none">{match.bowling.runs}</span>
+                            <span className="text-[10px] leading-none">{match.bowling.wickets}/{match.bowling.runs}</span>
+                            <span className="text-[8px] opacity-70 mt-0.5">WKTS</span>
                           </div>
                         );
                       })
