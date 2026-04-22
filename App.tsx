@@ -79,8 +79,10 @@ const clearLegacyStorage = () => {
             localStorage.removeItem(key);
         });
         
-        // Specifically target the large match store persist key
+        // Specifically target the large match store persist key and player caches
         localStorage.removeItem('ins-match-center-storage');
+        localStorage.removeItem('ins_offline_players');
+        localStorage.removeItem('ins-players-cache');
     } catch (e) {
         console.error("Failed to clear legacy local storage", e);
     }

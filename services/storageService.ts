@@ -175,11 +175,7 @@ export const getPlayers = async (): Promise<Player[]> => {
 
     const data = await handleResponse(res);
     
-    // If handleResponse returned null (500 error), use cache
-    if (!data) {
-      const cached = localStorage.getItem('ins_offline_players');
-      return cached ? JSON.parse(cached) : [];
-    }
+    if (!data) return [];
 
     if (Array.isArray(data)) {
       console.log(`[storageService] Success! Received ${data.length} players.`);
@@ -214,27 +210,11 @@ export const getPlayers = async (): Promise<Player[]> => {
         console.table(players.slice(0, 5).map(p => ({ id: p.id, name: p.name, isActive: p.isActive })));
     }
 
-    // Update offline cache safely to prevent QuotaExceededError on large payloads
-    try {
-        localStorage.setItem('ins_offline_players', JSON.stringify(players));
-    } catch (cacheError) {
-        console.warn("[storageService] Local storage is full. Players will not be available offline.");
-        // Try clearing old cache to make room for new data if needed
-        try { localStorage.removeItem('ins_offline_players'); } catch(e) {}
-    }
-
     return players;
   } catch (e: any) {
     clearTimeout(timeoutId);
     console.error(`[storageService] Error fetching players:`, e);
-    console.warn("[storageService] Tunnel is slow or API failed, attempting to use cache...");
-    
-    try {
-        const cached = localStorage.getItem('ins_offline_players');
-        return cached ? JSON.parse(cached) : []; 
-    } catch (parseError) {
-        return [];
-    }
+    return [];
   }
 };
 
