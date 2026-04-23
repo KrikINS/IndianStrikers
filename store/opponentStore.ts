@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { OpponentTeam } from '../types';
 import * as api from '../services/storageService';
 

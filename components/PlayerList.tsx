@@ -199,6 +199,22 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     });
   }, [allPlayers, performerData, legacyStats]);
 
+  const recentBatting = useMemo(() => {
+    if (!viewingPlayer) return [];
+    return performerData
+      .filter(perf => (String(perf.playerId) === String(viewingPlayer.id) || String(perf.id) === String(viewingPlayer.id)) && perf.runs !== undefined)
+      .sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime())
+      .slice(0, 5);
+  }, [viewingPlayer, performerData]);
+
+  const recentBowling = useMemo(() => {
+    if (!viewingPlayer) return [];
+    return performerData
+      .filter(perf => (String(perf.playerId) === String(viewingPlayer.id) || String(perf.id) === String(viewingPlayer.id)) && perf.wickets !== undefined)
+      .sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime())
+      .slice(0, 5);
+  }, [viewingPlayer, performerData]);
+
   const statsSyncHandler = async () => {
     setIsSyncing(true);
     try {
@@ -1362,68 +1378,63 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                     </h3>
                     <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">Last 5 Innings</p>
                   </div>
-                  <div className="flex gap-2 items-center">
-                    {(detailedStats as any)?.recentForm?.length > 0 ? (
-                      (detailedStats as any)?.recentForm?.map((match: any, i: number) => {
-                        const hasBatting = Number(match.batting?.balls || 0) > 0;
-                        const hasBowling = Number(match.bowling?.overs || 0) > 0;
-                        
-                        if (!hasBatting && !hasBowling) {
-                          return (
-                            <div key={i} className="w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center font-black text-[9px] bg-slate-100 text-slate-400 border border-slate-200 shadow-sm leading-tight text-center" title="Did Not Bat / Bowl">
-                              DNB<br/>DNB
-                            </div>
-                          );
-                        }
-
-                        if (hasBatting && hasBowling) {
-                          return (
-                            <div key={i} className="w-10 h-10 md:w-12 md:h-12 rounded-lg overflow-hidden flex flex-col shadow-sm transition-transform hover:scale-110 cursor-help border border-slate-200 bg-white" title={`${match.batting.runs}${match.batting.isNotOut ? '*' : ''} Runs & ${match.bowling.wickets}-${match.bowling.runs} Wkts`}>
-                              <div className={`flex-1 flex items-center justify-center text-[10px] font-black border-b border-slate-100 ${match.batting.runs >= 30 ? 'bg-sky-500 text-white' : 'text-slate-700'}`}>
-                                {match.batting.runs}{match.batting.isNotOut ? '*' : ''}
+                  
+                  <div className="space-y-3">
+                    {/* Batting Row */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Batting Form</span>
+                      <div className="flex gap-2 items-center overflow-x-auto pb-1 scroller-hide">
+                        {recentBatting.length > 0 ? (
+                          recentBatting.map((perf, i) => {
+                            const runs = Number(perf.runs || 0);
+                            return (
+                              <div 
+                                key={i} 
+                                className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-[10px] shadow-sm transition-transform hover:scale-110 cursor-help ${
+                                  runs >= 50 ? 'bg-yellow-400 text-yellow-900 ring-1 ring-yellow-200' : 
+                                  runs >= 30 ? 'bg-sky-500 text-white' : 
+                                  runs === 0 && !perf.isNotOut ? 'bg-slate-800 text-white ring-1 ring-red-400' :
+                                  'bg-slate-50 text-slate-700 border border-slate-200'
+                                }`}
+                                title={perf.isNotOut ? `${runs}* (Not Out)` : `${runs} Runs`}
+                              >
+                                {runs}{perf.isNotOut ? '*' : ''}
                               </div>
-                              <div className={`flex-1 flex items-center justify-center text-[10px] font-black ${match.bowling.wickets >= 2 ? 'bg-emerald-500 text-white' : 'text-slate-600'}`}>
-                                {match.bowling.wickets}-{match.bowling.runs}
+                            );
+                          })
+                        ) : (
+                          <span className="text-slate-300 italic text-[9px]">No recent scores</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bowling Row */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bowling Form</span>
+                      <div className="flex gap-2 items-center overflow-x-auto pb-1 scroller-hide">
+                        {recentBowling.length > 0 ? (
+                          recentBowling.map((perf, i) => {
+                            const wkts = Number(perf.wickets || 0);
+                            const runs = Number(perf.bowlingRuns || 0);
+                            return (
+                              <div 
+                                key={i} 
+                                className={`w-8 h-8 shrink-0 rounded-lg flex flex-col items-center justify-center font-black shadow-sm transition-transform hover:scale-110 cursor-help border ${
+                                  wkts >= 3 ? 'bg-emerald-600 text-white border-emerald-700' : 
+                                  wkts >= 1 ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
+                                  'bg-slate-50 text-slate-500 border-slate-200'
+                                }`}
+                                title={`${wkts}-${runs} in ${perf.bowlingOvers || 0} ov`}
+                              >
+                                <span className="text-[9px] leading-none font-bold">{wkts}-{runs}</span>
                               </div>
-                            </div>
-                          );
-                        }
-
-                        if (hasBatting) {
-                          return (
-                            <div 
-                              key={i} 
-                              className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center font-black text-xs shadow-sm transition-transform hover:scale-110 cursor-help ${
-                                match.batting.runs >= 50 ? 'bg-yellow-400 text-yellow-900 ring-2 ring-yellow-200' : 
-                                match.batting.runs >= 30 ? 'bg-sky-500 text-white' : 
-                                match.batting.runs === 0 && !match.batting.isNotOut ? 'bg-slate-800 text-white ring-2 ring-red-400' :
-                                'bg-slate-50 text-slate-700 border border-slate-200'
-                              }`}
-                              title={match.batting.isNotOut ? `${match.batting.runs}* (Not Out)` : `${match.batting.runs} Runs`}
-                            >
-                              {match.batting.runs}{match.batting.isNotOut ? '*' : ''}
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div 
-                            key={i} 
-                            className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex flex-col items-center justify-center font-black shadow-sm transition-transform hover:scale-110 cursor-help border ${
-                              match.bowling.wickets >= 3 ? 'bg-emerald-600 text-white border-emerald-700' : 
-                              match.bowling.wickets >= 1 ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
-                              'bg-slate-50 text-slate-500 border-slate-200'
-                            }`}
-                            title={`${match.bowling.wickets}-${match.bowling.runs} in ${match.bowling.overs} ov`}
-                          >
-                            <span className="text-[10px] leading-none">{match.bowling.wickets}-{match.bowling.runs}</span>
-                            <span className="text-[7px] opacity-70 uppercase tracking-tighter">W-R</span>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <span className="text-slate-400 italic text-[10px]">No recent matches played</span>
-                    )}
+                            );
+                          })
+                        ) : (
+                          <span className="text-slate-300 italic text-[9px]">No recent figures</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1569,10 +1580,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Maid</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Runs</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/80">Wkts</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Best</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">SR</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Ave</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Econ</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">SR</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Best</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">4W</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">5W</th>
                             </tr>
@@ -1590,10 +1601,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                       <td className="p-2 md:p-3 text-center">{detailedStats.legacy.maidens}</td>
                                       <td className="p-2 md:p-3 text-center font-bold text-black">{detailedStats.legacy.runs_conceded}</td>
                                       <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.wickets}</td>
-                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
+                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_strikeRate || '-'}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_average || '-'}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.economy || '-'}</td>
-                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_strikeRate || '-'}</td>
+                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.four_wickets}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.five_wickets}</td>
                                     </tr>

@@ -531,6 +531,42 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     </tbody>
                   </ScoreCardTable>
 
+                  {(() => {
+                    const batters = currentInningsData.batting;
+                    // Detect if Home team is batting by checking if any batter exists in the Home players list
+                    let isHomeBatting = batters.some(b => players.some(p => p.id === b.playerId || p.player_id === b.playerId));
+                    
+                    // Fallback to match metadata if no one has batted yet
+                    if (batters.length === 0) {
+                      isHomeBatting = (selectedInnings === 1 && match.isHomeBattingFirst) || 
+                                      (selectedInnings === 2 && !match.isHomeBattingFirst);
+                    }
+
+                    const playingXI = isHomeBatting ? (match.homeTeamXI || []) : (match.opponentTeamXI || []);
+                    const battingIds = new Set(batters.map(b => b.playerId));
+                    const dnbPlayers = playingXI.filter((id: string) => !battingIds.has(id));
+
+                    if (dnbPlayers.length === 0) return null;
+
+                    return (
+                      <div style={{ 
+                        padding: '12px 8px', 
+                        fontSize: '0.7rem', 
+                        color: 'rgba(255,255,255,0.4)', 
+                        fontStyle: 'italic',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        marginBottom: '24px'
+                      }}>
+                        <span style={{ fontWeight: 800, textTransform: 'uppercase', marginRight: 6, fontStyle: 'normal', opacity: 0.8 }}>Did Not Bat:</span>
+                        {dnbPlayers.map((id: string, idx: number) => (
+                          <span key={id}>
+                            {getPlayerNameResolved(id)}{idx < dnbPlayers.length - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
                   <TableTitle><Target size={14} /> BOWLING</TableTitle>
                   <ScoreCardTable>
                     <thead>

@@ -30,8 +30,12 @@ import {
   CloudDownload,
   CloudOff,
   LineChart as ChartIcon,
-  Lock as LockIcon
+  Lock as LockIcon,
+  Award,
+  Target,
+  ExternalLink
 } from 'lucide-react';
+import { APP_VERSION } from '../src/version';
 import MatchSummaryModal from './MatchSummaryModal';
 import { 
   ResponsiveContainer, 
@@ -1015,7 +1019,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Helper: resolve player name from either squad
   const getPlayerName = (id: string | null): string => {
-    if (!id) return 'â€”';
+    if (!id) return '—';
     const homePlayer = players.find((p: Player) => p.id === id);
     if (homePlayer) return homePlayer.name;
     const awayPlayer = opponentPlayers.find(p => p.id === id);
@@ -1396,7 +1400,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       setSyncStatus('idle');
       toast.success("Match synced. Safe to hand over!", {
         duration: 5000,
-        icon: 'ðŸ¤'
+        icon: '🤝'
       });
 
       // 4. Clean exit
@@ -1539,8 +1543,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         if (b.subType === 'bat') sPRuns += b.runs;
         if (b.isLegal) sPBalls++;
       } else if (b.strikerId === nsId) {
-        if (b.subType === 'bat') nsPRuns += b.runs;
-        if (b.isLegal) nsPBalls++;
+        if (b.strikerId === nsId) {
+          if (b.subType === 'bat') nsPRuns += b.runs;
+          if (b.isLegal) nsPBalls++;
+        }
       }
     });
 
@@ -1683,7 +1689,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     )}
                   </div>
                   <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: 4, fontWeight: 600 }}>
-                    {m.tournament} â€¢ {new Date(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    {m.tournament} • {new Date(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </div>
                 </div>
                 <ChevronRight size={20} color="#FAB005" />
@@ -1704,20 +1710,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </div>
         </div>
 
-        {(() => {
-          const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
-          const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
-          return (
-            <SyncStatusPill $outOfSync={cloudBalls !== localBalls}>
-              {cloudBalls === localBalls ? (
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ADE80' }} />
-              ) : (
-                <CloudLightning size={10} />
-              )}
-              L:{localBalls} | C:{cloudBalls}
-            </SyncStatusPill>
-          );
-        })()}
         <SyncStatusPill $outOfSync={( (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0) ) !== ( (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0) )}>
           {( (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0) ) === ( (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0) ) ? (
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ADE80' }} />
@@ -4354,10 +4346,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   </div>
                 </SettingsGroup>
 
-                <div style={{ marginTop: 'auto', padding: '12px 0' }}>
-                  <p style={{ fontSize: '0.6rem', opacity: 0.3, textAlign: 'center', letterSpacing: '1px' }}>
-                    RIYADH NIGHTS EDITION • STRIKERS PULSE v2.5
-                  </p>
+                <div style={{ marginTop: 'auto', padding: '16px 0', textAlign: 'center', opacity: 0.4 }}>
+                  <span style={{ fontSize: '9px', fontWeight: 900, color: '#FFF', letterSpacing: '1px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    {APP_VERSION}
+                  </span>
                 </div>
               </DrawerContent>
             </DrawerOverlay>

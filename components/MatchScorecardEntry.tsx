@@ -4,7 +4,9 @@ import { X, Save, Award, Zap, Target, ChevronDown, Star, Loader2 } from 'lucide-
 import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types';
 
 import { useStore } from '../store/StoreProvider';
+import { addCricketOvers } from '../services/statsEngine';
 import * as api from '../services/storageService';
+import { APP_VERSION } from '../src/version';
 
 interface MatchScorecardEntryProps {
   match: ScheduledMatch;
@@ -138,8 +140,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     if (Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0) {
       return masterHomePlayers.filter(p => match.homeTeamXI!.includes(p.id));
     }
-    // 2. Fallback: Show all club players
-    return masterHomePlayers.filter(p => p.teamId === 'IND_STRIKERS');
+    // 2. Fallback: Show all club players (Case-insensitive check)
+    return masterHomePlayers.filter(p => p.teamId?.toUpperCase() === 'IND_STRIKERS');
   }, [masterHomePlayers, match.homeTeamXI]);
 
   const awaySquad = useMemo(() => {
@@ -161,6 +163,30 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
 
   React.useEffect(() => {
     const rehydrate = async () => {
+      // Prioritize immediately available live_data/scorecard from props
+      const initialData = match.scorecard || (match.live_data as any);
+      if (initialData) {
+        const s = initialData;
+        setScorecard(s);
+        if (s.innings1?.batting) setBattingRowIds(prev => ({ ...prev, 1: s.innings1.batting.map((b: any) => b.playerId) }));
+        if (s.innings2?.batting) setBattingRowIds(prev => ({ ...prev, 2: s.innings2.batting.map((b: any) => b.playerId) }));
+        
+        const mapRow = (r: any) => ({
+          playerId: r.playerId || '',
+          overs: r.overs || 0,
+          maidens: r.maidens || 0,
+          runs: r.runsConceded || r.runs || 0,
+          wickets: r.wickets || 0,
+          wd: r.wides || r.wd || 0,
+          nb: r.no_balls || r.nb || 0,
+          is_hero: !!r.is_hero
+        });
+
+        if (s.innings1?.bowling) setBowlingRows(prev => ({ ...prev, 1: s.innings1.bowling.map(mapRow) }));
+        if (s.innings2?.bowling) setBowlingRows(prev => ({ ...prev, 2: s.innings2.bowling.map(mapRow) }));
+      }
+
+      // Secondary check: Fetch fresh from API if ID exists
       if (match.id) {
         try {
           const fresh = await api.getMatch(match.id);
@@ -192,7 +218,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
       }
     };
     rehydrate();
-  }, [match.id]);
+  }, [match]);
 
   React.useEffect(() => {
     if (battingRowIds[activeInnings].length === 0) {
@@ -273,18 +299,34 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         };
       });
 
-    const finalScorecard = {
-      innings1: { ...scorecard.innings1, batting: buildBatting(1), bowling: buildBowling(1), extras: { ...scorecard.innings1.extras, wide: autoWides(1), no_ball: autoNoBalls(1) } },
-      innings2: { ...scorecard.innings2, batting: buildBatting(2), bowling: buildBowling(2), extras: { ...scorecard.innings2.extras, wide: autoWides(2), no_ball: autoNoBalls(2) } },
-    };
-
     const inn1Runs = buildBatting(1).reduce((s, b) => s + (b.runs || 0), 0) + (scorecard.innings1.extras.legByes || 0) + (scorecard.innings1.extras.byes || 0) + autoWides(1) + autoNoBalls(1);
     const inn1Wickets = buildBatting(1).filter(b => !['Not Out', 'Did Not Bat', 'Retired Hurt'].includes(b.outHow)).length;
-    const inn1Overs = buildBowling(1).reduce((s, b) => s + (b.overs || 0), 0); // simplistic over sum
+    const inn1Overs = buildBowling(1).reduce((s, b) => addCricketOvers(s, b.overs || 0), 0);
 
     const inn2Runs = buildBatting(2).reduce((s, b) => s + (b.runs || 0), 0) + (scorecard.innings2.extras.legByes || 0) + (scorecard.innings2.extras.byes || 0) + autoWides(2) + autoNoBalls(2);
     const inn2Wickets = buildBatting(2).filter(b => !['Not Out', 'Did Not Bat', 'Retired Hurt'].includes(b.outHow)).length;
-    const inn2Overs = buildBowling(2).reduce((s, b) => s + (b.overs || 0), 0);
+    const inn2Overs = buildBowling(2).reduce((s, b) => addCricketOvers(s, b.overs || 0), 0);
+
+    const finalScorecard = {
+      innings1: { 
+        ...scorecard.innings1, 
+        batting: buildBatting(1), 
+        bowling: buildBowling(1), 
+        extras: { ...scorecard.innings1.extras, wide: autoWides(1), no_ball: autoNoBalls(1) },
+        totalRuns: inn1Runs,
+        totalWickets: inn1Wickets,
+        totalOvers: inn1Overs
+      },
+      innings2: { 
+        ...scorecard.innings2, 
+        batting: buildBatting(2), 
+        bowling: buildBowling(2), 
+        extras: { ...scorecard.innings2.extras, wide: autoWides(2), no_ball: autoNoBalls(2) },
+        totalRuns: inn2Runs,
+        totalWickets: inn2Wickets,
+        totalOvers: inn2Overs
+      },
+    };
 
     const fScoreHome = innings1BattingTeam === 'home' ? { runs: inn1Runs, wickets: inn1Wickets, overs: inn1Overs } : { runs: inn2Runs, wickets: inn2Wickets, overs: inn2Overs };
     const fScoreAway = innings1BattingTeam === 'home' ? { runs: inn2Runs, wickets: inn2Wickets, overs: inn2Overs } : { runs: inn1Runs, wickets: inn1Wickets, overs: inn1Overs };
@@ -557,10 +599,31 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
             </div>
           )}
 
+          <div className="flex gap-4 mt-6">
+            <button type="button" onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold hover:bg-white/10 transition-colors">Close</button>
+            {!isLocked && (
+              <button 
+                type="submit" 
+                disabled={isSaving}
+                className={`flex-[2] py-3 rounded-xl font-black shadow-lg transition-all flex items-center justify-center gap-2 ${isSaving ? 'bg-blue-800 cursor-not-allowed opacity-80' : 'bg-blue-700 hover:bg-blue-600 active:scale-[0.98]'}`}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>SYNCING...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    <span>SYNC SCORECARD</span>
+                  </>
+                )}
+              </button>
             )}
           </div>
+
           {isSaving && (
-            <div className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+            <div className="absolute inset-0 z-[200] bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-4">
               <div className="relative">
                 <div className={`w-16 h-16 border-4 border-sky-500/20 border-t-sky-500 rounded-full ${!showSuccess ? 'animate-spin' : ''} ${showSuccess ? 'border-emerald-500/20 border-t-emerald-500' : ''}`} />
                 {showSuccess ? (
@@ -570,13 +633,14 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                 )}
               </div>
               <h3 className="text-xl font-black text-white mt-6 tracking-tight uppercase">
-                {showSuccess ? 'Data Cemented!' : 'Syncing to Cloud...'}
+                {showSuccess ? 'Data Cemented!' : 'Syncing to Cloud SQL...'}
               </h3>
-              <p className="text-slate-400 text-sm mt-2 max-w-[240px] font-medium">
+              <p className="text-slate-400 text-sm mt-2 max-w-[240px] font-medium text-center">
                 {showSuccess 
                   ? 'Stats successfully finalized in Google Cloud SQL.' 
                   : 'Please wait while we finalize the stats in Google Cloud SQL.'}
               </p>
+              <div className="absolute bottom-4 right-4 text-[10px] text-slate-600 font-bold uppercase tracking-widest">{APP_VERSION}</div>
             </div>
           )}
         </form>

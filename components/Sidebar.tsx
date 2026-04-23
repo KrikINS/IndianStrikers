@@ -27,6 +27,7 @@ import {
   Lock,
   Loader2
 } from 'lucide-react';
+import { APP_VERSION } from '../src/version';
 import { UserRole, MembershipRequest } from '../types';
 import MembershipRequestForm from './MembershipRequestForm';
 import { getMembershipRequests, changePassword } from '../services/storageService';
@@ -396,6 +397,12 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
             </button>
           )}
 
+          {/* Version Display */}
+          <div className={`mt-4 pt-2 border-t border-slate-800/50 flex flex-col items-center opacity-30 ${isCollapsed ? 'px-0' : 'px-2'}`}>
+            <span className="text-[8px] font-black tracking-[0.2em] text-slate-500 uppercase">
+              {isCollapsed ? APP_VERSION.split('-')[0] : APP_VERSION}
+            </span>
+          </div>
         </div>
       </aside >
 
