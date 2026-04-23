@@ -136,6 +136,7 @@ export interface UnifiedMatchStore extends MatchScorerState {
     addPlayer: (player: Player) => Promise<void>;
     updatePlayer: (player: Player) => Promise<void>;
     deletePlayer: (id: string) => Promise<void>;
+    handleToggleLock: (matchId: string, currentStatus: boolean) => Promise<void>;
 }
 
 const INITIAL_SCORER_STATE: MatchScorerState = {
@@ -263,6 +264,11 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     },
 
     finalizeMatch: async (id, matchData, updatedPlayers) => {
+        const match = get().matches.find(m => m.id === id);
+        if (match?.isLocked) {
+            throw new Error("Match is locked. No further modifications allowed.");
+        }
+
         try {
             await api.finalizeMatch(id, matchData, updatedPlayers);
             set((state) => ({
@@ -683,6 +689,35 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
                 opponentPlayers: state.opponentPlayers.filter(p => p.id !== id)
             }));
         } catch (err: any) {
+            throw err;
+        }
+    },
+
+    handleToggleLock: async (matchId: string, currentStatus: boolean) => {
+        const match = get().matches.find(m => m.id === matchId);
+        if (!match) return;
+
+        const targetStatus = !currentStatus;
+        try {
+            if (targetStatus) {
+                // LOCKING: Send flat values to avoid 400 Bad Request (object to integer column)
+                const score = match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 };
+                await api.updateMatch(matchId, {
+                    total_runs: score.runs,
+                    total_wickets: score.wickets,
+                    total_overs: score.overs,
+                    is_locked: true
+                } as any);
+            } else {
+                // UNLOCKING
+                await api.updateMatch(matchId, { is_locked: false } as any);
+            }
+
+            set((state) => ({
+                matches: state.matches.map(m => m.id === matchId ? { ...m, isLocked: targetStatus } : m)
+            }));
+        } catch (err) {
+            console.error("Failed to toggle lock:", err);
             throw err;
         }
     }

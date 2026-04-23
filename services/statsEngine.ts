@@ -73,8 +73,8 @@ export const updateBattingCareerStats = (current: BattingStats, perf: Performer)
   updated.matches = syncMatchValue(current.matches, 1);
 
   // Only count as an innings if the player actually batted:
-  // (Faced at least one ball OR was out/not-out at the crease)
-  const didBat = Number(perf.balls) > 0 || (perf.outHow && !['Did Not Bat', 'DNB', 'dnb'].includes(perf.outHow));
+  // Rule: INN ONLY if balls_faced > 0
+  const didBat = Number(perf.balls || 0) > 0;
 
   if (didBat) {
     const matchRuns = Number(perf.runs || 0);
@@ -120,15 +120,17 @@ export const updateBattingCareerStats = (current: BattingStats, perf: Performer)
 export const updateBowlingCareerStats = (current: BowlingStats, perf: Performer): BowlingStats => {
   const updated = { ...current };
 
-  // Skip bowling update if player didn't bowl
-  if (Number(perf.bowlingOvers || 0) <= 0) return updated;
+  // MAT always increments for all Playing XI members
+  updated.matches = syncMatchValue(current.matches, 1);
 
-  const matchOvers = Number(perf.bowlingOvers);
+  // Skip bowling update if player didn't bowl
+  const matchOvers = Number(perf.bowlingOvers || 0);
+  if (matchOvers <= 0) return updated;
+
   const matchRuns = Number(perf.bowlingRuns || 0);
   const matchWkts = Number(perf.wickets || 0);
   const matchMaidens = Number(perf.maidens || 0);
 
-  updated.matches = syncMatchValue(current.matches, 1);
   updated.innings = syncMatchValue(current.innings, 1);
 
   // ✅ CRITICAL FIX: Use addCricketOvers instead of float addition

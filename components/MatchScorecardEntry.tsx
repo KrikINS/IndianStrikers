@@ -273,6 +273,10 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked) {
+      alert("This match is locked. Please unlock it to save changes.");
+      return;
+    }
     setIsSaving(true);
     setSyncError(null);
     const buildBatting = (inn: 1 | 2) => {

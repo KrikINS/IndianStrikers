@@ -204,7 +204,9 @@ function WeeklyPerformerCarousel({
                       </div>
                     </div>
                     <h4 className="font-black text-2xl uppercase tracking-[0.2rem] italic text-center mb-1 leading-none text-white">{player.name}</h4>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.3em] mb-4">{player.role}</p>
+                    <p className="text-[9px] font-bold text-sky-400/60 uppercase tracking-[0.3em] mb-4 italic">
+                      vs {opponents.find((o: any) => String(o.id) === String(player.opponentId))?.name || player.opponentName || 'TEAM'}
+                    </p>
                     <div className="mb-6 text-center">
                       <p className="text-4xl font-black text-sky-400 italic">
                         {player.wickets * 35 > player.runs ? player.wickets : player.runs}
@@ -488,39 +490,64 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     return squadPlayers
       .filter(p => p.teamId === 'IND_STRIKERS')
       .map(p => {
-      const matchPerf = performerData.performers?.find(perf => 
-        String(perf.playerId) === String(p.id) || 
-        String(perf.id) === String(p.id)
-      );
-      const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
+        // 1. Reset local stats to zero (Clean State) to prevent double-calculation
+        let totalRuns = 0;
+        let totalWickets = 0;
+        let totalMatches = 0;
+        let totalSixes = 0;
+        let totalFours = 0;
+        let totalInnings = 0;
 
-      // PERMANENT STATS LAW: Max-Inclusion Aggregation (SUM Legacy + Profile + Live)
-      // This ensures that live updates aren't masked by old historical records.
-      const baseRuns = Number(legacyRow?.runs || 0) + Number(p.runsScored || 0) + Number(matchPerf?.runs || 0);
-      const baseWickets = Number(legacyRow?.wickets || 0) + Number(p.wicketsTaken || 0) + Number(matchPerf?.wickets || 0);
-      const baseMatches = Number(legacyRow?.matches || 0) + Number(p.matchesPlayed || 0) + Number(matchPerf?.matches || 0);
+        const pId = String(p.id);
+        
+        // 2. Aggregate Legacy Stats
+        const legacy = legacyStats.find(l => String(l.player_id) === pId);
+        if (legacy) {
+          totalRuns += Number(legacy.runs || 0);
+          totalWickets += Number(legacy.wickets || 0);
+          totalMatches += Number(legacy.matches || 0);
+          totalSixes += Number(legacy.sixes || 0);
+          totalFours += Number(legacy.fours || 0);
+          totalInnings += Number(legacy.innings || 0);
+        }
 
-      const enrichedBatting = {
-        ...(p.battingStats || {}),
-        matches: baseMatches,
-        runs: baseRuns,
-        sixes: Number(legacyRow?.sixes || 0) + Number(p.battingStats?.sixes || 0) + Number(matchPerf?.sixes || 0),
-        fours: Number(legacyRow?.fours || 0) + Number(p.battingStats?.fours || 0) + Number(matchPerf?.fours || 0),
-        highestScore: String(legacyRow?.highest_score || p.battingStats?.highestScore || '0')
-      };
+        // 3. Aggregate Match-by-Match Performances (Clean Slate)
+        const playerPerfs = (performerData.performers || []).filter(perf => 
+          String(perf.playerId || perf.id) === pId
+        );
 
-      const enrichedBowling = {
-        ...(p.bowlingStats || {}),
-        wickets: baseWickets,
-        bestBowling: (legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0')
-      };
+        playerPerfs.forEach(perf => {
+          totalRuns += Number(perf.runs || 0);
+          totalWickets += Number(perf.wickets || 0);
+          totalMatches += 1;
+          totalSixes += Number(perf.sixes || 0);
+          totalFours += Number(perf.fours || 0);
+          
+          // THE "87" RESTORATION: Innings only count if balls faced > 0
+          if (Number(perf.balls || 0) > 0) {
+            totalInnings += 1;
+          }
+        });
 
-      return {
-        ...p,
-        battingStats: enrichedBatting as any,
-        bowlingStats: enrichedBowling as any
-      };
-    });
+        // 4. Return Enriched Object (Zero-based calculation)
+        return {
+          ...p,
+          battingStats: {
+            ...(p.battingStats || {}),
+            matches: totalMatches,
+            innings: totalInnings,
+            runs: totalRuns,
+            sixes: totalSixes,
+            fours: totalFours,
+            highestScore: String(legacy?.highest_score || p.battingStats?.highestScore || '0')
+          },
+          bowlingStats: {
+            ...(p.bowlingStats || {}),
+            wickets: totalWickets,
+            bestBowling: (legacy?.best_bowling || p.bowlingStats?.bestBowling || '0/0')
+          }
+        };
+      });
   }, [squadPlayers, performerData.performers, legacyStats]);
 
   const topRunScorers = [...enrichedPlayers]

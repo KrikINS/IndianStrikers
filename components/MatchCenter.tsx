@@ -35,6 +35,52 @@ interface MatchCenterProps {
     onRefresh?: () => Promise<void>;
 }
 
+const MatchAction: React.FC<{ 
+    match: ScheduledMatch; 
+    onToggleLock: (id: string, current: boolean) => Promise<void>; 
+    isAdmin: boolean;
+}> = ({ match, onToggleLock, isAdmin }) => {
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [localLocked, setLocalLocked] = useState(!!(match.isLocked || (match as any).is_locked));
+
+    // Keep local state in sync with prop updates
+    useEffect(() => {
+        setLocalLocked(!!(match.isLocked || (match as any).is_locked));
+    }, [match.isLocked, (match as any).is_locked]);
+
+    const handleAction = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (isProcessing) return;
+        
+        setIsProcessing(true);
+        try {
+            await onToggleLock(match.id, localLocked);
+            setLocalLocked(!localLocked);
+        } catch (err) {
+            // Error handled by parent alert
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    if (!isAdmin) return null;
+
+    return (
+        <button 
+            onClick={handleAction} 
+            disabled={isProcessing}
+            className={`p-1.5 transition-all duration-200 ${localLocked ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-400 hover:text-amber-500'}`} 
+            title={localLocked ? "Unlock Match (Now Internal)" : "Lock Match (Finalize Stats)"}
+        >
+            {isProcessing ? (
+                <Loader2 size={14} className="animate-spin text-blue-500" />
+            ) : (
+                localLocked ? <LockIcon size={14} /> : <Unlock size={14} />
+            )}
+        </button>
+    );
+};
+
 const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo, currentUser, onUpdateOpponent, onRefresh }) => {
     const { squadPlayers: players, updatePlayer: onUpdatePlayer } = useStore();
     const navigate = useNavigate();
@@ -49,7 +95,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         getSortedMatches,
         purgeTestData,
         wipeLocalMatches,
-        isLoading
+        isLoading,
+        handleToggleLock: storeToggleLock
     } = useMatchCenter();
     const { grounds, tournaments, syncMasterData } = useMasterData();
     const initializeMatch = useCricketScorer(state => state.initializeMatch);
@@ -81,28 +128,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
     const handleToggleLock = async (matchId: string, currentStatus: boolean) => {
         if (!isAdmin) return;
-        
         try {
-            const match = matches.find(m => m.id === matchId);
-            if (!match) return;
-
-            const targetStatus = !currentStatus;
-            
-            if (targetStatus) {
-                // LOCKING: Use finalize endpoint to "cement" the state if match is completed
-                if (match.status === 'completed' && match.live_data) {
-                    const performers = match.performers || [];
-                    await finalizeMatch(matchId, { ...match, isLocked: true }, performers);
-                } else {
-                    // Fallback to simple update if no live_data or not completed
-                    await updateMatch(matchId, { isLocked: true } as any);
-                }
-                console.log(`[Admin] Match ${matchId} locked via finalize.`);
-            } else {
-                // UNLOCKING: Simple update
-                await updateMatch(matchId, { isLocked: false } as any);
-                console.log(`[Admin] Match ${matchId} unlocked.`);
-            }
+            await storeToggleLock(matchId, currentStatus);
+            console.log(`[Admin] Match ${matchId} lock status toggled.`);
         } catch (err) {
             console.error("Failed to toggle lock:", err);
             alert("Failed to update lock status. Please check your connection.");
@@ -1010,13 +1038,11 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                 {userRole === 'admin' && (
                                                                     <td onClick={(e) => e.stopPropagation()}>
                                                                         <div className="flex items-center gap-2">
-                                                                            <button 
-                                                                                onClick={(e) => { e.stopPropagation(); handleToggleLock(m.id, !!(m.isLocked || (m as any).is_locked)); }} 
-                                                                                className={`p-1.5 transition-colors ${(m.isLocked || (m as any).is_locked) ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-500 hover:text-amber-500'}`} 
-                                                                                title={(m.isLocked || (m as any).is_locked) ? "Unlock Match (Now Internal)" : "Lock Match (Finalize Stats)"}
-                                                                            >
-                                                                                {(m.isLocked || (m as any).is_locked) ? <LockIcon size={14} /> : <Unlock size={14} />}
-                                                                            </button>
+                                                                            <MatchAction 
+                                                                                match={m} 
+                                                                                onToggleLock={handleToggleLock} 
+                                                                                isAdmin={isAdmin} 
+                                                                            />
                                                                             <button onClick={(e) => { e.stopPropagation(); setEditingMatch(m); }} className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors" title="Edit Metadata"><Plus size={14} /></button>
                                                                             <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Trash2 size={14} /></button>
                                                                         </div>

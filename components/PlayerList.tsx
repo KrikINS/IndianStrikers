@@ -156,6 +156,15 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
       const totalMatchRuns = playerPerformances.reduce((sum, perf) => sum + (Number(perf.runs) || 0), 0);
       const totalMatchWickets = playerPerformances.reduce((sum, perf) => sum + (Number(perf.wickets) || 0), 0);
       const totalMatchMatches = playerPerformances.reduce((sum, perf) => sum + (Number(perf.matches) || 1), 0);
+      
+      const totalMatchInnings = playerPerformances.reduce((sum, perf) => {
+        const didBat = Number(perf.balls || 0) > 0;
+        return sum + (didBat ? 1 : 0);
+      }, 0);
+
+      const totalMatchBowlingInnings = playerPerformances.reduce((sum, perf) => {
+        return sum + (Number(perf.bowlingOvers || 0) > 0 ? 1 : 0);
+      }, 0);
 
       const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
 
@@ -163,10 +172,13 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
       const baseRuns = Number(legacyRow?.runs || p.runsScored || 0);
       const baseWickets = Number(legacyRow?.wickets || p.wicketsTaken || 0);
       const baseMatches = Number(legacyRow?.matches || p.matchesPlayed || 0);
+      const baseInnings = Number(legacyRow?.innings || p.battingStats?.innings || 0);
+      const baseBowlingInnings = Number(legacyRow?.bowling_innings || p.bowlingStats?.innings || 0);
 
       const enrichedBatting = {
         ...(p.battingStats || {}),
         matches: baseMatches + totalMatchMatches,
+        innings: baseInnings + totalMatchInnings,
         runs: baseRuns + totalMatchRuns,
         highestScore: playerPerformances.reduce((max, perf) => {
           const runs = Number(perf.runs || 0);
@@ -177,6 +189,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
       const enrichedBowling = {
         ...(p.bowlingStats || {}),
+        matches: baseMatches + totalMatchMatches,
+        innings: baseBowlingInnings + totalMatchBowlingInnings,
         wickets: baseWickets + totalMatchWickets,
         bestBowling: playerPerformances.reduce((best, perf) => {
           const wkts = Number(perf.wickets || 0);
@@ -199,18 +213,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     });
   }, [allPlayers, performerData, legacyStats]);
 
-  const recentBatting = useMemo(() => {
+  const recentInvolvement = useMemo(() => {
     if (!viewingPlayer) return [];
     return performerData
-      .filter(perf => (String(perf.playerId) === String(viewingPlayer.id) || String(perf.id) === String(viewingPlayer.id)) && perf.runs !== undefined)
-      .sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime())
-      .slice(0, 5);
-  }, [viewingPlayer, performerData]);
-
-  const recentBowling = useMemo(() => {
-    if (!viewingPlayer) return [];
-    return performerData
-      .filter(perf => (String(perf.playerId) === String(viewingPlayer.id) || String(perf.id) === String(viewingPlayer.id)) && perf.wickets !== undefined)
+      .filter(perf => (String(perf.playerId) === String(viewingPlayer.id) || String(perf.id) === String(viewingPlayer.id)))
       .sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime())
       .slice(0, 5);
   }, [viewingPlayer, performerData]);
@@ -241,7 +247,51 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         setIsStatsLoading(true);
         try {
           const stats = await getPlayerDetailedStats(viewingPlayer.id);
-          setDetailedStats(stats);
+          
+          // Recalculate Career Totals dynamically to separate MAT from INN
+          const playerPerf = performerData.filter(perf => String(perf.playerId) === String(viewingPlayer.id) || String(perf.id) === String(viewingPlayer.id));
+          const legacy = legacyStats.find(l => String(l.player_id) === String(viewingPlayer.id));
+          
+          const totalInnings = (legacy?.innings || 0) + playerPerf.reduce((s, p) => {
+            const didBat = Number(p.balls || 0) > 0;
+            return s + (didBat ? 1 : 0);
+          }, 0);
+
+          const totalMatches = (legacy?.matches || 0) + playerPerf.reduce((s, p) => s + (Number(p.matches) || 1), 0);
+          const totalRuns = (legacy?.runs || 0) + playerPerf.reduce((s, p) => s + (Number(p.runs) || 0), 0);
+          
+          const totalBowlInnings = (legacy?.bowling_innings || 0) + playerPerf.reduce((s, p) => s + (Number(p.bowlingOvers || 0) > 0 ? 1 : 0), 0);
+          const totalWickets = (legacy?.wickets || 0) + playerPerf.reduce((s, p) => s + (Number(p.wickets) || 0), 0);
+
+          const enrichedStats = {
+            ...stats,
+            recentForm: recentInvolvement,
+            tournaments: (stats.tournaments || []).map(t => {
+               // Enforce strict innings logic: Count matches in this tournament where player actually batted
+               const tournamentPerfs = playerPerf.filter(p => p.tournamentName === t.tournamentName);
+               const innCount = tournamentPerfs.reduce((s, p) => s + (Number(p.balls || 0) > 0 ? 1 : 0), 0);
+               return { 
+                 ...t, 
+                 batting: { ...t.batting, innings: innCount } 
+               };
+            }),
+            total: { 
+              batting: { 
+                ...stats.total.batting, 
+                matches: totalMatches, 
+                innings: totalInnings, 
+                runs: totalRuns 
+              },
+              bowling: { 
+                ...stats.total.bowling, 
+                matches: totalMatches, 
+                innings: totalBowlInnings, 
+                wickets: totalWickets 
+              }
+            }
+          };
+
+          setDetailedStats(enrichedStats as any);
         } catch (e) {
           console.error("Failed to fetch detailed stats", e);
           setDetailedStats(null);
@@ -1384,9 +1434,17 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                     <div className="flex flex-col gap-1">
                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Batting Form</span>
                       <div className="flex gap-2 items-center overflow-x-auto pb-1 scroller-hide">
-                        {recentBatting.length > 0 ? (
-                          recentBatting.map((perf, i) => {
+                        {recentInvolvement.length > 0 ? (
+                          recentInvolvement.map((perf, i) => {
+                            const dnbTerms = ['did not bat', 'dnb', 'absent', 'absent hurt', 'substitute', 'yet to bat'];
+                            const outHowLower = (perf.outHow || '').toLowerCase().trim();
+                            const didBat = Number(perf.balls || 0) > 0 || (!!outHowLower && !dnbTerms.includes(outHowLower));
                             const runs = Number(perf.runs || 0);
+
+                            if (!didBat) return (
+                              <div key={i} className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-[9px] bg-slate-100 text-slate-400 border border-slate-200" title="Did Not Bat">DNB</div>
+                            );
+
                             return (
                               <div 
                                 key={i} 
@@ -1412,10 +1470,16 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                     <div className="flex flex-col gap-1">
                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bowling Form</span>
                       <div className="flex gap-2 items-center overflow-x-auto pb-1 scroller-hide">
-                        {recentBowling.length > 0 ? (
-                          recentBowling.map((perf, i) => {
+                        {recentInvolvement.length > 0 ? (
+                          recentInvolvement.map((perf, i) => {
                             const wkts = Number(perf.wickets || 0);
                             const runs = Number(perf.bowlingRuns || 0);
+                            const didBowl = Number(perf.bowlingOvers || 0) > 0;
+
+                            if (!didBowl) return (
+                              <div key={i} className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-[9px] bg-slate-100 text-slate-400 border border-slate-200" title="Did Not Bowl">DNB</div>
+                            );
+
                             return (
                               <div 
                                 key={i} 
