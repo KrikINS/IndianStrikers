@@ -4,6 +4,7 @@ import { X, Save, Award, Zap, Target, ChevronDown, Star, Loader2 } from 'lucide-
 import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types';
 
 import { useStore } from '../store/StoreProvider';
+import * as api from '../services/storageService';
 
 interface MatchScorecardEntryProps {
   match: ScheduledMatch;
@@ -30,6 +31,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   const [maxOvers, setMaxOvers] = useState<number>(match.maxOvers || (match.matchFormat === 'One Day' ? 50 : 20));
   const [resultType, setResultType] = useState(match.resultType || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const isLocked = !!(match.isLocked || (match as any).is_locked);
 
@@ -80,14 +82,30 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     return base;
   });
 
-  const [battingRowIds, setBattingRowIds] = useState<Record<1 | 2, string[]>>({
-    1: [],
-    2: []
+  const [battingRowIds, setBattingRowIds] = useState<Record<1 | 2, string[]>>(() => {
+    const s = match.scorecard || (match.live_data as any);
+    return {
+      1: s?.innings1?.batting?.map((b: any) => b.playerId) || [],
+      2: s?.innings2?.batting?.map((b: any) => b.playerId) || []
+    };
   });
 
-  const [bowlingRows, setBowlingRows] = useState<Record<1 | 2, any[]>>({
-    1: Array(2).fill(null).map(() => ({ playerId: '', overs: 0, maidens: 0, runs: 0, wickets: 0, wd: 0, nb: 0, is_hero: false })),
-    2: Array(2).fill(null).map(() => ({ playerId: '', overs: 0, maidens: 0, runs: 0, wickets: 0, wd: 0, nb: 0, is_hero: false })),
+  const [bowlingRows, setBowlingRows] = useState<Record<1 | 2, any[]>>(() => {
+    const s = match.scorecard || (match.live_data as any);
+    const mapRow = (r: any) => ({
+      playerId: r.playerId || '',
+      overs: r.overs || 0,
+      maidens: r.maidens || 0,
+      runs: r.runsConceded || r.runs || 0,
+      wickets: r.wickets || 0,
+      wd: r.wides || r.wd || 0,
+      nb: r.no_balls || r.nb || 0,
+      is_hero: !!r.is_hero
+    });
+    return {
+      1: s?.innings1?.bowling?.map(mapRow) || Array(2).fill(null).map(() => ({ playerId: '', overs: 0, maidens: 0, runs: 0, wickets: 0, wd: 0, nb: 0, is_hero: false })),
+      2: s?.innings2?.bowling?.map(mapRow) || Array(2).fill(null).map(() => ({ playerId: '', overs: 0, maidens: 0, runs: 0, wickets: 0, wd: 0, nb: 0, is_hero: false }))
+    };
   });
 
   const updateBowlingRow = (inn: 1 | 2, idx: number, field: string, value: any) => {
@@ -120,8 +138,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     if (Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0) {
       return masterHomePlayers.filter(p => match.homeTeamXI!.includes(p.id));
     }
-    // 2. Fallback: Show all active club players
-    return masterHomePlayers.filter(p => p.teamId === 'IND_STRIKERS' && p.isActive);
+    // 2. Fallback: Show all club players
+    return masterHomePlayers.filter(p => p.teamId === 'IND_STRIKERS');
   }, [masterHomePlayers, match.homeTeamXI]);
 
   const awaySquad = useMemo(() => {
@@ -140,6 +158,41 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   const bowlingSquad = activeInnings === 1
     ? (innings1BattingTeam === 'home' ? awaySquad : homeSquad)
     : (innings1BattingTeam === 'home' ? homeSquad : awaySquad);
+
+  React.useEffect(() => {
+    const rehydrate = async () => {
+      if (match.id) {
+        try {
+          const fresh = await api.getMatch(match.id);
+          if (fresh) {
+            const s = fresh.scorecard || (fresh.live_data as any);
+            if (s) {
+              setScorecard(s);
+              if (s.innings1?.batting) setBattingRowIds(prev => ({ ...prev, 1: s.innings1.batting.map((b: any) => b.playerId) }));
+              if (s.innings2?.batting) setBattingRowIds(prev => ({ ...prev, 2: s.innings2.batting.map((b: any) => b.playerId) }));
+              
+              const mapRow = (r: any) => ({
+                playerId: r.playerId || '',
+                overs: r.overs || 0,
+                maidens: r.maidens || 0,
+                runs: r.runsConceded || r.runs || 0,
+                wickets: r.wickets || 0,
+                wd: r.wides || r.wd || 0,
+                nb: r.no_balls || r.nb || 0,
+                is_hero: !!r.is_hero
+              });
+
+              if (s.innings1?.bowling) setBowlingRows(prev => ({ ...prev, 1: s.innings1.bowling.map(mapRow) }));
+              if (s.innings2?.bowling) setBowlingRows(prev => ({ ...prev, 2: s.innings2.bowling.map(mapRow) }));
+            }
+          }
+        } catch (err) {
+          console.error("Failed to rehydrate match scorecard:", err);
+        }
+      }
+    };
+    rehydrate();
+  }, [match.id]);
 
   React.useEffect(() => {
     if (battingRowIds[activeInnings].length === 0) {
@@ -300,6 +353,13 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         toss: { winner: tossWinner, choice: tossChoice },
         maxOvers,
       });
+
+      setShowSuccess(true);
+      setTimeout(() => {
+        setIsSaving(false);
+        onClose();
+      }, 2000);
+
     } catch (err: any) {
       console.error("[MatchScorecardEntry] ❌ Submission failed:", err);
       setSyncError(err.message || 'Sync Failed. Data is preserved locally.');
@@ -497,28 +557,28 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl font-bold hover:bg-white/10 transition-colors">Close</button>
-            {!isLocked && (
-              <button 
-                type="submit" 
-                disabled={isSaving}
-                className={`flex-[2] py-3 rounded-xl font-black shadow-lg transition-all flex items-center justify-center gap-2 ${isSaving ? 'bg-blue-800 cursor-not-allowed opacity-80' : 'bg-blue-700 hover:bg-blue-600 active:scale-[0.98]'}`}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="animate-spin" size={18} />
-                    <span>SYNCING...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    <span>SYNC SCORECARD</span>
-                  </>
-                )}
-              </button>
             )}
           </div>
+          {isSaving && (
+            <div className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+              <div className="relative">
+                <div className={`w-16 h-16 border-4 border-sky-500/20 border-t-sky-500 rounded-full ${!showSuccess ? 'animate-spin' : ''} ${showSuccess ? 'border-emerald-500/20 border-t-emerald-500' : ''}`} />
+                {showSuccess ? (
+                  <Zap className="absolute inset-0 m-auto text-emerald-400" size={24} />
+                ) : (
+                  <Loader2 className="absolute inset-0 m-auto text-sky-400 animate-pulse" size={24} />
+                )}
+              </div>
+              <h3 className="text-xl font-black text-white mt-6 tracking-tight uppercase">
+                {showSuccess ? 'Data Cemented!' : 'Syncing to Cloud...'}
+              </h3>
+              <p className="text-slate-400 text-sm mt-2 max-w-[240px] font-medium">
+                {showSuccess 
+                  ? 'Stats successfully finalized in Google Cloud SQL.' 
+                  : 'Please wait while we finalize the stats in Google Cloud SQL.'}
+              </p>
+            </div>
+          )}
         </form>
       </div>
     </div>

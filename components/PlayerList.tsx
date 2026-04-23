@@ -1590,10 +1590,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                       <td className="p-2 md:p-3 text-center">{detailedStats.legacy.maidens}</td>
                                       <td className="p-2 md:p-3 text-center font-bold text-black">{detailedStats.legacy.runs_conceded}</td>
                                       <td className="p-2 md:p-3 text-center font-bold text-slate-600">{detailedStats.legacy.wickets}</td>
-                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_strikeRate || '-'}</td>
+                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_average || '-'}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.economy || '-'}</td>
-                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.best_bowling}</td>
+                                      <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.bowling_strikeRate || '-'}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.four_wickets}</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats?.legacy?.five_wickets}</td>
                                     </tr>
