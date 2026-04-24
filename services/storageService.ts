@@ -760,6 +760,7 @@ export interface TournamentStat {
   tournamentName: string;
   batting: BattingStats;
   bowling: BowlingStats;
+  matchBreakdown?: any[]; // Array of match details for accordion
 }
 
 export interface PlayerDetailedStats {

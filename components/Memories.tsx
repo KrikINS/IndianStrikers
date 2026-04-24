@@ -61,7 +61,8 @@ const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await fetch('http://localhost:4001/api/upload', {
+      const baseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
+      const res = await fetch(`${baseUrl}/upload`, {
         method: 'POST',
         body: formData,
         headers: { 'Authorization': `Bearer ${sessionStorage.getItem('authToken')}` }

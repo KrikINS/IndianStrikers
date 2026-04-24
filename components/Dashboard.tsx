@@ -519,8 +519,8 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const topInningsRuns = [...(enrichedPlayers || [])]
     .filter(p => p.battingStats?.highestScore && p.battingStats.highestScore !== '0')
     .sort((a, b) => {
-      const valA = parseInt((a.battingStats?.highestScore || '0').replace('*', '')) || 0;
-      const valB = parseInt((b.battingStats?.highestScore || '0').replace('*', '')) || 0;
+      const valA = parseInt((a.battingStats?.highestScore || '0').toString().replace('*', '')) || 0;
+      const valB = parseInt((b.battingStats?.highestScore || '0').toString().replace('*', '')) || 0;
       return valB - valA;
     })
     .slice(0, 5);
@@ -528,8 +528,8 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const topInningsWickets = [...(enrichedPlayers || [])]
     .filter(p => p.bowlingStats?.bestBowling && p.bowlingStats.bestBowling !== '0/0')
     .sort((a, b) => {
-      const [wA, rA] = (a.bowlingStats?.bestBowling || '0/0').split('/').map(Number);
-      const [wB, rB] = (b.bowlingStats?.bestBowling || '0/0').split('/').map(Number);
+      const [wA, rA] = (a.bowlingStats?.bestBowling || '0/0').toString().split('/').map(Number);
+      const [wB, rB] = (b.bowlingStats?.bestBowling || '0/0').toString().split('/').map(Number);
       if (wB !== wA) return wB - wA;
       return rA - rB;
     })

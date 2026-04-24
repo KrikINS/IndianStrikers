@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UserRole } from '../types';
 import KirikINSLogo from './KirikINSLogo';
 import { login, addMembershipRequest, changePassword, forgotPassword, resetPassword } from '../services/storageService';
+import PublicFooter from './PublicFooter';
 
 interface SplashScreenProps {
   onComplete: (role: UserRole, user?: { id?: string; name: string; username: string; avatarUrl?: string }) => void;
@@ -586,6 +587,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
           </div>
         </div>
       )}
+
+      {/* Trust Signals Footer */}
+      <div className="relative z-10 w-full">
+        <PublicFooter />
+      </div>
     </div>
   );
 };

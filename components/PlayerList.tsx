@@ -87,6 +87,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const [activeEditTab, setActiveEditTab] = useState<'general' | 'batting' | 'bowling'>('general');
    const [detailedStats, setDetailedStats] = useState<PlayerDetailedStats | null>(null);
   const [isStatsExpanded, setIsStatsExpanded] = useState(false);
+  const [expandedTournamentId, setExpandedTournamentId] = useState<string | null>(null);
   const [isStatsLoading, setIsStatsLoading] = useState(false);
   const [performerData, setPerformerData] = useState<any[]>([]);
   const [legacyStats, setLegacyStats] = useState<any[]>([]);
@@ -248,50 +249,18 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         try {
           const stats = await getPlayerDetailedStats(viewingPlayer.id);
           
-          // Recalculate Career Totals dynamically to separate MAT from INN
-          const playerPerf = performerData.filter(perf => String(perf.playerId) === String(viewingPlayer.id) || String(perf.id) === String(viewingPlayer.id));
-          const legacy = legacyStats.find(l => String(l.player_id) === String(viewingPlayer.id));
-          
-          const totalInnings = (legacy?.innings || 0) + playerPerf.reduce((s, p) => {
-            const didBat = Number(p.balls || 0) > 0;
-            return s + (didBat ? 1 : 0);
-          }, 0);
-
-          const totalMatches = (legacy?.matches || 0) + playerPerf.reduce((s, p) => s + (Number(p.matches) || 1), 0);
-          const totalRuns = (legacy?.runs || 0) + playerPerf.reduce((s, p) => s + (Number(p.runs) || 0), 0);
-          
-          const totalBowlInnings = (legacy?.bowling_innings || 0) + playerPerf.reduce((s, p) => s + (Number(p.bowlingOvers || 0) > 0 ? 1 : 0), 0);
-          const totalWickets = (legacy?.wickets || 0) + playerPerf.reduce((s, p) => s + (Number(p.wickets) || 0), 0);
-
-          const enrichedStats = {
+          // UNIFY STATS TO LEADERBOARD TRUTH
+          // Instead of recalculating, we use the pre-calculated career stats already in the Store/Player object
+          // This ensures Anas Ummer (4361 runs) and others match the high-level Leaderboard truth.
+          const unifiedStats = {
             ...stats,
-            recentForm: recentInvolvement,
-            tournaments: (stats.tournaments || []).map(t => {
-               // Enforce strict innings logic: Count matches in this tournament where player actually batted
-               const tournamentPerfs = playerPerf.filter(p => p.tournamentName === t.tournamentName);
-               const innCount = tournamentPerfs.reduce((s, p) => s + (Number(p.balls || 0) > 0 ? 1 : 0), 0);
-               return { 
-                 ...t, 
-                 batting: { ...t.batting, innings: innCount } 
-               };
-            }),
-            total: { 
-              batting: { 
-                ...stats.total.batting, 
-                matches: totalMatches, 
-                innings: totalInnings, 
-                runs: totalRuns 
-              },
-              bowling: { 
-                ...stats.total.bowling, 
-                matches: totalMatches, 
-                innings: totalBowlInnings, 
-                wickets: totalWickets 
-              }
+            total: {
+              batting: viewingPlayer.battingStats || stats.total.batting,
+              bowling: viewingPlayer.bowlingStats || stats.total.bowling
             }
           };
 
-          setDetailedStats(enrichedStats as any);
+          setDetailedStats(unifiedStats as any);
         } catch (e) {
           console.error("Failed to fetch detailed stats", e);
           setDetailedStats(null);
@@ -300,7 +269,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         }
       };
       fetchDetailed();
-      setIsStatsExpanded(false); // Reset expansion on new player
+      setIsStatsExpanded(false); 
+      setExpandedTournamentId(null);
     } else {
       setDetailedStats(null);
     }
@@ -1573,28 +1543,82 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                 )}
 
                                 {detailedStats?.tournaments.map((t, idx) => (
-                                  <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-black border-b border-slate-100 group hover:bg-slate-50 animate-in fade-in slide-in-from-top-1 duration-300">
-                                    <td className="p-2 md:p-3 font-bold text-sky-600 sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors" style={{ fontSize: '9px', lineHeight: '1.2' }}>
-                                      {t.tournamentId && t.tournamentId !== '00000000-0000-0000-0000-000000000000' ? (
-                                        <Link to={`/tournaments/${t.tournamentId}?player=${viewingPlayer.id}`} className="hover:underline flex items-center gap-1">
-                                          {t.tournamentName} <ExternalLink size={8} />
-                                        </Link>
-                                      ) : t.tournamentName}
-                                    </td>
-                                    <td className="p-2 md:p-3 text-center">{t.batting.matches}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.batting.innings}</td>
-                                    <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.notOuts}</td>
-                                    <td className="p-2 md:p-3 text-center font-bold text-black whitespace-nowrap">{t.batting.runs}</td>
-                                    <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.balls || '-'}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.batting.average}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.batting.strikeRate}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.batting.highestScore}</td>
-                                    <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.hundreds}</td>
-                                    <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.fifties}</td>
-                                    <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.ducks || '0'}</td>
-                                    <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.fours || '0'}</td>
-                                    <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.sixes || '0'}</td>
-                                  </tr>
+                                  <React.Fragment key={t.tournamentId || idx}>
+                                    <tr className="bg-white text-[10px] md:text-xs text-black border-b border-slate-100 group hover:bg-slate-50 animate-in fade-in slide-in-from-top-1 duration-300">
+                                      <td className="p-2 md:p-3 font-bold text-sky-600 sticky left-0 bg-white group-hover:bg-slate-50 z-10 transition-colors" style={{ fontSize: '9px', lineHeight: '1.2' }}>
+                                        <div className="flex items-center gap-2">
+                                          <button 
+                                            onClick={() => setExpandedTournamentId(expandedTournamentId === t.tournamentId ? null : t.tournamentId)}
+                                            className="p-1 hover:bg-slate-100 rounded transition-colors text-slate-400"
+                                            title={expandedTournamentId === t.tournamentId ? 'Hide matches' : 'Show matches'}
+                                          >
+                                            {expandedTournamentId === t.tournamentId ? <Minus size={12} /> : <Plus size={12} />}
+                                          </button>
+                                          {t.tournamentId && t.tournamentId !== '00000000-0000-0000-0000-000000000000' ? (
+                                            <Link to={`/tournaments/${t.tournamentId}?player=${viewingPlayer.id}`} className="hover:underline flex items-center gap-1">
+                                              {t.tournamentName} <ExternalLink size={8} />
+                                            </Link>
+                                          ) : t.tournamentName}
+                                        </div>
+                                      </td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.matches}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.innings}</td>
+                                      <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.notOuts}</td>
+                                      <td className="p-2 md:p-3 text-center font-bold text-black whitespace-nowrap">{t.batting.runs}</td>
+                                      <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.balls || '-'}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.average}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.strikeRate}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.highestScore}</td>
+                                      <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.hundreds}</td>
+                                      <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.fifties}</td>
+                                      <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.ducks || '0'}</td>
+                                      <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.fours || '0'}</td>
+                                      <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.sixes || '0'}</td>
+                                    </tr>
+                                    {expandedTournamentId === t.tournamentId && t.matchBreakdown && (
+                                      <tr className="bg-slate-50/50">
+                                        <td colSpan={14} className="p-0">
+                                          <div className="p-4 bg-slate-50 animate-in slide-in-from-top-2 duration-300">
+                                            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                                              <table className="w-full text-[10px] md:text-[11px] border-collapse">
+                                                <thead className="bg-slate-50 border-b border-slate-100">
+                                                  <tr className="text-slate-400 uppercase font-black">
+                                                    <th className="p-3 text-left">Date</th>
+                                                    <th className="p-3 text-left">Opponent</th>
+                                                    <th className="p-3 text-center">Score</th>
+                                                    <th className="p-3 text-center">Balls</th>
+                                                    <th className="p-3 text-left">How Out</th>
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {t.matchBreakdown.filter((m: any) => m.batting).map((m: any, mIdx: number) => (
+                                                    <tr key={mIdx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                                      <td className="p-3 text-slate-500 font-medium">{new Date(m.date).toLocaleDateString()}</td>
+                                                      <td className="p-3 font-bold text-slate-700">{m.opponentName}</td>
+                                                      <td className="p-3 text-center">
+                                                         <span className={`px-2 py-0.5 rounded font-black ${
+                                                           (m.batting?.runs || 0) >= 50 ? 'bg-yellow-100 text-yellow-700' : 
+                                                           (m.batting?.runs || 0) >= 30 ? 'bg-blue-50 text-blue-700' : 'text-slate-900'
+                                                         }`}>
+                                                           {m.batting?.runs ?? '-'}
+                                                           {m.batting?.isNotOut ? '*' : ''}
+                                                         </span>
+                                                      </td>
+                                                      <td className="p-3 text-center text-slate-500">{m.batting?.balls ?? '-'}</td>
+                                                      <td className="p-3 text-slate-500 italic">{m.batting?.outHow || 'Out'}</td>
+                                                    </tr>
+                                                  ))}
+                                                  {t.matchBreakdown.filter((m: any) => m.batting).length === 0 && (
+                                                    <tr><td colSpan={5} className="p-4 text-center text-slate-400 italic">No batting details available for this tournament</td></tr>
+                                                  )}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </React.Fragment>
                                 ))}
                               </>
                             ) : null}
@@ -1675,27 +1699,79 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                   )}
 
                                 {detailedStats?.tournaments.map((t, idx) => (
-                                  <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-black border-b border-slate-100 group hover:bg-slate-50 animate-in fade-in slide-in-from-top-1 duration-300">
-                                    <td className="p-2 md:p-3 font-bold text-sky-600 sticky left-0 bg-white group-hover:bg-slate-50 z-10" style={{ fontSize: '9px', lineHeight: '1.2' }}>
-                                      {t.tournamentId && t.tournamentId !== '00000000-0000-0000-0000-000000000000' ? (
-                                        <Link to={`/tournaments/${t.tournamentId}?player=${viewingPlayer.id}`} className="hover:underline flex items-center gap-1">
-                                          {t.tournamentName} <ExternalLink size={8} />
-                                        </Link>
-                                      ) : t.tournamentName}
-                                    </td>
-                                    <td className="p-2 md:p-3 text-center">{t.bowling.matches}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.bowling.innings}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.bowling.overs}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.bowling.maidens || '0'}</td>
-                                    <td className="p-2 md:p-3 text-center font-bold text-black">{t.bowling.runs || '0'}</td>
-                                    <td className="p-2 md:p-3 text-center font-bold text-slate-700 whitespace-nowrap">{t.bowling.wickets}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.bowling.average}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.bowling.economy}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.bowling.strikeRate || '-'}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.bowling.fourWickets || '0'}</td>
-                                    <td className="p-2 md:p-3 text-center">{t.bowling.fiveWickets || '0'}</td>
-                                  </tr>
+                                  <React.Fragment key={t.tournamentId || idx}>
+                                    <tr key={t.tournamentId || idx} className="bg-white text-[10px] md:text-xs text-black border-b border-slate-100 group hover:bg-slate-50 animate-in fade-in slide-in-from-top-1 duration-300">
+                                      <td className="p-2 md:p-3 font-bold text-sky-600 sticky left-0 bg-white group-hover:bg-slate-50 z-10" style={{ fontSize: '9px', lineHeight: '1.2' }}>
+                                        <div className="flex items-center gap-2">
+                                          <button 
+                                            onClick={() => setExpandedTournamentId(expandedTournamentId === t.tournamentId ? null : t.tournamentId)}
+                                            className="p-1 hover:bg-slate-100 rounded transition-colors text-slate-400"
+                                            title={expandedTournamentId === t.tournamentId ? 'Hide matches' : 'Show matches'}
+                                          >
+                                            {expandedTournamentId === t.tournamentId ? <Minus size={12} /> : <Plus size={12} />}
+                                          </button>
+                                          {t.tournamentId && t.tournamentId !== '00000000-0000-0000-0000-000000000000' ? (
+                                            <Link to={`/tournaments/${t.tournamentId}?player=${viewingPlayer.id}`} className="hover:underline flex items-center gap-1">
+                                              {t.tournamentName} <ExternalLink size={8} />
+                                            </Link>
+                                          ) : t.tournamentName}
+                                        </div>
+                                      </td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.matches}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.innings}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.overs}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.maidens || '0'}</td>
+                                      <td className="p-2 md:p-3 text-center font-bold text-black">{t.bowling.runs || '0'}</td>
+                                      <td className="p-2 md:p-3 text-center font-bold text-slate-700 whitespace-nowrap">{t.bowling.wickets}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.average}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.economy}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.strikeRate || '-'}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.fourWickets || '0'}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.fiveWickets || '0'}</td>
+                                    </tr>
+                                    {expandedTournamentId === t.tournamentId && t.matchBreakdown && (
+                                      <tr className="bg-slate-50/50">
+                                        <td colSpan={13} className="p-0">
+                                          <div className="p-4 bg-slate-50 animate-in slide-in-from-top-2 duration-300">
+                                            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                                              <table className="w-full text-[10px] md:text-[11px] border-collapse">
+                                                <thead className="bg-slate-50 border-b border-slate-100">
+                                                  <tr className="text-slate-400 uppercase font-black">
+                                                    <th className="p-3 text-left">Date</th>
+                                                    <th className="p-3 text-left">Opponent</th>
+                                                    <th className="p-3 text-center">Overs</th>
+                                                    <th className="p-3 text-center">Runs</th>
+                                                    <th className="p-3 text-center">Wickets</th>
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {t.matchBreakdown.filter((m: any) => m.bowling).map((m: any, mIdx: number) => (
+                                                    <tr key={mIdx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                                      <td className="p-3 text-slate-500 font-medium">{new Date(m.date).toLocaleDateString()}</td>
+                                                      <td className="p-3 font-bold text-slate-700">{m.opponentName}</td>
+                                                      <td className="p-3 text-center text-slate-500">{m.bowling?.overs ?? '-'}</td>
+                                                      <td className="p-3 text-center text-slate-500">{m.bowling?.runs ?? '-'}</td>
+                                                      <td className="p-3 text-center">
+                                                         <span className={`px-2 py-0.5 rounded font-black ${
+                                                           (m.bowling?.wickets || 0) >= 3 ? 'bg-emerald-100 text-emerald-700' : 'text-slate-900'
+                                                         }`}>
+                                                           {m.bowling?.wickets ?? '-'}
+                                                         </span>
+                                                      </td>
+                                                    </tr>
+                                                  ))}
+                                                  {t.matchBreakdown.filter((m: any) => m.bowling).length === 0 && (
+                                                    <tr><td colSpan={5} className="p-4 text-center text-slate-400 italic">No bowling details available for this tournament</td></tr>
+                                                  )}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </React.Fragment>
                                 ))}
                               </>
                             ) : null}

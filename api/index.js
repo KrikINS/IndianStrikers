@@ -1281,11 +1281,13 @@ app.get('/api/players/:id/stats', async (req, res) => {
             `SELECT 
                 m.id as match_id, m.status as match_status, m.is_test, m.tournament_id, m.date, m.live_data,
                 t.name as tournament_name,
+                o.name as opponent_name,
                 pms.runs, pms.balls, pms.fours, pms.sixes, pms.status as player_record_status,
                 pms.wickets, pms.runs_conceded, pms.overs_bowled, pms.maidens,
                 pms.wides, pms.no_balls
              FROM matches m
              LEFT JOIN tournaments t ON m.tournament_id = t.id
+             LEFT JOIN opponents o ON m.opponent_id = o.id
              LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1::BIGINT)
              WHERE (
                 pms.player_id IS NOT NULL 
@@ -1313,7 +1315,8 @@ app.get('/api/players/:id/stats', async (req, res) => {
                     tournamentId: tId,
                     tournamentName: tName,
                     batting: { matches: 0, innings: 0, notOuts: 0, runs: 0, balls: 0, highestScore: '0', hundreds: 0, fifties: 0, ducks: 0, fours: 0, sixes: 0, average: 0, strikeRate: 0 },
-                    bowling: { matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0, wickets: 0, fourWickets: 0, fiveWickets: 0, bestBowling: '0/0', average: 0, economy: 0, strikeRate: 0, wides: 0, no_balls: 0 }
+                    bowling: { matches: 0, innings: 0, overs: 0, maidens: 0, runs: 0, wickets: 0, fourWickets: 0, fiveWickets: 0, bestBowling: '0/0', average: 0, economy: 0, strikeRate: 0, wides: 0, no_balls: 0 },
+                    matchBreakdown: []
                 };
             }
 
@@ -1386,10 +1389,10 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 if (runs === 0 && isDismissedLocal) group.batting.ducks++;
             }
             
-            const currentHS = parseInt(group.batting.highestScore.replace('*', '')) || 0;
+            const currentHS = parseInt(group.batting.highestScore.toString().replace('*', '')) || 0;
             if (runs > currentHS) {
-                group.batting.highestScore = `${runs}${!isDismissed && pStatus !== 'dnb' ? '*' : ''}`;
-            } else if (runs === currentHS && !isDismissed && pStatus !== 'dnb' && !group.batting.highestScore.includes('*')) {
+                group.batting.highestScore = `${runs}${!isDismissedLocal && pStatus !== 'dnb' ? '*' : ''}`;
+            } else if (runs === currentHS && !isDismissedLocal && pStatus !== 'dnb' && !group.batting.highestScore.toString().includes('*')) {
                 group.batting.highestScore = `${runs}*`;
             }
 
@@ -1416,6 +1419,27 @@ app.get('/api/players/:id/stats', async (req, res) => {
                     group.bowling.bestBowling = `${bWickets}/${bRuns}`;
                 }
             }
+
+            // Collect Match Breakdown
+            group.matchBreakdown.push({
+                matchId: row.match_id,
+                date: row.date,
+                opponentName: row.opponent_name || 'Unknown',
+                batting: hasActuallyBatted ? {
+                    runs,
+                    balls,
+                    fours,
+                    sixes,
+                    outHow: pStatus,
+                    isNotOut: !isDismissedLocal && statusLower !== 'batting' && !isDNB
+                } : null,
+                bowling: bOvers > 0 ? {
+                    overs: bOvers,
+                    maidens: bMaidens,
+                    runs: bRuns,
+                    wickets: bWickets
+                } : null
+            });
         });
 
         Object.values(tournamentGroups).forEach(group => {
@@ -1478,8 +1502,8 @@ app.get('/api/players/:id/stats', async (req, res) => {
             grandTotal.batting.hundreds += t.batting.hundreds;
             grandTotal.batting.fifties += t.batting.fifties;
             grandTotal.batting.ducks += t.batting.ducks;
-            const hs = parseInt(t.batting.highestScore.replace('*', ''));
-            if (hs > parseInt(grandTotal.batting.highestScore.replace('*', ''))) grandTotal.batting.highestScore = t.batting.highestScore;
+            const hs = parseInt(t.batting.highestScore.toString().replace('*', ''));
+            if (hs > parseInt(grandTotal.batting.highestScore.toString().replace('*', ''))) grandTotal.batting.highestScore = t.batting.highestScore;
 
             grandTotal.bowling.matches += t.bowling.matches;
             grandTotal.bowling.innings += t.bowling.innings;
@@ -1492,8 +1516,8 @@ app.get('/api/players/:id/stats', async (req, res) => {
             grandTotal.bowling.wickets += t.bowling.wickets;
             grandTotal.bowling.fourWickets += t.bowling.fourWickets;
             grandTotal.bowling.fiveWickets += t.bowling.fiveWickets;
-            const [w, r] = t.bowling.bestBowling.split('/').map(Number);
-            const [tw, tr] = grandTotal.bowling.bestBowling.split('/').map(Number);
+            const [w, r] = t.bowling.bestBowling.toString().split('/').map(Number);
+            const [tw, tr] = grandTotal.bowling.bestBowling.toString().split('/').map(Number);
             if (w > tw || (w === tw && r < tr)) grandTotal.bowling.bestBowling = t.bowling.bestBowling;
         });
 

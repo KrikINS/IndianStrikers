@@ -56,6 +56,7 @@ import { getOpponents, addOpponent, updateOpponent, deleteOpponent, getTeamLogo,
 import { Menu, Shield, ArrowRight, Plus, MapPin, Trophy, Settings, Users, Layout, MessageSquare } from 'lucide-react';
 import KirikINSLogo from './components/KirikINSLogo';
 import GlobalChat from './components/GlobalChat';
+import PublicFooter from './components/PublicFooter';
 import { Toaster, toast } from 'react-hot-toast';
 
 declare global {
@@ -269,7 +270,10 @@ const AppContent: React.FC<{
               
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
-          </div>
+
+              {/* Trust Signals Footer */}
+              {!isScorerActive && <PublicFooter />}
+            </div>
           
           <div className="fixed bottom-4 right-4 z-[9999] pointer-events-none select-none opacity-40 transition-opacity hover:opacity-100 hidden md:block">
             <div className="scale-50 origin-bottom-right">
