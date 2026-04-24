@@ -736,12 +736,19 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         const targetStatus = !currentStatus;
         try {
             if (targetStatus) {
-                // LOCKING: Send flat values to avoid 400 Bad Request (object to integer column)
+                // LOCKING: Extract primitive values to match database schema
                 const score = match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 };
+                
+                // Convert overs (e.g. 18.2) to total balls
+                const overs = Number(score.overs || 0);
+                const overParts = String(overs).split('.');
+                const balls = (parseInt(overParts[0]) * 6) + (parseInt(overParts[1]) || 0);
+
                 await api.updateMatch(matchId, {
+                    final_score_home: score.runs,
                     total_runs: score.runs,
                     total_wickets: score.wickets,
-                    total_overs: score.overs,
+                    total_balls: balls,
                     is_locked: true
                 } as any);
             } else {

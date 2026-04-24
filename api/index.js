@@ -443,15 +443,29 @@ const mapMatchToDB = (m) => {
   const jsonColumns = ['home_team_xi', 'opponent_team_xi', 'performers', 'scorecard', 'live_data'];
   
   // Extra: If finalScore objects are present, extract runs/wickets to top-level columns
-  if (mapped.finalScoreHome && typeof mapped.finalScoreHome === 'object') {
-    dbReady.final_score_home = mapped.finalScoreHome.runs;
-    dbReady.total_runs = mapped.finalScoreHome.runs;
-    dbReady.total_wickets = mapped.finalScoreHome.wickets;
-    if (mapped.finalScoreHome.overs) {
-       // Convert overs (e.g. 18.2) to total balls for the DB
-       const parts = String(mapped.finalScoreHome.overs).split('.');
+  // We check both camelCase (from frontend) and snake_case (just in case)
+  const scoreHome = mapped.finalScoreHome || mapped.final_score_home;
+  const scoreAway = mapped.finalScoreAway || mapped.final_score_away;
+
+  if (scoreHome && typeof scoreHome === 'object') {
+    dbReady.final_score_home = scoreHome.runs;
+    // total_runs/wickets columns are typically for the main result (usually home team in this schema)
+    dbReady.total_runs = scoreHome.runs;
+    dbReady.total_wickets = scoreHome.wickets;
+    
+    if (scoreHome.overs) {
+       const parts = String(scoreHome.overs).split('.');
        const totalBalls = (parseInt(parts[0]) * 6) + (parseInt(parts[1]) || 0);
        dbReady.total_balls = totalBalls;
+    }
+  }
+
+  if (scoreAway && typeof scoreAway === 'object') {
+    dbReady.final_score_away = scoreAway.runs;
+    // If it's a scheduled match and we are editing, we might want to ensure 
+    // total_runs is consistent if home team isn't set
+    if (dbReady.total_runs === undefined && scoreAway.runs) {
+        dbReady.total_runs = scoreAway.runs;
     }
   }
 
@@ -462,6 +476,13 @@ const mapMatchToDB = (m) => {
       if (jsonColumns.includes(col) && val !== null && typeof val === 'object') {
         val = JSON.stringify(val);
       }
+      
+      // Safety: Ensure integer columns don't receive objects
+      const integerColumns = ['final_score_home', 'final_score_away', 'total_runs', 'total_wickets', 'total_balls', 'target_score', 'max_overs'];
+      if (integerColumns.includes(col) && typeof val === 'object' && val !== null) {
+        val = val.runs ?? val.value ?? 0;
+      }
+
       final[col] = val;
     }
   });
