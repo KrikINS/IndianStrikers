@@ -672,9 +672,13 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
         finalScoreAway?.runs || 0,
         finalScoreHome?.runs || 0,
         finalScoreHome?.wickets || 0,
-        0, // total_balls
-        matchData.resultSummary || matchData.result_summary || null,
-        matchData.resultNote || matchData.result_note || null,
+        (() => {
+          const overs = parseFloat(finalScoreHome?.overs || 0);
+          const parts = String(overs).split('.');
+          return (parseInt(parts[0]) * 6) + (parseInt(parts[1]) || 0);
+        })(), // total_balls calculated from overs
+        matchData.resultSummary || matchData.result_note || null,
+        matchData.resultNote || matchData.resultSummary || null,
         tossWinnerId || null,
         matchData.toss?.choice || matchData.toss_choice || 'Bat',
         parseInt(matchData.maxOvers || matchData.max_overs || 20)
@@ -749,6 +753,21 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
       }
 
       await db.query('UPDATE matches SET performers = $1 WHERE id = $2', [JSON.stringify(performers), id]);
+    }
+
+    // 3. Final Recalculation for ALL Players in the XI (Ensures MAT count updates even for DNB/DNBowl)
+    try {
+        const { data: matchXI } = await db.getOne('SELECT home_team_xi, opponent_team_xi FROM matches WHERE id = $1', [id]);
+        if (matchXI) {
+            const allXI = [...(matchXI.home_team_xi || []), ...(matchXI.opponent_team_xi || [])];
+            console.log(`[Sync] Triggering final career sync for ${allXI.length} XI members...`);
+            for (const pId of allXI) {
+                if (!pId) continue;
+                await recalculateCareerStats(pId).catch(err => console.warn(`[Sync] XI Sync failed for ${pId}:`, err.message));
+            }
+        }
+    } catch (xiErr) {
+        console.error('[Sync] XI Recalculation loop failed:', xiErr);
     }
 
     res.json({ ok: true });
@@ -1098,9 +1117,9 @@ async function recalculateCareerStats(playerId) {
          WHERE (
             pms.player_id IS NOT NULL 
             OR m.home_team_xi @> jsonb_build_array($1::text)
-            OR m.home_team_xi @> jsonb_build_array($1::int)
+            OR m.home_team_xi @> jsonb_build_array($1::bigint)
             OR m.opponent_team_xi @> jsonb_build_array($1::text)
-            OR m.opponent_team_xi @> jsonb_build_array($1::int)
+            OR m.opponent_team_xi @> jsonb_build_array($1::bigint)
          )
          AND (m.is_test IS NOT TRUE)
          AND (m.status != 'upcoming' AND m.status != 'Upcoming')`,
@@ -2035,6 +2054,30 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   } else {
     res.status(404).json({ error: 'API Not Found' });
+  }
+});
+
+// ADMIN: SYNC ALL PLAYER STATS
+app.post('/api/admin/sync-all-stats', authGuard(['admin']), async (req, res) => {
+  console.log('[ADMIN] Starting Global Stats Synchronization...');
+  try {
+    const { data: players, error } = await db.query('SELECT id, name FROM players WHERE is_club_player = true');
+    if (error) throw error;
+
+    console.log(`[ADMIN] Found ${players?.length || 0} club players to sync.`);
+    
+    for (const player of players) {
+      try {
+        await recalculateCareerStats(player.id);
+      } catch (e) {
+        console.error(`[ADMIN] Failed to sync ${player.name} (${player.id}):`, e.message);
+      }
+    }
+
+    res.json({ ok: true, count: players?.length || 0 });
+  } catch (e) {
+    console.error('[ADMIN] Global sync failed:', e);
+    res.status(500).json({ error: e.message });
   }
 });
 

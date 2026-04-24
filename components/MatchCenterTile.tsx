@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
@@ -21,6 +22,7 @@ interface MatchCenterTileProps {
     isCarouselActive?: boolean;
     isGraphic?: boolean;
     onShareSummary?: (matchId: string) => void;
+    tournaments?: any[];
 }
 
 const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
@@ -41,7 +43,8 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     grounds,
     isCarouselActive,
     isGraphic = false,
-    onShareSummary
+    onShareSummary,
+    tournaments = []
 }) => {
     const isScorerOrAdmin = userRole === 'admin' || canScore;
     const isLive = match.status === 'live';
@@ -143,9 +146,25 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             </button>
                         )}
                         <div className={isGraphic ? 'text-center' : ''}>
-                            <div className="text-[16px] font-black text-white uppercase tracking-tighter leading-tight">
-                                {match.tournament || 'Exhibition Match'}
-                            </div>
+                            {(() => {
+                                const tId = match.tournamentId || tournaments.find(t => t.name === match.tournament)?.id;
+                                if (tId) {
+                                    return (
+                                        <Link 
+                                            to={`/tournaments/${tId}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="text-[16px] font-black text-white uppercase tracking-tighter leading-tight hover:text-blue-400 hover:underline transition-all block"
+                                        >
+                                            {match.tournament || 'Exhibition Match'}
+                                        </Link>
+                                    );
+                                }
+                                return (
+                                    <div className="text-[16px] font-black text-white uppercase tracking-tighter leading-tight">
+                                        {match.tournament || 'Exhibition Match'}
+                                    </div>
+                                );
+                            })()}
                             <div className="text-[11px] font-bold uppercase tracking-widest mt-0.5" style={{ color: '#94a3b8' }}>
                                 {match.stage || 'Official'}
                             </div>

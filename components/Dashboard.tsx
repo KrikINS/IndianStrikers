@@ -487,68 +487,11 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     if (!squadPlayers) return [];
     
     // STRICT FIX: Only Indian Strikers (Home Team) players should appear in Dashboard stats
+    // We now rely on the backend-calculated stats (p.battingStats / p.bowlingStats) 
+    // which already aggregate Legacy + Match Ledger.
     return squadPlayers
-      .filter(p => p.teamId === 'IND_STRIKERS')
-      .map(p => {
-        // 1. Reset local stats to zero (Clean State) to prevent double-calculation
-        let totalRuns = 0;
-        let totalWickets = 0;
-        let totalMatches = 0;
-        let totalSixes = 0;
-        let totalFours = 0;
-        let totalInnings = 0;
-
-        const pId = String(p.id);
-        
-        // 2. Aggregate Legacy Stats
-        const legacy = legacyStats.find(l => String(l.player_id) === pId);
-        if (legacy) {
-          totalRuns += Number(legacy.runs || 0);
-          totalWickets += Number(legacy.wickets || 0);
-          totalMatches += Number(legacy.matches || 0);
-          totalSixes += Number(legacy.sixes || 0);
-          totalFours += Number(legacy.fours || 0);
-          totalInnings += Number(legacy.innings || 0);
-        }
-
-        // 3. Aggregate Match-by-Match Performances (Clean Slate)
-        const playerPerfs = (performerData.performers || []).filter(perf => 
-          String(perf.playerId || perf.id) === pId
-        );
-
-        playerPerfs.forEach(perf => {
-          totalRuns += Number(perf.runs || 0);
-          totalWickets += Number(perf.wickets || 0);
-          totalMatches += 1;
-          totalSixes += Number(perf.sixes || 0);
-          totalFours += Number(perf.fours || 0);
-          
-          // THE "87" RESTORATION: Innings only count if balls faced > 0
-          if (Number(perf.balls || 0) > 0) {
-            totalInnings += 1;
-          }
-        });
-
-        // 4. Return Enriched Object (Zero-based calculation)
-        return {
-          ...p,
-          battingStats: {
-            ...(p.battingStats || {}),
-            matches: totalMatches,
-            innings: totalInnings,
-            runs: totalRuns,
-            sixes: totalSixes,
-            fours: totalFours,
-            highestScore: String(legacy?.highest_score || p.battingStats?.highestScore || '0')
-          },
-          bowlingStats: {
-            ...(p.bowlingStats || {}),
-            wickets: totalWickets,
-            bestBowling: (legacy?.best_bowling || p.bowlingStats?.bestBowling || '0/0')
-          }
-        };
-      });
-  }, [squadPlayers, performerData.performers, legacyStats]);
+      .filter(p => p.teamId === 'IND_STRIKERS');
+  }, [squadPlayers]);
 
   const topRunScorers = [...enrichedPlayers]
     .sort((a, b) => (b.battingStats?.runs || 0) - (a.battingStats?.runs || 0))

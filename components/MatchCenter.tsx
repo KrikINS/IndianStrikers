@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Player, OpponentTeam, UserRole, ScheduledMatch, AppUser } from '../types';
 import { useMatchCenter } from '../store/matchStore';
 import MatchCenterTile from './MatchCenterTile';
@@ -22,6 +22,7 @@ import { useCricketScorer } from '../store/matchStore';
 import { useStore } from '../store/StoreProvider';
 import PointsTable from './PointsTable';
 import TournamentsManager from './TournamentsManager';
+import { syncAllPlayerStats } from '../services/storageService';
 
 
 // Responsive constants for Carousel handled inside component
@@ -105,6 +106,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
     // Filters and Search
     const [activeTab, setActiveTab] = useState<'list' | 'standings' | 'tournaments'>('list');
     const [selectedCardMatch, setSelectedCardMatch] = useState<ScheduledMatch | null>(null);
+    const [isSyncingStats, setIsSyncingStats] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [formatFilter, setFormatFilter] = useState<'All' | 'T20' | 'One Day'>('All');
     const [tournamentFilter, setTournamentFilter] = useState('All');
@@ -864,6 +866,28 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                 </div>
                                 
                                 <button
+                                    title="Cloud Sync Player Stats"
+                                    disabled={isSyncingStats}
+                                    onClick={async () => {
+                                        if (window.confirm("This will recalculate career statistics for all Indian Strikers players based on finalized match data. Proceed?")) {
+                                            setIsSyncingStats(true);
+                                            try {
+                                                await syncAllPlayerStats();
+                                                alert("Cloud synchronization complete! All player stats have been updated.");
+                                                window.location.reload(); // Reload to fetch fresh stats
+                                            } catch (e: any) {
+                                                alert("Sync failed: " + e.message);
+                                            } finally {
+                                                setIsSyncingStats(false);
+                                            }
+                                        }
+                                    }}
+                                    className={`p-2.5 rounded-xl transition-all shadow-md group border border-slate-700 ${isSyncingStats ? 'bg-blue-600/20 cursor-wait' : 'bg-slate-900 hover:bg-blue-600'}`}
+                                >
+                                    <RefreshCw size={18} className={`${isSyncingStats ? 'animate-spin text-blue-400' : 'text-blue-400 group-hover:text-white'}`} />
+                                </button>
+
+                                <button
                                     title="Purge All Test Data"
                                     onClick={async () => {
                                         if (window.confirm("FINAL CONFIRMATION: This will permanently delete ALL 'is_test' matches and their associated ledger entries. This action cannot be undone. Proceed?")) {
@@ -1013,7 +1037,21 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                             <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
                                                                         </div>
                                                                         <div className="match-meta-info pl-1.5 opacity-70">
-                                                                            {m.tournament || 'Exhibition Match'}
+                                                                            {(() => {
+                                                                                const tId = m.tournamentId || tournaments?.find(t => t.name === m.tournament)?.id;
+                                                                                if (tId) {
+                                                                                    return (
+                                                                                        <Link 
+                                                                                            to={`/tournaments/${tId}`}
+                                                                                            className="hover:text-blue-400 hover:underline transition-all"
+                                                                                            onClick={(e) => e.stopPropagation()}
+                                                                                        >
+                                                                                            {m.tournament || 'Exhibition Match'}
+                                                                                        </Link>
+                                                                                    );
+                                                                                }
+                                                                                return m.tournament || 'Exhibition Match';
+                                                                            })()}
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -1130,6 +1168,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                 canScore={currentUser?.canScore}
                                 grounds={grounds}
                                 onToggleLock={handleToggleLock}
+                                tournaments={tournaments}
                             />
                         </motion.div>
                     </motion.div>

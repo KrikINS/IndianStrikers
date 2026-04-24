@@ -1008,4 +1008,12 @@ export const deleteLeagueFixture = async (id: string) => {
   return handleResponse(res);
 };
 
+export const syncAllPlayerStats = async () => {
+  const res = await fetch(`${API_URL}/admin/sync-all-stats`, {
+    method: 'POST',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
 
