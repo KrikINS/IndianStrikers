@@ -5,7 +5,7 @@ import { Hash, Loader2, Plus, Trash2 } from 'lucide-react';
 
 interface PointsTableProps {
   userRole?: UserRole;
-  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
+  currentUser?: import('../types').AppUser | null;
   opponents: OpponentTeam[];
   tournaments: any[];
 }

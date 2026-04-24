@@ -11,7 +11,7 @@ import styles from './PlayerList.module.css';
 
 interface PlayerListProps {
   userRole: UserRole;
-  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
+  currentUser?: AppUser | null;
 }
 
 const defaultBattingStats: BattingStats = {

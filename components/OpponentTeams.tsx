@@ -1,11 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { Swords, Star, TrendingUp, AlertCircle, ChevronDown, ChevronUp, Plus, Upload, UserPlus, X, Edit2, Trash2 } from 'lucide-react';
-import { OpponentTeam, UserRole } from '../types';
+import { OpponentTeam, UserRole, AppUser } from '../types';
 import { useOpponentStore } from '../store/opponentStore';
 
 interface OpponentTeamsProps {
   userRole: UserRole;
-  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
+  currentUser?: AppUser | null;
 }
 
 const OpponentTeams: React.FC<OpponentTeamsProps> = ({ userRole, currentUser }) => {

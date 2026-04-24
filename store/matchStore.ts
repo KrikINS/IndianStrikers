@@ -514,7 +514,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             if (victimId === sId) sId = newBatterId || null;
             else nsId = newBatterId || null;
             if (sId && !nextInnings.battingStats[sId]) {
-                nextInnings.battingStats[sId] = { id: sId, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: Object.keys(nextInnings.battingStats).length };
+                nextInnings.battingStats[sId] = { id: sId, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: Object.keys(nextInnings.battingStats).length, fifty_notified: false, hundred_notified: false };
             }
         }
         if (runs % 2 !== 0) {
@@ -543,6 +543,41 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
         nextInnings.history = [...(nextInnings.history || []), ballRecord];
 
+        // --- Milestone Detection (Atomic) ---
+        let milestone: { type: string, player: string, subText?: string } | null = null;
+        
+        // Batting Milestones (50, 100)
+        if (subType === 'bat' && b) {
+            if (b.runs >= 100 && !b.hundred_notified) {
+                b.hundred_notified = true;
+                milestone = { type: 'hundred', player: b.name };
+            } else if (b.runs >= 50 && !b.fifty_notified) {
+                b.fifty_notified = true;
+                milestone = { type: 'fifty', player: b.name };
+            }
+        }
+
+        // Bowling Milestones (4W, 5W, Hat-trick)
+        if (isWicket && bw) {
+            // Check for Hat-trick (3 consecutive wickets in history for this bowler)
+            const bowlerBalls = (nextInnings.history || []).filter((bl: BallRecord) => bl.bowlerId === state.currentBowlerId && bl.isLegal);
+            if (bowlerBalls.length >= 3) {
+                const last3 = bowlerBalls.slice(-3);
+                // Wicket types that count for hat-tricks (exclude Run Out, Retired, etc. as per standard rules)
+                const isHatTrick = last3.every((bl: BallRecord) => bl.isWicket && !['Run Out', 'Retired Hurt', 'Retired Out', 'Timed Out', 'Obstructing the Field'].includes(bl.wicketType || ''));
+                if (isHatTrick) {
+                    milestone = { type: 'hat_trick', player: bw.name };
+                }
+            }
+
+            // Wicket hauls
+            if (bw.wickets === 5) {
+                milestone = { type: 'five_wicket', player: bw.name, subText: `${bw.wickets}-${bw.runs}` };
+            } else if (bw.wickets === 4 && !milestone) { // Don't overwrite hat-trick or 5W if already set
+                milestone = { type: 'four_wicket', player: bw.name, subText: `${bw.wickets}-${bw.runs}` };
+            }
+        }
+
         let finished = state.isFinished;
         if (state.currentInnings === 2) {
             const innings1Runs = state.innings1?.totalRuns || 0;
@@ -560,6 +595,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             isFinished: finished,
             isWaitingForBowler: isOverComplete,
             currentBowlerId: isOverComplete ? null : state.currentBowlerId,
+            pendingMilestone: milestone,
             historyStack: [...state.historyStack, prevState].slice(-20)
         });
     },

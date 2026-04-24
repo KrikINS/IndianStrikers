@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Player, OpponentTeam, UserRole, ScheduledMatch, Ground } from '../types';
+import { Player, OpponentTeam, UserRole, ScheduledMatch, Ground, AppUser } from '../types';
 import { getOpponents, getTournamentPerformers, getMatches, getLegacyStats } from '../services/storageService';
 import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, Bell, MapPin, Clock, Loader2, RefreshCw, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,7 +12,7 @@ import './Dashboard.css';
 interface DashboardProps {
   userRole?: UserRole;
   teamLogo?: string;
-  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
+  currentUser?: AppUser | null;
 }
 
 const MILESTONE_TAGLINES = {

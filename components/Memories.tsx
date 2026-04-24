@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Play, Image as ImageIcon, Plus, X, Maximize2, Heart, Film, Calendar, Trash2, MessageCircle, Send, User } from 'lucide-react';
-import { UserRole } from '../types';
+import { UserRole, AppUser } from '../types';
 
 interface Comment {
   id: string;
@@ -15,7 +15,7 @@ import { getMemories, deleteMemory, addMemory, updateMemory, Memory } from '../s
 
 interface MemoriesProps {
   userRole: UserRole;
-  currentUser?: { name: string; username: string; id?: string };
+  currentUser?: AppUser | null;
 }
 
 const Memories: React.FC<MemoriesProps> = ({ userRole, currentUser }) => {

@@ -28,7 +28,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { APP_VERSION } from '../src/version';
-import { UserRole, MembershipRequest } from '../types';
+import { UserRole, MembershipRequest, AppUser } from '../types';
 import MembershipRequestForm from './MembershipRequestForm';
 import { getMembershipRequests, changePassword } from '../services/storageService';
 
@@ -40,7 +40,7 @@ interface SidebarProps {
   onSignOut: () => void;
   teamLogo: string;
   onUpdateLogo: (url: string) => void;
-  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
+  currentUser?: AppUser | null;
   linkedPlayer?: { id?: string; name: string; avatarUrl?: string }; // Minimal player type needed
   isOffline?: boolean;
 }

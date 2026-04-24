@@ -1065,13 +1065,31 @@ app.get('/api/memories', async (_req, res) => {
 async function recalculateCareerStats(playerId) {
     console.log(`[SyncEngine] Recalculating career for Player ID: ${playerId}...`);
     
-    // Join matches to check is_test
-    const { data: allMatchStats } = await db.query(
-        `SELECT pms.* FROM player_match_stats pms 
-         JOIN matches m ON pms.match_id = m.id 
-         WHERE pms.player_id = $1 AND m.is_test = false`,
+    // 1. Max-Inclusion Query: Find ALL matches via performance record OR squad participation
+    // This ensures MAT increments for all Playing XI members even without stats.
+    const { data: participationStats, error: partError } = await db.query(
+        `SELECT 
+            pms.*, 
+            m.status as match_status, 
+            m.is_test 
+         FROM matches m
+         LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1::BIGINT)
+         WHERE (
+            pms.player_id IS NOT NULL 
+            OR m.home_team_xi @> jsonb_build_array($1::text)
+            OR m.home_team_xi @> jsonb_build_array($1::int)
+            OR m.opponent_team_xi @> jsonb_build_array($1::text)
+            OR m.opponent_team_xi @> jsonb_build_array($1::int)
+         )
+         AND (m.is_test IS NOT TRUE)
+         AND (m.status != 'upcoming' AND m.status != 'Upcoming')`,
         [playerId]
     );
+
+    if (partError) {
+        console.error(`[SyncEngine] Query error for ${playerId}:`, partError);
+        return;
+    }
 
     const { data: legacyBaseline } = await db.getOne('SELECT * FROM player_legacy_stats WHERE player_id = $1', [playerId]);
     
@@ -1081,7 +1099,7 @@ async function recalculateCareerStats(playerId) {
         runs_conceded: 0, maidens: 0, hundreds: 0, fifties: 0, ducks: 0, 
         four_wickets: 0, five_wickets: 0, wides: 0, no_balls: 0, best_bowling: '0/0' 
     };
-    const m = allMatchStats || [];
+    const m = participationStats || [];
 
     // Helper to add overs (base-6) correctly
     const toBalls = (ov) => {
@@ -1098,16 +1116,22 @@ async function recalculateCareerStats(playerId) {
 
     const totalRuns = m.reduce((s, row) => s + (Number(row.runs) || 0), 0) + (Number(l.runs) || 0);
     const totalWickets = m.reduce((s, row) => s + (Number(row.wickets) || 0), 0) + (Number(l.wickets) || 0);
-    const totalMatches = m.reduce((s, row) => s + (row.status?.startsWith('HISTORICAL:') ? (parseInt(row.status.split(':')[1]) || 1) : 1), 0) + (Number(l.matches) || 0);
-        const totalInnings = m.filter(row => {
+    
+    // Match counting with HISTORICAL:N support
+    const totalMatches = m.reduce((s, row) => {
+        const status = row.status?.toString() || '';
+        return s + (status.startsWith('HISTORICAL:') ? (parseInt(status.split(':')[1]) || 1) : 1);
+    }, 0) + (Number(l.matches) || 0);
+
+    const totalInnings = m.filter(row => {
         const status = (row.status || '').toLowerCase();
-        const runs = Number(row.runs) || 0;
         const balls = Number(row.balls) || 0;
-        // MUST have faced a ball, scored a run, or been out to count as an inning
-        // Exclude DNB, Did Not Bat, Absent, null/empty status
-        if (runs === 0 && balls === 0 && (['did not bat', 'dnb', 'absent', ''].includes(status) || !row.status)) {
-            return false;
-        }
+        
+        // USER REQUEST: faces at least one ball OR has a valid batting status ... that is NOT 'Did Not Bat'
+        // We exclude 'dnb', 'did not bat', 'absent', 'absent hurt', and empty status.
+        const isDNB = !status || ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(status);
+        if (isDNB && balls === 0) return false;
+        
         return true;
     }).length + (Number(l.innings) || 0);
 
@@ -1148,7 +1172,7 @@ async function recalculateCareerStats(playerId) {
         bestBBI = allBBI[0];
     }
 
-        const dismissals = totalInnings - totalNO;
+    const dismissals = totalInnings - totalNO;
     const batAvg = dismissals > 0 ? (totalRuns / dismissals) : totalRuns;
 
     const batSR = totalBalls > 0 ? (totalRuns / totalBalls) * 100 : 0;
@@ -1194,7 +1218,6 @@ async function recalculateCareerStats(playerId) {
     );
 
     if (upErr) throw upErr;
-    console.log(`[SyncEngine] ✅ Career recalculated for ${playerId}`);
 }
 
 // LEGACY STATS MANAGEMENT
@@ -1298,14 +1321,20 @@ app.get('/api/players/:id/stats', async (req, res) => {
             }
 
             // Batting Aggregation
-            const isDismissed = pStatus && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(pStatus);
-            const isDNB = ['dnb', 'did not bat'].includes(pStatus);
-            const hasActuallyBatted = !isDNB && (runs > 0 || balls > 0 || isDismissed || pStatus === 'batting');
+            const statusLower = pStatus.toLowerCase();
+            const ballsCount = Number(balls) || 0;
+            
+            // USER REQUEST: faces at least one ball OR has a valid batting status ... that is NOT 'Did Not Bat'
+            const isDNB = !statusLower || ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(statusLower);
+            const hasActuallyBatted = (ballsCount > 0) || !isDNB;
             
             if (hasActuallyBatted) {
                 group.batting.innings++;
-                // A player is 'Not Out' if they are not dismissed AND not currently batting (because live batting is an active state, not a finished not-out record)
-                if (!isDismissed && pStatus !== 'batting' && pStatus !== 'dnb') group.batting.notOuts++;
+                
+                // A player is 'Not Out' if they are not dismissed AND not currently batting/DNB
+                const isDismissedLocal = statusLower && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(statusLower);
+                
+                if (!isDismissedLocal && statusLower !== 'batting' && !isDNB) group.batting.notOuts++;
                 group.batting.runs += runs;
                 group.batting.balls += balls;
                 group.batting.fours += fours;
@@ -1314,7 +1343,7 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 // Dynamic Milestones
                 if (runs >= 100) group.batting.hundreds++;
                 else if (runs >= 50) group.batting.fifties++;
-                if (runs === 0 && isDismissed) group.batting.ducks++;
+                if (runs === 0 && isDismissedLocal) group.batting.ducks++;
             }
             
             const currentHS = parseInt(group.batting.highestScore.replace('*', '')) || 0;

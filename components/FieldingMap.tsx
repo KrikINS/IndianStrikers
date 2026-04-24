@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Player, FieldingStrategy, PlayerRole, FieldPosition, UserRole } from '../types';
+import { Player, FieldingStrategy, PlayerRole, FieldPosition, UserRole, AppUser } from '../types';
 import { getPlayers, getStrategies, addStrategy, deleteStrategy } from '../services/storageService';
 import { useStore } from '../store/StoreProvider';
 import { Save, RefreshCcw, Target, GripVertical, Plus, Zap, Flame, Clock, Trash2, Users, ChevronRight, CornerUpLeft, Activity, X } from 'lucide-react';
@@ -7,7 +7,7 @@ import './FieldingMap.css';
 
 interface FieldingMapProps {
   userRole?: UserRole;
-  currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
+  currentUser?: AppUser | null;
 }
 
 const FieldingBoard: React.FC<FieldingMapProps> = ({ userRole = 'guest', currentUser }) => {

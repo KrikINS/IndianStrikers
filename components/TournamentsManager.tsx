@@ -117,17 +117,41 @@ const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tournament</span>
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                        <Link 
+                          to={`/tournaments/${t.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-sm font-black text-slate-900 uppercase tracking-tight hover:text-blue-600 hover:underline flex items-center gap-1.5 group"
+                        >
                           {t.name || (t as any).tournament_name || 'Unnamed Tournament'}
-                        </h3>
+                          <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </Link>
                       </div>
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Season {t.year}</span>
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border
-                          ${t.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
-                            t.status === 'upcoming' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                          {t.status}
-                        </span>
+                        {isAdmin ? (
+                          <select 
+                            value={t.status}
+                            title="Change Tournament Status"
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              updateTourneyStore({ ...t, status: e.target.value as any });
+                            }}
+                            className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border outline-none cursor-pointer
+                              ${t.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
+                                t.status === 'upcoming' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
+                          >
+                            <option value="upcoming" className="bg-slate-900 text-white">Upcoming</option>
+                            <option value="active" className="bg-slate-900 text-white">Active</option>
+                            <option value="completed" className="bg-slate-900 text-white">Completed</option>
+                          </select>
+                        ) : (
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border
+                            ${t.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
+                              t.status === 'upcoming' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                            {t.status}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

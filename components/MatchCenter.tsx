@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Player, OpponentTeam, UserRole, ScheduledMatch } from '../types';
+import { Player, OpponentTeam, UserRole, ScheduledMatch, AppUser } from '../types';
 import { useMatchCenter } from '../store/matchStore';
 import MatchCenterTile from './MatchCenterTile';
 import { PlayingXIModal } from './PlayingXIModal';
@@ -30,7 +30,7 @@ interface MatchCenterProps {
     opponents: OpponentTeam[];
     userRole: UserRole;
     teamLogo?: string;
-    currentUser?: { id?: string; name: string; username: string; avatarUrl?: string; canScore?: boolean };
+    currentUser?: AppUser | null;
     onUpdateOpponent: (t: OpponentTeam) => void;
     onRefresh?: () => Promise<void>;
 }
@@ -1089,7 +1089,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
                         {activeTab === 'tournaments' && (
                             <div className="px-6 pb-20 pt-4">
-                                <TournamentsManager />
+                                <TournamentsManager isAdmin={isAdmin} />
                             </div>
                         )}
                     </AnimatePresence>
