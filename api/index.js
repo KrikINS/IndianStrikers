@@ -277,20 +277,22 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
     linked_user_id: (linked_user_id === '' || !linked_user_id) ? null : linked_user_id, 
     jersey_number: (jersey_number === '' || jersey_number === undefined) ? null : Number(jersey_number), 
     dob: (dob === '' || !dob) ? null : dob, 
-    external_id
+    external_id,
+    avatar_history: avatar_url ? [avatar_url] : []
   };
   console.log('[POST /api/players] Sanitized Payload:', JSON.stringify(payload));
 
   const { data, error } = await db.getOne(
-    `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, wides, no_balls, linked_user_id, jersey_number, dob, external_id, is_active, status, is_club_player) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING *`,
+    `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, wides, no_balls, linked_user_id, jersey_number, dob, external_id, is_active, status, is_club_player, avatar_history) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING *`,
     [
       payload.name, payload.role, payload.batting_style, payload.bowling_style, payload.avatar_url, 
       payload.matches_played, payload.runs_scored, payload.wickets_taken, payload.average, 
       payload.is_captain, payload.is_vice_captain, payload.is_available, 
       payload.batting_stats, payload.bowling_stats, Number(req.body.wides || 0), Number(req.body.no_balls || 0), payload.linked_user_id, 
       payload.jersey_number, payload.dob, payload.external_id,
-      payload.is_active, payload.status, req.body.is_club_player !== false
+      payload.is_active, payload.status, req.body.is_club_player !== false,
+      JSON.stringify(payload.avatar_history)
     ]
   );
 
@@ -344,6 +346,10 @@ app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => 
       wides=$15, no_balls=$16, linked_user_id=$17, 
       jersey_number=$18, dob=$19, external_id=$20, 
       is_active=$21, status=$22, is_club_player=$23, primary_team_id=$24,
+      avatar_history = CASE 
+        WHEN $5 IS NOT NULL AND NOT (avatar_history @> jsonb_build_array($5)) THEN avatar_history || jsonb_build_array($5)
+        ELSE avatar_history 
+      END,
       updated_at=NOW() 
      WHERE id=$25`,
     [

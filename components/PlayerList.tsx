@@ -23,6 +23,40 @@ const defaultBowlingStats: BowlingStats = {
   wides: 0, no_balls: 0
 };
 
+/**
+ * Compresses an image to fit within a target size (in bytes).
+ */
+const compressImage = (base64Str: string, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      // Calculate aspect ratio and new dimensions
+      if (width > height) {
+        if (width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width *= maxHeight / height;
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+  });
+};
+
 // Simple Password Modal Component
 const PasswordConfirmModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: () => void }) => {
   const [password, setPassword] = useState('');
@@ -475,12 +509,22 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // 500KB limit check before processing
+      if (file.size > 500 * 1024) {
+        alert('File is too large! Please choose an image smaller than 500KB.');
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, avatarUrl: reader.result as string }));
+      reader.onloadend = async () => {
+        const compressed = await compressImage(reader.result as string);
+        setFormData(prev => ({ 
+          ...prev, 
+          avatarUrl: compressed
+        }));
       };
       reader.readAsDataURL(file);
     }
@@ -520,7 +564,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         jerseyNumber: (formData.jerseyNumber !== undefined && (formData.jerseyNumber as any) !== '' && formData.jerseyNumber !== null) ? Number(formData.jerseyNumber) : undefined,
         battingStats: batting,
         bowlingStats: bowling,
-        linkedUserId: formData.linkedUserId
+        linkedUserId: formData.linkedUserId,
+        avatarHistory: formData.avatarHistory || []
       };
 
       if (editingPlayer) {
@@ -1051,6 +1096,29 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                         onChange={handleFileChange}
                       />
                     </div>
+                    {/* Avatar History Gallery */}
+                    {editingPlayer && formData.avatarHistory && formData.avatarHistory.length > 0 && (
+                      <div className="flex flex-col gap-2 w-full mt-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Previous Pictures</label>
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                          {formData.avatarHistory.map((url, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+                              className={`relative shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${formData.avatarUrl === url ? 'border-blue-500 scale-105 shadow-md' : 'border-slate-200 opacity-60 hover:opacity-100'}`}
+                            >
+                              <img src={url} alt={`History ${i}`} className="w-full h-full object-cover" />
+                              {formData.avatarUrl === url && (
+                                <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                                  <div className="bg-blue-500 text-white rounded-full p-0.5"><Plus size={10} className="rotate-45" /></div>
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex-1 space-y-4 w-full">
                       <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Full Name</label>

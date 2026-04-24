@@ -195,6 +195,7 @@ export interface Player {
   linkedUserId?: string;
   isClubPlayer?: boolean; // Default true for Indian Strikers members
   primaryTeamId?: string; // Link to the opponent team if isClubPlayer is false
+  avatarHistory?: string[];
   wides?: number;
   no_balls?: number;
 }
