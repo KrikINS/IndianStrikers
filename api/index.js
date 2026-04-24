@@ -43,6 +43,33 @@ console.log(`[Database Config] URL: ${process.env.DATABASE_URL ? 'Found' : 'MISS
 cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET });
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Automatic Database Migrations
+async function runMigrations() {
+  console.log('[Migration] Checking for missing database columns...');
+  try {
+    // 1. Add avatar_history to players
+    await db.query(`
+      ALTER TABLE players 
+      ADD COLUMN IF NOT EXISTS avatar_history JSONB DEFAULT '[]'::jsonb;
+    `);
+    
+    // 2. Initialize history for existing players
+    await db.query(`
+      UPDATE players 
+      SET avatar_history = jsonb_build_array(avatar_url)
+      WHERE avatar_url IS NOT NULL 
+      AND (avatar_history IS NULL OR jsonb_array_length(avatar_history) = 0);
+    `);
+    
+    console.log('[Migration] Database schema is up to date.');
+  } catch (err) {
+    console.error('[Migration] Failed to run database migrations:', err.message);
+  }
+}
+
+// Execute migration on startup
+runMigrations();
+
 function signToken(payload) { return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' }); }
 function authGuard(roles = []) {
   return (req, res, next) => {
