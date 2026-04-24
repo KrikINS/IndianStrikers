@@ -773,6 +773,7 @@ export interface PlayerDetailedStats {
     batting: BattingStats;
     bowling: BowlingStats;
   };
+  recentForm?: any[];
 }
 
 export const getPlayerDetailedStats = async (playerId: string): Promise<PlayerDetailedStats> => {

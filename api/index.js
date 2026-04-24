@@ -311,7 +311,7 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
 
   const { data, error } = await db.getOne(
     `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, wides, no_balls, linked_user_id, jersey_number, dob, external_id, is_active, status, is_club_player, avatar_history) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING *`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24::jsonb) RETURNING *`,
     [
       payload.name, payload.role, payload.batting_style, payload.bowling_style, payload.avatar_url, 
       payload.matches_played, payload.runs_scored, payload.wickets_taken, payload.average, 
@@ -366,19 +366,19 @@ app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => 
   const { error } = await db.query(
     `UPDATE players SET 
       name=$1, role=$2, batting_style=$3, bowling_style=$4, 
-      avatar_url=$5, matches_played=$6, runs_scored=$7, 
+      avatar_url=$5::text, matches_played=$6, runs_scored=$7, 
       wickets_taken=$8, average=$9, is_captain=$10, 
       is_vice_captain=$11, is_available=$12, 
-      batting_stats=$13, bowling_stats=$14, 
+      batting_stats=$13::jsonb, bowling_stats=$14::jsonb, 
       wides=$15, no_balls=$16, linked_user_id=$17, 
       jersey_number=$18, dob=$19, external_id=$20, 
       is_active=$21, status=$22, is_club_player=$23, primary_team_id=$24,
       avatar_history = CASE 
-        WHEN $5 IS NOT NULL AND NOT (avatar_history @> jsonb_build_array($5)) THEN avatar_history || jsonb_build_array($5)
+        WHEN $5::text IS NOT NULL AND NOT (avatar_history @> jsonb_build_array($5::text)) THEN avatar_history || jsonb_build_array($5::text)
         ELSE avatar_history 
       END,
       updated_at=NOW() 
-     WHERE id=$25`,
+     WHERE id=$25::bigint`,
     [
       payload.name, payload.role, payload.batting_style, payload.bowling_style, 
       payload.avatar_url, payload.matches_played, payload.runs_scored, 
@@ -1596,13 +1596,19 @@ app.get('/api/players/:id/stats', async (req, res) => {
             tournaments: Object.values(tournamentGroups),
             total: grandTotal,
             recentForm: participationStats
-                .filter(row => (Number(row.runs) > 0 || Number(row.balls) > 0 || (row.player_record_status && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(row.player_record_status?.toLowerCase()))))
                 .sort((a, b) => new Date(b.date || Date.now()) - new Date(a.date || Date.now()))
                 .slice(0, 5)
                 .map(row => ({
                     runs: row.runs || 0,
+                    balls: row.balls || 0,
                     isNotOut: row.player_record_status && ['not out', 'retired hurt', 'absent', 'batting'].includes(row.player_record_status?.toLowerCase()),
-                    isLive: row.match_status === 'live'
+                    isLive: row.match_status === 'live',
+                    status: row.player_record_status || 'DNB',
+                    date: row.date,
+                    matchId: row.match_id,
+                    wickets: row.wickets || 0,
+                    bowlingRuns: row.runs_conceded || 0,
+                    bowlingOvers: row.overs_bowled || 0
                 }))
         });
 

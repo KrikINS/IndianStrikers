@@ -250,11 +250,29 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
   const recentInvolvement = useMemo(() => {
     if (!viewingPlayer) return [];
+    
+    // NEW: Use the backend-provided Recent Form if available
+    if (detailedStats && detailedStats.recentForm && detailedStats.recentForm.length > 0) {
+       return detailedStats.recentForm.map(perf => ({
+          ...perf,
+          // Support existing UI fields
+          runs: Number(perf.runs || 0),
+          balls: Number(perf.balls || 0),
+          outHow: perf.status || 'DNB',
+          isNotOut: !!perf.isNotOut,
+          matchDate: perf.date,
+          wickets: Number(perf.wickets || 0),
+          bowlingRuns: Number(perf.bowlingRuns || 0),
+          bowlingOvers: Number(perf.bowlingOvers || 0)
+       }));
+    }
+
+    // Fallback to legacy performerData if detailed stats haven't loaded yet
     return performerData
       .filter(perf => (String(perf.playerId) === String(viewingPlayer.id) || String(perf.id) === String(viewingPlayer.id)))
       .sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime())
       .slice(0, 5);
-  }, [viewingPlayer, performerData]);
+  }, [viewingPlayer, performerData, detailedStats]);
 
   const statsSyncHandler = async () => {
     setIsSyncing(true);
