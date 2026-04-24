@@ -1617,6 +1617,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                       </tr>
                                     )}
                                   </React.Fragment>
+                                ))}
                             {/* End of tournament list */}
 
                             {!detailedStats?.tournaments.length && !detailedStats?.legacy && (
@@ -1760,6 +1761,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                       </tr>
                                     )}
                                   </React.Fragment>
+                                ))}
                             {/* End of tournament list */}
                           </tbody>
                           <tfoot className="sticky bottom-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
