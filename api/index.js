@@ -1402,11 +1402,11 @@ app.get('/api/players/:id/stats', async (req, res) => {
             const isDNB = !statusLower || ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(statusLower);
             const hasActuallyBatted = (ballsCount > 0) || !isDNB;
             
+            // A player is 'Not Out' if they are not dismissed AND not currently batting/DNB
+            const isDismissedLocal = statusLower && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(statusLower);
+            
             if (hasActuallyBatted) {
                 group.batting.innings++;
-                
-                // A player is 'Not Out' if they are not dismissed AND not currently batting/DNB
-                const isDismissedLocal = statusLower && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(statusLower);
                 
                 if (!isDismissedLocal && statusLower !== 'batting' && !isDNB) group.batting.notOuts++;
                 group.batting.runs += runs;
