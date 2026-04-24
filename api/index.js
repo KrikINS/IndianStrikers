@@ -1297,8 +1297,6 @@ app.get('/api/players/:id/stats', async (req, res) => {
              LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1::BIGINT)
              WHERE (
                 pms.player_id = $1::BIGINT
-                OR m.home_team_xi ? $1
-                OR m.opponent_team_xi ? $1
                 OR m.home_team_xi @> jsonb_build_array($1::text)
                 OR m.home_team_xi @> jsonb_build_array($1::bigint)
                 OR m.opponent_team_xi @> jsonb_build_array($1::text)
