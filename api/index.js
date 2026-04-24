@@ -565,9 +565,9 @@ app.put('/api/matches/:id', authGuard(['admin', 'member']), async (req, res) => 
     const { data: match } = await db.getOne('SELECT is_locked FROM matches WHERE id = $1', [id]);
     
     // Only allow modification if not locked, OR if we are explicitly changing the lock status itself
-    const isChangingLockOnly = Object.keys(req.body).length === 1 && 'isLocked' in req.body;
+    const isChangingLockOnly = Object.keys(req.body).length === 1 && ('isLocked' in req.body || 'is_locked' in req.body);
     
-    if (match?.is_locked && !req.body.is_locked && !isChangingLockOnly) { 
+    if (match?.is_locked && !isChangingLockOnly) { 
       return res.status(403).json({ error: 'This match is LOCKED and cannot be modified.' });
     }
 
