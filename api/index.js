@@ -1279,7 +1279,7 @@ app.get('/api/players/:id/stats', async (req, res) => {
         // We use numeric array for JSONB search as IDs are stored as Numbers.
         const { data: participationStats, error: partError } = await db.query(
             `SELECT 
-                m.id as match_id, m.status as match_status, m.is_test, m.tournament_id, m.date, m.live_data,
+                m.id as match_id, m.status as match_status, m.is_test, m.tournament_id, m.date, m.live_data, m.scorecard,
                 t.name as tournament_name,
                 o.name as opponent_name,
                 pms.runs, pms.balls, pms.fours, pms.sixes, pms.status as player_record_status,
@@ -1290,7 +1290,9 @@ app.get('/api/players/:id/stats', async (req, res) => {
              LEFT JOIN opponents o ON m.opponent_id = o.id
              LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1::BIGINT)
              WHERE (
-                pms.player_id IS NOT NULL 
+                pms.player_id = $1::BIGINT
+                OR m.home_team_xi ? $1
+                OR m.opponent_team_xi ? $1
                 OR m.home_team_xi @> jsonb_build_array($1::text)
                 OR m.home_team_xi @> jsonb_build_array($1::bigint)
                 OR m.opponent_team_xi @> jsonb_build_array($1::text)
@@ -1339,28 +1341,57 @@ app.get('/api/players/:id/stats', async (req, res) => {
             let bWides = Number(row.wides) || 0;
             let bNB = Number(row.no_balls) || 0;
 
-            if (row.match_status === 'live' && row.live_data) {
+            // Data source priority: Scorecard/Live Data > Database Performance Row
+            if (row.scorecard || row.live_data) {
                 try {
-                    const ld = typeof row.live_data === 'string' ? JSON.parse(row.live_data) : row.live_data;
-                    const bat = (ld.innings1?.battingStats || {})[playerId] || (ld.innings2?.battingStats || {})[playerId];
-                    const bowl = (ld.innings1?.bowlingStats || {})[playerId] || (ld.innings2?.bowlingStats || {})[playerId];
+                    const sc = row.scorecard ? (typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard) : null;
+                    const ld = row.live_data ? (typeof row.live_data === 'string' ? JSON.parse(row.live_data) : row.live_data) : null;
                     
-                    if (bat) {
-                        runs = Number(bat.runs) || 0;
-                        balls = Number(bat.balls) || 0;
-                        fours = Number(bat.fours) || 0;
-                        sixes = Number(bat.sixes) || 0;
-                        pStatus = bat.outHow || (bat.isNotOut ? 'not out' : (bat.isOut ? 'out' : 'batting'));
+                    // Try to find in scorecard first (for completed matches)
+                    if (sc) {
+                        const allBatting = [...(sc.innings1?.batting || []), ...(sc.innings2?.batting || [])];
+                        const allBowling = [...(sc.innings1?.bowling || []), ...(sc.innings2?.bowling || [])];
+                        
+                        const bat = allBatting.find(b => String(b.playerId) === String(playerId));
+                        const bowl = allBowling.find(b => String(b.playerId) === String(playerId));
+                        
+                        if (bat) {
+                            runs = Number(bat.runs) || 0;
+                            balls = Number(bat.balls) || 0;
+                            fours = Number(bat.fours) || 0;
+                            sixes = Number(bat.sixes) || 0;
+                            pStatus = bat.outHow || (bat.isNotOut ? 'not out' : 'out');
+                        }
+                        if (bowl) {
+                            bOvers = Number(bowl.overs) || 0;
+                            bMaidens = Number(bowl.maidens) || 0;
+                            bRuns = Number(bowl.runs) || 0;
+                            bWickets = Number(bowl.wickets) || 0;
+                        }
                     }
-                    if (bowl) {
-                        bOvers = Number(bowl.overs) || 0;
-                        bMaidens = Number(bowl.maidens) || 0;
-                        bRuns = Number(bowl.runs) || 0;
-                        bWickets = Number(bowl.wickets) || 0;
-                        bWides = Number(bowl.wides) || 0;
-                        bNB = Number(bowl.no_balls) || 0;
+                    
+                    // Fallback to live_data if scorecard empty or for live matches
+                    if (ld && (!runs && !bOvers)) {
+                        const bat = (ld.innings1?.battingStats || {})[playerId] || (ld.innings2?.battingStats || {})[playerId];
+                        const bowl = (ld.innings1?.bowlingStats || {})[playerId] || (ld.innings2?.bowlingStats || {})[playerId];
+                        
+                        if (bat) {
+                            runs = Number(bat.runs) || 0;
+                            balls = Number(bat.balls) || 0;
+                            fours = Number(bat.fours) || 0;
+                            sixes = Number(bat.sixes) || 0;
+                            pStatus = bat.outHow || (bat.isNotOut ? 'not out' : (bat.isOut ? 'out' : 'batting'));
+                        }
+                        if (bowl) {
+                            bOvers = Number(bowl.overs) || 0;
+                            bMaidens = Number(bowl.maidens) || 0;
+                            bRuns = Number(bowl.runs) || 0;
+                            bWickets = Number(bowl.wickets) || 0;
+                        }
                     }
-                } catch(e) {}
+                } catch(e) {
+                    console.error("Error parsing match data:", e);
+                }
             }
 
             // Batting Aggregation

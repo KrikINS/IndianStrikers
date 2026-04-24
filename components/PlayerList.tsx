@@ -255,8 +255,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           const unifiedStats = {
             ...stats,
             total: {
-              batting: viewingPlayer.battingStats || stats.total.batting,
-              bowling: viewingPlayer.bowlingStats || stats.total.bowling
+              batting: (viewingPlayer.battingStats && (viewingPlayer.battingStats.matches || 0) > 0) ? viewingPlayer.battingStats : stats.total.batting,
+              bowling: (viewingPlayer.bowlingStats && (viewingPlayer.bowlingStats.matches || 0) > 0) ? viewingPlayer.bowlingStats : stats.total.bowling
             }
           };
 
@@ -1520,10 +1520,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                             </tr>
                           </thead>
                           <tbody>
-                            {/* Detailed Rows with dynamic expansion */}
-                            {isExpanded ? (
-                              <>
-                                {detailedStats?.legacy && (
+                            {/* Detailed Rows with legacy and tournament breakdowns */}
+                            {detailedStats?.legacy && (
                                   <tr className="bg-slate-50/80 text-[10px] md:text-xs text-black border-b border-slate-100 animate-in fade-in slide-in-from-top-1 duration-300">
                                     <td className="p-2 md:p-3 font-bold text-slate-600 italic sticky left-0 bg-slate-50/80 z-10 transition-colors group-hover:bg-slate-100" style={{ fontSize: '9px' }}>Legacy Baseline</td>
                                     <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
@@ -1619,11 +1617,9 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                       </tr>
                                     )}
                                   </React.Fragment>
-                                ))}
-                              </>
-                            ) : null}
+                            {/* End of tournament list */}
 
-                            {!isExpanded && !detailedStats?.tournaments.length && !detailedStats?.legacy && (
+                            {!detailedStats?.tournaments.length && !detailedStats?.legacy && (
                               <tr><td colSpan={14} className="p-8 text-center text-slate-400 italic font-medium">No tournament records found for this player.</td></tr>
                             )}
                           </tbody>
@@ -1631,13 +1627,6 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                             <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
                               <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30 flex items-center justify-between gap-2 min-h-[44px]">
                                 <span>Career Total</span>
-                                <button 
-                                  onClick={() => setIsExpanded(!isExpanded)}
-                                  className="p-1 hover:bg-slate-800 rounded transition-colors"
-                                  title={isExpanded ? 'Minimize' : 'Expand'}
-                                >
-                                  {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
-                                </button>
                               </td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.matches || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.innings || '0'}</td>
@@ -1678,9 +1667,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                           </thead>
                            <tbody>
                             {/* Detailed Rows with dynamic expansion */}
-                            {isExpanded ? (
-                              <>
-                                  {detailedStats?.legacy && (
+                            {/* Detailed Rows with legacy and tournament breakdowns */}
+                            {detailedStats?.legacy && (
                                     <tr className="bg-slate-50/80 text-[10px] md:text-xs text-black border-b border-slate-100 animate-in fade-in slide-in-from-top-1 duration-300">
                                       <td className="p-2 md:p-3 font-bold text-slate-600 italic sticky left-0 bg-slate-50/80 z-10" style={{ fontSize: '9px' }}>Legacy Baseline</td>
                                       <td className="p-2 md:p-3 text-center">{detailedStats.legacy.matches}</td>
@@ -1772,21 +1760,12 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                       </tr>
                                     )}
                                   </React.Fragment>
-                                ))}
-                              </>
-                            ) : null}
+                            {/* End of tournament list */}
                           </tbody>
                           <tfoot className="sticky bottom-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
                             <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
                               <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30 flex items-center justify-between gap-2 min-h-[44px]">
                                 <span>Career Total</span>
-                                <button 
-                                  onClick={() => setIsExpanded(!isExpanded)}
-                                  className="p-1 hover:bg-slate-800 rounded transition-colors"
-                                  title={isExpanded ? 'Minimize' : 'Expand'}
-                                >
-                                  {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
-                                </button>
                               </td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.matches || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.innings || '0'}</td>
