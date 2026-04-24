@@ -1290,9 +1290,9 @@ app.get('/api/players/:id/stats', async (req, res) => {
              WHERE (
                 pms.player_id IS NOT NULL 
                 OR m.home_team_xi @> jsonb_build_array($1::text)
-                OR m.home_team_xi @> jsonb_build_array($1::int)
+                OR m.home_team_xi @> jsonb_build_array($1::bigint)
                 OR m.opponent_team_xi @> jsonb_build_array($1::text)
-                OR m.opponent_team_xi @> jsonb_build_array($1::int)
+                OR m.opponent_team_xi @> jsonb_build_array($1::bigint)
              )
              AND (m.is_test IS NOT TRUE)
              AND (m.status != 'upcoming' AND m.status != 'Upcoming')
