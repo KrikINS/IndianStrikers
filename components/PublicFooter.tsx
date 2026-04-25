@@ -31,29 +31,26 @@ const PublicFooter: React.FC = () => {
   );
 
   return (
-    <footer className="w-full py-8 mt-12 border-t border-slate-200/60 bg-white/30 backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="flex flex-col items-center md:items-start gap-1">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-            Official Management Portal
-          </p>
-          <p className="text-sm font-bold text-slate-600">
+    <footer className="w-full py-2 mt-8 border-t border-slate-200/60 bg-white/30 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-6 flex flex-row justify-between items-center gap-4">
+        <div className="flex items-center">
+          <p className="text-[7px] font-bold text-slate-500">
             © {new Date().getFullYear()} Indian Strikers Cricket Club
           </p>
         </div>
 
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4">
           <button 
             onClick={() => setActiveModal('privacy')}
-            className="text-xs font-black text-slate-400 hover:text-blue-600 uppercase tracking-widest transition-colors flex items-center gap-2"
+            className="text-[6px] font-black text-slate-400 hover:text-blue-600 uppercase tracking-widest transition-colors flex items-center gap-1"
           >
-            <Shield size={14} /> Privacy Policy
+            <Shield size={8} /> Privacy
           </button>
           <button 
             onClick={() => setActiveModal('contact')}
-            className="text-xs font-black text-slate-400 hover:text-blue-600 uppercase tracking-widest transition-colors flex items-center gap-2"
+            className="text-[6px] font-black text-slate-400 hover:text-blue-600 uppercase tracking-widest transition-colors flex items-center gap-1"
           >
-            <Mail size={14} /> Contact Support
+            <Mail size={8} /> Contact
           </button>
         </div>
       </div>
