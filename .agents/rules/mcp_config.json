@@ -12,7 +12,7 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-postgres",
-        "postgresql://postgres:AppTerra%23INS@34.93.230.37:5432/postgres?sslmode=require"
+        "postgresql://postgres:AppTerra%23INS@localhost:5433/postgres?sslmode=disable"
       ]
     },
     "cloudrun": {

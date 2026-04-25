@@ -1145,7 +1145,9 @@ async function recalculateCareerStats(playerId) {
             pms.*, 
             pms.status as pms_status,
             m.status as match_status, 
-            m.is_test 
+            m.is_test,
+            m.scorecard,
+            m.live_data
          FROM matches m
          LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1::BIGINT)
          WHERE (
@@ -1197,28 +1199,53 @@ async function recalculateCareerStats(playerId) {
         return s + (status.startsWith('HISTORICAL:') ? (parseInt(status.split(':')[1]) || 1) : 1);
     }, 0) + (Number(l.matches) || 0);
 
-    // CRITICAL FIX: Use player_record_status (batting outcome) NOT match status to determine innings
+    // CRITICAL FIX: True Innings Logic
     const totalInnings = m.filter(row => {
-        // row.status is the MATCH status (live/completed), NOT the player batting status
-        // row.pms_status = player batting outcome e.g. 'Not Out', 'DNB', 'Caught', etc.
-        // For LEFT JOIN rows where player has no pms record (squad-only), all pms cols are null.
-        const playerBattingStatus = (row.pms_status || '').toLowerCase();
-        const balls = Number(row.balls) || 0;
-        
-        // If pms row doesn't exist (null player_id on LEFT JOIN result), the player was squad-only = DNB
+        let pStatus = (row.pms_status || '').toLowerCase().trim();
+        let balls = Number(row.balls) || 0;
+
+        // Try to enrich from scorecard if available for accuracy
+        if (row.scorecard) {
+            try {
+                const sc = typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard;
+                const bat = [...(sc.innings1?.batting || []), ...(sc.innings2?.batting || [])]
+                           .find(b => String(b.playerId) === String(playerId));
+                if (bat) {
+                    pStatus = (bat.outHow || (bat.isNotOut ? 'not out' : 'out')).toLowerCase().trim();
+                    balls = Number(bat.balls) || 0;
+                }
+            } catch(e) {}
+        }
+
         const hasPMSRecord = row.player_id !== null;
-        if (!hasPMSRecord) return false; // Squad-only with no pms entry = DNB, don't count innings
+        if (!hasPMSRecord && !row.scorecard) return false;
+
+        // TRUE INNINGS RULE: Out or Not Out AND balls_faced > 0
+        const isNotOut = pStatus === 'not out' || pStatus === 'retired hurt' || !!row.is_not_out;
+        const isOut = pStatus !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(pStatus);
         
-        const isDNB = !playerBattingStatus || ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(playerBattingStatus);
-        if (isDNB && balls === 0) return false; // DNB: match counts but not innings
-        
-        return true;
+        return (isNotOut || isOut) && balls > 0;
     }).length + (Number(l.innings) || 0);
 
-    // CRITICAL FIX: Use pms_status for not-out check, not match status
+    // CRITICAL FIX: Not Out count matching the innings logic
     const totalNO = m.filter(row => {
-        const s = (row.pms_status || '').toLowerCase();
-        return s === 'not out' || s === 'retired hurt' || !!row.is_not_out;
+        let pStatus = (row.pms_status || '').toLowerCase().trim();
+        let balls = Number(row.balls) || 0;
+        
+        if (row.scorecard) {
+            try {
+                const sc = typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard;
+                const bat = [...(sc.innings1?.batting || []), ...(sc.innings2?.batting || [])]
+                           .find(b => String(b.playerId) === String(playerId));
+                if (bat) {
+                    pStatus = (bat.outHow || (bat.isNotOut ? 'not out' : 'out')).toLowerCase().trim();
+                    balls = Number(bat.balls) || 0;
+                }
+            } catch(e) {}
+        }
+        
+        const isNotOut = pStatus === 'not out' || pStatus === 'retired hurt' || !!row.is_not_out;
+        return isNotOut && balls > 0;
     }).length + (Number(l.not_outs) || 0);
     const totalBalls = m.reduce((s, row) => s + (Number(row.balls) || 0), 0) + (Number(l.balls) || 0);
     const totalFours = m.reduce((s, row) => s + (Number(row.fours) || 0), 0) + (Number(l.fours) || 0);
@@ -1227,7 +1254,18 @@ async function recalculateCareerStats(playerId) {
     const total50s = m.reduce((s, row) => s + (Number(row.fifties) || 0), 0) + (Number(l.fifties) || 0);
     const totalDucks = m.reduce((s, row) => s + (Number(row.ducks) || 0), 0) + (Number(l.ducks) || 0);
 
-    const totalBowlRuns = m.reduce((s, row) => s + (Number(row.runs_conceded) || 0), 0) + (Number(l.runs_conceded) || 0);
+    const totalBowlRuns = m.reduce((s, row) => {
+        let r = Number(row.runs_conceded) || 0;
+        if (row.scorecard) {
+            try {
+                const sc = typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard;
+                const bowl = [...(sc.innings1?.bowling || []), ...(sc.innings2?.bowling || [])]
+                            .find(b => String(b.playerId) === String(playerId));
+                if (bowl) r = Number(bowl.runs) || Number(bowl.runsConceded) || 0;
+            } catch(e) {}
+        }
+        return s + r;
+    }, 0) + (Number(l.runs_conceded) || 0);
     
     // Proper Over Summation (Delta + Legacy)
     const matchBallsBowled = m.reduce((s, row) => s + toBalls(row.overs_bowled), 0);
@@ -1326,7 +1364,9 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 m.id as match_id, m.status as match_status, m.is_test, m.tournament_id, m.date, m.live_data, m.scorecard,
                 t.name as tournament_name,
                 o.name as opponent_name,
+                pms.player_id as pms_player_id,
                 pms.runs, pms.balls, pms.fours, pms.sixes, pms.status as player_record_status,
+                pms.is_not_out,
                 pms.wickets, pms.runs_conceded, pms.overs_bowled, pms.maidens,
                 pms.wides, pms.no_balls
              FROM matches m
@@ -1407,7 +1447,7 @@ app.get('/api/players/:id/stats', async (req, res) => {
                         if (bowl) {
                             bOvers = Number(bowl.overs) || 0;
                             bMaidens = Number(bowl.maidens) || 0;
-                            bRuns = Number(bowl.runs) || 0;
+                            bRuns = Number(bowl.runs) || Number(bowl.runsConceded) || 0;
                             bWickets = Number(bowl.wickets) || 0;
                         }
                     }
@@ -1427,7 +1467,7 @@ app.get('/api/players/:id/stats', async (req, res) => {
                         if (bowl) {
                             bOvers = Number(bowl.overs) || 0;
                             bMaidens = Number(bowl.maidens) || 0;
-                            bRuns = Number(bowl.runs) || 0;
+                            bRuns = Number(bowl.runs) || Number(bowl.runsConceded) || 0;
                             bWickets = Number(bowl.wickets) || 0;
                         }
                     }
@@ -1437,28 +1477,24 @@ app.get('/api/players/:id/stats', async (req, res) => {
             }
 
             // --- BATTING AGGREGATION ---
-            // CRITICAL: pStatus is the player's BATTING outcome (DNB, Not Out, Caught, etc.)
-            // The player's record may come from:
-            //   1. The scorecard JSONB (most reliable for completed matches)
-            //   2. The live_data JSONB (for live/in-progress matches) 
-            //   3. The player_match_stats DB row (fallback)
-            //   4. Nothing - squad-only participant with NO PMS entry (true DNB)
+            // Use pms_player_id (not pms.player_id which was not selected before) to detect squad-only rows.
+            // If pms_player_id is null → LEFT JOIN found no PMS record → player was squad-only (DNB).
+            const hasPMSRecord = row.pms_player_id !== null && row.pms_player_id !== undefined;
 
             const statusLower = pStatus.toLowerCase().trim();
             const ballsCount = Number(balls) || 0;
             
-            // DNB means: no pms record at all (squad-only), OR explicit DNB status, OR no balls faced with empty/absent status
-            const hasPMSRecord = row.player_record_status !== null || row.runs !== null || row.balls !== null;
-            const isDNB = !hasPMSRecord || // Squad-only participant, no stats record
-                          !statusLower ||   // Status is blank/null with no balls
-                          ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(statusLower);
-
-            // A player has batted if they faced a ball OR have a non-DNB dismissal status
-            const hasActuallyBatted = hasPMSRecord && (ballsCount > 0 || (!isDNB && statusLower !== ''));
+            // TRUE INNINGS RULE (User Fix): 
+            // A match counts as an innings ONLY if:
+            //   1. PMS/Scorecard record exists, AND
+            //   2. balls_faced > 0, AND
+            //   3. Status is explicitly an "Out" or "Not Out" state.
+            const isNotOutLocal = statusLower === 'not out' || statusLower === 'retired hurt' || !!row.is_not_out;
+            const isOutLocal = statusLower !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(statusLower);
             
-            // Dismissed = any status that is not 'not out', 'retired hurt', 'batting', 'dnb', 'did not bat', 'absent'
-            const isDismissedLocal = hasActuallyBatted && statusLower && 
-                                     !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat', 'absent hurt'].includes(statusLower);
+            const hasActuallyBatted = hasPMSRecord && ballsCount > 0 && (isNotOutLocal || isOutLocal);
+            const isDismissedLocal = hasActuallyBatted && isOutLocal;
+            const isDNB = !hasActuallyBatted;
             
             if (hasActuallyBatted) {
                 group.batting.innings++; // Only count innings if player actually batted
@@ -1625,24 +1661,29 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 .sort((a, b) => new Date(b.date || Date.now()) - new Date(a.date || Date.now()))
                 .slice(0, 5)
                 .map(row => {
-                    // Determine if this is a true DNB: no PMS record at all, or explicit DNB status
-                    const hasPMSRow = row.player_id !== null; // LEFT JOIN: null player_id = no pms entry
+                    const hasPMSRow = row.pms_player_id !== null && row.pms_player_id !== undefined;
                     const rawStatus = (row.player_record_status || '').toLowerCase().trim();
-                    const isDNBRow = !hasPMSRow || !rawStatus || ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(rawStatus);
+                    const explicitDNB = ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(rawStatus);
+                    const balls = Number(row.balls || 0);
+                    
+                    const isNotOut = rawStatus === 'not out' || rawStatus === 'retired hurt' || !!row.is_not_out;
+                    const isOut = rawStatus !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(rawStatus);
+                    const isDNBRow = !hasPMSRow || explicitDNB || !((isNotOut || isOut) && balls > 0);
+                    
                     const batStatus = isDNBRow ? 'DNB' : (row.player_record_status || 'DNB');
-                    const isNotOut = !isDNBRow && ['not out', 'retired hurt', 'batting'].includes(rawStatus);
+                    
                     return {
                         runs: isDNBRow ? 0 : (row.runs || 0),
-                        balls: isDNBRow ? 0 : (row.balls || 0),
-                        isNotOut,
+                        balls: isDNBRow ? 0 : balls,
+                        isNotOut: !isDNBRow && isNotOut,
                         isDNB: isDNBRow,
                         isLive: row.match_status === 'live',
                         status: batStatus,
                         date: row.date,
                         matchId: row.match_id,
-                        wickets: row.wickets || 0,
-                        bowlingRuns: row.runs_conceded || 0,
-                        bowlingOvers: row.overs_bowled || 0
+                        wickets: Number(row.wickets || 0),
+                        bowlingRuns: Number(row.runs_conceded || 0),
+                        bowlingOvers: Number(row.overs_bowled || 0)
                     };
                 })
         });
