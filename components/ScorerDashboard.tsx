@@ -35,7 +35,6 @@ import {
   Target,
   ExternalLink
 } from 'lucide-react';
-import { APP_VERSION } from '../src/version';
 import MatchSummaryModal from './MatchSummaryModal';
 import { 
   ResponsiveContainer, 
@@ -4347,9 +4346,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 </SettingsGroup>
 
                 <div style={{ marginTop: 'auto', padding: '16px 0', textAlign: 'center', opacity: 0.4 }}>
-                  <span style={{ fontSize: '9px', fontWeight: 900, color: '#FFF', letterSpacing: '1px', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    {APP_VERSION}
-                  </span>
                 </div>
               </DrawerContent>
             </DrawerOverlay>

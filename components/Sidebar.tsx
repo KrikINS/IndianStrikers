@@ -398,8 +398,8 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
           )}
 
           {/* Version Display */}
-          <div className={`mt-4 pt-2 border-t border-slate-800/50 flex flex-col items-center opacity-30 ${isCollapsed ? 'px-0' : 'px-2'}`}>
-            <span className="text-[8px] font-black tracking-[0.2em] text-slate-500 uppercase">
+          <div className={`mt-4 pt-2 pb-10 border-t border-slate-800/50 flex flex-col items-center opacity-60 ${isCollapsed ? 'px-0' : 'px-2'}`}>
+            <span className="text-[8px] font-black tracking-[0.2em] text-slate-400 uppercase">
               {isCollapsed ? APP_VERSION.split('-')[0] : APP_VERSION}
             </span>
           </div>

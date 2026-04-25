@@ -6,7 +6,6 @@ import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types
 import { useStore } from '../store/StoreProvider';
 import { addCricketOvers } from '../services/statsEngine';
 import * as api from '../services/storageService';
-import { APP_VERSION } from '../src/version';
 
 interface MatchScorecardEntryProps {
   match: ScheduledMatch;
@@ -644,7 +643,6 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                   ? 'Stats successfully finalized in Google Cloud SQL.' 
                   : 'Please wait while we finalize the stats in Google Cloud SQL.'}
               </p>
-              <div className="absolute bottom-4 right-4 text-[10px] text-slate-600 font-bold uppercase tracking-widest">{APP_VERSION}</div>
             </div>
           )}
         </form>

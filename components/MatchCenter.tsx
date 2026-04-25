@@ -8,7 +8,6 @@ import { PlayingXIModal } from './PlayingXIModal';
 import { LineupGraphic } from './LineupGraphic';
 import EditMatchModal from './EditMatchModal';
 import AddMatchModal from './AddMatchModal';
-import { APP_VERSION } from '../src/version';
 import MatchSummaryModal from './MatchSummaryModal';
 import MatchScorecardEntry from './MatchScorecardEntry';
 import { UniversalScorecard } from './UniversalScorecard';
@@ -1340,12 +1339,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     </div>
                 </div>
             )}
-            
-            <div className="mt-8 mb-4 text-center">
-                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest border border-slate-200">
-                    {APP_VERSION}
-                </span>
-            </div>
         </>
     );
 };

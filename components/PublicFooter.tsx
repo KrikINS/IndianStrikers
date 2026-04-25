@@ -31,7 +31,7 @@ const PublicFooter: React.FC = () => {
   );
 
   return (
-    <footer className="w-full py-2 mt-8 border-t border-slate-200/60 bg-white/30 backdrop-blur-sm">
+    <footer className="fixed bottom-0 left-0 w-full py-2 border-t border-slate-200/60 bg-white/60 backdrop-blur-md z-[999]">
       <div className="max-w-7xl mx-auto px-6 flex flex-row justify-between items-center gap-4">
         <div className="flex items-center">
           <p className="text-[7px] font-bold text-slate-500">
