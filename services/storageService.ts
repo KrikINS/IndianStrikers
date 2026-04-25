@@ -1022,4 +1022,10 @@ export const syncAllPlayerStats = async () => {
   return handleResponse(res);
 };
 
-
+export const forceRecalculatePlayer = async (playerId: string) => {
+  const res = await fetch(`${API_URL}/admin/recalculate/${playerId}`, {
+    method: 'POST',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};

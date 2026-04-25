@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Player, PlayerRole, BattingStyle, BowlingStyle, UserRole, BattingStats, BowlingStats, AppUser, OpponentTeam } from '../types';
 import { Plus, Minus, Trash2, Edit2, Shield, Sword, CircleDot, X, Upload, Activity, Medal, UserCheck, UserX, Lock, AlertTriangle, Search, Users, UserMinus, LayoutGrid, LayoutList, ChevronDown, ChevronRight, ArrowRight, ExternalLink, RefreshCw, Swords } from 'lucide-react';
 import * as api from '../services/storageService';
-import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUsers, getLegacyStats } from '../services/storageService';
+import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUsers, getLegacyStats, forceRecalculatePlayer } from '../services/storageService';
 import { useStore } from '../store/StoreProvider';
 import { useOpponentStore } from '../store/opponentStore';
 import styles from './PlayerList.module.css';
@@ -126,6 +126,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const [performerData, setPerformerData] = useState<any[]>([]);
   const [legacyStats, setLegacyStats] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   const [users, setUsers] = useState<AppUser[]>([]); // New State for user linking
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1720,6 +1721,24 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                             <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
                               <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30 flex items-center justify-between gap-2 min-h-[44px]">
                                 <span>Career Total</span>
+                                {userRole === 'admin' && viewingPlayer && (
+                                  <button
+                                    title="Force recalculate stats (flushes ghost innings counts)"
+                                    disabled={isRecalculating}
+                                    onClick={async () => {
+                                      setIsRecalculating(true);
+                                      try {
+                                        await forceRecalculatePlayer(String(viewingPlayer.id));
+                                        const fresh = await getPlayerDetailedStats(String(viewingPlayer.id));
+                                        setDetailedStats(fresh);
+                                      } catch(e) { console.error('Recalculate failed', e); }
+                                      finally { setIsRecalculating(false); }
+                                    }}
+                                    className="p-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/40 text-sky-400 transition-all shrink-0"
+                                  >
+                                    <RefreshCw size={12} className={isRecalculating ? 'animate-spin' : ''} />
+                                  </button>
+                                )}
                               </td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.matches || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.innings || '0'}</td>

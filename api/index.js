@@ -2189,22 +2189,45 @@ app.get('*', (req, res) => {
 app.post('/api/admin/sync-all-stats', authGuard(['admin']), async (req, res) => {
   console.log('[ADMIN] Starting Global Stats Synchronization...');
   try {
-    const { data: players, error } = await db.query('SELECT id, name FROM players WHERE is_club_player = true');
+    // Sync all players who have any match records (not just club players)
+    const { data: players, error } = await db.query(
+      `SELECT DISTINCT p.id, p.name FROM players p
+       WHERE p.is_club_player = true
+       OR p.id IN (SELECT DISTINCT player_id FROM player_match_stats WHERE player_id IS NOT NULL)`
+    );
     if (error) throw error;
 
-    console.log(`[ADMIN] Found ${players?.length || 0} club players to sync.`);
+    console.log(`[ADMIN] Found ${players?.length || 0} players to sync.`);
+    let synced = 0, failed = 0;
     
     for (const player of players) {
       try {
         await recalculateCareerStats(player.id);
+        synced++;
       } catch (e) {
         console.error(`[ADMIN] Failed to sync ${player.name} (${player.id}):`, e.message);
+        failed++;
       }
     }
 
-    res.json({ ok: true, count: players?.length || 0 });
+    res.json({ ok: true, synced, failed, total: players?.length || 0 });
   } catch (e) {
     console.error('[ADMIN] Global sync failed:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ADMIN: FORCE RECALCULATE A SINGLE PLAYER'S STATS (Flush ghost counts)
+app.post('/api/admin/recalculate/:id', authGuard(['admin']), async (req, res) => {
+  const { id } = req.params;
+  console.log(`[ADMIN] Force-recalculating stats for player ${id}...`);
+  try {
+    await recalculateCareerStats(id);
+    // Return fresh stats immediately after recalculation
+    const { data: player } = await db.getOne('SELECT id, name, batting_stats, bowling_stats, matches_played FROM players WHERE id = $1', [id]);
+    res.json({ ok: true, player });
+  } catch (e) {
+    console.error(`[ADMIN] Force recalculate failed for ${id}:`, e.message);
     res.status(500).json({ error: e.message });
   }
 });
