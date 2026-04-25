@@ -260,6 +260,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           balls: Number(perf.balls || 0),
           outHow: perf.status || 'DNB',
           isNotOut: !!perf.isNotOut,
+          isDNB: !!perf.isDNB, // Explicitly pass DNB flag from backend for reliable UI rendering
           matchDate: perf.date,
           wickets: Number(perf.wickets || 0),
           bowlingRuns: Number(perf.bowlingRuns || 0),
@@ -1492,9 +1493,14 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                       <div className="flex gap-2 items-center overflow-x-auto pb-1 scroller-hide">
                         {recentInvolvement.length > 0 ? (
                           recentInvolvement.map((perf, i) => {
+                            // Use the isDNB flag from the backend if available, otherwise fallback to status check
                             const dnbTerms = ['did not bat', 'dnb', 'absent', 'absent hurt', 'substitute', 'yet to bat'];
-                            const outHowLower = (perf.outHow || '').toLowerCase().trim();
-                            const didBat = Number(perf.balls || 0) > 0 || (!!outHowLower && !dnbTerms.includes(outHowLower));
+                            const outHowLower = (perf.outHow || perf.status || '').toLowerCase().trim();
+                            const didBat = perf.isDNB === false
+                              ? true // Explicitly marked as batted by backend
+                              : perf.isDNB === true
+                              ? false // Explicitly marked as DNB by backend
+                              : (Number(perf.balls || 0) > 0 || (!!outHowLower && !dnbTerms.includes(outHowLower)));
                             const runs = Number(perf.runs || 0);
 
                             if (!didBat) return (

@@ -545,11 +545,21 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
   const filteredSpotlightPerformers = useMemo(() => {
     // STRICT FIX: Any player present in our main roster (Indian Strikers) is eligible.
-    return performerData.performers.filter(perf => {
-      const pId = String(perf.playerId || perf.id);
-      const player = squadPlayers.find(p => String(p.id) === pId);
-      return player && player.teamId === 'IND_STRIKERS';
-    });
+    return performerData.performers
+      .filter(perf => {
+        const pId = String(perf.playerId || perf.id);
+        const player = squadPlayers.find(p => String(p.id) === pId);
+        return player && player.teamId === 'IND_STRIKERS';
+      })
+      .map(perf => {
+        // Randomize image from history if available for "Spotlight" freshness
+        let randomizedUrl = perf.avatarUrl;
+        if (perf.avatarHistory && Array.isArray(perf.avatarHistory) && perf.avatarHistory.length > 0) {
+          const randomIndex = Math.floor(Math.random() * perf.avatarHistory.length);
+          randomizedUrl = perf.avatarHistory[randomIndex];
+        }
+        return { ...perf, avatarUrl: randomizedUrl };
+      });
   }, [performerData.performers, squadPlayers]);
 
   const handleGenerateHeroPoster = async () => {

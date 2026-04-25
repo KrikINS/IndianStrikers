@@ -802,6 +802,7 @@ export const getTournamentPerformers = async (): Promise<any> => {
       ...p,
       playerId: String(p.player_id || p.playerId),
       avatarUrl: p.avatar_url || p.avatarUrl,
+      avatarHistory: p.avatar_history || p.avatarHistory || [],
       opponentId: p.opponent_id || p.opponentId,
       groundId: p.ground_id || p.groundId,
       opponentName: p.opponent_name || p.opponentName,

@@ -1143,6 +1143,7 @@ async function recalculateCareerStats(playerId) {
     const { data: participationStats, error: partError } = await db.query(
         `SELECT 
             pms.*, 
+            pms.status as pms_status,
             m.status as match_status, 
             m.is_test 
          FROM matches m
@@ -1196,19 +1197,29 @@ async function recalculateCareerStats(playerId) {
         return s + (status.startsWith('HISTORICAL:') ? (parseInt(status.split(':')[1]) || 1) : 1);
     }, 0) + (Number(l.matches) || 0);
 
+    // CRITICAL FIX: Use player_record_status (batting outcome) NOT match status to determine innings
     const totalInnings = m.filter(row => {
-        const status = (row.status || '').toLowerCase();
+        // row.status is the MATCH status (live/completed), NOT the player batting status
+        // row.pms_status = player batting outcome e.g. 'Not Out', 'DNB', 'Caught', etc.
+        // For LEFT JOIN rows where player has no pms record (squad-only), all pms cols are null.
+        const playerBattingStatus = (row.pms_status || '').toLowerCase();
         const balls = Number(row.balls) || 0;
         
-        // USER REQUEST: faces at least one ball OR has a valid batting status ... that is NOT 'Did Not Bat'
-        // We exclude 'dnb', 'did not bat', 'absent', 'absent hurt', and empty status.
-        const isDNB = !status || ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(status);
-        if (isDNB && balls === 0) return false;
+        // If pms row doesn't exist (null player_id on LEFT JOIN result), the player was squad-only = DNB
+        const hasPMSRecord = row.player_id !== null;
+        if (!hasPMSRecord) return false; // Squad-only with no pms entry = DNB, don't count innings
+        
+        const isDNB = !playerBattingStatus || ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(playerBattingStatus);
+        if (isDNB && balls === 0) return false; // DNB: match counts but not innings
         
         return true;
     }).length + (Number(l.innings) || 0);
 
-    const totalNO = m.filter(row => row.is_not_out || row.status === 'Not Out' || row.status === 'not out').length + (Number(l.not_outs) || 0);
+    // CRITICAL FIX: Use pms_status for not-out check, not match status
+    const totalNO = m.filter(row => {
+        const s = (row.pms_status || '').toLowerCase();
+        return s === 'not out' || s === 'retired hurt' || !!row.is_not_out;
+    }).length + (Number(l.not_outs) || 0);
     const totalBalls = m.reduce((s, row) => s + (Number(row.balls) || 0), 0) + (Number(l.balls) || 0);
     const totalFours = m.reduce((s, row) => s + (Number(row.fours) || 0), 0) + (Number(l.fours) || 0);
     const totalSixes = m.reduce((s, row) => s + (Number(row.sixes) || 0), 0) + (Number(l.sixes) || 0);
@@ -1425,37 +1436,52 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 }
             }
 
-            // Batting Aggregation
-            const statusLower = pStatus.toLowerCase();
+            // --- BATTING AGGREGATION ---
+            // CRITICAL: pStatus is the player's BATTING outcome (DNB, Not Out, Caught, etc.)
+            // The player's record may come from:
+            //   1. The scorecard JSONB (most reliable for completed matches)
+            //   2. The live_data JSONB (for live/in-progress matches) 
+            //   3. The player_match_stats DB row (fallback)
+            //   4. Nothing - squad-only participant with NO PMS entry (true DNB)
+
+            const statusLower = pStatus.toLowerCase().trim();
             const ballsCount = Number(balls) || 0;
             
-            // USER REQUEST: faces at least one ball OR has a valid batting status ... that is NOT 'Did Not Bat'
-            const isDNB = !statusLower || ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(statusLower);
-            const hasActuallyBatted = (ballsCount > 0) || !isDNB;
+            // DNB means: no pms record at all (squad-only), OR explicit DNB status, OR no balls faced with empty/absent status
+            const hasPMSRecord = row.player_record_status !== null || row.runs !== null || row.balls !== null;
+            const isDNB = !hasPMSRecord || // Squad-only participant, no stats record
+                          !statusLower ||   // Status is blank/null with no balls
+                          ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(statusLower);
+
+            // A player has batted if they faced a ball OR have a non-DNB dismissal status
+            const hasActuallyBatted = hasPMSRecord && (ballsCount > 0 || (!isDNB && statusLower !== ''));
             
-            // A player is 'Not Out' if they are not dismissed AND not currently batting/DNB
-            const isDismissedLocal = statusLower && !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat'].includes(statusLower);
+            // Dismissed = any status that is not 'not out', 'retired hurt', 'batting', 'dnb', 'did not bat', 'absent'
+            const isDismissedLocal = hasActuallyBatted && statusLower && 
+                                     !['not out', 'retired hurt', 'absent', 'batting', 'dnb', 'did not bat', 'absent hurt'].includes(statusLower);
             
             if (hasActuallyBatted) {
-                group.batting.innings++;
+                group.batting.innings++; // Only count innings if player actually batted
                 
-                if (!isDismissedLocal && statusLower !== 'batting' && !isDNB) group.batting.notOuts++;
+                const isNotOut = !isDismissedLocal && statusLower !== 'batting' && !isDNB;
+                if (isNotOut) group.batting.notOuts++;
                 group.batting.runs += runs;
                 group.batting.balls += balls;
                 group.batting.fours += fours;
                 group.batting.sixes += sixes;
                 
-                // Dynamic Milestones
+                // Milestones
                 if (runs >= 100) group.batting.hundreds++;
                 else if (runs >= 50) group.batting.fifties++;
                 if (runs === 0 && isDismissedLocal) group.batting.ducks++;
-            }
-            
-            const currentHS = parseInt(group.batting.highestScore.toString().replace('*', '')) || 0;
-            if (runs > currentHS) {
-                group.batting.highestScore = `${runs}${!isDismissedLocal && pStatus !== 'dnb' ? '*' : ''}`;
-            } else if (runs === currentHS && !isDismissedLocal && pStatus !== 'dnb' && !group.batting.highestScore.toString().includes('*')) {
-                group.batting.highestScore = `${runs}*`;
+
+                // Highest Score update
+                const currentHS = parseInt(group.batting.highestScore.toString().replace('*', '')) || 0;
+                if (runs > currentHS) {
+                    group.batting.highestScore = `${runs}${!isDismissedLocal ? '*' : ''}`;
+                } else if (runs === currentHS && !isDismissedLocal && !group.batting.highestScore.toString().includes('*')) {
+                    group.batting.highestScore = `${runs}*`;
+                }
             }
 
             // Bowling Aggregation
@@ -1598,18 +1624,27 @@ app.get('/api/players/:id/stats', async (req, res) => {
             recentForm: participationStats
                 .sort((a, b) => new Date(b.date || Date.now()) - new Date(a.date || Date.now()))
                 .slice(0, 5)
-                .map(row => ({
-                    runs: row.runs || 0,
-                    balls: row.balls || 0,
-                    isNotOut: row.player_record_status && ['not out', 'retired hurt', 'absent', 'batting'].includes(row.player_record_status?.toLowerCase()),
-                    isLive: row.match_status === 'live',
-                    status: row.player_record_status || 'DNB',
-                    date: row.date,
-                    matchId: row.match_id,
-                    wickets: row.wickets || 0,
-                    bowlingRuns: row.runs_conceded || 0,
-                    bowlingOvers: row.overs_bowled || 0
-                }))
+                .map(row => {
+                    // Determine if this is a true DNB: no PMS record at all, or explicit DNB status
+                    const hasPMSRow = row.player_id !== null; // LEFT JOIN: null player_id = no pms entry
+                    const rawStatus = (row.player_record_status || '').toLowerCase().trim();
+                    const isDNBRow = !hasPMSRow || !rawStatus || ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(rawStatus);
+                    const batStatus = isDNBRow ? 'DNB' : (row.player_record_status || 'DNB');
+                    const isNotOut = !isDNBRow && ['not out', 'retired hurt', 'batting'].includes(rawStatus);
+                    return {
+                        runs: isDNBRow ? 0 : (row.runs || 0),
+                        balls: isDNBRow ? 0 : (row.balls || 0),
+                        isNotOut,
+                        isDNB: isDNBRow,
+                        isLive: row.match_status === 'live',
+                        status: batStatus,
+                        date: row.date,
+                        matchId: row.match_id,
+                        wickets: row.wickets || 0,
+                        bowlingRuns: row.runs_conceded || 0,
+                        bowlingOvers: row.overs_bowled || 0
+                    };
+                })
         });
 
     } catch (e) {
@@ -1732,7 +1767,7 @@ app.get('/api/tournament-performers', async (req, res) => {
     const getPerformersForTournament = async (tId) => {
       let q = `
         SELECT pms.*, m.id as m_id, m.date as m_date, m.status as m_status, m.tournament_id as m_t_id, m.ground_id as m_g_id, m.opponent_id as m_o_id,
-               p.name as p_name, p.role as p_role, p.avatar_url as p_avatar_url
+               p.name as p_name, p.role as p_role, p.avatar_url as p_avatar_url, p.avatar_history as p_avatar_history
         FROM player_match_stats pms
         JOIN matches m ON pms.match_id = m.id
         JOIN players p ON pms.player_id = p.id
@@ -1793,6 +1828,7 @@ app.get('/api/tournament-performers', async (req, res) => {
         name: row.p_name,
         role: row.p_role,
         avatarUrl: row.p_avatar_url,
+        avatarHistory: row.p_avatar_history,
         runs: Number(row.runs || 0),
         balls: Number(row.balls || 0),
         wickets: Number(row.wickets || 0),
