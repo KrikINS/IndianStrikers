@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Player, OpponentTeam, UserRole, ScheduledMatch, AppUser } from '../types';
 import { useMatchCenter } from '../store/matchStore';
 import MatchCenterTile from './MatchCenterTile';
@@ -11,7 +11,7 @@ import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import MatchScorecardEntry from './MatchScorecardEntry';
 import { UniversalScorecard } from './UniversalScorecard';
-import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Unlock, Download } from 'lucide-react';
+import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Award, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Unlock, Download, Swords } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
@@ -22,6 +22,7 @@ import { useStore } from '../store/StoreProvider';
 import PointsTable from './PointsTable';
 import TournamentsManager from './TournamentsManager';
 import { syncAllPlayerStats } from '../services/storageService';
+import OpponentsTab from './OpponentsTab';
 
 
 // Responsive constants for Carousel handled inside component
@@ -103,13 +104,24 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
     const isAdmin = userRole === 'admin';
 
     // Filters and Search
-    const [activeTab, setActiveTab] = useState<'list' | 'standings' | 'tournaments'>('list');
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState<'list' | 'standings' | 'tournaments' | 'opponents'>('list');
     const [selectedCardMatch, setSelectedCardMatch] = useState<ScheduledMatch | null>(null);
     const [isSyncingStats, setIsSyncingStats] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [formatFilter, setFormatFilter] = useState<'All' | 'T20' | 'One Day'>('All');
     const [tournamentFilter, setTournamentFilter] = useState('All');
     const [yearFilter, setYearFilter] = useState('All');
+
+    // Handle tab synchronization with URL
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tab = params.get('tab');
+        if (tab === 'opponents') setActiveTab('opponents');
+        else if (tab === 'standings') setActiveTab('standings');
+        else if (tab === 'tournaments') setActiveTab('tournaments');
+        else if (tab === 'list') setActiveTab('list');
+    }, [location.search]);
 
     // Available years from matches
     const availableYears = useMemo(() => {
@@ -928,6 +940,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                         >
                             <Trophy size={16} /> Tournaments
                         </button>
+                        <button
+                            onClick={() => setActiveTab('opponents')}
+                            className={`flex items-center gap-2 px-5 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
+                            ${activeTab === 'opponents' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-white hover:text-blue-400 hover:border-blue-500 hover:bg-blue-500/5'}`}
+                        >
+                            <Swords size={16} /> Opponents
+                        </button>
                     </div>
 
                     {/* Content Area */}
@@ -1127,6 +1146,15 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                         {activeTab === 'tournaments' && (
                             <div className="px-6 pb-20 pt-4">
                                 <TournamentsManager isAdmin={isAdmin} />
+                            </div>
+                        )}
+
+                        {activeTab === 'opponents' && (
+                            <div className="px-6 pb-20 pt-6">
+                                <OpponentsTab 
+                                    userRole={userRole}
+                                    currentUser={currentUser}
+                                />
                             </div>
                         )}
                     </AnimatePresence>

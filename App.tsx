@@ -6,7 +6,6 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import PlayerList from './components/PlayerList';
 import FieldingMap from './components/FieldingMap';
-import OpponentTeams from './components/OpponentTeams';
 import Memories from './components/Memories';
 import SplashScreen from './components/SplashScreen';
 const ScorerDashboard = lazy(() => 
@@ -199,15 +198,7 @@ const AppContent: React.FC<{
                   }
                 />
                 <Route path="/fielding" element={<FieldingMap userRole={effectiveRole} currentUser={currentUser} />} />
-                <Route
-                  path="/opponents"
-                  element={
-                    <OpponentTeams
-                      userRole={effectiveRole}
-                      currentUser={currentUser}
-                    />
-                  }
-                />
+                <Route path="/opponents" element={<Navigate to="/match-center?tab=opponents" replace />} />
                 <Route path="/memories" element={<Memories userRole={effectiveRole} currentUser={currentUser} />} />
                 <Route 
                   path="/match-center" 

@@ -101,6 +101,51 @@ const PasswordConfirmModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean;
   );
 };
 
+// Gallery Modal Component
+const GalleryModal = ({ isOpen, onClose, history, onSelect }: { isOpen: boolean; onClose: () => void; history: string[]; onSelect: (url: string) => void }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[80vh]">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter italic flex items-center gap-3">
+            <LayoutGrid size={24} className="text-blue-600" />
+            Picture Gallery
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-800 transition-colors p-2" title="Close Gallery"><X size={24} /></button>
+        </div>
+        <div className="p-8 overflow-y-auto scrollbar-hide">
+          {!history || history.length === 0 ? (
+            <div className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest italic">
+              Intelligence Gap: No previous pictures found.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              {history.map((url, i) => (
+                <div 
+                  key={i} 
+                  className="group relative aspect-square rounded-3xl overflow-hidden border-2 border-slate-100 hover:border-blue-500 transition-all cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1" 
+                  onClick={() => { onSelect(url); onClose(); }}
+                >
+                  <img src={url} alt={`Gallery ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/20 flex items-center justify-center transition-colors">
+                    <div className="bg-blue-600 text-white p-3 rounded-full scale-0 group-hover:scale-100 transition-transform shadow-lg">
+                      <UserCheck size={24} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select a picture to restore it as the primary profile avatar</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const { squadPlayers, opponentPlayers, loading, fetchPlayers, addPlayer: onAddPlayer, updatePlayer: onUpdatePlayer, deletePlayer: onDeletePlayer } = useStore();
   // Combined list for general searches/profile deep-links
@@ -129,6 +174,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const [isRecalculating, setIsRecalculating] = useState(false);
 
   const [users, setUsers] = useState<AppUser[]>([]); // New State for user linking
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Handle deep-linking to player profile
@@ -597,10 +643,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     }
   };
 
-  const handleToggleAvailability = (player: Player, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onUpdatePlayer({ ...player, isAvailable: !player.isAvailable });
-  };
+
 
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
@@ -798,21 +841,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           <h3 className={`text-base md:text-lg font-bold truncate pr-1 ${player.isAvailable ? 'text-slate-800' : 'text-slate-500'}`}>{player.name}</h3>
           
           <div className="flex items-center gap-2">
-            {/* Quick Availability Toggle */}
-            {canManagePlayers && (
-              <button
-                onClick={(e) => handleToggleAvailability(player, e)}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black shadow-sm transition-all whitespace-nowrap
-                  ${player.isAvailable
-                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                    : 'bg-red-100 text-red-700 hover:bg-red-200'}
-                `}
-                title="Toggle Availability"
-              >
-                {player.isAvailable ? <UserCheck size={10} /> : <UserX size={10} />}
-                {player.isAvailable ? 'ACTIVE' : 'AWAY'}
-              </button>
-            )}
+
 
             {canEdit && canEditProfile && (
               <button
@@ -1094,88 +1123,63 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
               {activeEditTab === 'general' && (
                 <div className="space-y-6 animate-fade-in">
-                  <div className="flex flex-col md:flex-row items-center gap-6 pb-6 border-b border-slate-100">
-                    <div
-                      className="relative w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 shadow-inner flex items-center justify-center overflow-hidden cursor-pointer group shrink-0"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {formData.avatarUrl ? (
-                        <img src={formData.avatarUrl} alt="Preview" className="w-full h-full object-cover" />
-                      ) : (
-                        <UserCheck size={32} className="text-slate-500" />
-                      )}
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Upload size={20} className="text-white" />
-                      </div>
-                      <input
-                        type="file"
-                        title="Upload Avatar"
-                        ref={fileInputRef}
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                      />
-                    </div>
-                    {/* Avatar History Gallery */}
-                    {editingPlayer && formData.avatarHistory && formData.avatarHistory.length > 0 && (
-                      <div className="flex flex-col gap-2 w-full mt-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Previous Pictures</label>
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                          {formData.avatarHistory.map((url, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, avatarUrl: url }))}
-                              className={`relative shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${formData.avatarUrl === url ? 'border-blue-500 scale-105 shadow-md' : 'border-slate-200 opacity-60 hover:opacity-100'}`}
-                            >
-                              <img src={url} alt={`History ${i}`} className="w-full h-full object-cover" />
-                              {formData.avatarUrl === url && (
-                                <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                                  <div className="bg-blue-500 text-white rounded-full p-0.5"><Plus size={10} className="rotate-45" /></div>
-                                </div>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex-1 space-y-4 w-full">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Full Name</label>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              title="Active Status"
-                              name="isActive"
-                              id="isActive"
-                              checked={formData.isActive !== false}
-                              onChange={handleInputChange}
-                              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                            />
-                            <label htmlFor="isActive" className="text-sm font-bold text-slate-700">Active Squad Member</label>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              title="Match Availability"
-                              name="isAvailable"
-                              id="isAvailable"
-                              checked={formData.isAvailable || false}
-                              onChange={handleInputChange}
-                              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                            />
-                            <label htmlFor="isAvailable" className="text-sm font-bold text-slate-700">Available for Matches</label>
-                          </div>
+                  <div className="flex flex-col md:flex-row items-center md:items-start gap-8 pb-8 border-b border-slate-100">
+                    <div className="flex flex-col items-center gap-3 shrink-0">
+                      <div
+                        className="relative w-32 h-32 rounded-3xl bg-slate-800 border-4 border-slate-700 shadow-xl flex items-center justify-center overflow-hidden cursor-pointer group"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {formData.avatarUrl ? (
+                          <img src={formData.avatarUrl} alt="Preview" className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" />
+                        ) : (
+                          <UserCheck size={40} className="text-slate-500" />
+                        )}
+                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Upload size={24} className="text-white mb-1" />
+                          <span className="text-[8px] font-black text-white uppercase tracking-widest">Update</span>
                         </div>
                         <input
-                          required
-                          name="name"
-                          value={formData.name || ''}
-                          onChange={handleInputChange}
-                          className="w-full p-2 border-b-2 border-slate-200 focus:border-blue-500 outline-none font-bold text-xl bg-transparent placeholder-slate-300 text-slate-800"
-                          placeholder="Player Name"
+                          type="file"
+                          title="Upload Avatar"
+                          ref={fileInputRef}
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleFileChange}
                         />
+                      </div>
+                      
+                      {editingPlayer && formData.avatarHistory && formData.avatarHistory.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowGalleryModal(true)}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-slate-200"
+                        >
+                          <LayoutGrid size={12} /> View Gallery
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex-1 w-full pt-2">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Full Identity Name</label>
+                          <input
+                            required
+                            name="name"
+                            value={formData.name || ''}
+                            onChange={handleInputChange}
+                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 outline-none font-bold text-2xl transition-all placeholder:text-slate-300 text-slate-800 shadow-sm"
+                            placeholder="e.g. Anees Ahad"
+                            title="Player Name"
+                          />
+                        </div>
+                        
+                        <div className="flex items-center gap-4 px-2">
+                          <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></div>
+                          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                            Official Club Identity Profile
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1238,18 +1242,23 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="isCaptain" checked={formData.isCaptain} onChange={handleInputChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                      <span className="text-sm font-semibold text-slate-700">Captain</span>
+                  <div className="flex flex-wrap gap-6 p-5 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input type="checkbox" name="isCaptain" checked={formData.isCaptain} onChange={handleInputChange} className="w-5 h-5 text-blue-600 rounded-lg focus:ring-blue-500 transition-all border-slate-300" />
+                      <span className="text-sm font-black text-slate-700 uppercase tracking-widest group-hover:text-blue-600 transition-colors">Captain</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="isViceCaptain" checked={formData.isViceCaptain} onChange={handleInputChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                      <span className="text-sm font-semibold text-slate-700">Vice Capt</span>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input type="checkbox" name="isViceCaptain" checked={formData.isViceCaptain} onChange={handleInputChange} className="w-5 h-5 text-blue-600 rounded-lg focus:ring-blue-500 transition-all border-slate-300" />
+                      <span className="text-sm font-black text-slate-700 uppercase tracking-widest group-hover:text-blue-600 transition-colors">Vice Capt</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer border-l border-slate-200 pl-6">
-                      <input type="checkbox" name="isActive" checked={formData.isActive !== false} onChange={handleInputChange} className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" />
-                      <span className="text-sm font-semibold text-emerald-700">Active Squad member</span>
+                    <div className="w-px h-8 bg-slate-200 mx-2"></div>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input type="checkbox" name="isAvailable" checked={formData.isAvailable !== false} onChange={handleInputChange} className="w-5 h-5 text-blue-600 rounded-lg focus:ring-blue-500 transition-all border-slate-300" />
+                      <span className="text-sm font-black text-slate-700 uppercase tracking-widest group-hover:text-blue-600 transition-colors">Available for Matches</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input type="checkbox" name="isActive" checked={formData.isActive !== false} onChange={handleInputChange} className="w-5 h-5 text-emerald-600 rounded-lg focus:ring-emerald-500 transition-all border-slate-300" />
+                      <span className="text-sm font-black text-emerald-700 uppercase tracking-widest group-hover:text-emerald-800 transition-colors">Active Squad member</span>
                     </label>
                   </div>
 
@@ -1362,6 +1371,14 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           </div>
         </div>
       )}
+
+      {/* Gallery Modal */}
+      <GalleryModal 
+        isOpen={showGalleryModal} 
+        onClose={() => setShowGalleryModal(false)} 
+        history={formData.avatarHistory || []}
+        onSelect={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+      />
 
       {/* Password Modal */}
       <PasswordConfirmModal
