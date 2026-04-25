@@ -1221,7 +1221,7 @@ async function recalculateCareerStats(playerId) {
         if (!hasPMSRecord && !row.scorecard) return false;
 
         // TRUE INNINGS RULE: Out or Not Out AND balls_faced > 0
-        const isNotOut = pStatus === 'not out' || pStatus === 'retired hurt' || !!row.is_not_out;
+        const isNotOut = pStatus === 'not out' || pStatus === 'retired hurt';
         const isOut = pStatus !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(pStatus);
         
         return (isNotOut || isOut) && balls > 0;
@@ -1244,7 +1244,7 @@ async function recalculateCareerStats(playerId) {
             } catch(e) {}
         }
         
-        const isNotOut = pStatus === 'not out' || pStatus === 'retired hurt' || !!row.is_not_out;
+        const isNotOut = pStatus === 'not out' || pStatus === 'retired hurt';
         return isNotOut && balls > 0;
     }).length + (Number(l.not_outs) || 0);
     const totalBalls = m.reduce((s, row) => s + (Number(row.balls) || 0), 0) + (Number(l.balls) || 0);
@@ -1366,7 +1366,6 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 o.name as opponent_name,
                 pms.player_id as pms_player_id,
                 pms.runs, pms.balls, pms.fours, pms.sixes, pms.status as player_record_status,
-                pms.is_not_out,
                 pms.wickets, pms.runs_conceded, pms.overs_bowled, pms.maidens,
                 pms.wides, pms.no_balls
              FROM matches m
@@ -1477,10 +1476,7 @@ app.get('/api/players/:id/stats', async (req, res) => {
             }
 
             // --- BATTING AGGREGATION ---
-            // Use pms_player_id (not pms.player_id which was not selected before) to detect squad-only rows.
-            // If pms_player_id is null → LEFT JOIN found no PMS record → player was squad-only (DNB).
             const hasPMSRecord = row.pms_player_id !== null && row.pms_player_id !== undefined;
-
             const statusLower = pStatus.toLowerCase().trim();
             const ballsCount = Number(balls) || 0;
             
@@ -1489,33 +1485,29 @@ app.get('/api/players/:id/stats', async (req, res) => {
             //   1. PMS/Scorecard record exists, AND
             //   2. balls_faced > 0, AND
             //   3. Status is explicitly an "Out" or "Not Out" state.
-            const isNotOutLocal = statusLower === 'not out' || statusLower === 'retired hurt' || !!row.is_not_out;
-            const isOutLocal = statusLower !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(statusLower);
+            const isNotOutMatch = statusLower === 'not out' || statusLower === 'retired hurt' || !!row.is_not_out;
+            const isOutMatch = statusLower !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(statusLower);
             
-            const hasActuallyBatted = hasPMSRecord && ballsCount > 0 && (isNotOutLocal || isOutLocal);
-            const isDismissedLocal = hasActuallyBatted && isOutLocal;
-            const isDNB = !hasActuallyBatted;
+            const battedInnings = hasPMSRecord && ballsCount > 0 && (isNotOutMatch || isOutMatch);
+            const dismissed = battedInnings && isOutMatch;
             
-            if (hasActuallyBatted) {
-                group.batting.innings++; // Only count innings if player actually batted
+            if (battedInnings) {
+                group.batting.innings++;
+                if (isNotOutMatch) group.batting.notOuts++;
                 
-                const isNotOut = !isDismissedLocal && statusLower !== 'batting' && !isDNB;
-                if (isNotOut) group.batting.notOuts++;
                 group.batting.runs += runs;
                 group.batting.balls += balls;
                 group.batting.fours += fours;
                 group.batting.sixes += sixes;
                 
-                // Milestones
                 if (runs >= 100) group.batting.hundreds++;
                 else if (runs >= 50) group.batting.fifties++;
-                if (runs === 0 && isDismissedLocal) group.batting.ducks++;
+                if (runs === 0 && dismissed) group.batting.ducks++;
 
-                // Highest Score update
                 const currentHS = parseInt(group.batting.highestScore.toString().replace('*', '')) || 0;
                 if (runs > currentHS) {
-                    group.batting.highestScore = `${runs}${!isDismissedLocal ? '*' : ''}`;
-                } else if (runs === currentHS && !isDismissedLocal && !group.batting.highestScore.toString().includes('*')) {
+                    group.batting.highestScore = `${runs}${isNotOutMatch ? '*' : ''}`;
+                } else if (runs === currentHS && isNotOutMatch && !group.batting.highestScore.toString().includes('*')) {
                     group.batting.highestScore = `${runs}*`;
                 }
             }
@@ -1530,8 +1522,6 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 group.bowling.maidens += bMaidens;
                 group.bowling.runs += bRuns;
                 group.bowling.wickets += bWickets;
-                // Note: we'd benefit from four_wickets and five_wickets columns in player_match_stats if they exist,
-                // but for now we prioritize bWickets.
                 if (bWickets === 4) group.bowling.fourWickets++;
                 if (bWickets >= 5) group.bowling.fiveWickets++;
                 group.bowling.wides += bWides;
@@ -1549,13 +1539,13 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 matchId: row.match_id,
                 date: row.date,
                 opponentName: row.opponent_name || 'Unknown',
-                batting: hasActuallyBatted ? {
+                batting: battedInnings ? {
                     runs,
                     balls,
                     fours,
                     sixes,
                     outHow: pStatus,
-                    isNotOut: !isDismissedLocal && statusLower !== 'batting' && !isDNB
+                    isNotOut: isNotOutMatch
                 } : null,
                 bowling: bOvers > 0 ? {
                     overs: bOvers,
