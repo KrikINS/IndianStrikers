@@ -79,42 +79,45 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
     })),
 
     syncMasterData: async () => {
-        const controller = new AbortController();
-        // Increased patience for Cloud SQL Auth Proxy latency
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const maxAttempts = 3;
+        
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s patience per attempt
 
-        try {
-            console.log("[tournamentStore] Syncing grounds and tournaments (15s patience)...");
+            try {
+                console.log(`[tournamentStore] Syncing master data (attempt ${attempt}/${maxAttempts})...`);
 
-            const [grounds, tournaments] = await Promise.all([
-                api.getGrounds(),
-                api.getTournaments()
-            ]);
+                const [grounds, tournaments] = await Promise.all([
+                    api.getGrounds(),
+                    api.getTournaments()
+                ]);
 
-            clearTimeout(timeoutId);
+                clearTimeout(timeoutId);
 
-            // Critical Fix: Ensure we never set state to null
-            set({
-                grounds: grounds || [],
-                tournaments: tournaments || [],
-                isOffline: false
-            });
+                set({
+                    grounds: grounds || [],
+                    tournaments: tournaments || [],
+                    isOffline: false
+                });
 
-            // Clear the offline player cache only if we have a successful connection
-            if (Array.isArray(grounds)) {
-                localStorage.removeItem('ins_offline_players');
-                console.log(`[tournamentStore] Sync successful. Found ${grounds.length} grounds.`);
+                if (Array.isArray(grounds)) {
+                    localStorage.removeItem('ins_offline_players');
+                    console.log(`[tournamentStore] Master data sync successful. Found ${grounds.length} grounds.`);
+                }
+                return; // Success, exit function
+            } catch (e: any) {
+                clearTimeout(timeoutId);
+                const isTimeout = e.name === 'AbortError';
+                console.warn(`[tournamentStore] Master sync attempt ${attempt} failed (${isTimeout ? 'Timeout' : e.message})`);
+                
+                if (attempt === maxAttempts) {
+                    set({ isOffline: true });
+                } else {
+                    const delay = attempt * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
             }
-        } catch (e: any) {
-            clearTimeout(timeoutId);
-            if (e.name === 'AbortError') {
-                console.warn("[tournamentStore] Sync timed out. Keeping current state.");
-            } else {
-                console.error("[tournamentStore] Sync error:", e);
-            }
-
-            // Enter offline mode but keep existing data to avoid crashing the UI
-            set({ isOffline: true });
         }
     }
 }));

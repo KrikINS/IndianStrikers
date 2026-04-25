@@ -289,30 +289,37 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     syncWithCloud: async () => {
         if (get().isLoading) return;
         
-        set({ isLoading: true });
-        let attempts = 0;
-        const maxAttempts = 3; // Initial + 2 retries
+        set({ isLoading: true, error: null });
+        const maxAttempts = 3;
         
-        try {
-            while (attempts < maxAttempts) {
-                attempts++;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                console.log(`[Store] Syncing matches (attempt ${attempt}/${maxAttempts})...`);
                 const rawDbMatches = (await api.getMatches()) || [];
                 const dbMatches = rawDbMatches.filter(m => !m.is_test && m.id !== '00000000-0000-0000-0000-000000000001');
                 
-                if (dbMatches.length > 0 || attempts === maxAttempts) {
-                    set({ matches: dbMatches });
-                    break;
+                // If we got data, set it and break. If we got an empty list on the last attempt, also set it.
+                if (dbMatches.length > 0 || attempt === maxAttempts) {
+                    set({ matches: dbMatches, isLoading: false });
+                    console.log(`[Store] Sync successful. Found ${dbMatches.length} matches.`);
+                    return;
                 }
                 
-                // If empty, wait a bit before retry (race condition fix)
-                await new Promise(resolve => setTimeout(resolve, 500 * attempts));
-                console.log(`[Store] Match fetch empty, attempt ${attempts}/${maxAttempts}...`);
+                // If empty result (race condition fix), wait and retry
+                const delay = attempt * 1000;
+                console.log(`[Store] Match list empty, retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            } catch (e: any) {
+                console.error(`[Store] Sync attempt ${attempt} failed:`, e.message);
+                if (attempt === maxAttempts) {
+                    set({ error: "Failed to connect to cloud database.", isLoading: false });
+                    break;
+                }
+                const delay = attempt * 1000;
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
-        } catch (e: any) {
-            console.error("Cloud sync failed:", e);
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     getSortedMatches: () => {

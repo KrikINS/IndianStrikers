@@ -537,8 +537,8 @@ app.get('/api/matches', async (_req, res) => {
       o.logo_url AS opponent_logo,
       g.name AS ground_name
     FROM matches m
-    LEFT JOIN opponents o ON o.id::text = m.opponent_id::text
-    LEFT JOIN grounds g ON g.id::text = m.ground_id::text
+    LEFT JOIN opponents o ON o.id = m.opponent_id
+    LEFT JOIN grounds g ON g.id = m.ground_id
     ORDER BY m.date DESC
   `);
   if (error) return res.status(500).json({ error: error.message });
@@ -561,8 +561,8 @@ app.get('/api/matches/:id', async (req, res) => {
       o.logo_url AS opponent_logo,
       g.name AS ground_name
     FROM matches m
-    LEFT JOIN opponents o ON o.id::text = m.opponent_id::text
-    LEFT JOIN grounds g ON g.id::text = m.ground_id::text
+    LEFT JOIN opponents o ON o.id = m.opponent_id
+    LEFT JOIN grounds g ON g.id = m.ground_id
     WHERE m.id = $1
   `, [req.params.id]);
   if (error) return res.status(500).json({ error: error.message });
