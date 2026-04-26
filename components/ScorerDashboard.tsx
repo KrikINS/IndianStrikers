@@ -1152,6 +1152,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     }
   }, [store.toss]);
 
+  // Reset the player fetch guard if we enter the squad selection step
+  // This ensures that if the roster was empty due to a sync issue, it can be retried
+  useEffect(() => {
+    if (setupStep === 'squad_home') {
+      console.log("[Scorer] Entering squad selection. Resetting fetch guard...");
+      hasFetchedPlayersRef.current = false;
+    }
+  }, [setupStep]);
+
   // Auto-trigger bowler selection modal at end of over
   useEffect(() => {
     if (isWaitingForBowler && !showBowlerModal && !showInningsReview && !showMatchSummaryModal) {
@@ -1168,6 +1177,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const finalizeMatch = useMatchCenter(state => state.finalizeMatch);
   
   const activeMatchId = id || propMatchId || matchId;
+
+  // Add robust guard for match_id validation
+  const isValidMatchId = (mid: any): mid is string => {
+    return mid && typeof mid === 'string' && mid.length > 10;
+  };
 
   // ABSOLUTE METADATA LAW (V5): Guaranteed resolution for active tournament
   const METADATA_LAW: any = {
@@ -1796,10 +1810,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }
 
   if (setupStep !== null) {
-    const isReadyToStart = tossWinner && tossChoice && homeXI.length === 11 && awayXI.length === 11 && selStriker && selNonStriker && selBowler;
+    const isReadyToStart = tossWinner && tossChoice && 
+                          (homeXI?.length || 0) === 11 && 
+                          (awayXI?.length || 0) === 11 && 
+                          selStriker && selNonStriker && selBowler;
 
     const handleStartMatch = () => {
-      if (!isReadyToStart) return;
+      if (!isReadyToStart) {
+        toast.error("Please complete all setup selections first.");
+        return;
+      }
+      
+      if (!isValidMatchId(activeMatchId)) {
+        toast.error("Invalid Match ID. Cannot start scoring.");
+        console.error("[Scorer] Start match failed: activeMatchId is invalid", activeMatchId);
+        return;
+      }
 
       const winnerId = tossWinner === 'home' ? 'HOME' : 'AWAY';
       store.setToss(winnerId, tossChoice!);
@@ -1825,13 +1851,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       if (activeMatchId) {
         // Fetch fresh state to ensure new innings is included
         const freshStore = useMatchCenter.getState();
+        
+        // V5 ROBUSTNESS: Clean the store state of functions before persisting
+        const cleanedStore = Object.fromEntries(
+          Object.entries(freshStore).filter(([_, value]) => typeof value !== 'function')
+        );
+
         updateMatch(activeMatchId, {
           isHomeBattingFirst: startBatTeamId === 'HOME',
           status: 'live',
-          homeTeamXI: homeXI,
-          opponentTeamXI: awayXI,
+          homeTeamXI: homeXI || [],
+          opponentTeamXI: awayXI || [],
           live_data: {
-            ...freshStore,
+            ...cleanedStore,
             strikerId: selStriker!,
             nonStrikerId: selNonStriker!,
             currentBowlerId: selBowler!,
