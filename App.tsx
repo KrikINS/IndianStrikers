@@ -178,8 +178,6 @@ const AppContent: React.FC<{
               onSignOut={onSignOut}
               teamLogo={teamLogo}
               onUpdateLogo={onUpdateLogo}
-              currentUser={currentUser}
-              linkedPlayer={linkedPlayer}
               isOffline={isOffline}
             />
           </div>
@@ -317,6 +315,7 @@ const AppInternal: React.FC = () => {
     const storeAddPlayer = useMatchCenter(state => state.addPlayer);
     const storeUpdatePlayer = useMatchCenter(state => state.updatePlayer);
     const storeDeletePlayer = useMatchCenter(state => state.deletePlayer);
+    const setStoreUser = useMatchCenter(state => state.setCurrentUser);
 
     // Opponents from opponentStore
     const opponents = useOpponentStore(state => state.opponents);
@@ -380,7 +379,11 @@ const AppInternal: React.FC = () => {
             syncWithCloud();
 
             const savedUser = sessionStorage.getItem('currentUser');
-            if (savedUser) setCurrentUser(JSON.parse(savedUser));
+            if (savedUser) {
+                const parsedUser = JSON.parse(savedUser);
+                setCurrentUser(parsedUser);
+                setStoreUser(parsedUser);
+            }
 
             setShowSplash(false);
         }
@@ -392,6 +395,7 @@ const AppInternal: React.FC = () => {
     if (user) {
       const fullUser = { ...user, role };
       setCurrentUser(fullUser);
+      setStoreUser(fullUser);
       sessionStorage.setItem('currentUser', JSON.stringify(fullUser));
     }
     setShowSplash(false);
@@ -410,6 +414,7 @@ const AppInternal: React.FC = () => {
     setUserRole('guest');
     setIsAdminView(false);
     setCurrentUser(undefined);
+    setStoreUser(null);
     setShowSplash(true);
     sessionStorage.removeItem('hasSeenSplash');
     sessionStorage.removeItem('userRole');

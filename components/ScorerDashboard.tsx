@@ -33,7 +33,8 @@ import {
   Lock as LockIcon,
   Award,
   Target,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle
 } from 'lucide-react';
 import MatchSummaryModal from './MatchSummaryModal';
 import { 
@@ -1034,14 +1035,18 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [opponentPlayers, setOpponentPlayers] = useState<{ id: string; name: string; role?: string }[]>([]);
 
   // Helper: resolve player name from either squad
-  const getPlayerName = (id: string | null): string => {
+  const getPlayerName = (id: any): string => {
     if (!id) return '—';
-    const homePlayer = players.find((p: Player) => p.id === id);
+    // Robust check for object-based IDs or legacy participation
+    const searchId = (typeof id === 'object' && id !== null) ? (id.id || id.name || String(id)) : String(id);
+    if (searchId === '[object Object]') return 'Unknown Player';
+    
+    const homePlayer = players.find((p: Player) => String(p.id) === searchId);
     if (homePlayer) return homePlayer.name;
-    const awayPlayer = opponentPlayers.find(p => p.id === id);
+    const awayPlayer = opponentPlayers.find(p => String(p.id) === searchId);
     if (awayPlayer) return awayPlayer.name;
     // awayXI may store names directly for opponent teams without registered IDs
-    return id;
+    return searchId;
   };
 
   const getPlayerAvatar = (id: string | null): string | null => {
@@ -1237,6 +1242,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }, [activeMatchId]); // Only re-run when the active match ID changes
 
   const matchMeta = (matches || []).find(m => m.id === activeMatchId);
+  const venueName = typeof matchMeta?.venue === 'object' ? (matchMeta.venue as any)?.name : (matchMeta?.venue || 'LOCAL GROUND');
 
   // Sync with URL ID: Initialize match data into store when navigating from a match card
   useEffect(() => {
@@ -1351,7 +1357,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         const groundMeta = grounds.find(g => g.id === matchMeta.groundId);
         const opponentMeta = allOpponents.find((o: any) => o.id === matchMeta.opponentId || o.name === matchMeta.opponentName);
 
-        const resolvedGroundName = groundMeta?.name || matchMeta.venue || 'Local Ground';
+        const resolvedGroundName = groundMeta?.name || (typeof matchMeta.venue === 'object' ? (matchMeta.venue as any)?.name : matchMeta.venue) || 'Local Ground';
         const resolvedOpponentName = opponentMeta?.name || matchMeta.opponentName || 'OPPONENT';
         const resolvedAwayLogo = matchMeta.opponentLogo || opponentMeta?.logoUrl || '';
 
@@ -2746,9 +2752,18 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   };
 
 
-  const isLocked = store.matches.find(m => m.id === activeMatchId)?.isLocked;
+  const isLocked = (matches || []).find(m => m.id === activeMatchId)?.isLocked;
 
-  if (!currentInnings) return null;
+  if (!currentInnings) {
+    if (setupStep !== null) return null; // Component handles its own setup view
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#001F3F', color: '#FFF' }}>
+        <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#FAB005', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <p style={{ marginTop: 16, fontSize: '0.8rem', opacity: 0.6, fontWeight: 900, letterSpacing: 1 }}>SYNCHRONIZING MATCH STATE...</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   const strikerStats = currentInnings?.battingStats[store.strikerId || ''] || { runs: 0, balls: 0 };
   const nonStrikerStats = currentInnings?.battingStats[store.nonStrikerId || ''] || { runs: 0, balls: 0 };
@@ -2757,7 +2772,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const isQueueFull = store.offlineQueue && store.offlineQueue.length >= 10 && isOfflineStore;
 
-  return (
+  try {
+    return (
     <DashboardContainer>
       {isQueueFull && (
         <PremiumModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ zIndex: 9999 }}>
@@ -4047,7 +4063,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         INDIAN STRIKERS VS {(matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
                       </p>
                       <div className="flex items-center justify-center gap-2 text-sky-400/60 font-black italic text-[10px] uppercase">
-                        <span>{matchMeta?.venue || 'LOCAL GROUND'}</span>
+                        <span>{venueName}</span>
                         <span className="w-1 h-1 bg-sky-400/40 rounded-full" />
                         <span>{matchMeta?.date ? new Date(matchMeta.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'MATCH DAY'}</span>
                       </div>
@@ -4641,7 +4657,23 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         <MilestoneOverlay ref={milestoneRef} />
       </>
     </DashboardContainer>
-  );
+    );
+  } catch (error) {
+    console.error("[ScorerDashboard] Critical Render Error:", error);
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#081c15', color: '#FFF', padding: 20, textAlign: 'center' }}>
+        <AlertTriangle size={48} color="#FF4D4D" style={{ marginBottom: 16 }} />
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>RENDERING ERROR</h2>
+        <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 24 }}>A UI component failed to load. We've captured the error and are synchronizing state.</p>
+        <button 
+          onClick={() => window.location.reload()}
+          style={{ padding: '12px 24px', borderRadius: 12, background: '#10b981', border: 'none', color: '#FFF', fontWeight: 900, cursor: 'pointer' }}
+        >
+          RELOAD DASHBOARD
+        </button>
+      </div>
+    );
+  }
 };
 
 export default ScorerDashboard;

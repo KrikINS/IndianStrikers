@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { Player, ScheduledMatch, Performer, MatchStatus, MatchStage, FullScorecardData, BallRecord } from '../types';
 import * as api from '../services/storageService';
 
+const ensureId = (id: any): string => {
+    if (!id) return '';
+    if (typeof id === 'object' && id.id) return String(id.id);
+    return String(id);
+};
+
 // --- Types from Live Scorer ---
 export interface LivePlayer {
     id: string;
@@ -80,6 +86,9 @@ export interface MatchScorerState {
     pendingIntroduction: string | null;
     offlineQueue: BallRecord[];
     
+    // Central Auth State
+    currentUser: AppUser | null;
+
     // Player Management State
     squadPlayers: Player[];
     opponentPlayers: Player[];
@@ -137,6 +146,7 @@ export interface UnifiedMatchStore extends MatchScorerState {
     updatePlayer: (player: Player) => Promise<void>;
     deletePlayer: (id: string) => Promise<void>;
     handleToggleLock: (matchId: string, currentStatus: boolean) => Promise<void>;
+    setCurrentUser: (user: AppUser | null) => void;
 }
 
 const INITIAL_SCORER_STATE: MatchScorerState = {
@@ -170,6 +180,9 @@ const INITIAL_SCORER_STATE: MatchScorerState = {
     pendingIntroduction: null,
     offlineQueue: [],
 
+    // Central Auth
+    currentUser: null,
+
     // Player Management Initial State
     squadPlayers: [],
     opponentPlayers: [],
@@ -177,6 +190,47 @@ const INITIAL_SCORER_STATE: MatchScorerState = {
     isLoading: false,
     error: null
 };
+
+// Helper to get only the scoring-related reset state
+const getScoringResetState = (state: UnifiedMatchStore) => ({
+    matchId: null,
+    matchType: 'T20' as const,
+    tournament: '',
+    ground: '',
+    opponentName: '',
+    maxOvers: 20,
+    toss: { winnerId: null, choice: null },
+    innings1: null,
+    innings2: null,
+    currentInnings: 1 as (1|2),
+    strikerId: null,
+    nonStrikerId: null,
+    currentBowlerId: null,
+    isFreeHit: false,
+    isFinished: false,
+    homeXI: [],
+    awayXI: [],
+    homeLogo: '',
+    awayLogo: '',
+    historyStack: [],
+    manOfTheMatch: null,
+    targetScore: 0,
+    useWagonWheel: false,
+    wagonWheelQuickSave: false,
+    isWaitingForBowler: false,
+    pendingMilestone: null,
+    partnership_notified: [],
+    pendingIntroduction: null,
+    offlineQueue: [],
+    // Preserve management state
+    squadPlayers: state.squadPlayers,
+    opponentPlayers: state.opponentPlayers,
+    matches: state.matches,
+    currentUser: state.currentUser,
+    loading: state.loading,
+    isLoading: state.isLoading,
+    error: state.error
+});
 
 export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     // --- Unified State ---
@@ -362,15 +416,16 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     },
 
     // --- Live Scorer Actions ---
-    hardReset: () => set({ ...INITIAL_SCORER_STATE }),
-    resetStore: () => set({ ...INITIAL_SCORER_STATE }),
+    hardReset: () => set(getScoringResetState(get())),
+    resetStore: () => set(getScoringResetState(get())),
 
     initializeMatch: (data) => {
+        const current = get();
         // IMMUTABLE LOCK GUARD
         if (data.isLocked) {
             console.log("[Store] Initializing in Read-Only Mode (Locked)");
             set({ 
-                ...INITIAL_SCORER_STATE,
+                ...getScoringResetState(current),
                 ...data.liveData,
                 matchId: data.matchId,
                 matchType: data.matchType,
@@ -379,7 +434,6 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             return;
         }
 
-        const current = get();
         if (data.liveData && Object.keys(data.liveData).length > 0) {
             let parsedData = data.liveData;
             if (typeof data.liveData === 'string') {
@@ -387,9 +441,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             }
             if (parsedData.innings1) {
                 set({ 
-                    ...INITIAL_SCORER_STATE,
+                    ...getScoringResetState(current),
                     ...parsedData,
-                    matchId: data.matchId,
+                    matchId: ensureId(data.matchId),
                     matchType: data.matchType || parsedData.matchType,
                     tournament: data.tournament || parsedData.tournament,
                     ground: data.ground || parsedData.ground,
@@ -398,14 +452,17 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
                     homeXI: data.homeXI || (parsedData.homeXI || []),
                     awayXI: data.awayXI || (parsedData.awayXI || []),
                     homeLogo: data.homeLogo || parsedData.homeLogo,
-                    awayLogo: data.awayLogo || parsedData.awayLogo
+                    awayLogo: data.awayLogo || parsedData.awayLogo,
+                    strikerId: ensureId(parsedData.strikerId),
+                    nonStrikerId: ensureId(parsedData.nonStrikerId),
+                    currentBowlerId: ensureId(parsedData.currentBowlerId)
                 });
                 return;
             }
         }
 
         set({ 
-            ...INITIAL_SCORER_STATE, 
+            ...getScoringResetState(current), 
             matchId: data.matchId,
             matchType: data.matchType,
             tournament: data.tournament,
@@ -440,9 +497,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
         set({
             currentInnings: num,
-            strikerId: strId,
-            nonStrikerId: nStrId,
-            currentBowlerId: bwlId,
+            strikerId: ensureId(strId),
+            nonStrikerId: ensureId(nStrId),
+            currentBowlerId: ensureId(bwlId),
             isFreeHit: false,
             isFinished: false,
             [num === 1 ? 'innings1' : 'innings2']: {
@@ -453,11 +510,11 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
                 totalBalls: 0,
                 extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, penalty: 0 },
                 battingStats: {
-                    [strId]: { id: strId, name: 'Striker', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: 0, fifty_notified: false, hundred_notified: false },
-                    [nStrId]: { id: nStrId, name: 'Non-Striker', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: 1, fifty_notified: false, hundred_notified: false }
+                    [ensureId(strId)]: { id: ensureId(strId), name: 'Striker', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: 0, fifty_notified: false, hundred_notified: false },
+                    [ensureId(nStrId)]: { id: ensureId(nStrId), name: 'Non-Striker', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: 1, fifty_notified: false, hundred_notified: false }
                 },
                 bowlingStats: {
-                    [bwlId]: { id: bwlId, name: 'Bowler', overs: 0, maidens: 0, runs: 0, wickets: 0, index: 0 }
+                    [ensureId(bwlId)]: { id: ensureId(bwlId), name: 'Bowler', overs: 0, maidens: 0, runs: 0, wickets: 0, index: 0 }
                 },
                 fallOfWickets: [],
                 history: []
@@ -780,7 +837,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             console.error("Failed to toggle lock:", err);
             throw err;
         }
-    }
+    },
+
+    setCurrentUser: (user) => set({ currentUser: user })
 }));
 
 export const useCricketScorer = useMatchCenter;

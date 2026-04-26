@@ -16,21 +16,20 @@ import {
   Upload,
   Settings,
   UserPlus,
-  ArrowRight,
   ChevronLeft,
   ChevronRight,
   Trophy,
   MapPin,
-  History as HistoryIcon,
   Calendar,
   Key,
   Lock,
   Loader2
 } from 'lucide-react';
 import { APP_VERSION } from '../src/version';
-import { UserRole, MembershipRequest, AppUser } from '../types';
+import { UserRole, MembershipRequest, AppUser, Player } from '../types';
 import MembershipRequestForm from './MembershipRequestForm';
 import { getMembershipRequests, changePassword } from '../services/storageService';
+import { useMatchCenter } from '../store/matchStore';
 
 interface SidebarProps {
   userRole?: UserRole;
@@ -40,12 +39,10 @@ interface SidebarProps {
   onSignOut: () => void;
   teamLogo: string;
   onUpdateLogo: (url: string) => void;
-  currentUser?: AppUser | null;
-  linkedPlayer?: { id?: string; name: string; avatarUrl?: string }; // Minimal player type needed
   isOffline?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = 'guest', isAdminView = false, onToggleAdminView, onSignOut, teamLogo, onUpdateLogo, currentUser, linkedPlayer, isOffline }) => {
+const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = 'guest', isAdminView = false, onToggleAdminView, onSignOut, teamLogo, onUpdateLogo, isOffline }) => {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
@@ -144,18 +141,16 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
 
   mainLinks.push({ to: '/scorer', icon: <ClipboardList size={20} />, label: 'Live Scores' });
 
-  if (effectiveRole === 'admin') {
-    controlPanelLinks.push({ 
-      to: '/control-panel/grounds', 
-      icon: <Settings size={20} />, 
-      label: 'Control Panel',
-      badge: pendingRequests > 0 ? pendingRequests : undefined
-    });
-  }
+    if (effectiveRole === 'admin') {
+      controlPanelLinks.push({ 
+        to: '/control-panel/grounds', 
+        icon: <Settings size={20} />, 
+        label: 'Control Panel',
+        badge: pendingRequests > 0 ? pendingRequests : undefined
+      });
+    }
 
-  const effectiveAvatar = linkedPlayer?.avatarUrl || currentUser?.avatarUrl;
-
-  return (
+    return (
     <>
       {/* Sidebar */}
       <aside className={`
@@ -322,87 +317,14 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
           )}
         </nav>
 
-        <div className={`mt-auto border-t border-slate-800 bg-slate-900/80 backdrop-blur-md transition-all ${isCollapsed ? 'p-1' : 'p-6'}`}>
-          {/* User Badge */}
-          <div
-            onClick={() => {
-              if (linkedPlayer?.id) {
-                navigate(`/roster?id=${linkedPlayer.id}`);
-              }
-            }}
-            title={isCollapsed ? (linkedPlayer?.name || currentUser?.name || userRole) : ""}
-            className={`mb-4 flex items-center bg-slate-800 rounded-xl border border-slate-700 transition-all ${isCollapsed ? 'justify-center p-1' : 'justify-between p-3'} ${linkedPlayer?.id ? 'cursor-pointer hover:bg-slate-700/50 group/user' : ''}`}
-          >
-            <div className={`flex items-center transition-all ${isCollapsed ? 'justify-center' : 'gap-3 overflow-hidden'}`}>
-              <div className={`
-                  rounded-full flex items-center justify-center shrink-0 overflow-hidden transition-all
-                  ${isCollapsed ? 'w-8 h-8' : 'w-10 h-10'}
-                  ${!effectiveAvatar ? (
-                  userRole === 'admin' ? 'bg-blue-600 text-white' :
-                    (currentUser?.canScore) ? 'bg-purple-600 text-white' :
-                      userRole === 'member' ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white'
-                ) : 'bg-slate-900 border border-slate-600'}
-                `}>
-                {effectiveAvatar ? (
-                  <img src={effectiveAvatar} alt="Avatar" className="w-full h-full object-cover group-hover/user:scale-110 transition-transform" />
-                ) : (
-                  userRole === 'admin' ? <Shield size={18} /> :
-                    (currentUser?.canScore) ? <ClipboardList size={18} /> :
-                      userRole === 'member' ? <User size={18} /> : <Ticket size={18} />
-                )}
-              </div>
-              {!isCollapsed && (
-                <div className="overflow-hidden">
-                  <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Logged In</p>
-                  <p className="text-sm font-bold text-white capitalize truncate group-hover/user:text-blue-300 transition-colors">
-                    {(linkedPlayer?.name || currentUser?.name || userRole).split(' ')[0]}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* User Actions */}
-          <div className={`flex ${isCollapsed ? 'flex-col gap-1' : 'gap-2'}`}>
-            {currentUser?.id && (
-              <button
-                onClick={() => setShowConfig(true)}
-                title={isCollapsed ? "Change Password" : ""}
-                className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-blue-400 hover:bg-blue-950/20 rounded-lg transition-all border border-transparent hover:border-blue-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-[10px]'}`}
-              >
-                <Key size={isCollapsed ? 18 : 14} />
-                {!isCollapsed && <span>PASSWORD</span>}
-              </button>
-            )}
-            <button
-              onClick={onSignOut}
-              title={isCollapsed ? "Sign Out" : ""}
-              className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-[10px]'}`}
-            >
-              <LogOut size={isCollapsed ? 18 : 14} />
-              {!isCollapsed && <span>SIGN OUT</span>}
-            </button>
-          </div>
-
-          {/* Join Us Button for Guests */}
-          {userRole === 'guest' && (
-            <button
-              onClick={() => setIsJoinModalOpen(true)}
-              title={isCollapsed ? "Join Us" : ""}
-              className={`w-full mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-blue-900/40 flex items-center justify-center transition-all hover:scale-[1.02] ${isCollapsed ? 'p-3' : 'p-3 gap-2'}`}
-            >
-              <UserPlus size={isCollapsed ? 20 : 18} />
-              {!isCollapsed && <span>Join Us / Apply</span>}
-            </button>
-          )}
-
-          {/* Version Display */}
-          <div className={`mt-4 pt-2 pb-10 border-t border-slate-800/50 flex flex-col items-center opacity-60 ${isCollapsed ? 'px-0' : 'px-2'}`}>
-            <span className="text-[8px] font-black tracking-[0.2em] text-slate-400 uppercase">
-              {isCollapsed ? APP_VERSION.split('-')[0] : APP_VERSION}
-            </span>
-          </div>
-        </div>
+        <UserFooter 
+          isCollapsed={isCollapsed} 
+          userRole={userRole} 
+          onSignOut={onSignOut} 
+          onShowConfig={() => setShowConfig(true)}
+          isJoinModalOpen={isJoinModalOpen}
+          setIsJoinModalOpen={setIsJoinModalOpen}
+        />
       </aside >
 
       {/* Change Password Modal */}
@@ -444,6 +366,110 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
       {/* Membership Request Modal */}
       {isJoinModalOpen && <MembershipRequestForm onClose={() => setIsJoinModalOpen(false)} />}
     </>
+  );
+};
+
+const UserFooter: React.FC<{ 
+  isCollapsed: boolean; 
+  userRole: UserRole; 
+  onSignOut: () => void; 
+  onShowConfig: () => void;
+  isJoinModalOpen: boolean;
+  setIsJoinModalOpen: (open: boolean) => void;
+}> = ({ isCollapsed, userRole, onSignOut, onShowConfig, isJoinModalOpen, setIsJoinModalOpen }) => {
+  const navigate = useNavigate();
+  const currentUser = useMatchCenter(state => state.currentUser);
+  const squadPlayers = useMatchCenter(state => state.squadPlayers);
+  
+  const linkedPlayer = React.useMemo(() => {
+    if (!currentUser?.id) return null;
+    return squadPlayers.find(p => String(p.linkedUserId) === String(currentUser.id));
+  }, [currentUser?.id, squadPlayers]);
+
+  const photoURL = linkedPlayer?.avatarUrl || currentUser?.avatarUrl;
+
+  return (
+    <div className={`mt-auto border-t border-slate-800 bg-slate-900/80 backdrop-blur-md transition-all ${isCollapsed ? 'p-1' : 'p-6'}`}>
+      {/* User Badge */}
+      <div
+        onClick={() => {
+          if (linkedPlayer?.id) {
+            navigate(`/roster?id=${linkedPlayer.id}`);
+          }
+        }}
+        title={isCollapsed ? (linkedPlayer?.name || currentUser?.name || userRole) : ""}
+        className={`mb-4 flex items-center bg-slate-800 rounded-xl border border-slate-700 transition-all ${isCollapsed ? 'justify-center p-1' : 'justify-between p-3'} ${linkedPlayer?.id ? 'cursor-pointer hover:bg-slate-700/50 group/user' : ''}`}
+      >
+        <div className={`flex items-center transition-all ${isCollapsed ? 'justify-center' : 'gap-3 overflow-hidden'}`}>
+          <div className={`
+              rounded-full flex items-center justify-center shrink-0 overflow-hidden transition-all
+              ${isCollapsed ? 'w-8 h-8' : 'w-10 h-10'}
+              ${!photoURL ? (
+              userRole === 'admin' ? 'bg-blue-600 text-white' :
+                (currentUser?.canScore) ? 'bg-purple-600 text-white' :
+                  userRole === 'member' ? 'bg-emerald-600 text-white' : 'bg-orange-500 text-white'
+            ) : 'bg-slate-900 border border-slate-600'}
+            `}>
+            {photoURL ? (
+              <img src={photoURL} alt="Avatar" className="w-full h-full object-cover group-hover/user:scale-110 transition-transform" />
+            ) : (
+              userRole === 'admin' ? <Shield size={18} /> :
+                (currentUser?.canScore) ? <ClipboardList size={18} /> :
+                  userRole === 'member' ? <User size={18} /> : <Ticket size={18} />
+            )}
+          </div>
+          {!isCollapsed && (
+            <div className="overflow-hidden">
+              <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Logged In</p>
+              <p className="text-sm font-bold text-white capitalize truncate group-hover/user:text-blue-300 transition-colors">
+                {(linkedPlayer?.name || currentUser?.name || userRole).split(' ')[0]}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* User Actions */}
+      <div className={`flex mb-4 ${isCollapsed ? 'flex-col gap-1' : 'gap-2'}`}>
+        {currentUser?.id && (
+          <button
+            onClick={onShowConfig}
+            title={isCollapsed ? "Change Password" : ""}
+            className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-blue-400 hover:bg-blue-950/20 rounded-lg transition-all border border-transparent hover:border-blue-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-[10px]'}`}
+          >
+            <Key size={isCollapsed ? 18 : 14} />
+            {!isCollapsed && <span>PASSWORD</span>}
+          </button>
+        )}
+        <button
+          onClick={onSignOut}
+          title={isCollapsed ? "Sign Out" : ""}
+          className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-[10px]'}`}
+        >
+          <LogOut size={isCollapsed ? 18 : 14} />
+          {!isCollapsed && <span>SIGN OUT</span>}
+        </button>
+      </div>
+
+      {/* Join Us Button for Guests */}
+      {userRole === 'guest' && (
+        <button
+          onClick={() => setIsJoinModalOpen(true)}
+          title={isCollapsed ? "Join Us" : ""}
+          className={`w-full mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-blue-900/40 flex items-center justify-center transition-all hover:scale-[1.02] ${isCollapsed ? 'p-3' : 'p-3 gap-2'}`}
+        >
+          <UserPlus size={isCollapsed ? 20 : 18} />
+          {!isCollapsed && <span>Join Us / Apply</span>}
+        </button>
+      )}
+
+      {/* Version Display */}
+      <div className={`mt-4 pt-2 pb-2 border-t border-slate-800/50 flex flex-col items-center opacity-60 ${isCollapsed ? 'px-0' : 'px-2'}`}>
+        <span className="text-[8px] font-black tracking-[0.2em] text-slate-400 uppercase">
+          {isCollapsed ? APP_VERSION.split('-')[0] : APP_VERSION}
+        </span>
+      </div>
+    </div>
   );
 };
 
