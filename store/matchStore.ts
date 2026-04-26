@@ -686,10 +686,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const players = await api.getPlayers();
-            const allPlayers = (players || []).map((p: any) => ({
-                ...p,
-                teamId: p.is_club_player ? 'IND_STRIKERS' : (p.primary_team_id || 'OPPONENT')
-            }));
+            const allPlayers = players || [];
             
             set({
                 squadPlayers: allPlayers.filter(p => p.teamId === 'IND_STRIKERS'),
@@ -704,10 +701,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     addPlayer: async (player) => {
         try {
             const res = await api.addPlayer(player);
-            const newPlayer = {
-                ...res,
-                teamId: res.is_club_player ? 'IND_STRIKERS' : (res.primary_team_id || 'OPPONENT')
-            };
+            // StorageService already returns a mapped Player object with teamId
+            const newPlayer = res;
             if (newPlayer.teamId === 'IND_STRIKERS') {
                 set((state) => ({ squadPlayers: [newPlayer, ...state.squadPlayers] }));
             } else {
@@ -723,7 +718,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             await api.updatePlayer(updatedPlayer);
             const stablePlayer = {
                 ...updatedPlayer,
-                teamId: updatedPlayer.is_club_player ? 'IND_STRIKERS' : (updatedPlayer.primary_team_id || 'OPPONENT')
+                teamId: updatedPlayer.isClubPlayer ? 'IND_STRIKERS' : (updatedPlayer.primaryTeamId || 'OPPONENT')
             };
             if (stablePlayer.teamId === 'IND_STRIKERS') {
                 set((state) => ({
