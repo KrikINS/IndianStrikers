@@ -131,16 +131,20 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         return Array.from(new Set(years)).sort((a, b) => b - a); // Newest first
     }, [matches]);
 
-    // Auto-sync on mount
+    // Auto-sync on mount: Using a ref to strictly ensure this only runs once
+    const hasAutoSynced = useRef(false);
     React.useEffect(() => {
-        console.log("[MatchCenter] Auto-sync triggered");
-        if (syncWithCloud) {
+        if (hasAutoSynced.current) return;
+        
+        console.log("[MatchCenter] Initial Auto-sync triggered");
+        if (syncWithCloud && !isLoading) {
+            hasAutoSynced.current = true;
             syncWithCloud().catch(err => console.error("Auto-sync error:", err));
         }
         if (syncMasterData) {
             syncMasterData().catch(err => console.error("Master data sync error:", err));
         }
-    }, [syncWithCloud, syncMasterData]);
+    }, [syncWithCloud, syncMasterData, isLoading]);
 
     const handleToggleLock = async (matchId: string, currentStatus: boolean) => {
         if (!isAdmin) return;

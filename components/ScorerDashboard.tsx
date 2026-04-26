@@ -956,9 +956,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   // Unified State & Actions using Selectors for maximum stability
   const squadPlayers = useMatchCenter(state => state.squadPlayers);
   const fetchPlayers = useMatchCenter(state => state.fetchPlayers);
+  const isPlayersLoading = useMatchCenter(state => state.loading);
+  
+  // Scorer State Selectors (Breaking the dependency on the whole store object)
+  const innings1 = useMatchCenter(state => state.innings1);
+  const innings2 = useMatchCenter(state => state.innings2);
+  const toss = useMatchCenter(state => state.toss);
+  const homeXI = useMatchCenter(state => state.homeXI);
+  const awayXI = useMatchCenter(state => state.awayXI);
+  const matchId = useMatchCenter(state => state.matchId);
+  const isWaitingForBowler = useMatchCenter(state => state.isWaitingForBowler);
   
   // Scorer Actions
-  const store = useMatchCenter(); // Temporarily keeping the object for backward compatibility
+  const store = useMatchCenter(); // Temporarily keeping for deep nested logic, but usage is now more stable
   const isOfflineStore = useTournamentStore(state => state.isOffline);
   
   // Master Data
@@ -972,15 +982,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [extraSubType, setExtraSubType] = useState<'bat' | 'bye' | 'lb' | 'keeper'>('bat');
   const [showWicketModal, setShowWicketModal] = useState(false);
   const [showBowlerModal, setShowBowlerModal] = useState(false);
-  const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_home' | 'squad_away' | 'openers_bat' | 'openers_bowl' | null>(store.innings1 ? null : 'preview');
-  const [tossWinner, setTossWinner] = useState<'home' | 'away' | null>(store.toss.winnerId ? (store.toss.winnerId === 'HOME' ? 'home' : 'away') : null);
-  const [tossChoice, setTossChoice] = useState<'Bat' | 'Bowl' | null>(store.toss.choice || null);
+  const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_home' | 'squad_away' | 'openers_bat' | 'openers_bowl' | null>(innings1 ? null : 'preview');
+  const [tossWinner, setTossWinner] = useState<'home' | 'away' | null>(toss.winnerId ? (toss.winnerId === 'HOME' ? 'home' : 'away') : null);
+  const [tossChoice, setTossChoice] = useState<'Bat' | 'Bowl' | null>(toss.choice || null);
   const [tempMaxOvers, setTempMaxOvers] = useState(20);
 
   // Derive players for convenience
   const players = squadPlayers;
 
-  const { homeXI, awayXI } = store;
+  // homeXI and awayXI are now defined via selectors at the top
+  const { matchId: storeMatchId } = store;
   const [selStriker, setSelStriker] = useState<string | null>(null);
   const [selNonStriker, setSelNonStriker] = useState<string | null>(null);
   const [selBowler, setSelBowler] = useState<string | null>(null);
@@ -1136,20 +1147,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Auto-trigger bowler selection modal at end of over
   useEffect(() => {
-    if (store.isWaitingForBowler && !showBowlerModal && !showInningsReview && !showMatchSummaryModal) {
+    if (isWaitingForBowler && !showBowlerModal && !showInningsReview && !showMatchSummaryModal) {
       const timer = setTimeout(() => {
         setShowBowlerModal(true);
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [store.isWaitingForBowler, showInningsReview, showMatchSummaryModal, showBowlerModal]);
+  }, [isWaitingForBowler, showInningsReview, showMatchSummaryModal, showBowlerModal]);
 
   // Get metadata from MatchCenterStore
   const matches = useMatchCenter(state => state.matches);
   const syncWithCloud = useMatchCenter(state => state.syncWithCloud);
   const finalizeMatch = useMatchCenter(state => state.finalizeMatch);
   
-  const activeMatchId = id || propMatchId || store.matchId;
+  const activeMatchId = id || propMatchId || matchId;
 
   // ABSOLUTE METADATA LAW (V5): Guaranteed resolution for active tournament
   const METADATA_LAW: any = {
@@ -1182,7 +1193,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   useEffect(() => {
     // Only reset if we are switching to a DIFFERENT match that isn't already the active one
-    if (activeMatchId && activeMatchId !== store.matchId) {
+    if (activeMatchId && activeMatchId !== matchId) {
       console.log("[Scorer] Different match detected. Preparing fresh session...");
     }
 
@@ -1193,11 +1204,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         syncMasterData().catch(console.error);
     }
     // CRITICAL: Ensure players are loaded for squad selection
-    if (fetchPlayers && (!squadPlayers || squadPlayers.length === 0)) {
+    // Added isPlayersLoading guard to prevent infinite re-render loop
+    if (fetchPlayers && !isPlayersLoading && (!squadPlayers || squadPlayers.length === 0)) {
         console.log("[Scorer] Players missing. Fetching squad...");
         fetchPlayers().catch(console.error);
     }
-  }, [activeMatchId, fetchPlayers, squadPlayers?.length]); // Re-run if ID changes or players missing
+  }, [activeMatchId, fetchPlayers, squadPlayers?.length, isPlayersLoading]); // Re-run if ID changes or players missing
 
   const matchMeta = (matches || []).find(m => m.id === activeMatchId);
 
