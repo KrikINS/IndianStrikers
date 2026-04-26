@@ -311,22 +311,26 @@ const App: React.FC = () => {
 };
 
 const AppInternal: React.FC = () => {
-    const fetchPlayers = useStore(state => state.fetchPlayers);
-    const squadPlayers = useStore(state => state.squadPlayers);
-    const storeAddPlayer = useStore(state => state.addPlayer);
-    const storeUpdatePlayer = useStore(state => state.updatePlayer);
-    const storeDeletePlayer = useStore(state => state.deletePlayer);
+    // Player Management from matchStore
+    const fetchPlayers = useMatchCenter(state => state.fetchPlayers);
+    const squadPlayers = useMatchCenter(state => state.squadPlayers);
+    const storeAddPlayer = useMatchCenter(state => state.addPlayer);
+    const storeUpdatePlayer = useMatchCenter(state => state.updatePlayer);
+    const storeDeletePlayer = useMatchCenter(state => state.deletePlayer);
 
+    // Opponents from opponentStore
     const opponents = useOpponentStore(state => state.opponents);
     const fetchOpponents = useOpponentStore(state => state.fetchOpponents);
     const storeAddOpponent = useOpponentStore(state => state.addOpponent);
     const storeUpdateOpponent = useOpponentStore(state => state.updateOpponent);
     const storeDeleteOpponent = useOpponentStore(state => state.deleteOpponent);
 
+    // Tournaments from tournamentStore
     const syncMasterData = useTournamentStore(state => state.syncMasterData);
     const isOfflineStore = useTournamentStore(state => state.isOffline);
     const setOfflineStore = useTournamentStore(state => state.setOffline);
 
+    // Match Management from matchStore
     const syncWithCloud = useMatchCenter(state => state.syncWithCloud);
     const resetZombieMatches = useMatchCenter(state => state.resetZombieMatches);
 

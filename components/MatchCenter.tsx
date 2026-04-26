@@ -83,7 +83,8 @@ const MatchAction: React.FC<{
 };
 
 const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo, currentUser, onUpdateOpponent, onRefresh }) => {
-    const { squadPlayers: players, updatePlayer: onUpdatePlayer } = useStore();
+    const players = useMatchCenter(state => state.squadPlayers);
+    const onUpdatePlayer = useMatchCenter(state => state.updatePlayer);
     const navigate = useNavigate();
     const matches = useMatchCenter(state => state.matches);
     const isLoading = useMatchCenter(state => state.isLoading);
