@@ -85,21 +85,22 @@ const MatchAction: React.FC<{
 const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo, currentUser, onUpdateOpponent, onRefresh }) => {
     const { squadPlayers: players, updatePlayer: onUpdatePlayer } = useStore();
     const navigate = useNavigate();
-    const {
-        matches,
-        updateMatch,
-        deleteMatch,
-        setPlayingXI,
-        updateMatchStatus,
-        finalizeMatch,
-        syncWithCloud,
-        getSortedMatches,
-        purgeTestData,
-        wipeLocalMatches,
-        isLoading,
-        handleToggleLock: storeToggleLock
-    } = useMatchCenter();
-    const { grounds, tournaments, syncMasterData } = useMasterData();
+    const matches = useMatchCenter(state => state.matches);
+    const isLoading = useMatchCenter(state => state.isLoading);
+    const syncWithCloud = useMatchCenter(state => state.syncWithCloud);
+    const updateMatch = useMatchCenter(state => state.updateMatch);
+    const deleteMatch = useMatchCenter(state => state.deleteMatch);
+    const setPlayingXI = useMatchCenter(state => state.setPlayingXI);
+    const updateMatchStatus = useMatchCenter(state => state.updateMatchStatus);
+    const finalizeMatch = useMatchCenter(state => state.finalizeMatch);
+    const getSortedMatches = useMatchCenter(state => state.getSortedMatches);
+    const purgeTestData = useMatchCenter(state => state.purgeTestData);
+    const wipeLocalMatches = useMatchCenter(state => state.wipeLocalMatches);
+    const storeToggleLock = useMatchCenter(state => state.handleToggleLock);
+
+    const grounds = useMasterData(state => state.grounds);
+    const tournaments = useMasterData(state => state.tournaments);
+    const syncMasterData = useMasterData(state => state.syncMasterData);
     const initializeMatch = useCricketScorer(state => state.initializeMatch);
     const isAdmin = userRole === 'admin';
 
@@ -131,6 +132,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
     // Auto-sync on mount
     React.useEffect(() => {
+        console.log("[MatchCenter] Auto-sync triggered");
         if (syncWithCloud) {
             syncWithCloud().catch(err => console.error("Auto-sync error:", err));
         }

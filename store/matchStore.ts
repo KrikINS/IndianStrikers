@@ -287,7 +287,10 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     },
 
     syncWithCloud: async () => {
-        if (get().isLoading) return;
+        if (get().isLoading) {
+            console.log("[Store] syncWithCloud skipped - already loading");
+            return;
+        }
         
         set({ isLoading: true, error: null });
         const maxAttempts = 3;

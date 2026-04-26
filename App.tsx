@@ -311,7 +311,24 @@ const App: React.FC = () => {
 };
 
 const AppInternal: React.FC = () => {
-    const store = useStore();
+    const fetchPlayers = useStore(state => state.fetchPlayers);
+    const squadPlayers = useStore(state => state.squadPlayers);
+    const storeAddPlayer = useStore(state => state.addPlayer);
+    const storeUpdatePlayer = useStore(state => state.updatePlayer);
+    const storeDeletePlayer = useStore(state => state.deletePlayer);
+
+    const opponents = useOpponentStore(state => state.opponents);
+    const fetchOpponents = useOpponentStore(state => state.fetchOpponents);
+    const storeAddOpponent = useOpponentStore(state => state.addOpponent);
+    const storeUpdateOpponent = useOpponentStore(state => state.updateOpponent);
+    const storeDeleteOpponent = useOpponentStore(state => state.deleteOpponent);
+
+    const syncMasterData = useTournamentStore(state => state.syncMasterData);
+    const isOfflineStore = useTournamentStore(state => state.isOffline);
+    const setOfflineStore = useTournamentStore(state => state.setOffline);
+
+    const syncWithCloud = useMatchCenter(state => state.syncWithCloud);
+    const resetZombieMatches = useMatchCenter(state => state.resetZombieMatches);
 
     const [showSplash, setShowSplash] = useState(true);
     const [userRole, setUserRole] = useState<UserRole>('guest');
@@ -320,38 +337,32 @@ const AppInternal: React.FC = () => {
     const [teamLogo, setTeamLogo] = useState<string>('');
     const [isOffline, setIsOffline] = useState(false);
 
-    // Safeguard for store readiness - Moved AFTER state hooks but BEFORE rendering logic that uses store sub-objects
-    // However, to satisfy "Rules of Hooks", ALL hooks (useState, useEffect, etc) must be called UNCONDITIONALLY.
-    
-    // We can extract store values after the check, but useEffect must be called before the check if we want them to run.
-    
     useEffect(() => {
-        store.matchCenter.resetZombieMatches();
-    }, [store.matchCenter.resetZombieMatches]);
+        resetZombieMatches();
+    }, [resetZombieMatches]);
 
     const loadData = async () => {
         try {
             console.log("Fetching data from backend...");
             await Promise.allSettled([
-                store.fetchPlayers(),
-                store.opponents.fetchOpponents(),
-                store.tournaments.syncMasterData(),
-                store.matchCenter.syncWithCloud(),
+                fetchPlayers(),
+                fetchOpponents(),
+                syncMasterData(),
+                syncWithCloud(),
                 getTeamLogo().then(l => setTeamLogo(l || ''))
             ]);
 
             setIsOffline(false);
-            store.tournaments.setOffline(false);
+            setOfflineStore(false);
         } catch (error) {
             console.error("Failed to load data:", error);
             setIsOffline(true);
-            store.tournaments.setOffline(true);
+            setOfflineStore(true);
         }
     };
 
     useEffect(() => {
         window.refreshAppData = loadData;
-        
         loadData();
         
         const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
@@ -362,7 +373,7 @@ const AppInternal: React.FC = () => {
             const savedAdminView = sessionStorage.getItem('isAdminView');
             if (savedAdminView === 'true') setIsAdminView(true);
 
-            store.matchCenter.syncWithCloud();
+            syncWithCloud();
 
             const savedUser = sessionStorage.getItem('currentUser');
             if (savedUser) setCurrentUser(JSON.parse(savedUser));
@@ -370,22 +381,6 @@ const AppInternal: React.FC = () => {
             setShowSplash(false);
         }
     }, []);
-
-    if (!store) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-slate-950">
-                <StrikersLoader />
-            </div>
-        );
-    }
-
-    const { squadPlayers, addPlayer: storeAddPlayer, updatePlayer: storeUpdatePlayer, deletePlayer: storeDeletePlayer } = store;
-    const { opponents, addOpponent: storeAddOpponent, updateOpponent: storeUpdateOpponent, deleteOpponent: storeDeleteOpponent } = store.opponents;
-    const resetZombieMatches = store.matchCenter.resetZombieMatches;
-    const syncWithCloud = store.matchCenter.syncWithCloud;
-    const isOfflineStore = store.tournaments.isOffline;
-    const setOfflineStore = store.tournaments.setOffline;
-    const syncMasterData = store.tournaments.syncMasterData;
 
   const handleLoginComplete = (role: UserRole, user?: any) => {
     setUserRole(role);

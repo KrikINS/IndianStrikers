@@ -25,18 +25,16 @@ const StoreContext = createContext<RootStore | null>(null);
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the individual hooks
   const matchCenter = useMatchCenter();
-
   const opponents = useOpponentStore();
   const tournaments = useTournamentStore();
 
-  const value = {
+  const value = React.useMemo(() => ({
     ...matchCenter,
     matchCenter,
-
     opponents,
     tournaments,
-    isHydrated: true // Always true in stateless mode
-  };
+    isHydrated: true
+  }), [matchCenter, opponents, tournaments]);
 
   return (
     <StoreContext.Provider value={value}>
