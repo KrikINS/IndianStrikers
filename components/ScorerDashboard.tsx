@@ -169,7 +169,7 @@ const ScoreSection = styled.div`
   align-items: stretch;
   justify-content: space-between;
   flex-shrink: 0;
-  min-height: 140px;
+  min-height: 300px;
   gap: 16px;
 `;
 
@@ -1413,7 +1413,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
       try {
         setIsSyncing(true);
-        await updateMatch(activeMatchId, { live_data: state, last_updated: new Date().toISOString() });
+        // CRITICAL: Only sync the slimmed payload, not the full store object which contains lists of all players
+        const payload = state.prepareSyncPayload ? state.prepareSyncPayload() : state;
+        await updateMatch(activeMatchId, { live_data: payload, last_updated: new Date().toISOString() });
         setIsSyncing(false);
       } catch (err) {
         console.error("[Sync] Failed to update match:", err);
@@ -1694,7 +1696,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button title="Back" onClick={() => navigate('/match-center')} className="p-2 hover:bg-slate-100/10 rounded-xl transition-all text-white"><ChevronLeft /></button>
             <span style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '1px' }}>STRIKERS PULSE</span>
-            <span style={{ fontSize: '8px', opacity: 0.3, marginLeft: 6, fontWeight: 700 }}>v0.1.0</span>
           </div>
           <button
             title="Global Settings"
@@ -2547,10 +2548,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const totalWickets = currentInnings.wickets;
       const target = (store.innings1?.totalRuns || 0) + 1;
 
-      // Clean store to avoid massive payload (strip UNDO historyStack)
-      const exportableStore = JSON.parse(JSON.stringify(store));
-      delete exportableStore.historyStack;
-      if (exportableStore.backup_data) delete exportableStore.backup_data;
+      // use the new centralized slimmer
+      const exportableStore = store.prepareSyncPayload();
 
       const updatePayload: any = {
         tournament_id: matchMeta?.tournamentId,
@@ -3052,8 +3051,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </div>
 
           {/* RIGHT: WORM CHART */}
-          <div style={{ flex: 1.5, position: 'relative', minWidth: 0 }}>
-             <ResponsiveContainer width="100%" height="100%">
+          <div style={{ flex: 1.5, position: 'relative', minWidth: 0, height: 300 }}>
+             <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0}>
                 <LineChart data={wormData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
                   <XAxis 

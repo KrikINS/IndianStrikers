@@ -8,6 +8,8 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
 const app = express();
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 const PORT = process.env.PORT || 4001;
 
 const allowedOrigins = [
@@ -36,8 +38,6 @@ app.use((req, _res, next) => {
   console.log(`[Incoming Request] ${req.method} ${req.url}`);
   next();
 });
-
-app.use(express.json({ limit: '10mb' }));
 
 console.log(`[Database Config] URL: ${process.env.DATABASE_URL ? 'Found' : 'MISSING'}`);
 cloudinary.config({ cloud_name: process.env.CLOUDINARY_CLOUD_NAME, api_key: process.env.CLOUDINARY_API_KEY, api_secret: process.env.CLOUDINARY_API_SECRET });

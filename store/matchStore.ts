@@ -139,6 +139,7 @@ export interface UnifiedMatchStore extends MatchScorerState {
     enqueueOfflineBall: (payload: any) => void;
     clearOfflineQueue: () => void;
     setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
+    prepareSyncPayload: () => any;
 
     // Player Management Actions
     fetchPlayers: () => Promise<void>;
@@ -839,7 +840,36 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         }
     },
 
-    setCurrentUser: (user) => set({ currentUser: user })
+    setCurrentUser: (user) => set({ currentUser: user }),
+
+    prepareSyncPayload: () => {
+        const state = get();
+        // Return ONLY the essentials for scoring rehydration
+        return {
+            matchId: state.matchId,
+            matchType: state.matchType,
+            tournament: state.tournament,
+            ground: state.ground,
+            opponentName: state.opponentName,
+            maxOvers: state.maxOvers,
+            toss: state.toss,
+            innings1: state.innings1,
+            innings2: state.innings2,
+            currentInnings: state.currentInnings,
+            strikerId: state.strikerId,
+            nonStrikerId: state.nonStrikerId,
+            currentBowlerId: state.currentBowlerId,
+            isFreeHit: state.isFreeHit,
+            isFinished: state.isFinished,
+            homeXI: (state.homeXI || []).map(p => typeof p === 'object' ? (p as any).id : p),
+            awayXI: (state.awayXI || []).map(p => typeof p === 'object' ? (p as any).id : p),
+            targetScore: state.targetScore,
+            useWagonWheel: state.useWagonWheel,
+            isWaitingForBowler: state.isWaitingForBowler,
+            wagonWheelQuickSave: state.wagonWheelQuickSave,
+            partnership_notified: state.partnership_notified
+        };
+    }
 }));
 
 export const useCricketScorer = useMatchCenter;
