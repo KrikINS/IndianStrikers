@@ -949,29 +949,33 @@ const SettingsInput = styled.div`
 // Types already imported at the top
 
 const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ matchId: propMatchId, teamLogo }) => {
-  const rootStore = useStore();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
-  if (!rootStore) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8">
-        <div className="w-12 h-12 border-t-2 border-sky-500 border-solid rounded-full animate-spin mb-4" />
-        <span className="text-white/40 uppercase font-black text-[10px] tracking-widest animate-pulse">Initializing Scoring Engine...</span>
-      </div>
-    );
-  }
-
-  const { squadPlayers: players, fetchPlayers } = rootStore;
-  const store = rootStore.matchCenter;
+  // Unified State & Actions using Selectors for maximum stability
+  const squadPlayers = useMatchCenter(state => state.squadPlayers);
+  const fetchPlayers = useMatchCenter(state => state.fetchPlayers);
+  
+  // Scorer Actions
+  const store = useMatchCenter(); // Temporarily keeping the object for backward compatibility
+  const isOfflineStore = useTournamentStore(state => state.isOffline);
+  
+  // Master Data
+  const grounds = useTournamentStore(state => state.grounds);
+  const allOpponents = useOpponentStore(state => state.opponents);
+  const updateMatch = useMatchCenter(state => state.updateMatch);
+  const updateMatchStatus = useMatchCenter(state => state.updateMatchStatus);
+  
   const [extraSubType, setExtraSubType] = useState<'bat' | 'bye' | 'lb' | 'keeper'>('bat');
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [showWicketModal, setShowWicketModal] = useState(false);
   const [showBowlerModal, setShowBowlerModal] = useState(false);
   const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_home' | 'squad_away' | 'openers_bat' | 'openers_bowl' | null>(store.innings1 ? null : 'preview');
   const [tossWinner, setTossWinner] = useState<'home' | 'away' | null>(store.toss.winnerId ? (store.toss.winnerId === 'HOME' ? 'home' : 'away') : null);
   const [tossChoice, setTossChoice] = useState<'Bat' | 'Bowl' | null>(store.toss.choice || null);
   const [tempMaxOvers, setTempMaxOvers] = useState(20);
+
+  // Derive players for convenience
+  const players = squadPlayers;
 
   const { homeXI, awayXI } = store;
   const [selStriker, setSelStriker] = useState<string | null>(null);
@@ -1140,8 +1144,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }, [store.isWaitingForBowler, showInningsReview, showMatchSummaryModal, showBowlerModal]);
 
   // Get metadata from MatchCenterStore
-  const { matches, syncWithCloud, updateMatchStatus, finalizeMatch, updateMatch } = rootStore.matchCenter;
-  const { grounds, tournaments, syncMasterData } = rootStore.tournaments;
+  const matches = useMatchCenter(state => state.matches);
+  const syncWithCloud = useMatchCenter(state => state.syncWithCloud);
+  const finalizeMatch = useMatchCenter(state => state.finalizeMatch);
+  // Grounds, tournaments and syncMasterData are already defined via selectors at the top
+  const syncMasterData = useTournamentStore(state => state.syncMasterData);
+  const tournaments = useTournamentStore(state => state.tournaments);
+  
   const activeMatchId = id || propMatchId || store.matchId;
 
   // ABSOLUTE METADATA LAW (V5): Guaranteed resolution for active tournament
@@ -1352,9 +1361,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     });
   }, [matchMeta?.opponentId]);
 
+  // Fix: Prevent the infinite sync loop by using a ref to track the last synced ball count
+  const lastSyncedBallCount = useRef<number>(-1);
+
   useEffect(() => {
-    syncToDatabase(store);
-  }, [store, syncToDatabase]);
+    const currentBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
+    if (currentBalls > 0 && currentBalls !== lastSyncedBallCount.current) {
+      lastSyncedBallCount.current = currentBalls;
+      syncToDatabase(store);
+    }
+  }, [store.innings1?.totalBalls, store.innings2?.totalBalls, syncToDatabase]);
 
   const handleUpdateMatchStatus = async (status: MatchStatus) => {
     if (activeMatchId) {
@@ -2183,7 +2199,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         tournament_id: matchMeta?.tournamentId || null
       };
 
-      if (!navigator.onLine || rootStore.tournaments.isOffline) {
+      if (!navigator.onLine || isOfflineStore) {
         store.enqueueOfflineBall(payload);
         toast.error(`Offline: Ball queued (${store.offlineQueue.length + 1}/10)`);
         syncToDatabase(store); // retain local state mirror
