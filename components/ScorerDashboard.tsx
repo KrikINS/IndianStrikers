@@ -1146,9 +1146,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const matches = useMatchCenter(state => state.matches);
   const syncWithCloud = useMatchCenter(state => state.syncWithCloud);
   const finalizeMatch = useMatchCenter(state => state.finalizeMatch);
-  // Grounds, tournaments and syncMasterData are already defined via selectors at the top
-  const syncMasterData = useTournamentStore(state => state.syncMasterData);
-  const tournaments = useTournamentStore(state => state.tournaments);
   
   const activeMatchId = id || propMatchId || store.matchId;
 
@@ -1185,7 +1182,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     // Only reset if we are switching to a DIFFERENT match that isn't already the active one
     if (activeMatchId && activeMatchId !== store.matchId) {
       console.log("[Scorer] Different match detected. Preparing fresh session...");
-      // We don't call hardReset() immediately anymore to allow rehydration from liveData
     }
 
     if (syncWithCloud) {
@@ -1194,7 +1190,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     if (syncMasterData) {
         syncMasterData().catch(console.error);
     }
-  }, [activeMatchId]); // Re-run if ID changes
+    // CRITICAL: Ensure players are loaded for squad selection
+    if (fetchPlayers && (!squadPlayers || squadPlayers.length === 0)) {
+        console.log("[Scorer] Players missing. Fetching squad...");
+        fetchPlayers().catch(console.error);
+    }
+  }, [activeMatchId, fetchPlayers, squadPlayers?.length]); // Re-run if ID changes or players missing
 
   const matchMeta = (matches || []).find(m => m.id === activeMatchId);
 

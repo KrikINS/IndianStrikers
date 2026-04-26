@@ -201,10 +201,10 @@ export const getPlayers = async (): Promise<Player[]> => {
         jerseyNumber: p.jersey_number,
         dob: p.dob,
         externalId: p.external_id,
-        isClubPlayer: p.is_club_player,
+        isClubPlayer: p.is_club_player === true || p.is_club_player === 'true' || p.is_club_player === 't',
         primaryTeamId: p.primary_team_id,
         avatarHistory: Array.isArray(p.avatar_history) ? p.avatar_history : [],
-        teamId: p.team_id || (p.is_club_player ? 'IND_STRIKERS' : (p.primary_team_id || 'OTHER'))
+        teamId: p.team_id || ((p.is_club_player === true || p.is_club_player === 'true' || p.is_club_player === 't') ? 'IND_STRIKERS' : (p.primary_team_id || 'OTHER'))
       }));
 
     if (players.length > 0) {
@@ -268,10 +268,10 @@ export const addPlayer = async (player: Partial<Player>) => {
     bowlingStyle: p.bowling_style,
     dob: p.dob,
     externalId: p.external_id,
-    isClubPlayer: p.is_club_player,
+    isClubPlayer: p.is_club_player === true || p.is_club_player === 'true' || p.is_club_player === 't',
     primaryTeamId: p.primary_team_id,
     avatarHistory: Array.isArray(p.avatar_history) ? p.avatar_history : [],
-    teamId: p.team_id || (p.is_club_player ? 'IND_STRIKERS' : (p.primary_team_id || 'OTHER'))
+    teamId: p.team_id || ((p.is_club_player === true || p.is_club_player === 'true' || p.is_club_player === 't') ? 'IND_STRIKERS' : (p.primary_team_id || 'OTHER'))
   };
 };
 
