@@ -963,6 +963,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   
   // Master Data
   const grounds = useTournamentStore(state => state.grounds);
+  const tournaments = useTournamentStore(state => state.tournaments);
+  const syncMasterData = useTournamentStore(state => state.syncMasterData);
   const allOpponents = useOpponentStore(state => state.opponents);
   const updateMatch = useMatchCenter(state => state.updateMatch);
   const updateMatchStatus = useMatchCenter(state => state.updateMatchStatus);
@@ -1172,7 +1174,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const resolveTournament = (tid: string | undefined, tname: string | undefined) => {
     if (!tid && !tname) return METADATA_LAW.tournaments['default'];
-    const fromMaster = (tournaments || []).find(t => tid && String(t.id) === String(tid))?.name;
+    const fromMaster = (tournaments || []).find((t: any) => tid && String(t.id) === String(tid))?.name;
     if (fromMaster && fromMaster !== 'RCA T20 TOURNAMENT') return fromMaster;
     if (tname === 'RCA T20 TOURNAMENT') return METADATA_LAW.tournaments['RCA T20 TOURNAMENT'];
     return tname || METADATA_LAW.tournaments['default'];
