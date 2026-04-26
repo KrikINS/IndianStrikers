@@ -686,7 +686,11 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const players = await api.getPlayers();
-            const allPlayers = players || [];
+            const allPlayers = (players || []).map((p: any) => ({
+                ...p,
+                teamId: p.is_club_player ? 'IND_STRIKERS' : (p.primary_team_id || 'OPPONENT')
+            }));
+            
             set({
                 squadPlayers: allPlayers.filter(p => p.teamId === 'IND_STRIKERS'),
                 opponentPlayers: allPlayers.filter(p => p.teamId !== 'IND_STRIKERS'),
@@ -699,7 +703,11 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
     addPlayer: async (player) => {
         try {
-            const newPlayer = await api.addPlayer(player);
+            const res = await api.addPlayer(player);
+            const newPlayer = {
+                ...res,
+                teamId: res.is_club_player ? 'IND_STRIKERS' : (res.primary_team_id || 'OPPONENT')
+            };
             if (newPlayer.teamId === 'IND_STRIKERS') {
                 set((state) => ({ squadPlayers: [newPlayer, ...state.squadPlayers] }));
             } else {
@@ -713,13 +721,17 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     updatePlayer: async (updatedPlayer) => {
         try {
             await api.updatePlayer(updatedPlayer);
-            if (updatedPlayer.teamId === 'IND_STRIKERS') {
+            const stablePlayer = {
+                ...updatedPlayer,
+                teamId: updatedPlayer.is_club_player ? 'IND_STRIKERS' : (updatedPlayer.primary_team_id || 'OPPONENT')
+            };
+            if (stablePlayer.teamId === 'IND_STRIKERS') {
                 set((state) => ({
-                    squadPlayers: state.squadPlayers.map(p => p.id === updatedPlayer.id ? updatedPlayer : p)
+                    squadPlayers: state.squadPlayers.map(p => p.id === stablePlayer.id ? stablePlayer : p)
                 }));
             } else {
                 set((state) => ({
-                    opponentPlayers: state.opponentPlayers.map(p => p.id === updatedPlayer.id ? updatedPlayer : p)
+                    opponentPlayers: state.opponentPlayers.map(p => p.id === stablePlayer.id ? stablePlayer : p)
                 }));
             }
         } catch (err: any) {
