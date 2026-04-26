@@ -1116,6 +1116,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncQueue, setSyncQueue] = useState<number>(0);
 
+  // Ref to hold the latest cloud live_data WITHOUT adding it as a useCallback dependency.
+  // This breaks the: sync → cloud update → matchMeta change → syncToDatabase recreated → sync cycle.
+  const cloudLiveDataRef = useRef<any>(null);
+
+  // One-shot guard: prevent re-fetching players every time squadPlayers becomes empty.
+  const hasFetchedPlayersRef = useRef(false);
+
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -1195,6 +1202,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     // Only reset if we are switching to a DIFFERENT match that isn't already the active one
     if (activeMatchId && activeMatchId !== matchId) {
       console.log("[Scorer] Different match detected. Preparing fresh session...");
+      // Reset the one-shot player-fetch guard when the match changes.
+      hasFetchedPlayersRef.current = false;
     }
 
     if (syncWithCloud) {
@@ -1203,13 +1212,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     if (syncMasterData) {
         syncMasterData().catch(console.error);
     }
-    // CRITICAL: Ensure players are loaded for squad selection
-    // Added isPlayersLoading guard to prevent infinite re-render loop
-    if (fetchPlayers && !isPlayersLoading && (!squadPlayers || squadPlayers.length === 0)) {
-        console.log("[Scorer] Players missing. Fetching squad...");
+    // CRITICAL: Ensure players are loaded for squad selection.
+    // Use a one-shot ref guard instead of watching squadPlayers.length,
+    // which caused an infinite loop when the squad was empty.
+    if (fetchPlayers && !isPlayersLoading && !hasFetchedPlayersRef.current) {
+        hasFetchedPlayersRef.current = true;
+        console.log("[Scorer] One-shot: Fetching squad players...");
         fetchPlayers().catch(console.error);
     }
-  }, [activeMatchId, fetchPlayers, squadPlayers?.length, isPlayersLoading]); // Re-run if ID changes or players missing
+  }, [activeMatchId]); // Only re-run when the active match ID changes
 
   const matchMeta = (matches || []).find(m => m.id === activeMatchId);
 
@@ -1286,17 +1297,30 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     // Only auto-close setup if we are in initial preview and already have innings data
     if (store.innings1 && setupStep === 'preview') {
       setSetupStep(null); // Jump straight to scoring if we have innings data
-    } else if (activeMatchId === store.matchId && matchMeta?.status === 'live' && matchMeta?.live_data) {
-      // --- RESUME LOGIC (Device B): Match is live in DB but local store is empty ---
-      // Rehydrate from live_data and skip toss
+      return;
+    }
+
+    // --- RESUME LOGIC (Device B): Match is live in DB but local store is empty or behind ---
+    if (activeMatchId === store.matchId && matchMeta?.status === 'live' && matchMeta?.live_data) {
       const ld = matchMeta.live_data as any;
       if (ld && ld.innings1) {
-        // PROGRESS LOCK: Prevent rehydration from rolling back match state
-        // If current device is already ahead (more balls or higher innings), skip overwrite
         const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
         const cloudBalls = (ld.innings1?.totalBalls || 0) + (ld.innings2?.totalBalls || 0);
         const localInnings = store.currentInnings || 1;
         const cloudInnings = ld.currentInnings || 1;
+
+        // ROOT CAUSE FIX: Only rehydrate if cloud is STRICTLY ahead OR local store has no innings.
+        // Previously, when we synced a ball to the cloud, matchMeta.live_data updated,
+        // which triggered this effect and called initializeMatch, resetting the store.
+        const cloudIsAhead =
+          cloudInnings > localInnings ||
+          (cloudInnings === localInnings && cloudBalls > localBalls);
+        const localIsEmpty = !store.innings1;
+
+        if (!localIsEmpty && !cloudIsAhead) {
+          // Local state is equal to or ahead of cloud — skip rehydration.
+          return;
+        }
 
         if (cloudInnings < localInnings) {
           console.log("[Scorer] Rehydration blocked: Cloud innings is behind local state.");
@@ -1307,17 +1331,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           return;
         }
 
-        console.log('[Scorer] Match is live in DB. Rehydrating store from live_data...');
-        
+        console.log(`[Scorer] Rehydration: Cloud(${cloudBalls} balls, inn${cloudInnings}) > Local(${localBalls} balls, inn${localInnings}). Rehydrating...`);
+
         // PERMANENT RESOLUTION LAW: Resolve IDs to Names/Logos from master data
         const groundMeta = grounds.find(g => g.id === matchMeta.groundId);
         const opponentMeta = allOpponents.find((o: any) => o.id === matchMeta.opponentId || o.name === matchMeta.opponentName);
-        
+
         const resolvedGroundName = groundMeta?.name || matchMeta.venue || 'Local Ground';
         const resolvedOpponentName = opponentMeta?.name || matchMeta.opponentName || 'OPPONENT';
         const resolvedAwayLogo = matchMeta.opponentLogo || opponentMeta?.logoUrl || '';
 
-        // live_data has innings - reinitialize the full store state
         store.initializeMatch({
           matchId: matchMeta.id,
           matchType: matchMeta.matchFormat || 'T20',
@@ -1331,18 +1354,37 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           awayLogo: resolvedAwayLogo,
           liveData: ld
         });
-        // setSetupStep(null) will fire on next render when store.innings1 is set
       }
     }
-  }, [!!store.innings1, store.matchId, matchMeta?.status, matchMeta?.live_data]);
+  // Depend on ball-count primitives rather than the full live_data object to prevent
+  // the effect from firing every time we write to the cloud.
+  }, [
+    !!store.innings1,
+    store.matchId,
+    matchMeta?.status,
+    store.innings1?.totalBalls,
+    store.innings2?.totalBalls,
+    (matchMeta?.live_data as any)?.innings1?.totalBalls,
+    (matchMeta?.live_data as any)?.innings2?.totalBalls,
+    (matchMeta?.live_data as any)?.currentInnings,
+  ]);
+
+  // Keep the cloud live_data in a ref so syncToDatabase doesn't need it as a dep.
+  // Without this, every cloud write updated matchMeta.live_data → recreated the
+  // syncToDatabase callback → triggered the sync effect → called syncToDatabase again.
+  useEffect(() => {
+    cloudLiveDataRef.current = matchMeta?.live_data ?? null;
+  }, [matchMeta?.live_data]);
 
   const syncToDatabase = useCallback(
     async (state: any) => {
       if (!activeMatchId) return;
 
-      // GUARDED SYNC: Only push if local totalBalls >= Cloud totalBalls
+      // GUARDED SYNC: Only push if local totalBalls >= Cloud totalBalls.
+      // Read cloud state from the ref to avoid adding matchMeta to the dep array.
       const localBalls = (state.innings1?.totalBalls || 0) + (state.innings2?.totalBalls || 0);
-      const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
+      const cloudBalls = ((cloudLiveDataRef.current as any)?.innings1?.totalBalls || 0) +
+                         ((cloudLiveDataRef.current as any)?.innings2?.totalBalls || 0);
 
       if (cloudBalls > localBalls) {
         console.warn(`[Sync] Stale overwrite prevented: Cloud(${cloudBalls}) > Local(${localBalls})`);
@@ -1358,7 +1400,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         setIsSyncing(false);
       }
     },
-    [activeMatchId, matchMeta?.live_data]
+    [activeMatchId] // matchMeta?.live_data intentionally removed; read via ref instead
   );
 
   // Fetch opponent players when we know the opponent ID
@@ -1375,7 +1417,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     });
   }, [matchMeta?.opponentId]);
 
-  // Fix: Prevent the infinite sync loop by using a ref to track the last synced ball count
+  // Prevent the infinite sync loop by using a ref to track the last synced ball count.
   const lastSyncedBallCount = useRef<number>(-1);
 
   useEffect(() => {
@@ -1384,6 +1426,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       lastSyncedBallCount.current = currentBalls;
       syncToDatabase(store);
     }
+  // syncToDatabase is now stable (only depends on activeMatchId), so this effect
+  // only fires when the ball count genuinely increases.
   }, [store.innings1?.totalBalls, store.innings2?.totalBalls, syncToDatabase]);
 
   const handleUpdateMatchStatus = async (status: MatchStatus) => {
