@@ -49,6 +49,7 @@ import {
 import { useStore } from '../store/StoreProvider';
 import { useMatchCenter } from '../store/matchStore';
 import { useTournamentStore } from '../store/tournamentStore';
+import { useOpponentStore } from '../store/opponentStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { UniversalScorecard } from './UniversalScorecard';
 import _ from 'lodash';
@@ -1008,7 +1009,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [showMatchSummaryModal, setShowMatchSummaryModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const lastSplashRef = useRef<string | null>(null);
-  const [allOpponents, setAllOpponents] = useState<any[]>([]);
   const [commentaryTemplates, setCommentaryTemplates] = useState<CommentaryTemplate[]>([]);
   const [nextCommentarySuggestions, setNextCommentarySuggestions] = useState<Record<CommentaryEventType, string[]>>({
     FOUR: [], SIX: [], WICKET: [], DOT: [], SINGLE: [], DOUBLE: [], TRIPLE: [], MILESTONE: []
@@ -1038,9 +1038,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   };
 
   useEffect(() => {
-    import('../services/storageService').then(({ getOpponents }) => {
-      getOpponents().then(data => setAllOpponents(data || [])).catch(console.error);
-    });
+    // Master data is now automatically synced by the stores, 
+    // we don't need to manually fetch opponents into a local state here.
   }, []);
 
   useEffect(() => {
@@ -1213,7 +1212,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const resolvedTournament = resolveTournament(meta.tournamentId, meta.tournament);
       const resolvedGroundName = resolveGroundName(meta.groundId, meta.venue);
       
-      const opponentMeta = (allOpponents || []).find(o => String(o.id) === String(meta.opponentId) || o.name === meta.opponentName);
+      const opponentMeta = (allOpponents || []).find((o: any) => String(o.id) === String(meta.opponentId) || o.name === meta.opponentName);
       const resolvedOpponentName = (opponentMeta?.name && opponentMeta.name !== 'OPPONENT') ? opponentMeta.name : (meta.opponentName === 'OPPONENT' ? 'SAUDI KNIGHTS' : (meta.opponentName || 'SAUDI KNIGHTS'));
       const resolvedAwayLogo = meta.opponentLogo || opponentMeta?.logoUrl || '';
 
@@ -1297,7 +1296,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         
         // PERMANENT RESOLUTION LAW: Resolve IDs to Names/Logos from master data
         const groundMeta = grounds.find(g => g.id === matchMeta.groundId);
-        const opponentMeta = allOpponents.find(o => o.id === matchMeta.opponentId || o.name === matchMeta.opponentName);
+        const opponentMeta = allOpponents.find((o: any) => o.id === matchMeta.opponentId || o.name === matchMeta.opponentName);
         
         const resolvedGroundName = groundMeta?.name || matchMeta.venue || 'Local Ground';
         const resolvedOpponentName = opponentMeta?.name || matchMeta.opponentName || 'OPPONENT';
@@ -2665,7 +2664,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const bowlerStats = currentInnings?.bowlingStats[store.currentBowlerId || ''] || { overs: 0, runs: 0, wickets: 0 };
 
 
-  const isQueueFull = store.offlineQueue && store.offlineQueue.length >= 10 && rootStore.tournaments.isOffline;
+  const isQueueFull = store.offlineQueue && store.offlineQueue.length >= 10 && isOfflineStore;
 
   return (
     <DashboardContainer>
