@@ -2145,8 +2145,21 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </div>
 
               {(() => {
-                const firstInningsBatTeamId = (tossWinner === 'home' && tossChoice === 'Bat') || (tossWinner === 'away' && tossChoice === 'Bowl') ? 'HOME' : 'AWAY';
-                const batTeamId = store.innings1 ? (firstInningsBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeamId;
+                // V5 ROBUST DERIVATION: Determine who bats now based on toss and innings
+                const getInningsBattingTeam = () => {
+                  const firstInningsBatTeam = (String(tossWinner).toLowerCase() === 'home' && String(tossChoice).toLowerCase() === 'bat') || 
+                                              (String(tossWinner).toLowerCase() === 'away' && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
+                  
+                  // Only flip if innings1 is truly active/completed
+                  const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
+                  if (isFirstInningsDone) {
+                    return firstInningsBatTeam === 'HOME' ? 'AWAY' : 'HOME';
+                  }
+                  return firstInningsBatTeam;
+                };
+
+                const batTeamId = getInningsBattingTeam();
+                const batTeamName = batTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || matchMeta?.opponentName || 'OPPONENT');
                 const batSquadIds = batTeamId === 'HOME' ? homeXI : awayXI;
                 const batPool = batTeamId === 'HOME'
                   ? (players || []).filter((p: any) => (batSquadIds || []).includes(p.id))
@@ -2154,7 +2167,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
                 return (
                   <>
-                    <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Striker & Non-Striker ({batTeamId === 'HOME' ? 'Indian Strikers' : (store.opponentName || matchMeta?.opponentName || 'OPPONENT')})</p>
+                    <div style={{ background: 'rgba(250, 176, 5, 0.1)', border: '1px solid rgba(250, 176, 5, 0.2)', padding: '10px 16px', borderRadius: 12, marginBottom: 20 }}>
+                       <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', opacity: 0.8, textTransform: 'uppercase' }}>Current Batting Team</p>
+                       <p style={{ margin: '4px 0 0', fontSize: '1rem', fontWeight: 900, color: '#FFF' }}>{batTeamName}</p>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 12 }}>Select Striker & Non-Striker</p>
                     <SelectionGrid>
                       {batPool.map((p: any) => (
                         <PlayerCard
@@ -2199,9 +2216,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </div>
 
               {(() => {
-                const firstBatTeamId = (tossWinner === 'home' && tossChoice === 'Bat') || (tossWinner === 'away' && tossChoice === 'Bowl') ? 'HOME' : 'AWAY';
-                const batTeamId = store.innings1 ? (firstBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : firstBatTeamId;
-                const bowlTeamId = batTeamId === 'HOME' ? 'AWAY' : 'HOME';
+                const getInningsBowlingTeam = () => {
+                   const firstInningsBatTeam = (String(tossWinner).toLowerCase() === 'home' && String(tossChoice).toLowerCase() === 'bat') || 
+                                               (String(tossWinner).toLowerCase() === 'away' && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
+                   
+                   const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
+                   const batTeamId = isFirstInningsDone ? (firstInningsBatTeam === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeam;
+                   return batTeamId === 'HOME' ? 'AWAY' : 'HOME';
+                };
+
+                const bowlTeamId = getInningsBowlingTeam();
+                const bowlTeamName = bowlTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || matchMeta?.opponentName || 'OPPONENT');
                 const bowlSquadIds = bowlTeamId === 'HOME' ? homeXI : awayXI;
                 const bowlPool = bowlTeamId === 'HOME'
                   ? (players || []).filter((p: any) => (bowlSquadIds || []).includes(p.id))
@@ -2209,7 +2234,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
                 return (
                   <>
-                    <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 8 }}>Select Opening Bowler ({bowlTeamId === 'HOME' ? 'Indian Strikers' : (store.opponentName || matchMeta?.opponentName || 'OPPONENT')})</p>
+                    <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.2)', padding: '10px 16px', borderRadius: 12, marginBottom: 20 }}>
+                       <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 900, color: '#38BDF8', opacity: 0.8, textTransform: 'uppercase' }}>Current Bowling Team</p>
+                       <p style={{ margin: '4px 0 0', fontSize: '1rem', fontWeight: 900, color: '#FFF' }}>{bowlTeamName}</p>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 12 }}>Select Opening Bowler</p>
                     <SelectionGrid>
                       {bowlPool.map((p: any) => (
                         <PlayerCard
