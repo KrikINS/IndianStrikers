@@ -1124,11 +1124,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Escape hatch: if no innings for >4s, reveal action buttons instead of infinite spinner.
   // MUST be here (before any early returns) to satisfy React Rules of Hooks.
+  // IMPORTANT: Do NOT reference `currentInnings` here — it is declared at line ~1521 (TDZ crash).
+  // Use store.innings1 + store.currentInnings (available via selectors) instead.
+  const _hasInnings = store.currentInnings === 1 ? !!store.innings1 : !!store.innings2;
   useEffect(() => {
-    if (currentInnings) { setSyncTimedOut(false); return; }
+    if (_hasInnings) { setSyncTimedOut(false); return; }
     const t = setTimeout(() => setSyncTimedOut(true), 4000);
     return () => clearTimeout(t);
-  }, [!!currentInnings]);
+  }, [_hasInnings]);
 
   // Ref to hold the latest cloud live_data WITHOUT adding it as a useCallback dependency.
   // This breaks the: sync → cloud update → matchMeta change → syncToDatabase recreated → sync cycle.
