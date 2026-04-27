@@ -121,7 +121,7 @@ export interface UnifiedMatchStore extends MatchScorerState {
     updateMatchSettings: (data: Partial<MatchScorerState>) => void;
     setToss: (winnerId: string | null, choice: 'Bat' | 'Bowl' | null) => void;
     startInnings: (num: 1 | 2, batId: string, bowlId: string, strId: string, nStrId: string, bwlId: string) => void;
-    recordBall: (payload: any) => void;
+    recordBall: (payload: any) => Promise<void>;
     recordPenalty: (team: 'batting' | 'bowling', runs: number) => void;
     undoLastBall: () => void;
     switchStriker: () => void;
@@ -534,7 +534,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         }
     },
 
-    recordBall: (payload) => {
+    recordBall: async (payload) => {
         const state = get();
         const m = state.matches.find(x => x.id === state.matchId);
         if (m?.isLocked) return;
