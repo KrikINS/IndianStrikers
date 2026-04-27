@@ -8,8 +8,14 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
 const app = express();
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ limit: '100mb', extended: true }));
+
+// ─── PAYLOAD LIMITS ────────────────────────────────────────────────────────────
+// MUST be the FIRST middleware registered — before cors, authGuard, or any router.
+// Without this at the top, Node/Express uses the default 100kb limit and
+// returns 413 Payload Too Large before the request reaches any route handler.
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// ───────────────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 4001;
 
 const allowedOrigins = [

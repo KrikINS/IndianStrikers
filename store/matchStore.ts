@@ -844,31 +844,59 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
     prepareSyncPayload: () => {
         const state = get();
-        // Return ONLY the essentials for scoring rehydration
-        return {
-            matchId: state.matchId,
-            matchType: state.matchType,
-            tournament: state.tournament,
-            ground: state.ground,
-            opponentName: state.opponentName,
-            maxOvers: state.maxOvers,
+
+        // ── DESTRUCTIVE FILTER ──────────────────────────────────────────────────
+        // Only extract the bare minimum needed to rehydrate a live scoring session.
+        // NEVER include: squadPlayers, opponentPlayers, matches, historyStack,
+        // currentUser (has photoURL), or any nested objects not needed for scoring.
+        const payload = {
+            // Match identity
+            matchId:        state.matchId,
+            matchType:      state.matchType,
+            tournament:     state.tournament,
+            ground:         state.ground,
+            opponentName:   state.opponentName,
+            maxOvers:       state.maxOvers,
+            targetScore:    state.targetScore ?? 0,
+
+            // Toss
             toss: state.toss,
+
+            // Live innings blobs (the real data)
             innings1: state.innings1,
             innings2: state.innings2,
             currentInnings: state.currentInnings,
-            strikerId: state.strikerId,
-            nonStrikerId: state.nonStrikerId,
+
+            // Active player IDs only — never full player objects
+            strikerId:      state.strikerId,
+            nonStrikerId:   state.nonStrikerId,
             currentBowlerId: state.currentBowlerId,
-            isFreeHit: state.isFreeHit,
-            isFinished: state.isFinished,
-            homeXI: (state.homeXI || []).map(p => typeof p === 'object' ? (p as any).id : p),
-            awayXI: (state.awayXI || []).map(p => typeof p === 'object' ? (p as any).id : p),
-            targetScore: state.targetScore,
-            useWagonWheel: state.useWagonWheel,
+
+            // Flags
+            isFreeHit:          state.isFreeHit,
+            isFinished:         state.isFinished,
             isWaitingForBowler: state.isWaitingForBowler,
+            useWagonWheel:      state.useWagonWheel,
             wagonWheelQuickSave: state.wagonWheelQuickSave,
-            partnership_notified: state.partnership_notified
+
+            // XI — IDs only, never full player objects
+            homeXI: (state.homeXI || []).map(p => (typeof p === 'object' && p !== null) ? (p as any).id : p),
+            awayXI: (state.awayXI || []).map(p => (typeof p === 'object' && p !== null) ? (p as any).id : p),
+
+            // Milestone tracking (tiny)
+            partnership_notified: state.partnership_notified ?? [],
         };
+
+        // ── 50 KB SIZE GUARD ────────────────────────────────────────────────────
+        const serialized = JSON.stringify(payload);
+        const sizeKb = Math.round(serialized.length / 1024);
+        if (sizeKb > 50) {
+            console.warn(`[prepareSyncPayload] WARNING: payload is ${sizeKb}kb — exceeds 50kb target. Check innings1/innings2 history arrays.`);
+        } else {
+            console.log(`[prepareSyncPayload] Payload size: ${sizeKb}kb ✓`);
+        }
+
+        return payload;
     }
 }));
 

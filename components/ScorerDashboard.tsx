@@ -1022,6 +1022,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
   const [showMatchSummaryModal, setShowMatchSummaryModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [syncTimedOut, setSyncTimedOut] = useState(false);
   const lastSplashRef = useRef<string | null>(null);
   const [commentaryTemplates, setCommentaryTemplates] = useState<CommentaryTemplate[]>([]);
   const [nextCommentarySuggestions, setNextCommentarySuggestions] = useState<Record<CommentaryEventType, string[]>>({
@@ -2753,8 +2754,46 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const isLocked = (matches || []).find(m => m.id === activeMatchId)?.isLocked;
 
+  // Escape hatch: if we've been stuck without innings for >4s, show action buttons
+  React.useEffect(() => {
+    if (currentInnings) { setSyncTimedOut(false); return; }
+    const t = setTimeout(() => setSyncTimedOut(true), 4000);
+    return () => clearTimeout(t);
+  }, [!!currentInnings]);
+
   if (!currentInnings) {
-    if (setupStep !== null) return null; // Component handles its own setup view
+    // If setup is active, let the setup UI render (return null here lets the outer
+    // setup view take over — but only if setupStep is a real step, not 'preview').
+    if (setupStep !== null && setupStep !== 'preview') return null;
+
+    // Timed-out: show actionable escape instead of infinite spinner
+    if (syncTimedOut) {
+      return (
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#001F3F', color: '#FFF', gap: 16, padding: 24 }}>
+          <div style={{ fontSize: '2rem' }}>🏏</div>
+          <p style={{ fontWeight: 900, fontSize: '1rem', letterSpacing: 1, textAlign: 'center' }}>NO INNINGS DATA FOUND</p>
+          <p style={{ opacity: 0.5, fontSize: '0.75rem', textAlign: 'center', maxWidth: 280 }}>
+            The match is live but has no innings recorded yet.
+            Start the innings setup to begin scoring.
+          </p>
+          <button
+            onClick={() => { setSyncTimedOut(false); setSetupStep('toss'); }}
+            style={{ marginTop: 8, padding: '12px 32px', background: '#FAB005', color: '#001F3F', fontWeight: 900, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: '0.85rem', letterSpacing: 1, textTransform: 'uppercase' }}
+          >
+            Setup Innings →
+          </button>
+          <button
+            onClick={() => navigate('/match-center')}
+            style={{ padding: '10px 24px', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontWeight: 700, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: '0.75rem' }}
+          >
+            ← Back to Match Centre
+          </button>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      );
+    }
+
+    // Still within the 4-second grace period — show the spinner
     return (
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#001F3F', color: '#FFF' }}>
         <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#FAB005', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />

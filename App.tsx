@@ -340,9 +340,9 @@ const AppInternal: React.FC = () => {
     const [teamLogo, setTeamLogo] = useState<string>('');
     const [isOffline, setIsOffline] = useState(false);
 
-    useEffect(() => {
+    /* useEffect(() => {
         resetZombieMatches();
-    }, [resetZombieMatches]);
+    }, [resetZombieMatches]); */
 
     const loadData = async () => {
         try {
