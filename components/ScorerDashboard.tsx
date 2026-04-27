@@ -1122,6 +1122,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncQueue, setSyncQueue] = useState<number>(0);
 
+  // Escape hatch: if no innings for >4s, reveal action buttons instead of infinite spinner.
+  // MUST be here (before any early returns) to satisfy React Rules of Hooks.
+  useEffect(() => {
+    if (currentInnings) { setSyncTimedOut(false); return; }
+    const t = setTimeout(() => setSyncTimedOut(true), 4000);
+    return () => clearTimeout(t);
+  }, [!!currentInnings]);
+
   // Ref to hold the latest cloud live_data WITHOUT adding it as a useCallback dependency.
   // This breaks the: sync → cloud update → matchMeta change → syncToDatabase recreated → sync cycle.
   const cloudLiveDataRef = useRef<any>(null);
@@ -2753,13 +2761,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
 
   const isLocked = (matches || []).find(m => m.id === activeMatchId)?.isLocked;
-
-  // Escape hatch: if we've been stuck without innings for >4s, show action buttons
-  React.useEffect(() => {
-    if (currentInnings) { setSyncTimedOut(false); return; }
-    const t = setTimeout(() => setSyncTimedOut(true), 4000);
-    return () => clearTimeout(t);
-  }, [!!currentInnings]);
 
   if (!currentInnings) {
     // If setup is active, let the setup UI render (return null here lets the outer
