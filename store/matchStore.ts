@@ -257,16 +257,27 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     addMatch: async (match) => {
         const tempId = (match as any).id || crypto.randomUUID();
         const localMatch = { ...match, id: tempId, status: match.status || 'upcoming' };
+        
+        // OPTIMISTIC UPDATE: Add immediately to local state
         set((state) => ({ matches: [...state.matches, localMatch as ScheduledMatch] }));
+        
         try {
             const savedMatch = await api.addMatch(match);
+            
+            // SYNC UPDATE: Replace temp with real server data
             set((state) => ({
                 matches: state.matches.map(m => m.id === tempId ? savedMatch : m)
             }));
+            
+            // REFRESH: Force a background sync to ensure tournament links etc are clean
+            get().syncWithCloud().catch(() => {});
+            
             return savedMatch.id;
         } catch (e) {
             console.error("Cloud save failed:", e);
-            return tempId;
+            // Revert optimistic update on failure
+            set((state) => ({ matches: state.matches.filter(m => m.id !== tempId) }));
+            throw e;
         }
     },
 
@@ -529,7 +540,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         if (updatedState.matchId) {
             api.updateMatch(updatedState.matchId, { 
                 live_data: updatedState.prepareSyncPayload(), 
-                last_updated: new Date().toISOString() 
+                last_updated: new Date().toISOString(),
+                force_upsert: true
             }).catch(console.error);
         }
     },
@@ -696,14 +708,15 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
         try {
             const payload = state.prepareSyncPayload();
+            // FORCE UPSERT: Overwrite cloud data with local state regardless of versioning
             await api.updateMatch(state.matchId, { 
                 live_data: payload, 
-                last_updated: new Date().toISOString() 
+                last_updated: new Date().toISOString(),
+                force_upsert: true // Signal to backend to prioritize this payload
             });
-            console.log("[Store] Sync successful");
+            console.log("[Store] Force Sync successful");
         } catch (err) {
-            console.error("[Store] Sync failed:", err);
-            // Re-throw to allow caller to handle if needed
+            console.error("[Store] Force Sync failed:", err);
             throw err;
         }
     },
@@ -728,7 +741,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         if (updatedState.matchId) {
             api.updateMatch(updatedState.matchId, { 
                 live_data: updatedState.prepareSyncPayload(), 
-                last_updated: new Date().toISOString() 
+                last_updated: new Date().toISOString(),
+                force_upsert: true
             }).catch(console.error);
         }
     },
@@ -748,7 +762,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         if (updatedState.matchId) {
             api.updateMatch(updatedState.matchId, { 
                 live_data: updatedState.prepareSyncPayload(), 
-                last_updated: new Date().toISOString() 
+                last_updated: new Date().toISOString(),
+                force_upsert: true
             }).catch(console.error);
         }
     },

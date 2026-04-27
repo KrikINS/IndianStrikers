@@ -258,6 +258,7 @@ export interface ScheduledMatch {
   live_data?: any;
   live_state?: any;
   last_updated?: string;
+  force_upsert?: boolean;
 }
 
 export interface FieldPosition {

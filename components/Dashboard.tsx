@@ -428,7 +428,7 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
 
 // --- Main Dashboard Component ---
 export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }: DashboardProps) {
-  const { squadPlayers, fetchPlayers } = useStore();
+  const { squadPlayers, fetchPlayers, matches, syncWithCloud } = useStore();
   const { legacy, tournaments, grounds } = useMasterData();
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   const [selectedHero, setSelectedHero] = useState<any>(null);
@@ -436,17 +436,14 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const heroPosterRef = useRef<HTMLDivElement>(null);
-  const [nextMatch, setNextMatch] = useState<ScheduledMatch | null>(null);
   const [performerData, setPerformerData] = useState<{ tournamentName: string, performers: any[] }>({ tournamentName: '', performers: [] });
   const [legacyStats, setLegacyStats] = useState<any[]>([]);
-  const [carouselMatches, setCarouselMatches] = useState<ScheduledMatch[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [opp, allMatches, perf, legacy] = await Promise.all([
+        const [opp, perf, legacy] = await Promise.all([
           getOpponents(), 
-          getMatches(),
           getTournamentPerformers(),
           getLegacyStats(),
           fetchPlayers()
@@ -454,34 +451,43 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         setOpponents(opp);
         setPerformerData(perf);
         setLegacyStats(legacy || []);
-
-        // Filter for Carousel: Live + Last 5 Completed
-        const live = (allMatches || []).filter(m => m.status === 'live');
-        const completed = (allMatches || [])
-          .filter(m => m.status === 'completed' && !m.is_test)
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-          .slice(0, 5);
-        setCarouselMatches([...live, ...completed]);
-
-        // Existing Next Match Logic
-        const priorityMatch = (allMatches || [])
-          .filter(m => (m.status === 'live' || (m.status === 'upcoming' && !m.is_test)))
-          .sort((a, b) => {
-            if (a.status === 'live' && b.status !== 'live') return -1;
-            if (b.status === 'live' && a.status !== 'live') return 1;
-            return new Date(a.date).getTime() - new Date(b.date).getTime();
-          })[0];
-
-        if (priorityMatch) {
-          const opponent = opp.find(o => o.id === priorityMatch.opponentId);
-          setNextMatch({ ...priorityMatch, opponentName: priorityMatch.opponentName || (opponent ? opponent.name : 'Opponent') });
-        }
+        
+        // Initial match sync
+        syncWithCloud().catch(console.error);
       } catch (e) {
         console.error("Dashboard Load Error:", e);
       }
     };
     loadData();
-  }, [fetchPlayers]);
+  }, [fetchPlayers, syncWithCloud]);
+
+  // REACTIVE DERIVATION: Automatically updates when store.matches changes
+  const carouselMatches = useMemo(() => {
+    const live = (matches || []).filter(m => m.status === 'live');
+    const completed = (matches || [])
+      .filter(m => m.status === 'completed' && !m.is_test)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+    return [...live, ...completed];
+  }, [matches]);
+
+  const nextMatch = useMemo(() => {
+    const priorityMatch = (matches || [])
+      .filter(m => (m.status === 'live' || (m.status === 'upcoming' && !m.is_test)))
+      .sort((a, b) => {
+        if (a.status === 'live' && b.status !== 'live') return -1;
+        if (b.status === 'live' && a.status !== 'live') return 1;
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      })[0];
+
+    if (!priorityMatch) return null;
+    
+    const opponent = opponents.find(o => o.id === priorityMatch.opponentId);
+    return { 
+      ...priorityMatch, 
+      opponentName: priorityMatch.opponentName || (opponent ? opponent.name : 'Opponent') 
+    };
+  }, [matches, opponents]);
 
   const enrichedPlayers = useMemo(() => {
     if (!squadPlayers) return [];
