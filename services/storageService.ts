@@ -191,8 +191,7 @@ export const getPlayers = async (): Promise<Player[]> => {
         wicketsTaken: p.wickets_taken,
         isCaptain: p.is_captain,
         isViceCaptain: p.is_vice_captain,
-        // TEMPORARY FIX: Relaxing isActive filter for Match Setup roster visibility
-        isActive: true, // (p.is_active !== false && p.is_active !== 0 && p.is_active !== 'false') && p.status !== 'inactive',
+        isActive: (p.is_active !== false && p.is_active !== 0 && p.is_active !== 'false') && p.status !== 'inactive',
         isAvailable: p.is_available,
         battingStats: p.batting_stats,
         bowlingStats: p.bowling_stats,

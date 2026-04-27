@@ -2144,7 +2144,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
               <SelectionGrid>
                 {((setupStep === 'squad_home' ? (players || []) : (opponentPlayers || [])) as any[])
-                  .filter((p: any) => roleFilter === 'All' || p.role === roleFilter)
+                  .filter((p: any) => {
+                    const matchesRole = roleFilter === 'All' || p.role === roleFilter;
+                    // Only filter by isActive for the Home Team (Indian Strikers)
+                    const isActuallyActive = setupStep === 'squad_away' || (p.isActive && p.status !== 'inactive');
+                    return matchesRole && isActuallyActive;
+                  })
                   .map((p: any) => {
                     const currentXI = setupStep === 'squad_home' ? homeXI : awayXI;
                     const isSelected = (currentXI || []).includes(p.id);
@@ -2211,7 +2216,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
               <button
                 onClick={() => {
-                  const pool = setupStep === 'squad_home' ? players : opponentPlayers;
+                  const pool = setupStep === 'squad_home' 
+                    ? (players || []).filter((p: any) => p.isActive && p.status !== 'inactive')
+                    : (opponentPlayers || []);
                   const selectedIds = pool.slice(0, 11).map((p: any) => p.id);
                   store.updateMatchSettings({
                     [setupStep === 'squad_home' ? 'homeXI' : 'awayXI']: selectedIds

@@ -1614,19 +1614,19 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                           <thead className="text-white font-bold uppercase sticky top-0 z-20 shadow-sm">
                             <tr className="bg-[#1e3a8a]">
                               <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-30 min-w-[140px]">Tournament</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Mat</th>
+                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Mat</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Inn</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden md:table-cell">NO</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">NO</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-blue-800/80">Runs</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden md:table-cell">Balls</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Balls</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Ave</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">SR</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">HS</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden lg:table-cell">100s</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden lg:table-cell">50s</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden lg:table-cell">0s</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden lg:table-cell">4s</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a] hidden lg:table-cell">6s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">100s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">50s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">0s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">4s</th>
+                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">6s</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1671,17 +1671,17 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                       </td>
                                       <td className="p-2 md:p-3 text-center">{t.batting.matches}</td>
                                       <td className="p-2 md:p-3 text-center">{t.batting.innings}</td>
-                                      <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.notOuts}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.notOuts}</td>
                                       <td className="p-2 md:p-3 text-center font-bold text-black whitespace-nowrap">{t.batting.runs}</td>
-                                      <td className="p-2 md:p-3 text-center hidden md:table-cell">{t.batting.balls || '-'}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.balls || '-'}</td>
                                       <td className="p-2 md:p-3 text-center">{t.batting.average}</td>
                                       <td className="p-2 md:p-3 text-center">{t.batting.strikeRate}</td>
                                       <td className="p-2 md:p-3 text-center">{t.batting.highestScore}</td>
-                                      <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.hundreds}</td>
-                                      <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.fifties}</td>
-                                      <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.ducks || '0'}</td>
-                                      <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.fours || '0'}</td>
-                                      <td className="p-2 md:p-3 text-center hidden lg:table-cell">{t.batting.sixes || '0'}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.hundreds}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.fifties}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.ducks || '0'}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.fours || '0'}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.batting.sixes || '0'}</td>
                                     </tr>
                                     {expandedTournamentId === t.tournamentId && t.matchBreakdown && (
                                       <tr className="bg-slate-50/50">
@@ -1757,19 +1757,19 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                   </button>
                                 )}
                               </td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.matches || '0'}</td>
+                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.matches || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.innings || '0'}</td>
-                              <td className="p-2 md:p-3 text-center hidden md:table-cell">{detailedStats?.total?.batting.notOuts || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.notOuts || '0'}</td>
                               <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{detailedStats?.total?.batting.runs || '0'}</td>
-                              <td className="p-2 md:p-3 text-center hidden md:table-cell">{detailedStats?.total?.batting.balls || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.balls || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.average || '0.00'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.strikeRate || '0.00'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.highestScore || '0'}</td>
-                              <td className="p-2 md:p-3 text-center hidden lg:table-cell">{detailedStats?.total?.batting.hundreds || '0'}</td>
-                              <td className="p-2 md:p-3 text-center hidden lg:table-cell">{detailedStats?.total?.batting.fifties || '0'}</td>
-                              <td className="p-2 md:p-3 text-center hidden lg:table-cell">{detailedStats?.total?.batting.ducks || '0'}</td>
-                              <td className="p-2 md:p-3 text-center hidden lg:table-cell">{detailedStats?.total?.batting.fours || '0'}</td>
-                              <td className="p-2 md:p-3 text-center hidden lg:table-cell">{detailedStats?.total?.batting.sixes || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.hundreds || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.fifties || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.ducks || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.fours || '0'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.sixes || '0'}</td>
                             </tr>
                           </tfoot>
                         </table>
@@ -1780,7 +1780,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                           <thead className="text-white font-bold uppercase sticky top-0 z-20 shadow-sm">
                             <tr className="bg-[#1e3a8a]">
                               <th className="p-2 md:p-3 whitespace-nowrap sticky left-0 bg-[#1e3a8a] z-30 min-w-[140px]">Tournament</th>
-                              <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Mat</th>
+                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Mat</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Inn</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Overs</th>
                               <th className="p-2 md:p-3 text-center whitespace-nowrap bg-[#1e3a8a]">Maid</th>
@@ -1834,16 +1834,16 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                                           ) : t.tournamentName}
                                         </div>
                                       </td>
-                                      <td className="p-2 md:p-3 text-center">{t.bowling.matches}</td>
+                                       <td className="p-2 md:p-3 text-center">{t.bowling.matches}</td>
                                       <td className="p-2 md:p-3 text-center">{t.bowling.innings}</td>
                                       <td className="p-2 md:p-3 text-center">{t.bowling.overs}</td>
                                       <td className="p-2 md:p-3 text-center">{t.bowling.maidens || '0'}</td>
                                       <td className="p-2 md:p-3 text-center font-bold text-black">{t.bowling.runs || '0'}</td>
                                       <td className="p-2 md:p-3 text-center font-bold text-slate-700 whitespace-nowrap">{t.bowling.wickets}</td>
-                                      <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.strikeRate || '-'}</td>
                                       <td className="p-2 md:p-3 text-center">{t.bowling.average}</td>
                                       <td className="p-2 md:p-3 text-center">{t.bowling.economy}</td>
-                                      <td className="p-2 md:p-3 text-center">{t.bowling.strikeRate || '-'}</td>
+                                      <td className="p-2 md:p-3 text-center">{t.bowling.bestBowling}</td>
                                       <td className="p-2 md:p-3 text-center">{t.bowling.fourWickets || '0'}</td>
                                       <td className="p-2 md:p-3 text-center">{t.bowling.fiveWickets || '0'}</td>
                                     </tr>
@@ -1897,16 +1897,16 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                               <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30 flex items-center justify-between gap-2 min-h-[44px]">
                                 <span>Career Total</span>
                               </td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.matches || '0'}</td>
+                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.matches || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.innings || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.overs || '0.0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.maidens || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.runs || '0'}</td>
                               <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{detailedStats?.total?.bowling.wickets || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.bestBowling || '-'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.strikeRate || '0.00'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.average || '0.00'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.economy || '0.00'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.strikeRate || '0.00'}</td>
+                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.bestBowling || '-'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.fourWickets || '0'}</td>
                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.bowling.fiveWickets || '0'}</td>
                             </tr>
