@@ -3392,6 +3392,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </div>
 
           <div style={{ background: '#001F3F', margin: '0 0 2px', borderRadius: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {/* SYSTEM NARRATIVE FEED */}
+            {store.systemCommentary && store.systemCommentary.length > 0 && (
+              <div className="bg-slate-900/80 px-3 py-2 max-h-[80px] overflow-y-auto custom-scrollbar border-b border-white/5 space-y-1.5 flex flex-col-reverse">
+                {[...store.systemCommentary].reverse().map(comm => (
+                  <div key={comm.id} className="text-xs text-white/90 font-medium leading-tight">
+                    <span className="text-amber-500/80 font-bold mr-1.5 text-[10px]">
+                      {new Date(comm.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </span>
+                    {comm.text}
+                  </div>
+                ))}
+              </div>
+            )}
             <TimelineContainer ref={timelineRef} id="match-timeline" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               {(() => {
                 const balls = currentInnings?.history || [];

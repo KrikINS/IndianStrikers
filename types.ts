@@ -46,6 +46,12 @@ export interface CommentaryTemplate {
   created_at?: string;
 }
 
+export interface SystemCommentary {
+  id: string;
+  timestamp: string;
+  text: string;
+}
+
 export type MatchStatus = 'upcoming' | 'live' | 'completed';
 export type MatchStage = 'League' | 'Quarter-Final' | 'Semi-Final' | 'Final';
 
@@ -259,6 +265,7 @@ export interface ScheduledMatch {
   live_state?: any;
   last_updated?: string;
   force_upsert?: boolean;
+  systemCommentary?: SystemCommentary[];
 }
 
 export interface FieldPosition {

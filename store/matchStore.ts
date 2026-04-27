@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Player, ScheduledMatch, Performer, MatchStatus, MatchStage, FullScorecardData, BallRecord, AppUser } from '../types';
+import { Player, ScheduledMatch, Performer, MatchStatus, MatchStage, FullScorecardData, BallRecord, AppUser, SystemCommentary } from '../types';
 import * as api from '../services/storageService';
 
 const ensureId = (id: any): string => {
@@ -85,6 +85,7 @@ export interface MatchScorerState {
     partnership_notified: number[];
     pendingIntroduction: string | null;
     offlineQueue: BallRecord[];
+    systemCommentary: SystemCommentary[];
     
     // Central Auth State
     currentUser: AppUser | null;
@@ -141,6 +142,7 @@ export interface UnifiedMatchStore extends MatchScorerState {
     setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
     prepareSyncPayload: () => any;
     syncToDatabase: () => Promise<void>;
+    addSystemCommentary: (text: string) => void;
 
     // Player Management Actions
     fetchPlayers: () => Promise<void>;
@@ -181,6 +183,7 @@ const INITIAL_SCORER_STATE: MatchScorerState = {
     partnership_notified: [],
     pendingIntroduction: null,
     offlineQueue: [],
+    systemCommentary: [],
 
     // Central Auth
     currentUser: null,
@@ -224,6 +227,7 @@ const getScoringResetState = (state: UnifiedMatchStore) => ({
     partnership_notified: [],
     pendingIntroduction: null,
     offlineQueue: [],
+    systemCommentary: [],
     // Preserve management state
     squadPlayers: state.squadPlayers,
     opponentPlayers: state.opponentPlayers,
@@ -535,6 +539,25 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             partnership_notified: []
         });
 
+        const state = get();
+        const getPlayerName = (id: string) => state.squadPlayers.find(p => p.id === id)?.name || state.opponentPlayers.find(p => p.id === id)?.name || 'Unknown Player';
+
+        if (num === 1 && state.systemCommentary?.length === 0) {
+            const tossWinnerName = state.toss.winnerId === 'HOME' ? 'Home Team' : (state.toss.winnerId === 'AWAY' ? state.opponentName : 'Toss Winner');
+            get().addSystemCommentary(`🏏 Toss Update: ${tossWinnerName} has won the toss and elected to ${state.toss.choice?.toLowerCase() || 'bat'} first.`);
+            
+            const homeXINames = (state.homeXI || []).map(id => getPlayerName(id)).join(', ');
+            const awayXINames = (state.awayXI || []).map(id => getPlayerName(id)).join(', ');
+            if (homeXINames) get().addSystemCommentary(`📋 Playing XI - Home: ${homeXINames}`);
+            if (awayXINames) get().addSystemCommentary(`📋 Playing XI - Away: ${awayXINames}`);
+        }
+
+        const strikerName = getPlayerName(ensureId(strId));
+        const nonStrikerName = getPlayerName(ensureId(nStrId));
+        const bowlerName = getPlayerName(ensureId(bwlId));
+        get().addSystemCommentary(`🚀 Game On: ${strikerName} and ${nonStrikerName} are at the crease. ${bowlerName} has the ball in hand. Let's go!`);
+
+
         // Force Sync on Innings Start
         const updatedState = get();
         if (updatedState.matchId) {
@@ -603,8 +626,18 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             const victimId = outPlayerId || state.strikerId;
             if (victimId === sId) sId = newBatterId || null;
             else nsId = newBatterId || null;
+            
+            const getPlayerName = (id: string) => state.squadPlayers.find(p => p.id === id)?.name || state.opponentPlayers.find(p => p.id === id)?.name || 'Unknown';
+            
             if (sId && !nextInnings.battingStats[sId]) {
-                nextInnings.battingStats[sId] = { id: sId, name: 'Unknown', runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: Object.keys(nextInnings.battingStats).length, fifty_notified: false, hundred_notified: false };
+                const newName = getPlayerName(sId);
+                nextInnings.battingStats[sId] = { id: sId, name: newName, runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: Object.keys(nextInnings.battingStats).length, fifty_notified: false, hundred_notified: false };
+                get().addSystemCommentary(`🏏 New Batsman: ${newName} arrives at the crease.`);
+            }
+            if (nsId && !nextInnings.battingStats[nsId] && nsId !== sId) {
+                const newName = getPlayerName(nsId);
+                nextInnings.battingStats[nsId] = { id: nsId, name: newName, runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: Object.keys(nextInnings.battingStats).length, fifty_notified: false, hundred_notified: false };
+                get().addSystemCommentary(`🏏 New Batsman: ${newName} arrives at the crease.`);
             }
         }
         if (runs % 2 !== 0) {
@@ -775,8 +808,22 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         set((state) => ({ strikerId: state.nonStrikerId, nonStrikerId: state.strikerId }));
     },
 
-    setNewBowler: (id, name) => set({ currentBowlerId: id, isWaitingForBowler: false }),
-    changeBowler: (id) => set({ currentBowlerId: id }),
+    setNewBowler: (id, name) => {
+        const state = get();
+        if (state.currentBowlerId !== id) {
+            const bowlerName = name || state.squadPlayers.find(p => p.id === id)?.name || state.opponentPlayers.find(p => p.id === id)?.name || 'New Bowler';
+            get().addSystemCommentary(`🔄 Bowling Change: ${bowlerName} comes into the attack.`);
+        }
+        set({ currentBowlerId: id, isWaitingForBowler: false });
+    },
+    changeBowler: (id) => {
+        const state = get();
+        if (state.currentBowlerId !== id) {
+            const bowlerName = state.squadPlayers.find(p => p.id === id)?.name || state.opponentPlayers.find(p => p.id === id)?.name || 'New Bowler';
+            get().addSystemCommentary(`🔄 Bowling Change: ${bowlerName} comes into the attack.`);
+        }
+        set({ currentBowlerId: id });
+    },
     retireBatter: (id) => {
         const state = get();
         const m = state.matches.find(x => x.id === state.matchId);
@@ -810,6 +857,24 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             if (type === 'hundred') nextInnings.battingStats[batterId].hundred_notified = true;
         }
         set({ [key]: nextInnings });
+    },
+
+    addSystemCommentary: (text: string) => {
+        const timestamp = new Date().toISOString();
+        const id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(7);
+        set((state) => ({
+            systemCommentary: [{ id, timestamp, text }, ...(state.systemCommentary || [])]
+        }));
+        
+        // Atomic sync
+        const updatedState = get();
+        if (updatedState.matchId) {
+            api.updateMatch(updatedState.matchId, { 
+                live_data: updatedState.prepareSyncPayload(), 
+                last_updated: new Date().toISOString(),
+                force_upsert: true
+            }).catch(console.error);
+        }
     },
 
     // PLAYER MANAGEMENT IMPLEMENTATION
@@ -958,6 +1023,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
             // Milestone tracking (tiny)
             partnership_notified: state.partnership_notified ?? [],
+            
+            // Commentary
+            systemCommentary: state.systemCommentary ?? []
         };
 
         // ── 50 KB SIZE GUARD ────────────────────────────────────────────────────
