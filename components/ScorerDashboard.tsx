@@ -1542,7 +1542,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }, [matchMeta?.live_data]);
 
   const syncToDatabase = useCallback(
-    async (state: any) => {
+    async (state: any, force = false) => {
       if (!activeMatchId) return;
 
       // GUARDED SYNC: Only push if local totalBalls >= Cloud totalBalls.
@@ -1551,7 +1551,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const cloudBalls = ((cloudLiveDataRef.current as any)?.innings1?.totalBalls || 0) +
                          ((cloudLiveDataRef.current as any)?.innings2?.totalBalls || 0);
 
-      if (cloudBalls > localBalls) {
+      if (!force && cloudBalls > localBalls) {
         console.warn(`[Sync] Stale overwrite prevented: Cloud(${cloudBalls}) > Local(${localBalls})`);
         return;
       }

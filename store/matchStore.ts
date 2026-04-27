@@ -140,6 +140,7 @@ export interface UnifiedMatchStore extends MatchScorerState {
     clearOfflineQueue: () => void;
     setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
     prepareSyncPayload: () => any;
+    syncToDatabase: () => Promise<void>;
 
     // Player Management Actions
     fetchPlayers: () => Promise<void>;
@@ -686,13 +687,24 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
         // --- FORCE IMMEDIATE CLOUD SYNC ---
         // V2.6.8: Push to database immediately after state update
-        const updatedState = get();
-        if (updatedState.matchId) {
-            const payload = updatedState.prepareSyncPayload();
-            api.updateMatch(updatedState.matchId, { 
+        await get().syncToDatabase();
+    },
+
+    syncToDatabase: async () => {
+        const state = get();
+        if (!state.matchId) return;
+
+        try {
+            const payload = state.prepareSyncPayload();
+            await api.updateMatch(state.matchId, { 
                 live_data: payload, 
                 last_updated: new Date().toISOString() 
-            }).catch(err => console.error("[Store] Immediate sync failed:", err));
+            });
+            console.log("[Store] Sync successful");
+        } catch (err) {
+            console.error("[Store] Sync failed:", err);
+            // Re-throw to allow caller to handle if needed
+            throw err;
         }
     },
 
