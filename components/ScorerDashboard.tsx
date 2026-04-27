@@ -1857,8 +1857,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const currentBowlTeamId = currentBatTeamId === 'HOME' ? 'AWAY' : 'HOME';
 
       store.updateMatchSettings({ maxOvers: tempMaxOvers });
+      // V5 ROBUSTNESS: Only start 2nd innings if 1st innings actually has data
+      const isFirstInningsComplete = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
       store.startInnings(
-        store.innings1 ? 2 : 1,
+        isFirstInningsComplete ? 2 : 1,
         currentBatTeamId,
         currentBowlTeamId,
         selStriker!,
@@ -2871,26 +2873,26 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </button>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%' }}>
               <img
                 src={store.homeLogo || '/INS%20LOGO.PNG'}
                 style={{ width: 30, height: 30, objectFit: 'contain' }}
-                alt="H"
+                alt="HOME"
               />
-              <span style={{ fontSize: '12px', fontWeight: 900, color: 'rgba(248, 248, 249, 1)', letterSpacing: '-0.2px' }}>
-                {store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT').toUpperCase()}
+              <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
+                INDIAN STRIKERS
               </span>
-              <span style={{ fontSize: '9px', fontWeight: 900, color: '#FAB005' }}>VS</span>
-              <span style={{ fontSize: '12px', fontWeight: 900, color: 'rgba(252, 253, 253, 1)', letterSpacing: '-0.2px' }}>
-                {store.innings1?.battingTeamId === 'AWAY' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT').toUpperCase()}
+              <span style={{ fontSize: '10px', fontWeight: 900, color: '#FAB005', opacity: 0.8 }}>VS</span>
+              <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
+                {(store.opponentName || matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
               </span>
               {store.awayLogo || matchMeta?.opponentLogo ? (
                 <img
                   src={store.awayLogo || matchMeta?.opponentLogo}
                   style={{ width: 30, height: 30, objectFit: 'contain' }}
-                  alt="A"
+                  alt="AWAY"
                 />
-              ) : <Shield size={24} color="#338feba9" />}
+              ) : <Shield size={24} color="rgba(255,255,255,0.2)" />}
             </div>
             <div style={{ fontSize: '7.5px', fontWeight: 900, opacity: 0.9, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2 }}>
               {store.toss.winnerId && (
