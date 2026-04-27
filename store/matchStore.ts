@@ -522,6 +522,15 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             },
             partnership_notified: []
         });
+
+        // Force Sync on Innings Start
+        const updatedState = get();
+        if (updatedState.matchId) {
+            api.updateMatch(updatedState.matchId, { 
+                live_data: updatedState.prepareSyncPayload(), 
+                last_updated: new Date().toISOString() 
+            }).catch(console.error);
+        }
     },
 
     recordBall: (payload) => {
@@ -656,6 +665,14 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
         const isOverComplete = nextInnings.totalBalls % 6 === 0 && isLegal && !finished;
 
+        // --- OVER END STRIKE ROTATION ---
+        // V2.6.8: If over is complete, swap striker/non-striker positions
+        if (isOverComplete) {
+            const temp = sId;
+            sId = nsId;
+            nsId = temp;
+        }
+
         set({
             [inningsKey]: nextInnings,
             strikerId: sId,
@@ -666,6 +683,17 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             pendingMilestone: milestone,
             historyStack: [...state.historyStack, prevState].slice(-20)
         });
+
+        // --- FORCE IMMEDIATE CLOUD SYNC ---
+        // V2.6.8: Push to database immediately after state update
+        const updatedState = get();
+        if (updatedState.matchId) {
+            const payload = updatedState.prepareSyncPayload();
+            api.updateMatch(updatedState.matchId, { 
+                live_data: payload, 
+                last_updated: new Date().toISOString() 
+            }).catch(err => console.error("[Store] Immediate sync failed:", err));
+        }
     },
 
     recordPenalty: (side, runs) => {
@@ -682,6 +710,15 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         nextInnings.totalRuns += runs;
         nextInnings.extras.penalty += runs;
         set({ [targetKey]: nextInnings });
+
+        // Force Sync on Penalty
+        const updatedState = get();
+        if (updatedState.matchId) {
+            api.updateMatch(updatedState.matchId, { 
+                live_data: updatedState.prepareSyncPayload(), 
+                last_updated: new Date().toISOString() 
+            }).catch(console.error);
+        }
     },
 
     undoLastBall: () => {
@@ -693,6 +730,15 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         if (historyStack.length === 0) return;
         const prevState = historyStack[historyStack.length - 1];
         set({ ...prevState, historyStack: historyStack.slice(0, -1) });
+
+        // Force Sync on Undo
+        const updatedState = get();
+        if (updatedState.matchId) {
+            api.updateMatch(updatedState.matchId, { 
+                live_data: updatedState.prepareSyncPayload(), 
+                last_updated: new Date().toISOString() 
+            }).catch(console.error);
+        }
     },
 
     switchStriker: () => {

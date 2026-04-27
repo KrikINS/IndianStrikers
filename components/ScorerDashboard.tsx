@@ -1477,29 +1477,26 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         const localInnings = store.currentInnings || 1;
         const cloudInnings = ld.currentInnings || 1;
 
-        // ROOT CAUSE FIX: Only rehydrate if cloud is STRICTLY ahead OR local store has no innings.
-        // Previously, when we synced a ball to the cloud, matchMeta.live_data updated,
-        // which triggered this effect and called initializeMatch, resetting the store.
+        // V2.6.8: Ensure absolute priority for Cloud Data on first load or if cloud is ahead
         const cloudIsAhead =
           cloudInnings > localInnings ||
           (cloudInnings === localInnings && cloudBalls > localBalls);
         const localIsEmpty = !store.innings1;
 
-        if (!localIsEmpty && !cloudIsAhead) {
-          // Local state is equal to or ahead of cloud — skip rehydration.
-          return;
+        // If local is empty, ALWAYS rehydrate from cloud
+        if (localIsEmpty) {
+            console.log("[Scorer] Initial Load: Local state empty, rehydrating from Cloud...");
+        } else if (!cloudIsAhead) {
+            // Local state is ahead or equal — skip rehydration to prevent "snap-back"
+            return;
         }
 
-        if (cloudInnings < localInnings) {
+        if (cloudInnings < localInnings && !localIsEmpty) {
           console.log("[Scorer] Rehydration blocked: Cloud innings is behind local state.");
           return;
         }
-        if (cloudInnings === localInnings && cloudBalls < localBalls) {
-          console.log("[Scorer] Rehydration blocked: Cloud ball count is behind local state.");
-          return;
-        }
 
-        console.log(`[Scorer] Rehydration: Cloud(${cloudBalls} balls, inn${cloudInnings}) > Local(${localBalls} balls, inn${localInnings}). Rehydrating...`);
+        console.log(`[Scorer] Rehydration: Cloud(${cloudBalls} balls, inn${cloudInnings}) > Local(${localBalls} balls, inn${localInnings}). Syncing...`);
 
         // PERMANENT RESOLUTION LAW: Resolve IDs to Names/Logos from master data
         const groundMeta = grounds.find(g => g.id === matchMeta.groundId);
@@ -1586,19 +1583,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       }).catch(console.error);
     });
   }, [matchMeta?.opponentId]);
-
-  // Prevent the infinite sync loop by using a ref to track the last synced ball count.
-  const lastSyncedBallCount = useRef<number>(-1);
-
-  useEffect(() => {
-    const currentBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
-    if (currentBalls > 0 && currentBalls !== lastSyncedBallCount.current) {
-      lastSyncedBallCount.current = currentBalls;
-      syncToDatabase(store);
-    }
-  // syncToDatabase is now stable (only depends on activeMatchId), so this effect
-  // only fires when the ball count genuinely increases.
-  }, [store.innings1?.totalBalls, store.innings2?.totalBalls, syncToDatabase]);
 
   const handleUpdateMatchStatus = async (status: MatchStatus) => {
     if (activeMatchId) {
