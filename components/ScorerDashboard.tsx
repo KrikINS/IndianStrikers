@@ -1834,7 +1834,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           (awayXI?.length || 0) === 11 && 
                           selStriker && selNonStriker && selBowler;
 
-    const handleStartMatch = () => {
+    const handleStartMatch = async () => {
       if (!isReadyToStart) {
         toast.error("Please complete all setup selections first.");
         return;
@@ -1851,16 +1851,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
       const homeBatting = (winnerId === 'HOME' && tossChoice === 'Bat') || (winnerId === 'AWAY' && tossChoice === 'Bowl');
       const startBatTeamId = homeBatting ? 'HOME' : 'AWAY';
-      const startBowlTeamId = startBatTeamId === 'HOME' ? 'AWAY' : 'HOME';
 
-      const currentBatTeamId = store.innings1 ? (startBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : startBatTeamId;
+      // V5 SINGLE SOURCE OF TRUTH: Compute innings number ONCE before any store mutation
+      const isFirstInningsComplete = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
+      const inningsNum: 1 | 2 = isFirstInningsComplete ? 2 : 1;
+
+      // For innings 2, the batting team is the team that bowled in innings 1
+      const currentBatTeamId = isFirstInningsComplete
+        ? (startBatTeamId === 'HOME' ? 'AWAY' : 'HOME')
+        : startBatTeamId;
       const currentBowlTeamId = currentBatTeamId === 'HOME' ? 'AWAY' : 'HOME';
 
       store.updateMatchSettings({ maxOvers: tempMaxOvers });
-      // V5 ROBUSTNESS: Only start 2nd innings if 1st innings actually has data
-      const isFirstInningsComplete = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
       store.startInnings(
-        isFirstInningsComplete ? 2 : 1,
+        inningsNum,
         currentBatTeamId,
         currentBowlTeamId,
         selStriker!,
@@ -1870,7 +1874,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
       // Persist the toss outcome and match status to the metadata store
       if (activeMatchId) {
-        // Fetch fresh state to ensure new innings is included
+        // Small delay to let Zustand commit the startInnings update
+        await new Promise(resolve => setTimeout(resolve, 50));
         const freshStore = useMatchCenter.getState();
         
         // V5 ROBUSTNESS: Clean the store state of functions before persisting
@@ -1888,7 +1893,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             strikerId: selStriker!,
             nonStrikerId: selNonStriker!,
             currentBowlerId: selBowler!,
-            currentInnings: freshStore.innings1 ? 2 : 1
+            currentInnings: inningsNum  // Use the pre-computed value, NOT freshStore
           } as any
         });
       }
