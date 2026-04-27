@@ -94,10 +94,10 @@ function WeeklyPerformerCarousel({
   const [isPaused, setIsPaused] = useState(false);
   
   const getCardWidth = () => {
-    if (typeof window === 'undefined') return 300;
-    if (window.innerWidth < 380) return 250;
-    if (window.innerWidth < 420) return 270;
-    return 290;
+    if (typeof window === 'undefined') return 220;
+    if (window.innerWidth < 380) return 200;
+    if (window.innerWidth < 420) return 210;
+    return 220;
   };
 
   const CARD_WIDTH = getCardWidth();
@@ -875,7 +875,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 md:gap-14 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-14 relative z-10">
           {/* Batting Leaderboard */}
           <div className="space-y-6">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">

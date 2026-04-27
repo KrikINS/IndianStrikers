@@ -18,6 +18,10 @@
 }
 
 /* Additional custom styles */
+html {
+  font-size: 12px; /* 75% of standard 16px, enabling high-density UI globally */
+}
+
 body {
   margin: 0;
   -webkit-font-smoothing: antialiased;

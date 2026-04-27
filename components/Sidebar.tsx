@@ -155,7 +155,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
       {/* Sidebar */}
       <aside className={`
         sticky top-0 h-screen bg-slate-900 text-white z-30 transition-all duration-300 ease-in-out flex flex-col shrink-0 shadow-xl border-r border-slate-800
-        ${isCollapsed ? 'w-16' : 'w-60 md:w-64'}
+        ${isCollapsed ? 'w-16' : 'w-48 md:w-52'}
       `}>
         <div className={`pt-4 pb-4 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30 relative transition-all ${isCollapsed ? 'items-center px-2' : ''}`}>
           <button
@@ -226,7 +226,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
           </div>
         </div>
 
-        <nav className={`mt-2 px-4 space-y-2 flex-1 overflow-y-auto custom-scrollbar transition-all ${isCollapsed ? 'px-2' : ''}`}>
+        <nav className={`mt-2 px-4 space-y-1 flex-1 overflow-y-auto custom-scrollbar transition-all ${isCollapsed ? 'px-2' : ''}`}>
           {/* Admin Switcher */}
           {userRole === 'admin' && (
             <button 
@@ -262,7 +262,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
               title={isCollapsed ? link.label : ""}
               className={({ isActive }) => `
                 flex items-center rounded-xl transition-all duration-200 relative
-                ${isCollapsed ? 'justify-center p-3' : 'space-x-3 px-4 py-3'}
+                ${isCollapsed ? 'justify-center p-2' : 'space-x-3 px-4 py-2'}
                 ${isActive
                   ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-900/50' + (isCollapsed ? '' : ' translate-x-1')
                   : 'text-slate-400 hover:bg-white/5 hover:text-white' + (isCollapsed ? '' : ' hover:translate-x-1')
@@ -293,7 +293,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
                 title={isCollapsed ? link.label : ""}
                 className={({ isActive }) => `
                   flex items-center rounded-xl transition-all duration-200 relative
-                  ${isCollapsed ? 'justify-center p-3' : 'space-x-3 px-4 py-3'}
+                  ${isCollapsed ? 'justify-center p-2' : 'space-x-3 px-4 py-2'}
                   ${isActive
                     ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-900/50' + (isCollapsed ? '' : ' translate-x-1')
                     : 'text-slate-400 hover:bg-white/5 hover:text-white' + (isCollapsed ? '' : ' hover:translate-x-1')
