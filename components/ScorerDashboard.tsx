@@ -672,8 +672,9 @@ const PlayerCard = styled.div<{ $selected?: boolean; $disabled?: boolean }>`
   border: 1px solid ${props => props.$selected ? '#FAB005' : 'rgba(255,255,255,0.1)'};
   border-radius: 12px;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
   cursor: ${props => props.$disabled ? 'not-allowed' : 'pointer'};
   opacity: ${props => props.$disabled ? 0.5 : 1};
   transition: all 0.2s;
@@ -1234,6 +1235,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   // One-shot guard: prevent re-fetching players every time squadPlayers becomes empty.
   const hasFetchedPlayersRef = useRef(false);
 
+  // One-shot rehydration guard: Ensure we only pull from cloud once on mount
+  const hasInitialRehydrated = useRef(false);
+
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -1470,33 +1474,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
     // --- RESUME LOGIC (Device B): Match is live in DB but local store is empty or behind ---
     if (activeMatchId === store.matchId && matchMeta?.status === 'live' && matchMeta?.live_data) {
+      if (hasInitialRehydrated.current) return;
+
       const ld = matchMeta.live_data as any;
+      const localIsEmpty = !store.innings1;
+
+      if (!localIsEmpty) return; // If local state exists, we assume master role immediately
+
       if (ld && ld.innings1) {
-        const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
-        const cloudBalls = (ld.innings1?.totalBalls || 0) + (ld.innings2?.totalBalls || 0);
-        const localInnings = store.currentInnings || 1;
-        const cloudInnings = ld.currentInnings || 1;
-
-        // V2.6.8: Ensure absolute priority for Cloud Data on first load or if cloud is ahead
-        const cloudIsAhead =
-          cloudInnings > localInnings ||
-          (cloudInnings === localInnings && cloudBalls > localBalls);
-        const localIsEmpty = !store.innings1;
-
-        // If local is empty, ALWAYS rehydrate from cloud
-        if (localIsEmpty) {
-            console.log("[Scorer] Initial Load: Local state empty, rehydrating from Cloud...");
-        } else if (!cloudIsAhead) {
-            // Local state is ahead or equal — skip rehydration to prevent "snap-back"
-            return;
-        }
-
-        if (cloudInnings < localInnings && !localIsEmpty) {
-          console.log("[Scorer] Rehydration blocked: Cloud innings is behind local state.");
-          return;
-        }
-
-        console.log(`[Scorer] Rehydration: Cloud(${cloudBalls} balls, inn${cloudInnings}) > Local(${localBalls} balls, inn${localInnings}). Syncing...`);
+        console.log("[Scorer] Sync-on-Mount Rehydration: Loading initial state from Cloud...");
+        hasInitialRehydrated.current = true;
 
         // PERMANENT RESOLUTION LAW: Resolve IDs to Names/Logos from master data
         const groundMeta = grounds.find(g => g.id === matchMeta.groundId);
@@ -1521,18 +1508,25 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         });
       }
     }
-  // Depend on ball-count primitives rather than the full live_data object to prevent
-  // the effect from firing every time we write to the cloud.
+  // Handover dependency: reactive to cloud ball counts
   }, [
-    !!store.innings1,
     store.matchId,
+    matchMeta?.id,
     matchMeta?.status,
-    store.innings1?.totalBalls,
-    store.innings2?.totalBalls,
     (matchMeta?.live_data as any)?.innings1?.totalBalls,
     (matchMeta?.live_data as any)?.innings2?.totalBalls,
     (matchMeta?.live_data as any)?.currentInnings,
   ]);
+
+  // Real-Time Polling: Check for cloud updates every 30 seconds for seamless handover
+  useEffect(() => {
+    if (!activeMatchId) return;
+    const interval = setInterval(() => {
+      console.log("[Sync] Periodic cloud poll triggered...");
+      syncWithCloud().catch(console.error);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [activeMatchId, syncWithCloud]);
 
   // Keep the cloud live_data in a ref so syncToDatabase doesn't need it as a dep.
   // Without this, every cloud write updated matchMeta.live_data → recreated the
@@ -1542,19 +1536,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }, [matchMeta?.live_data]);
 
   const syncToDatabase = useCallback(
-    async (state: any, force = false) => {
+    async (state: any) => {
       if (!activeMatchId) return;
 
-      // GUARDED SYNC: Only push if local totalBalls >= Cloud totalBalls.
-      // Read cloud state from the ref to avoid adding matchMeta to the dep array.
-      const localBalls = (state.innings1?.totalBalls || 0) + (state.innings2?.totalBalls || 0);
-      const cloudBalls = ((cloudLiveDataRef.current as any)?.innings1?.totalBalls || 0) +
-                         ((cloudLiveDataRef.current as any)?.innings2?.totalBalls || 0);
-
-      if (!force && cloudBalls > localBalls) {
-        console.warn(`[Sync] Stale overwrite prevented: Cloud(${cloudBalls}) > Local(${localBalls})`);
-        return;
-      }
+      // LAST WRITE WINS: Local state always overwrites cloud state during live scoring.
+      // This ensures the current device is the source of truth.
 
       try {
         setIsSyncing(true);

@@ -679,7 +679,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         const isOverComplete = nextInnings.totalBalls % 6 === 0 && isLegal && !finished;
 
         // --- OVER END STRIKE ROTATION ---
-        // V2.6.8: If over is complete, swap striker/non-striker positions
+        // Guaranteed swap at over end: non-striker becomes striker for next over
         if (isOverComplete) {
             const temp = sId;
             sId = nsId;
