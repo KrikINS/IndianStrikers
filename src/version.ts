@@ -1,1 +1,1 @@
-export const APP_VERSION = "v2.6.6-Stateless-Rehydrated";
+export const APP_VERSION = "v2.6.7-Payload-Optimized";
