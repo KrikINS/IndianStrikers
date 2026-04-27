@@ -1370,7 +1370,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     return Object.values(overStats).sort((a, b) => a.over - b.over);
   }, [store.currentInnings, store.innings1, store.innings2]);
 
-  const wormData = useMemo(() => {
+  const analyticsWormData = useMemo(() => {
     const transformHistory = (history: any[]) => {
       let cumulative = 0;
       return (history || []).map((ball: any, idx: number) => {
@@ -4974,9 +4974,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700 }} />
                           
                           {/* 1st Innings Line */}
-                          {wormData.innings1.length > 0 && (
+                          {analyticsWormData.innings1.length > 0 && (
                             <Line 
-                              data={wormData.innings1}
+                              data={analyticsWormData.innings1}
                               name="Innings 1"
                               type="monotone" 
                               dataKey="runs" 
@@ -4988,9 +4988,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           )}
 
                           {/* 2nd Innings Line */}
-                          {store.currentInnings === 2 && wormData.innings2.length > 0 && (
+                          {store.currentInnings === 2 && analyticsWormData.innings2.length > 0 && (
                             <Line 
-                              data={wormData.innings2}
+                              data={analyticsWormData.innings2}
                               name="Innings 2"
                               type="monotone" 
                               dataKey="runs" 
