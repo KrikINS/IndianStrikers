@@ -41,10 +41,14 @@ import {
   ResponsiveContainer, 
   LineChart, 
   Line, 
+  BarChart,
+  Bar,
+  Cell,
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
+  Legend,
   ReferenceLine 
 } from 'recharts';
 import { useStore } from '../store/StoreProvider';
@@ -948,6 +952,94 @@ const SettingsInput = styled.div`
   }
 `;
 
+const AnalyticsDrawerOverlay = styled(motion.div)`
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(12px);
+  z-index: 6000;
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const AnalyticsDrawerContent = styled(motion.div)`
+  width: 100%;
+  max-width: 500px;
+  height: 100%;
+  background: #001F3F;
+  border-left: 2px solid #FAB005;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+  box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+  color: #FFFFFF;
+`;
+
+const AnalyticsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 12px;
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: #FAB005;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+`;
+
+const ChartContainer = styled.div`
+  background: rgba(255,255,255,0.03);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,0.05);
+  
+  h3 {
+    font-size: 0.8rem;
+    font-weight: 800;
+    margin-bottom: 16px;
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+`;
+
+const FloatingAnalyticsButton = styled.button`
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #FAB005;
+  color: #001F3F;
+  border: none;
+  border-radius: 12px 0 0 12px;
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: -4px 0 15px rgba(250, 176, 5, 0.4);
+  font-weight: 900;
+  font-size: 0.6rem;
+  writing-mode: vertical-rl;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+
+  &:hover {
+    padding-right: 12px;
+    background: #FFD43B;
+  }
+`;
+
 // Types already imported at the top
 
 const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ matchId: propMatchId, teamLogo }) => {
@@ -1019,6 +1111,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [scorecardTab, setScorecardTab] = useState<'scorecard' | 'commentary'>('scorecard');
   const [showInningsReview, setShowInningsReview] = useState(false);
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
+  const [showAnalyticsDrawer, setShowAnalyticsDrawer] = useState(false);
+  const [activeChart, setActiveChart] = useState<'manhattan' | 'worm'>('manhattan');
   const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
   const [showMatchSummaryModal, setShowMatchSummaryModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -1255,6 +1349,48 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const matchMeta = (matches || []).find(m => m.id === activeMatchId);
   const venueName = typeof matchMeta?.venue === 'object' ? (matchMeta.venue as any)?.name : (matchMeta?.venue || 'LOCAL GROUND');
+
+  // V2.6.7-Payload-Optimized: DATA TRANSFORMATION FOR ANALYTICS
+  const manhattanData = useMemo(() => {
+    const currentInn = store.currentInnings === 1 ? store.innings1 : store.innings2;
+    if (!currentInn || !currentInn.history) return [];
+
+    const overStats: Record<number, { over: number, runs: number, wickets: number }> = {};
+    
+    // Group history by over number
+    currentInn.history.forEach((ball: any) => {
+      const overNum = ball.overNumber + 1; // 1-indexed for chart
+      if (!overStats[overNum]) {
+        overStats[overNum] = { over: overNum, runs: 0, wickets: 0 };
+      }
+      overStats[overNum].runs += (ball.runs || 0) + (ball.extraRuns || 0);
+      if (ball.isWicket) overStats[overNum].wickets += 1;
+    });
+
+    return Object.values(overStats).sort((a, b) => a.over - b.over);
+  }, [store.currentInnings, store.innings1, store.innings2]);
+
+  const wormData = useMemo(() => {
+    const transformHistory = (history: any[]) => {
+      let cumulative = 0;
+      return (history || []).map((ball: any, idx: number) => {
+        cumulative += (ball.runs || 0) + (ball.extraRuns || 0);
+        return {
+          ballIndex: idx + 1,
+          over: ball.overNumber + (ball.ballNumber / 6),
+          runs: cumulative
+        };
+      });
+    };
+
+    const inn1Worm = transformHistory(store.innings1?.history || []);
+    const inn2Worm = transformHistory(store.innings2?.history || []);
+
+    return {
+      innings1: inn1Worm,
+      innings2: inn2Worm
+    };
+  }, [store.innings1, store.innings2]);
 
   // Sync with URL ID: Initialize match data into store when navigating from a match card
   useEffect(() => {
@@ -2853,6 +2989,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   try {
     return (
     <DashboardContainer>
+      {/* V2.6.7-Premium: Floating Analytics Triggers */}
+      <FloatingAnalyticsButton 
+        onClick={() => { setActiveChart('manhattan'); setShowAnalyticsDrawer(true); }}
+        style={{ top: '40%' }}
+      >
+        MANHATTAN
+      </FloatingAnalyticsButton>
+      <FloatingAnalyticsButton 
+        onClick={() => { setActiveChart('worm'); setShowAnalyticsDrawer(true); }}
+        style={{ top: '60%' }}
+      >
+        WORM CHART
+      </FloatingAnalyticsButton>
+
       {isQueueFull && (
         <PremiumModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ zIndex: 9999 }}>
           <div style={{ background: '#001F3F', padding: '32px', borderRadius: '16px', textAlign: 'center', border: '2px solid #FF4D4D' }}>
@@ -4733,6 +4883,145 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         )}
 
         <MilestoneOverlay ref={milestoneRef} />
+
+        <AnimatePresence>
+          {showAnalyticsDrawer && (
+            <AnalyticsDrawerOverlay
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAnalyticsDrawer(false)}
+            >
+              <AnalyticsDrawerContent
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                onClick={e => e.stopPropagation()}
+              >
+                <AnalyticsHeader>
+                  <h2>{activeChart === 'manhattan' ? 'MATCH HEARTBEAT' : 'CHASE PROFILE'}</h2>
+                  <IconButton onClick={() => setShowAnalyticsDrawer(false)} style={{ color: '#FFF' }}>
+                    <X size={20} />
+                  </IconButton>
+                </AnalyticsHeader>
+
+                <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+                  <FilterChip 
+                    $active={activeChart === 'manhattan'} 
+                    onClick={() => setActiveChart('manhattan')}
+                  >
+                    MANHATTAN
+                  </FilterChip>
+                  <FilterChip 
+                    $active={activeChart === 'worm'} 
+                    onClick={() => setActiveChart('worm')}
+                  >
+                    WORM CHART
+                  </FilterChip>
+                </div>
+
+                <ChartContainer style={{ flex: 1, minHeight: 400, display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ marginBottom: 20 }}>
+                    {activeChart === 'manhattan' ? 'Runs Per Over (Including Extras)' : 'Cumulative Progress Comparison'}
+                  </h3>
+                  
+                  <div style={{ flex: 1, width: '100%', minHeight: 300 }}>
+                    {activeChart === 'manhattan' ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={manhattanData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                          <XAxis 
+                            dataKey="over" 
+                            stroke="rgba(255,255,255,0.5)" 
+                            fontSize={10} 
+                            tickLine={false} 
+                            axisLine={false} 
+                            label={{ value: 'OVERS', position: 'insideBottom', offset: -5, fill: 'rgba(255,255,255,0.3)', fontSize: 8, fontWeight: 900 }}
+                          />
+                          <YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} tickLine={false} axisLine={false} />
+                          <Tooltip 
+                            contentStyle={{ background: '#001F3F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
+                            itemStyle={{ color: '#FAB005', fontSize: '12px', fontWeight: 700 }}
+                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                          />
+                          <Bar dataKey="runs" fill="#FAB005" radius={[4, 4, 0, 0]} barSize={16}>
+                            {manhattanData.map((entry, index) => (
+                               <Cell key={`cell-${index}`} fill={entry.wickets > 0 ? '#FF4D4D' : '#FAB005'} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                          <XAxis 
+                            dataKey="over" 
+                            type="number" 
+                            domain={[0, store.maxOvers || 20]} 
+                            stroke="rgba(255,255,255,0.5)" 
+                            fontSize={10} 
+                            tickLine={false} 
+                            axisLine={false}
+                            label={{ value: 'OVERS', position: 'insideBottom', offset: -5, fill: 'rgba(255,255,255,0.3)', fontSize: 8, fontWeight: 900 }}
+                          />
+                          <YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} tickLine={false} axisLine={false} />
+                          <Tooltip 
+                            contentStyle={{ background: '#001F3F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
+                            itemStyle={{ fontSize: '12px', fontWeight: 700 }}
+                          />
+                          <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700 }} />
+                          
+                          {/* 1st Innings Line */}
+                          {wormData.innings1.length > 0 && (
+                            <Line 
+                              data={wormData.innings1}
+                              name="Innings 1"
+                              type="monotone" 
+                              dataKey="runs" 
+                              stroke="#38BDF8" 
+                              strokeWidth={2} 
+                              dot={false}
+                              strokeDasharray={store.currentInnings === 2 ? "5 5" : "0"}
+                            />
+                          )}
+
+                          {/* 2nd Innings Line */}
+                          {store.currentInnings === 2 && wormData.innings2.length > 0 && (
+                            <Line 
+                              data={wormData.innings2}
+                              name="Innings 2"
+                              type="monotone" 
+                              dataKey="runs" 
+                              stroke="#FAB005" 
+                              strokeWidth={3} 
+                              dot={false}
+                            />
+                          )}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: 24, padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <h4 style={{ fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: 1 }}>Analytic Insight</h4>
+                    <p style={{ fontSize: '0.75rem', opacity: 0.7, margin: 0, lineHeight: 1.5 }}>
+                      {activeChart === 'manhattan' 
+                        ? "Bars show total runs per over. Red highlights indicate overs with wickets, marking momentum shifts."
+                        : "The Worm tracks cumulative progress. In Innings 2, the solid line shows the chase against the dotted target line."
+                      }
+                    </p>
+                  </div>
+                </ChartContainer>
+
+                <div style={{ marginTop: 'auto', textAlign: 'center', opacity: 0.3, fontSize: '0.6rem', fontWeight: 900, letterSpacing: 2 }}>
+                  INDIAN STRIKERS ANALYTICS ENGINE v1.0
+                </div>
+              </AnalyticsDrawerContent>
+            </AnalyticsDrawerOverlay>
+          )}
+        </AnimatePresence>
       </>
     </DashboardContainer>
     );
