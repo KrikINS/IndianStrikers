@@ -62,7 +62,7 @@ import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
 import { Player, ScheduledMatch, Ball, CommentaryTemplate, BallRecord, CommentaryEventType, MatchStatus } from '../types';
 import { toast } from 'react-hot-toast';
 import html2canvas from 'html2canvas';
-import { getRandomCommentary } from '../data/commentary';
+import { useCommentaryStore } from '../store/commentaryStore';
 import { SyncStatus } from './common/SyncStatus';
 
 const DashboardContainer = styled.div`
@@ -247,13 +247,13 @@ const generateDynamicCommentary = (player: string, runs: number, zone?: string, 
   const firstName = player.split(' ')[0];
   
   if (isWicket) {
-    const base = getRandomCommentary('WICKET');
+    const base = useCommentaryStore.getState().getRandomDialogue('WICKET');
     return `${base} ${firstName} is out! Trapped while trying to hit towards ${z}.`;
   }
   
-  const baseFour = getRandomCommentary('FOUR');
-  const baseSix = getRandomCommentary('SIX');
-  const baseDot = getRandomCommentary('DOT');
+  const baseFour = useCommentaryStore.getState().getRandomDialogue('FOUR');
+  const baseSix = useCommentaryStore.getState().getRandomDialogue('SIX');
+  const baseDot = useCommentaryStore.getState().getRandomDialogue('DOT');
 
   switch (runs) {
     case 6:
@@ -1154,6 +1154,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   useEffect(() => {
     // Master data is now automatically synced by the stores, 
     // we don't need to manually fetch opponents into a local state here.
+    useCommentaryStore.getState().fetchTemplates();
   }, []);
 
   useEffect(() => {
@@ -2567,7 +2568,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       if (list && list.length > 0) {
         comm = list[Math.floor(Math.random() * list.length)];
       } else {
-        comm = getRandomCommentary(typeKey);
+        comm = useCommentaryStore.getState().getRandomDialogue(typeKey) || "";
       }
     }
 
@@ -3395,13 +3396,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             {/* SYSTEM NARRATIVE FEED */}
             {store.systemCommentary && store.systemCommentary.length > 0 && (
               <div className="bg-slate-900/80 px-3 py-2 max-h-[80px] overflow-y-auto custom-scrollbar border-b border-white/5 space-y-1.5 flex flex-col-reverse">
-                {[...store.systemCommentary].reverse().map(comm => (
-                  <div key={comm.id} className="text-xs text-white/90 font-medium leading-tight">
+                {[...store.systemCommentary].reverse().map((comm, index) => (
+                  <motion.div 
+                    key={comm.id} 
+                    className="text-xs text-white/90 font-medium leading-tight rounded p-1"
+                    initial={index === 0 ? { backgroundColor: "rgba(16, 185, 129, 0.5)" } : false}
+                    animate={{ backgroundColor: "transparent" }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                  >
                     <span className="text-amber-500/80 font-bold mr-1.5 text-[10px]">
                       {new Date(comm.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </span>
                     {comm.text}
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}

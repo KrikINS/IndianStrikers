@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { Player, ScheduledMatch, Performer, MatchStatus, MatchStage, FullScorecardData, BallRecord, AppUser, SystemCommentary } from '../types';
+import { Player, ScheduledMatch, Performer, MatchStatus, MatchStage, FullScorecardData, BallRecord, AppUser, SystemCommentary, CommentaryEventType } from '../types';
 import * as api from '../services/storageService';
+import { useCommentaryStore } from './commentaryStore';
 
 const ensureId = (id: any): string => {
     if (!id) return '';
@@ -646,6 +647,34 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             nsId = temp;
         }
 
+        let finalCommentary = payload.commentary || '';
+
+        // --- AUTOMATED HIGHLIGHT GENERATION ---
+        if (!finalCommentary) {
+            let cat: CommentaryEventType | null = null;
+            if (isWicket) cat = 'WICKET';
+            else if (runs === 4 && subType === 'bat') cat = 'FOUR';
+            else if (runs === 6 && subType === 'bat') cat = 'SIX';
+            
+            if (cat) {
+                const dialogue = useCommentaryStore.getState().getRandomDialogue(cat);
+                if (dialogue) {
+                    const getPlayerName = (id: string) => state.squadPlayers.find(p => p.id === id)?.name || state.opponentPlayers.find(p => p.id === id)?.name || 'Unknown';
+                    const sName = getPlayerName(state.strikerId || '');
+                    const bName = getPlayerName(state.currentBowlerId || '');
+                    const zName = zone || 'the gap';
+                    
+                    finalCommentary = dialogue
+                        .replace(/\{batsman\}/g, sName)
+                        .replace(/\{bowler\}/g, bName)
+                        .replace(/\{zone\}/g, zName);
+                    
+                    // Push to the Live Narrative Feed
+                    get().addSystemCommentary(`🎙️ ${finalCommentary}`);
+                }
+            }
+        }
+
         const ballRecord: BallRecord = {
             ballIndex: nextInnings.totalBalls,
             overNumber: Math.floor((nextInnings.totalBalls - (isLegal ? 1 : 0)) / 6),
@@ -659,7 +688,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             nonStrikerId: state.nonStrikerId || undefined,
             bowlerId: state.currentBowlerId || undefined,
             isLegal,
-            commentary: payload.commentary || '',
+            commentary: finalCommentary,
             wagon_wheel_zone: zone,
             timestamp: new Date().toISOString()
         };
