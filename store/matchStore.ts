@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Player, ScheduledMatch, Performer, MatchStatus, MatchStage, FullScorecardData, BallRecord } from '../types';
+import { Player, ScheduledMatch, Performer, MatchStatus, MatchStage, FullScorecardData, BallRecord, AppUser } from '../types';
 import * as api from '../services/storageService';
 
 const ensureId = (id: any): string => {

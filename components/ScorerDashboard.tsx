@@ -72,8 +72,8 @@ const DashboardContainer = styled.div`
   font-family: 'Inter', system-ui, sans-serif;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding-bottom: 300px; // Space for fixed scoring interface
+  justify-content: flex-start;
+  padding-bottom: 320px; // Space for fixed scoring interface
   overflow-y: auto;
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
@@ -166,14 +166,14 @@ const OverSeparator = styled.div`
 
 const ScoreSection = styled.div`
   background: #ffffffff;
-  padding: 8px 16px;
+  padding: 4px 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: row;
   align-items: stretch;
   justify-content: space-between;
   flex-shrink: 0;
-  min-height: 300px;
+  min-height: 240px;
   gap: 16px;
 `;
 
@@ -385,10 +385,10 @@ const ExtraStack = styled.div`
 const ScoringBtn = styled.button<{ $variant?: 'run' | 'wicket' | 'extra' | 'undo' }>`
   width: 100%;
   height: 100%;
-  min-height: 44px;
-  border-radius: 12px;
+  min-height: 48px;
+  border-radius: 14px;
   border: none;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -3084,7 +3084,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           )}
         </AnimatePresence>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, padding: '0 8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{
               width: 8, height: 8, borderRadius: '50%',
@@ -3183,8 +3183,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           )}
 
           {/* CENTERED STATS & SCORE */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '24px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15%', width: '100%', marginBottom: 20 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15%', width: '100%', marginBottom: 10 }}>
               {/* CRR */}
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>CRR</div>
@@ -3210,9 +3210,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'scale(1.15)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'scale(1.05)' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                <MainScore style={{ fontSize: '3.6rem', margin: 0, fontWeight: 900, letterSpacing: '-2px', color: '#001F3F' }}>
+                <MainScore style={{ fontSize: '3rem', margin: 0, fontWeight: 900, letterSpacing: '-2px', color: '#001F3F' }}>
                   {currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}
                 </MainScore>
               </div>
