@@ -512,7 +512,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             
             return matchesSearch && matchesFormat && matchesTournament && matchesYear;
         });
-    }, [getSortedMatches, opponents, searchQuery, formatFilter, tournamentFilter, yearFilter]);
+    }, [getSortedMatches, opponents, searchQuery, formatFilter, tournamentFilter, yearFilter, matches]);
 
     return (
         <>
