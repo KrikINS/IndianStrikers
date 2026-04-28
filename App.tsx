@@ -182,8 +182,8 @@ const AppContent: React.FC<{
             />
           </div>
 
-          <main className={`flex-1 min-w-0 transition-all duration-300 relative h-screen overflow-y-auto ${isScorerActive ? 'p-0 h-[100dvh] overflow-hidden' : ''}`}>
-            <div className="p-3 md:p-6 lg:p-8 w-full pb-24 md:pb-8">
+          <main className={`flex-1 min-w-0 transition-all duration-300 relative h-screen flex flex-col ${isScorerActive ? 'p-0 h-[100dvh] overflow-hidden' : ''}`}>
+            <div className={`flex-1 overflow-y-auto p-3 md:p-6 lg:p-8 w-full pb-24 md:pb-8 custom-scrollbar`}>
               <Routes>
                 <Route path="/home" element={<Dashboard userRole={effectiveRole} teamLogo={teamLogo} currentUser={currentUser} />} />
                 <Route
