@@ -48,7 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 1024);
   const [pendingRequests, setPendingRequests] = useState(0);
-  
+
   const [showConfig, setShowConfig] = useState(false);
   const [cpwPassword, setCpwPassword] = useState('');
   const [cpwNewPassword, setCpwNewPassword] = useState('');
@@ -96,7 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
         setCpwConfirmPassword('');
         setCpwMessage('');
       }, 2000);
-    } catch(err: any) {
+    } catch (err: any) {
       setCpwMessage(err.message || 'Failed to update');
     } finally {
       setCpwSubmitting(false);
@@ -107,8 +107,8 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
     const file = e.target.files?.[0];
     if (file && userRole === 'admin') {
       // Basic size check (approx 2MB limit for local storage safety)
-      if (file.size > 2 * 1024 * 1024) {
-        alert("Image is too large. Please upload a logo smaller than 2MB.");
+      if (file.size > 1 * 1024 * 1024) {
+        alert("Image is too large. Please upload a logo smaller than 1MB.");
         return;
       }
 
@@ -141,37 +141,37 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
 
   mainLinks.push({ to: '/scorer', icon: <ClipboardList size={20} />, label: 'Live Scores' });
 
-    if (effectiveRole === 'admin') {
-      controlPanelLinks.push({ 
-        to: '/control-panel/grounds', 
-        icon: <Settings size={20} />, 
-        label: 'Control Panel',
-        badge: pendingRequests > 0 ? pendingRequests : undefined
-      });
-    }
+  if (effectiveRole === 'admin') {
+    controlPanelLinks.push({
+      to: '/control-panel/grounds',
+      icon: <Settings size={20} />,
+      label: 'Control Panel',
+      badge: pendingRequests > 0 ? pendingRequests : undefined
+    });
+  }
 
-    return (
+  return (
     <>
       {/* Sidebar */}
       <aside className={`
         sticky top-0 h-screen bg-slate-900 text-white z-30 transition-all duration-300 ease-in-out flex flex-col shrink-0 shadow-xl border-r border-slate-800
         ${isCollapsed ? 'w-16' : 'w-48 md:w-52'}
       `}>
-        <div className={`pt-4 pb-4 px-5 flex flex-col gap-2 shrink-0 bg-slate-950/30 relative transition-all ${isCollapsed ? 'items-center px-2' : ''}`}>
+        <div className={`pt-4 pb-4 px-5 flex flex-col gap-6 shrink-0 bg-slate-950/30 relative transition-all ${isCollapsed ? 'items-center px-2' : ''}`}>
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="flex p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all absolute -right-3 top-8 z-50 border border-slate-700 shadow-xl"
+            className="flex p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all absolute -right-5 top-18 z-50 border border-slate-700 shadow-xl"
             title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
 
           {/* Restored Team Name Section with Upload Capability */}
-          <div className={`flex items-center transition-all ${isCollapsed ? 'justify-center space-x-0' : 'space-x-3'}`}>
+          <div className={`flex items-center transition-all ${isCollapsed ? 'justify-center space-x-0' : 'space-x-'}`}>
             <div
               onClick={() => userRole === 'admin' && fileInputRef.current?.click()}
               className={`
-                w-10 h-10 bg-transparent rounded-xl flex items-center justify-center 
+                w-15 h-15 bg-transparent rounded-xl flex items-center justify-center 
                 text-white overflow-hidden shrink-0 border border-white/10 relative group
                 ${userRole === 'admin' ? 'cursor-pointer hover:border-white transition-colors' : ''}
               `}
@@ -185,13 +185,13 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
                   alt="Team Logo"
                 />
               ) : (
-                <img src="/INS%20LOGO.PNG" alt="INS" className="w-6 h-6 object-contain" />
+                <img src="/INS%20LOGO.PNG" alt="INS" className="w-16 h-16 object-contain" />
               )}
 
               {/* Admin Upload Overlay */}
               {userRole === 'admin' && (
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Upload size={14} className="text-white" />
+                  <Upload size={16} className="text-white" />
                 </div>
               )}
 
@@ -211,7 +211,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
                   <span className="text-[#4169E1]">STRIKERS</span>
                 </Link>
                 {isOffline && (
-                  <div className="flex items-center gap-1.5 mt-1 animate-pulse">
+                  <div className="flex items-center gap-3 mt-1 animate-pulse">
                     <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
                     <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Database Offline</span>
                   </div>
@@ -226,17 +226,17 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
           </div>
         </div>
 
-        <nav className={`mt-2 px-4 space-y-1 flex-1 overflow-y-auto custom-scrollbar transition-all ${isCollapsed ? 'px-2' : ''}`}>
+        <nav className={`mt-6 px-3 space-y-3 flex-1 overflow-y-auto custom-scrollbar transition-all ${isCollapsed ? 'px-2' : ''}`}>
           {/* Admin Switcher */}
           {userRole === 'admin' && (
-            <button 
+            <button
               onClick={onToggleAdminView}
               className={`
                 w-full flex items-center rounded-xl transition-all duration-300 group
-                ${isCollapsed ? 'justify-center p-3' : 'space-x-3 px-4 py-3'}
-                ${isAdminView 
-                  ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                  : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                ${isCollapsed ? 'justify-center p-2' : 'space-x-2 px-1 py-2'}
+                ${isAdminView
+                  ? 'bg-blue-400/10 text-blue-300 border border-blue-400/20'
+                  : 'bg-emerald-400/10 text-emerald-400 border border-emerald-400/20'
                 }
                 hover:scale-[1.02] active:scale-95
               `}
@@ -247,8 +247,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col items-start leading-none">
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Active View</span>
-                  <span className="font-bold text-[13px]">{isAdminView ? 'ADMIN MODE' : 'MEMBER MODE'}</span>
+                  <span className="font-bold text-[10px]">{isAdminView ? 'ADMIN MODE' : 'MEMBER MODE'}</span>
                 </div>
               )}
             </button>
@@ -262,7 +261,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
               title={isCollapsed ? link.label : ""}
               className={({ isActive }) => `
                 flex items-center rounded-xl transition-all duration-200 relative
-                ${isCollapsed ? 'justify-center p-2' : 'space-x-3 px-4 py-2'}
+                ${isCollapsed ? 'justify-center p-2' : 'space-x-2 px-1 py-3'}
                 ${isActive
                   ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-900/50' + (isCollapsed ? '' : ' translate-x-1')
                   : 'text-slate-400 hover:bg-white/5 hover:text-white' + (isCollapsed ? '' : ' hover:translate-x-1')
@@ -271,7 +270,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
             >
               <div className="shrink-0">{link.icon}</div>
               {!isCollapsed && <span className="font-medium truncate">{link.label}</span>}
-              
+
               {/* Notification Badge */}
               {(link as any).badge && (
                 <span className={`
@@ -293,7 +292,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
                 title={isCollapsed ? link.label : ""}
                 className={({ isActive }) => `
                   flex items-center rounded-xl transition-all duration-200 relative
-                  ${isCollapsed ? 'justify-center p-2' : 'space-x-3 px-4 py-2'}
+                  ${isCollapsed ? 'justify-center p-2' : 'space-x-2 px-1 py-2'}
                   ${isActive
                     ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-900/50' + (isCollapsed ? '' : ' translate-x-1')
                     : 'text-slate-400 hover:bg-white/5 hover:text-white' + (isCollapsed ? '' : ' hover:translate-x-1')
@@ -302,7 +301,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
               >
                 <div className="shrink-0">{link.icon}</div>
                 {!isCollapsed && <span className="font-medium truncate">{link.label}</span>}
-                
+
                 {/* Notification Badge */}
                 {(link as any).badge && (
                   <span className={`
@@ -317,10 +316,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
           )}
         </nav>
 
-        <UserFooter 
-          isCollapsed={isCollapsed} 
-          userRole={userRole} 
-          onSignOut={onSignOut} 
+        <UserFooter
+          isCollapsed={isCollapsed}
+          userRole={userRole}
+          onSignOut={onSignOut}
           onShowConfig={() => setShowConfig(true)}
           isJoinModalOpen={isJoinModalOpen}
           setIsJoinModalOpen={setIsJoinModalOpen}
@@ -340,7 +339,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
                 <h3 className="text-lg font-bold text-white">Change Password</h3>
               </div>
             </div>
-            
+
             <form onSubmit={handleCpwSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 pl-1">Current Password</label>
@@ -369,10 +368,10 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
   );
 };
 
-const UserFooter: React.FC<{ 
-  isCollapsed: boolean; 
-  userRole: UserRole; 
-  onSignOut: () => void; 
+const UserFooter: React.FC<{
+  isCollapsed: boolean;
+  userRole: UserRole;
+  onSignOut: () => void;
   onShowConfig: () => void;
   isJoinModalOpen: boolean;
   setIsJoinModalOpen: (open: boolean) => void;
@@ -380,7 +379,7 @@ const UserFooter: React.FC<{
   const navigate = useNavigate();
   const currentUser = useMatchCenter(state => state.currentUser);
   const squadPlayers = useMatchCenter(state => state.squadPlayers);
-  
+
   const linkedPlayer = React.useMemo(() => {
     if (!currentUser?.id) return null;
     return squadPlayers.find(p => String(p.linkedUserId) === String(currentUser.id));
@@ -435,7 +434,7 @@ const UserFooter: React.FC<{
           <button
             onClick={onShowConfig}
             title={isCollapsed ? "Change Password" : ""}
-            className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-blue-400 hover:bg-blue-950/20 rounded-lg transition-all border border-transparent hover:border-blue-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-[10px]'}`}
+            className={`flex-1 flex items-center justify-center gap-1 font-bold text-slate-500 hover:text-blue-400 hover:bg-blue-950/20 rounded-lg transition-all border border-transparent hover:border-blue-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-[8px]'}`}
           >
             <Key size={isCollapsed ? 18 : 14} />
             {!isCollapsed && <span>PASSWORD</span>}
@@ -444,7 +443,7 @@ const UserFooter: React.FC<{
         <button
           onClick={onSignOut}
           title={isCollapsed ? "Sign Out" : ""}
-          className={`flex-1 flex items-center justify-center gap-2 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-[10px]'}`}
+          className={`flex-1 flex items-center justify-center gap-1 font-bold text-slate-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg transition-all border border-transparent hover:border-red-900/30 ${isCollapsed ? 'p-2' : 'py-2 text-[8px]'}`}
         >
           <LogOut size={isCollapsed ? 18 : 14} />
           {!isCollapsed && <span>SIGN OUT</span>}
@@ -464,8 +463,8 @@ const UserFooter: React.FC<{
       )}
 
       {/* Version Display */}
-      <div className={`mt-4 pt-2 pb-2 border-t border-slate-800/50 flex flex-col items-center opacity-60 ${isCollapsed ? 'px-0' : 'px-2'}`}>
-        <span className="text-[8px] font-black tracking-[0.2em] text-slate-400 uppercase">
+      <div className={`mt-2 pt-2 pb-4 border-t border-slate-800/50 flex flex-col items-center opacity-80 ${isCollapsed ? 'px-0' : 'px-0'}`}>
+        <span className="text-[7px] font-black tracking-[0.2em] text-slate-400 uppercase">
           {isCollapsed ? APP_VERSION.split('-')[0] : APP_VERSION}
         </span>
       </div>
