@@ -367,7 +367,12 @@ const mapMatch = (m: any): ScheduledMatch => {
         stage: m.stage || (m.tournament ? 'League' : 'League'),
         venue: m.venue || '',
         opponentName: m.opponent_name || '',
-        opponentLogo: m.opponent_logo || ''
+        opponentLogo: m.opponent_logo || '',
+        live_data: m.live_data,
+        live_state: m.live_state,
+        toss_winner_id: m.toss_winner_id,
+        toss_choice: m.toss_choice,
+        is_test: m.is_test
     };
 };
 
