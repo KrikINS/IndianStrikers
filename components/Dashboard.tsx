@@ -79,20 +79,20 @@ const getRandomTagline = (type: 'batting' | 'bowling', value: number, isHatTrick
 };
 
 // --- Carousel Component for Weekly Performers (Hoisted) ---
-function WeeklyPerformerCarousel({ 
-  performers, 
+function WeeklyPerformerCarousel({
+  performers,
   onSelectHero,
   opponents,
   grounds
-}: { 
-  performers: any[], 
+}: {
+  performers: any[],
   onSelectHero: (data: any) => void,
   opponents: any[],
-  grounds: any[] 
+  grounds: any[]
 }) {
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  
+
   const getCardWidth = () => {
     if (typeof window === 'undefined') return 220;
     if (window.innerWidth < 380) return 200;
@@ -181,8 +181,8 @@ function WeeklyPerformerCarousel({
                     if (isActive) onSelectHero({
                       player,
                       statsType: hasMoreImpactFromBowling ? 'bowling' : 'batting',
-                      statsValue: hasMoreImpactFromBowling 
-                        ? `${player.wickets}/${player.bowlingRuns}` 
+                      statsValue: hasMoreImpactFromBowling
+                        ? `${player.wickets}/${player.bowlingRuns}`
                         : `${player.runs} (${player.balls})`,
                       matchDate: player.matchDate,
                       matchTime: player.matchTime || (player.matchDate ? new Date(player.matchDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined),
@@ -214,12 +214,12 @@ function WeeklyPerformerCarousel({
                           {player.wickets * 35 > player.runs ? 'Wickets' : 'Runs'}
                         </span>
                       </p>
-                      
+
                       {/* Dynamic Milestone Tagline */}
                       {(player.runs >= 50 || player.wickets >= 3 || player.isHatTrick) && (
                         <p className="mt-3 text-[10px] font-black text-white/40 uppercase tracking-widest max-w-[200px] leading-relaxed animate-pulse">
                           {getRandomTagline(
-                            (player.wickets >= 3 || player.isHatTrick) ? 'bowling' : 'batting', 
+                            (player.wickets >= 3 || player.isHatTrick) ? 'bowling' : 'batting',
                             (player.wickets >= 3 || player.isHatTrick) ? player.wickets : player.runs,
                             player.isHatTrick
                           )}
@@ -233,10 +233,10 @@ function WeeklyPerformerCarousel({
           })}
         </motion.div>
       </div>
-      
+
       <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none">
-        <button title="Previous Slide" onClick={() => setIndex(prev => prev - 1)} className="p-3 rounded-full bg-slate-900/50 border border-white/10 text-white pointer-events-auto hover:bg-sky-500 transition-all"><ChevronLeft size={24}/></button>
-        <button title="Next Slide" onClick={() => setIndex(prev => prev + 1)} className="p-3 rounded-full bg-slate-900/50 border border-white/10 text-white pointer-events-auto hover:bg-sky-500 transition-all"><ChevronRight size={24}/></button>
+        <button title="Previous Slide" onClick={() => setIndex(prev => prev - 1)} className="p-3 rounded-full bg-slate-900/50 border border-white/10 text-white pointer-events-auto hover:bg-sky-500 transition-all"><ChevronLeft size={24} /></button>
+        <button title="Next Slide" onClick={() => setIndex(prev => prev + 1)} className="p-3 rounded-full bg-slate-900/50 border border-white/10 text-white pointer-events-auto hover:bg-sky-500 transition-all"><ChevronRight size={24} /></button>
       </div>
     </div>
   );
@@ -260,14 +260,14 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
   }, [isPaused, index]);
 
   return (
-    <div 
+    <div
       className="relative w-full max-w-4xl mx-auto px-4 py-8"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="flex items-center justify-between overflow-visible relative min-h-[120px]">
         {/* Navigation Buttons */}
-        <button 
+        <button
           title="Previous Match"
           onClick={prev}
           className="absolute left-0 z-20 p-3 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all -translate-x-1/2 md:-translate-x-full"
@@ -303,10 +303,10 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
               };
 
               const m = match as any;
-              const homeScore = isLive 
+              const homeScore = isLive
                 ? (m.innings1 ? `${m.innings1.totalRuns}/${m.innings1.wickets}` : '0/0')
                 : getScoreStr(match.finalScoreHome, m.innings1);
-              
+
               const awayScore = isLive
                 ? (m.innings2 ? `${m.innings2.totalRuns}/${m.innings2.wickets}` : '0/0')
                 : getScoreStr(match.finalScoreAway, m.innings2);
@@ -317,8 +317,8 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
                 <motion.div
                   key={`${match.id}-${matchIdx}`}
                   initial={{ opacity: 0, scale: 0.8, x: offset * 350 }}
-                  animate={{ 
-                    opacity: isCenter ? 1 : offset === 1 ? 0.3 : offset === -1 ? 0.3 : 0, 
+                  animate={{
+                    opacity: isCenter ? 1 : offset === 1 ? 0.3 : offset === -1 ? 0.3 : 0,
                     scale: isCenter ? 1 : 0.8,
                     x: offset * (window.innerWidth < 768 ? 268 : 380),
                     zIndex: isCenter ? 10 : 0
@@ -327,17 +327,16 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
                   transition={{ type: "spring", stiffness: 350, damping: 40 }}
                   className="absolute"
                 >
-                  <Link 
+                  <Link
                     to={isLive ? `/live/${match.id}` : `/scorecard/${match.id}`}
-                    className={`block w-[314px] md:w-[358px] rounded-3xl p-5 md:p-7 border transition-all duration-500 overflow-hidden relative group ${
-                      isLive 
-                        ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.3)]' 
-                        : 'bg-slate-900/60 backdrop-blur-md border-white/10 hover:border-sky-500/40'
-                    }`}
+                    className={`block w-[314px] md:w-[358px] rounded-3xl p-5 md:p-7 border transition-all duration-500 overflow-hidden relative group ${isLive
+                      ? 'bg-gradient-to-br from-red-950/80 to-slate-950 border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.3)]'
+                      : 'bg-slate-900/60 backdrop-blur-md border-white/10 hover:border-sky-500/40'
+                      }`}
                   >
                     {/* Animated Glow on center card */}
                     {isCenter && (
-                      <motion.div 
+                      <motion.div
                         animate={{ opacity: [0.1, 0.3, 0.1] }}
                         transition={{ repeat: Infinity, duration: 3 }}
                         className={`absolute -top-40 -right-40 w-80 h-80 blur-[100px] rounded-full ${isLive ? 'bg-red-600' : 'bg-sky-600'}`}
@@ -371,7 +370,7 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
                         </div>
 
                         <div className="flex flex-col items-center">
-                           <div className="text-[14px] font-black text-white/20 italic">VS</div>
+                          <div className="text-[14px] font-black text-white/20 italic">VS</div>
                         </div>
 
                         <div className="flex-1 flex flex-col items-center gap-2">
@@ -397,12 +396,11 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
                             {ground?.name || 'TBD'} {groundNum && <span className="text-sky-400 font-black">#{groundNum}</span>}
                           </span>
                         </div>
-                        <p className={`text-[13px] font-black uppercase tracking-tighter px-3 py-1 rounded-md ${
-                          isLive ? 'text-sky-400 bg-sky-400/10' :
+                        <p className={`text-[13px] font-black uppercase tracking-tighter px-3 py-1 rounded-md ${isLive ? 'text-sky-400 bg-sky-400/10' :
                           (match.resultNote?.toLowerCase().includes('won') || match.resultSummary?.toLowerCase().includes('won'))
                             ? (match.resultNote?.includes('Indian Strikers') || match.resultSummary?.includes('Indian Strikers') ? 'text-emerald-400 bg-emerald-400/10' : 'text-rose-400 bg-rose-400/10')
                             : 'text-white/60 bg-white/5'
-                        }`}>
+                          }`}>
                           {isLive ? (match.tossDetails || 'OPEN') : (match.resultNote || match.resultSummary || 'COMPLETED')}
                         </p>
                       </div>
@@ -414,7 +412,7 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
           </AnimatePresence>
         </div>
 
-        <button 
+        <button
           title="Next Match"
           onClick={next}
           className="absolute right-0 z-20 p-3 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all translate-x-1/2 md:translate-x-full"
@@ -443,7 +441,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     const loadData = async () => {
       try {
         const [opp, perf, legacy] = await Promise.all([
-          getOpponents(), 
+          getOpponents(),
           getTournamentPerformers(),
           getLegacyStats(),
           fetchPlayers()
@@ -451,7 +449,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
         setOpponents(opp);
         setPerformerData(perf);
         setLegacyStats(legacy || []);
-        
+
         // Initial match sync
         syncWithCloud().catch(console.error);
       } catch (e) {
@@ -481,17 +479,17 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       })[0];
 
     if (!priorityMatch) return null;
-    
+
     const opponent = opponents.find(o => o.id === priorityMatch.opponentId);
-    return { 
-      ...priorityMatch, 
-      opponentName: priorityMatch.opponentName || (opponent ? opponent.name : 'Opponent') 
+    return {
+      ...priorityMatch,
+      opponentName: priorityMatch.opponentName || (opponent ? opponent.name : 'Opponent')
     };
   }, [matches, opponents]);
 
   const enrichedPlayers = useMemo(() => {
     if (!squadPlayers) return [];
-    
+
     // STRICT FIX: Only Indian Strikers (Home Team) players should appear in Dashboard stats
     // We now rely on the backend-calculated stats (p.battingStats / p.bowlingStats) 
     // which already aggregate Legacy + Match Ledger.
@@ -581,7 +579,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   };
 
   return (
-    <div className="space-y-8 animate-fade-in pb-12 w-full px-4 md:px-0">
+    <div className="space-y-2 animate-fade-in pb-12 w-full px-1 md:px-0">
       {/* Standardized Page Header - Sticky */}
       <div className="sticky top-0 z-40 bg-slate-50/80 backdrop-blur-md flex flex-row justify-between items-center gap-4 border-b border-slate-200 pb-3 mb-2 -mx-4 px-4 md:-mx-0 md:px-0">
         <div className="flex flex-col">
@@ -589,10 +587,10 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             <span>STRIKERS PULSE</span>
           </h1>
           <div className="flex items-center mt-1">
-            <p className="text-slate-400 font-bold text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.3em] italic whitespace-nowrap">INS Team Management Portal</p>
+            <p className="text-slate-400 font-bold text-[8px] md:text-[10px] uppercase tracking-[0.1em] md:tracking-[0.2em] italic whitespace-nowrap">INS Team Management Portal</p>
           </div>
         </div>
-        
+
         <div className="bg-[#0f172a] text-white px-3 md:px-6 py-1.5 md:py-2 rounded-full font-black italic uppercase tracking-tighter md:tracking-widest text-[9px] md:text-sm shadow-xl border border-sky-400/20 whitespace-nowrap shrink-0">
           <span className="animate-bounce-shimmer">
             ONE TEAM <span className="mx-1 md:mx-2 text-sky-400/40">•</span> ONE DREAM
@@ -605,13 +603,13 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       {/* Hero Poster Modal */}
       <AnimatePresence>
         {selectedHero && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-md"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               className="bg-slate-900 rounded-[2.5rem] shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col md:flex-row border border-white/10"
@@ -619,44 +617,44 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {/* Visualizer Area */}
               <div className="flex-[1.5] bg-slate-950 p-4 md:p-8 flex items-center justify-center relative overflow-hidden min-h-[500px]">
                 <div ref={heroPosterRef} className="w-[360px] h-[640px] bg-[#0c1222] relative overflow-hidden flex flex-col shrink-0 shadow-2xl">
-                   {/* Poster Background */}
-                   <div 
-                     className="absolute inset-0 z-0 opacity-15"
-                     style={{ 
-                       backgroundImage: 'url(/assets/cricket_ground_bg.png)',
-                       backgroundSize: 'cover',
-                       backgroundPosition: 'center'
-                     }}
-                   />
-                   {/* Poster Content */}
-                   <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
-                      <img src="/INS%20LOGO.PNG" className="w-16 h-16 object-contain" alt="Logo" />
-                      <div className="text-white">
-                        <p className="text-[10px] font-black italic tracking-widest leading-none">MATCH DAY</p>
-                        <p className={`text-2xl font-black italic ${selectedHero.isSuperStriker ? 'text-orange-500' : 'text-sky-400'} leading-none`}>
-                          {selectedHero.isSuperStriker ? 'SUPER STRIKER' : 'HERO'}
-                        </p>
-                      </div>
-                   </div>
-                   <div className="flex-1 flex flex-col items-center justify-center pt-16 px-6">
-                      <img src={selectedHero.player.avatarUrl} className="h-[320px] w-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)] mb-6" alt="Player" crossOrigin="anonymous" />
-                      <h2 className="text-3xl font-black text-sky-400 uppercase italic tracking-tighter text-center leading-none mb-2">{selectedHero.player.name}</h2>
-                      <div className="h-1 w-12 bg-white/20 rounded-full mb-4"></div>
-                      <p className="text-white font-black text-lg uppercase italic tracking-widest">{selectedHero.statsValue}</p>
-                      {(selectedHero.player.runs >= 50 || selectedHero.player.wickets >= 3 || selectedHero.player.isHatTrick) && (
-                        <p className="mt-4 px-10 text-[8px] font-black text-sky-400/60 uppercase tracking-[0.2em] text-center leading-relaxed italic">
-                          {getRandomTagline(
-                             (selectedHero.player.wickets >= 3 || selectedHero.player.isHatTrick) ? 'bowling' : 'batting', 
-                             (selectedHero.player.wickets >= 3 || selectedHero.player.isHatTrick) ? selectedHero.player.wickets : selectedHero.player.runs,
-                             selectedHero.player.isHatTrick
-                           )}
-                        </p>
-                      )}
-                      <p className="text-sky-400/50 text-[10px] font-black uppercase mt-4 tracking-[0.2em]">VS {selectedHero.opponentName || 'OPPONENT'}</p>
-                   </div>
-                   <div className="p-4 text-center border-t border-white/5">
-                      <p className="text-[7px] text-white/20 font-black uppercase tracking-[0.4em]">INDIAN STRIKERS OFFICIAL APP</p>
-                   </div>
+                  {/* Poster Background */}
+                  <div
+                    className="absolute inset-0 z-0 opacity-15"
+                    style={{
+                      backgroundImage: 'url(/assets/cricket_ground_bg.png)',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    }}
+                  />
+                  {/* Poster Content */}
+                  <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
+                    <img src="/INS%20LOGO.PNG" className="w-16 h-16 object-contain" alt="Logo" />
+                    <div className="text-white">
+                      <p className="text-[10px] font-black italic tracking-widest leading-none">MATCH DAY</p>
+                      <p className={`text-2xl font-black italic ${selectedHero.isSuperStriker ? 'text-orange-500' : 'text-sky-400'} leading-none`}>
+                        {selectedHero.isSuperStriker ? 'SUPER STRIKER' : 'HERO'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex-1 flex flex-col items-center justify-center pt-16 px-6">
+                    <img src={selectedHero.player.avatarUrl} className="h-[320px] w-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)] mb-6" alt="Player" crossOrigin="anonymous" />
+                    <h2 className="text-3xl font-black text-sky-400 uppercase italic tracking-tighter text-center leading-none mb-2">{selectedHero.player.name}</h2>
+                    <div className="h-1 w-12 bg-white/20 rounded-full mb-4"></div>
+                    <p className="text-white font-black text-lg uppercase italic tracking-widest">{selectedHero.statsValue}</p>
+                    {(selectedHero.player.runs >= 50 || selectedHero.player.wickets >= 3 || selectedHero.player.isHatTrick) && (
+                      <p className="mt-4 px-10 text-[8px] font-black text-sky-400/60 uppercase tracking-[0.2em] text-center leading-relaxed italic">
+                        {getRandomTagline(
+                          (selectedHero.player.wickets >= 3 || selectedHero.player.isHatTrick) ? 'bowling' : 'batting',
+                          (selectedHero.player.wickets >= 3 || selectedHero.player.isHatTrick) ? selectedHero.player.wickets : selectedHero.player.runs,
+                          selectedHero.player.isHatTrick
+                        )}
+                      </p>
+                    )}
+                    <p className="text-sky-400/50 text-[10px] font-black uppercase mt-4 tracking-[0.2em]">VS {selectedHero.opponentName || 'OPPONENT'}</p>
+                  </div>
+                  <div className="p-4 text-center border-t border-white/5">
+                    <p className="text-[7px] text-white/20 font-black uppercase tracking-[0.4em]">INDIAN STRIKERS OFFICIAL APP</p>
+                  </div>
                 </div>
               </div>
 
@@ -676,12 +674,12 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                     </p>
                   </div>
                 </div>
-                <button 
-                  onClick={handleGenerateHeroPoster} 
+                <button
+                  onClick={handleGenerateHeroPoster}
                   disabled={isGenerating}
                   className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
                 >
-                  {isGenerating ? <Loader2 className="animate-spin"/> : <Download />} 
+                  {isGenerating ? <Loader2 className="animate-spin" /> : <Download />}
                   {isGenerating ? 'GENERATING...' : 'DOWNLOAD POSTER'}
                 </button>
               </div>
@@ -693,11 +691,11 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       {/* Top Grid: Logo, Legacy, and Match Alert */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="md:col-span-1 flex items-center justify-center p-6 relative perspective-container">
-          <motion.div 
+          <motion.div
             className="relative z-20"
             initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ 
-              opacity: 1, 
+            animate={{
+              opacity: 1,
               scale: 1,
               y: [0, -10, 0]
             }}
@@ -707,10 +705,10 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
             }}
           >
-            <motion.div 
+            <motion.div
               className="w-44 h-44 flex items-center justify-center relative cursor-pointer group overflow-hidden rounded-[2.5rem]"
               initial={{ filter: "drop-shadow(0px 0px 0px rgba(0,0,0,0)) brightness(1)" }}
-              whileHover={{ 
+              whileHover={{
                 scale: 1.1,
                 rotateY: 15,
                 rotateX: -10,
@@ -720,16 +718,16 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               transition={{ type: "spring", stiffness: 400, damping: 15 }}
             >
               {/* Energy Flare behind logo */}
-              <motion.div 
+              <motion.div
                 className="absolute inset-0 bg-sky-500/10 rounded-full blur-[30px] opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
 
-              <img 
-                src={teamLogo || "/INS%20LOGO.PNG"} 
-                className="h-40 object-contain relative z-10" 
-                alt="Team Logo" 
+              <img
+                src={teamLogo || "/INS%20LOGO.PNG"}
+                className="h-40 object-contain relative z-10"
+                alt="Team Logo"
               />
 
               {/* Shine Sweep Effect */}
@@ -737,7 +735,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             </motion.div>
           </motion.div>
         </div>
-        
+
         <div className="md:col-span-2 bg-slate-900 rounded-[2rem] p-8 text-white relative overflow-hidden flex flex-col justify-center border border-slate-800 shadow-xl">
           <div className="absolute top-0 right-0 p-8 opacity-5"><Trophy size={160} /></div>
           <div className="relative z-10">
@@ -831,7 +829,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       <div className="bg-slate-900 p-4 rounded-[1.5rem] border border-slate-800 shadow-2xl relative overflow-hidden">
         {/* Background Gradients */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
-        
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-2 relative z-10">
           <h3 className="text-xl font-black text-white flex items-center gap-2 uppercase tracking-tighter italic">
             <Zap className="text-sky-400 fill-sky-400" size={24} /> Performer Spotlight
@@ -843,11 +841,11 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
         <div className="relative z-10">
           {filteredSpotlightPerformers.length > 0 ? (
-            <WeeklyPerformerCarousel 
-              performers={filteredSpotlightPerformers} 
-              onSelectHero={setSelectedHero} 
-              opponents={opponents} 
-              grounds={grounds} 
+            <WeeklyPerformerCarousel
+              performers={filteredSpotlightPerformers}
+              onSelectHero={setSelectedHero}
+              opponents={opponents}
+              grounds={grounds}
             />
           ) : (
             <div className="py-20 text-center bg-white/5 rounded-3xl border border-white/5">
@@ -865,7 +863,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             <Crown className="text-yellow-500 fill-yellow-500" size={32} />
             <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Leaderboard</h3>
           </div>
-          <button 
+          <button
             onClick={statsSyncHandler}
             disabled={isSyncing}
             className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-full border border-slate-100 transition-all group active:scale-95"
