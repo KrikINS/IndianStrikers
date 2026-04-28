@@ -37,19 +37,19 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import MatchSummaryModal from './MatchSummaryModal';
-import { 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
   BarChart,
   Bar,
   Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   Legend,
-  ReferenceLine 
+  ReferenceLine
 } from 'recharts';
 import { useStore } from '../store/StoreProvider';
 import { useMatchCenter } from '../store/matchStore';
@@ -245,12 +245,12 @@ const PartnershipSub = styled.div`
 const generateDynamicCommentary = (player: string, runs: number, zone?: string, isWicket?: boolean): string => {
   const z = zone || "the gap";
   const firstName = player.split(' ')[0];
-  
+
   if (isWicket) {
     const base = useCommentaryStore.getState().getRandomDialogue('WICKET');
     return `${base} ${firstName} is out! Trapped while trying to hit towards ${z}.`;
   }
-  
+
   const baseFour = useCommentaryStore.getState().getRandomDialogue('FOUR');
   const baseSix = useCommentaryStore.getState().getRandomDialogue('SIX');
   const baseDot = useCommentaryStore.getState().getRandomDialogue('DOT');
@@ -1051,7 +1051,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const squadPlayers = useMatchCenter(state => state.squadPlayers);
   const fetchPlayers = useMatchCenter(state => state.fetchPlayers);
   const isPlayersLoading = useMatchCenter(state => state.loading);
-  
+
   // Scorer State Selectors (Breaking the dependency on the whole store object)
   const innings1 = useMatchCenter(state => state.innings1);
   const innings2 = useMatchCenter(state => state.innings2);
@@ -1060,11 +1060,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const awayXI = useMatchCenter(state => state.awayXI);
   const matchId = useMatchCenter(state => state.matchId);
   const isWaitingForBowler = useMatchCenter(state => state.isWaitingForBowler);
-  
+
   // Scorer Actions
   const store = useMatchCenter(); // Temporarily keeping for deep nested logic, but usage is now more stable
   const isOfflineStore = useTournamentStore(state => state.isOffline);
-  
+
   // Master Data
   const grounds = useTournamentStore(state => state.grounds);
   const tournaments = useTournamentStore(state => state.tournaments);
@@ -1072,7 +1072,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const allOpponents = useOpponentStore(state => state.opponents);
   const updateMatch = useMatchCenter(state => state.updateMatch);
   const updateMatchStatus = useMatchCenter(state => state.updateMatchStatus);
-  
+
   const [extraSubType, setExtraSubType] = useState<'bat' | 'bye' | 'lb' | 'keeper'>('bat');
   const [showWicketModal, setShowWicketModal] = useState(false);
   const [showBowlerModal, setShowBowlerModal] = useState(false);
@@ -1136,7 +1136,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     // Robust check for object-based IDs or legacy participation
     const searchId = (typeof id === 'object' && id !== null) ? (id.id || id.name || String(id)) : String(id);
     if (searchId === '[object Object]') return 'Unknown Player';
-    
+
     const homePlayer = players.find((p: Player) => String(p.id) === searchId);
     if (homePlayer) return homePlayer.name;
     const awayPlayer = opponentPlayers.find(p => String(p.id) === searchId);
@@ -1291,7 +1291,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const matches = useMatchCenter(state => state.matches);
   const syncWithCloud = useMatchCenter(state => state.syncWithCloud);
   const finalizeMatch = useMatchCenter(state => state.finalizeMatch);
-  
+
   const activeMatchId = id || propMatchId || matchId;
 
   // Add robust guard for match_id validation
@@ -1305,12 +1305,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       'a2903265-670b-4886-8699-661b0546e46c': 'RCA GROUND'
     },
     tournaments: {
-        'RCA T20 TOURNAMENT': 'PRINCE ABDULAZIZ BIN NASSER T20 TOURNAMENT',
-        'default': 'PRINCE ABDULAZIZ BIN NASSER T20 TOURNAMENT'
+      'RCA T20 TOURNAMENT': 'PRINCE ABDULAZIZ BIN NASSER T20 TOURNAMENT',
+      'default': 'PRINCE ABDULAZIZ BIN NASSER T20 TOURNAMENT'
     },
     opponents: {
-        'SAUDI KNIGHTS': 'SAUDI KNIGHTS',
-        'OPPONENT': 'SAUDI KNIGHTS'
+      'SAUDI KNIGHTS': 'SAUDI KNIGHTS',
+      'OPPONENT': 'SAUDI KNIGHTS'
     }
   };
 
@@ -1340,15 +1340,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       syncWithCloud().catch(console.error);
     }
     if (syncMasterData) {
-        syncMasterData().catch(console.error);
+      syncMasterData().catch(console.error);
     }
     // CRITICAL: Ensure players are loaded for squad selection.
     // Use a one-shot ref guard instead of watching squadPlayers.length,
     // which caused an infinite loop when the squad was empty.
     if (fetchPlayers && !isPlayersLoading && !hasFetchedPlayersRef.current) {
-        hasFetchedPlayersRef.current = true;
-        console.log("[Scorer] One-shot: Fetching squad players...");
-        fetchPlayers().catch(console.error);
+      hasFetchedPlayersRef.current = true;
+      console.log("[Scorer] One-shot: Fetching squad players...");
+      fetchPlayers().catch(console.error);
     }
   }, [activeMatchId]); // Only re-run when the active match ID changes
 
@@ -1361,7 +1361,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     if (!currentInn || !currentInn.history) return [];
 
     const overStats: Record<number, { over: number, runs: number, wickets: number }> = {};
-    
+
     // Group history by over number
     currentInn.history.forEach((ball: any) => {
       const overNum = ball.overNumber + 1; // 1-indexed for chart
@@ -1410,7 +1410,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       // PERMANENT V5 ABSOLUTE RESOLUTION: Use the Failsafe Helpers
       const resolvedTournament = resolveTournament(meta.tournamentId, meta.tournament);
       const resolvedGroundName = resolveGroundName(meta.groundId, meta.venue);
-      
+
       const opponentMeta = (allOpponents || []).find((o: any) => String(o.id) === String(meta.opponentId) || o.name === meta.opponentName);
       const resolvedOpponentName = (opponentMeta?.name && opponentMeta.name !== 'OPPONENT') ? opponentMeta.name : (meta.opponentName === 'OPPONENT' ? 'SAUDI KNIGHTS' : (meta.opponentName || 'SAUDI KNIGHTS'));
       const resolvedAwayLogo = meta.opponentLogo || opponentMeta?.logoUrl || '';
@@ -1441,22 +1441,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       }).catch(console.error);
     });
   }, [activeMatchId, grounds, teamLogo]);
-  
+
   // Trigger Milestone Splash Screen based on store events
   useEffect(() => {
     if (store.pendingMilestone && milestoneRef.current) {
       const { type, player, subText } = store.pendingMilestone;
-      
+
       // STRICT FIX: Only trigger milestone celebrations for home team (Indian Strikers) players.
       // We check if the player involved is part of the players store and marked as a club player.
       const isClubPlayer = players.some((p: Player) => p.name === player && !!p.isClubPlayer);
-      
+
       // Partnerships are allowed if at least one striker is a club member (usually true for home team matches)
       const shouldTrigger = type === 'partnership' || isClubPlayer;
 
       if (shouldTrigger) {
-        milestoneRef.current.trigger({ 
-          type: type === 'hundred' ? 'HUNDRED' : (type === 'partnership' ? 'PARTNERSHIP' : 'FIFTY'), 
+        milestoneRef.current.trigger({
+          type: type === 'hundred' ? 'HUNDRED' : (type === 'partnership' ? 'PARTNERSHIP' : 'FIFTY'),
           playerName: player,
           subText: subText
         });
@@ -1509,7 +1509,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         });
       }
     }
-  // Handover dependency: reactive to cloud ball counts
+    // Handover dependency: reactive to cloud ball counts
   }, [
     store.matchId,
     matchMeta?.id,
@@ -1786,48 +1786,48 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         <div style={{ padding: '24px 16px', maxWidth: 500, margin: '0 auto', width: '100%' }}>
           {/* SYNC STATUS BANNER */}
           {(() => {
-             const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
-             const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
-             if (cloudBalls > localBalls) {
-               return (
-                 <motion.div 
-                   initial={{ y: -20, opacity: 0 }} 
-                   animate={{ y: 0, opacity: 1 }}
-                   style={{ background: 'rgba(250, 176, 5, 0.1)', border: '1px solid rgba(250, 176, 5, 0.3)', padding: '12px 16px', borderRadius: 12, marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 8 }}
-                 >
-                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#FAB005', fontWeight: 900, fontSize: '0.75rem' }}>
-                     <CloudLightning size={16} /> CLOUD SCORE IS AHEAD
-                   </div>
-                   <p style={{ margin: 0, fontSize: '0.7rem', opacity: 0.7, color: '#001F3F', fontWeight: 600 }}>
-                     The cloud has {cloudBalls} balls compared to {localBalls} locally. Your mobile might be ahead.
-                   </p>
-                   <button 
-                     onClick={() => {
-                        if (matchMeta?.live_data) {
-                           store.initializeMatch({
-                             matchId: matchMeta.id,
-                             matchType: matchMeta.matchFormat || 'T20',
-                             tournament: matchMeta.tournament || 'Live Match',
-                             ground: matchMeta.venue || 'Local Ground',
-                             opponentName: matchMeta.opponentName || 'OPPONENT',
-                             maxOvers: matchMeta.maxOvers || 20,
-                             homeXI: matchMeta.homeTeamXI || [],
-                             awayXI: matchMeta.opponentTeamXI || [],
-                             homeLogo: teamLogo,
-                             awayLogo: matchMeta.opponentLogo || '',
-                             liveData: matchMeta.live_data
-                           });
-                           toast.success("Synchronized with Cloud!");
-                        }
-                     }}
-                     style={{ background: '#FAB005', border: 'none', borderRadius: 6, padding: '6px 12px', color: '#000', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer', width: 'fit-content' }}
-                   >
-                     DOWNLOAD CLOUD VERSION
-                   </button>
-                 </motion.div>
-               );
-             }
-             return null;
+            const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
+            const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
+            if (cloudBalls > localBalls) {
+              return (
+                <motion.div
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  style={{ background: 'rgba(250, 176, 5, 0.1)', border: '1px solid rgba(250, 176, 5, 0.3)', padding: '12px 16px', borderRadius: 12, marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 8 }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#FAB005', fontWeight: 900, fontSize: '0.75rem' }}>
+                    <CloudLightning size={16} /> CLOUD SCORE IS AHEAD
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.7rem', opacity: 0.7, color: '#001F3F', fontWeight: 600 }}>
+                    The cloud has {cloudBalls} balls compared to {localBalls} locally. Your mobile might be ahead.
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (matchMeta?.live_data) {
+                        store.initializeMatch({
+                          matchId: matchMeta.id,
+                          matchType: matchMeta.matchFormat || 'T20',
+                          tournament: matchMeta.tournament || 'Live Match',
+                          ground: matchMeta.venue || 'Local Ground',
+                          opponentName: matchMeta.opponentName || 'OPPONENT',
+                          maxOvers: matchMeta.maxOvers || 20,
+                          homeXI: matchMeta.homeTeamXI || [],
+                          awayXI: matchMeta.opponentTeamXI || [],
+                          homeLogo: teamLogo,
+                          awayLogo: matchMeta.opponentLogo || '',
+                          liveData: matchMeta.live_data
+                        });
+                        toast.success("Synchronized with Cloud!");
+                      }
+                    }}
+                    style={{ background: '#FAB005', border: 'none', borderRadius: 6, padding: '6px 12px', color: '#000', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer', width: 'fit-content' }}
+                  >
+                    DOWNLOAD CLOUD VERSION
+                  </button>
+                </motion.div>
+              );
+            }
+            return null;
           })()}
 
           <div style={{ marginBottom: 32, textAlign: 'center' }}>
@@ -1881,8 +1881,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </div>
         </div>
 
-        <SyncStatusPill $outOfSync={( (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0) ) !== ( (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0) )}>
-          {( (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0) ) === ( (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0) ) ? (
+        <SyncStatusPill $outOfSync={((store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)) !== ((matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0))}>
+          {((store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)) === ((matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0)) ? (
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ADE80' }} />
           ) : (
             <CloudLightning size={10} />
@@ -1894,17 +1894,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   }
 
   if (setupStep !== null) {
-    const isReadyToStart = tossWinner && tossChoice && 
-                          (homeXI?.length || 0) === 11 && 
-                          (awayXI?.length || 0) === 11 && 
-                          selStriker && selNonStriker && selBowler;
+    const isReadyToStart = tossWinner && tossChoice &&
+      (homeXI?.length || 0) === 11 &&
+      (awayXI?.length || 0) === 11 &&
+      selStriker && selNonStriker && selBowler;
 
     const handleStartMatch = async () => {
       if (!isReadyToStart) {
         toast.error("Please complete all setup selections first.");
         return;
       }
-      
+
       if (!isValidMatchId(activeMatchId)) {
         toast.error("Invalid Match ID. Cannot start scoring.");
         console.error("[Scorer] Start match failed: activeMatchId is invalid", activeMatchId);
@@ -1942,7 +1942,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         // Small delay to let Zustand commit the startInnings update
         await new Promise(resolve => setTimeout(resolve, 50));
         const freshStore = useMatchCenter.getState();
-        
+
         // V5 ROBUSTNESS: Clean the store state of functions before persisting
         const cleanedStore = Object.fromEntries(
           Object.entries(freshStore).filter(([_, value]) => typeof value !== 'function')
@@ -1990,46 +1990,46 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           {setupStep === 'preview' ? (
             <>
               {(() => {
-                  // V5 ABSOLUTE RESOLUTION: Forced overrides for RCA match
-                  const resolvedTournament = resolveTournament(matchMeta?.tournamentId, matchMeta?.tournament || store.tournament);
-                  const displayTournament = resolvedTournament || 'PRINCE ABDULAZIZ BIN NASSER T20 TOURNAMENT';
+                // V5 ABSOLUTE RESOLUTION: Forced overrides for RCA match
+                const resolvedTournament = resolveTournament(matchMeta?.tournamentId, matchMeta?.tournament || store.tournament);
+                const displayTournament = resolvedTournament || 'PRINCE ABDULAZIZ BIN NASSER T20 TOURNAMENT';
 
-                  const groundId = matchMeta?.groundId || store.ground;
-                  const displayGround = resolveGroundName(groundId, store.ground);
-                  
-                  const opponentMeta = (allOpponents || []).find(o => String(o.id) === String(matchMeta?.opponentId) || o.name === store.opponentName);
-                  const displayOpponentName = (opponentMeta?.name && opponentMeta.name !== 'OPPONENT') ? opponentMeta.name : (store.opponentName === 'OPPONENT' ? 'SAUDI KNIGHTS' : (store.opponentName || 'SAUDI KNIGHTS'));
-                  const displayOpponentLogo = (store.awayLogo && !store.awayLogo.includes('null') && store.awayLogo.length > 5) ? store.awayLogo : (matchMeta?.opponentLogo || opponentMeta?.logoUrl || '');
+                const groundId = matchMeta?.groundId || store.ground;
+                const displayGround = resolveGroundName(groundId, store.ground);
 
-                  return (
-                    <>
-                      <MatchTitle style={{ color: '#FFD700', textShadow: '0 0 10px rgba(255,215,0,0.3)' }}>{displayTournament.toUpperCase()}</MatchTitle>
-                      <GroundText>
-                        <MapPin size={14} /> {String(displayGround).toUpperCase()}
-                      </GroundText>
+                const opponentMeta = (allOpponents || []).find(o => String(o.id) === String(matchMeta?.opponentId) || o.name === store.opponentName);
+                const displayOpponentName = (opponentMeta?.name && opponentMeta.name !== 'OPPONENT') ? opponentMeta.name : (store.opponentName === 'OPPONENT' ? 'SAUDI KNIGHTS' : (store.opponentName || 'SAUDI KNIGHTS'));
+                const displayOpponentLogo = (store.awayLogo && !store.awayLogo.includes('null') && store.awayLogo.length > 5) ? store.awayLogo : (matchMeta?.opponentLogo || opponentMeta?.logoUrl || '');
 
-                      <TeamRow>
-                        <TeamBlock>
-                          <TeamLogoCircle $active>
-                            <img src={store.homeLogo || teamLogo || '/INS%20LOGO.PNG'} alt="H" />
-                          </TeamLogoCircle>
-                          <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>INDIAN STRIKERS</span>
-                        </TeamBlock>
-                        <TeamBlock>
-                          <TeamLogoCircle>
-                            {displayOpponentLogo ? (
-                              <img src={displayOpponentLogo} alt="A" />
-                            ) : (
-                              <Shield size={40} color="rgba(255,255,255,0.3)" />
-                            )}
-                          </TeamLogoCircle>
-                          <span style={{ fontStyle: 'italic', fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: '#FAB005' }}>
-                            {displayOpponentName.toUpperCase()}
-                          </span>
-                        </TeamBlock>
-                      </TeamRow>
-                    </>
-                  );
+                return (
+                  <>
+                    <MatchTitle style={{ color: '#FFD700', textShadow: '0 0 10px rgba(255,215,0,0.3)' }}>{displayTournament.toUpperCase()}</MatchTitle>
+                    <GroundText>
+                      <MapPin size={14} /> {String(displayGround).toUpperCase()}
+                    </GroundText>
+
+                    <TeamRow>
+                      <TeamBlock>
+                        <TeamLogoCircle $active>
+                          <img src={store.homeLogo || teamLogo || '/INS%20LOGO.PNG'} alt="H" />
+                        </TeamLogoCircle>
+                        <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>INDIAN STRIKERS</span>
+                      </TeamBlock>
+                      <TeamBlock>
+                        <TeamLogoCircle>
+                          {displayOpponentLogo ? (
+                            <img src={displayOpponentLogo} alt="A" />
+                          ) : (
+                            <Shield size={40} color="rgba(255,255,255,0.3)" />
+                          )}
+                        </TeamLogoCircle>
+                        <span style={{ fontStyle: 'italic', fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: '#FAB005' }}>
+                          {displayOpponentName.toUpperCase()}
+                        </span>
+                      </TeamBlock>
+                    </TeamRow>
+                  </>
+                );
               })()}
 
               <ActionButton $variant="primary" onClick={() => setSetupStep('toss')}>
@@ -2203,7 +2203,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
               <button
                 onClick={() => {
-                  const pool = setupStep === 'squad_home' 
+                  const pool = setupStep === 'squad_home'
                     ? (players || []).filter((p: any) => p.isActive && p.status !== 'inactive')
                     : (opponentPlayers || []);
                   const selectedIds = pool.slice(0, 11).map((p: any) => p.id);
@@ -2226,9 +2226,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               {(() => {
                 // V5 ROBUST DERIVATION: Determine who bats now based on toss and innings
                 const getInningsBattingTeam = () => {
-                  const firstInningsBatTeam = (String(tossWinner).toLowerCase() === 'home' && String(tossChoice).toLowerCase() === 'bat') || 
-                                              (String(tossWinner).toLowerCase() === 'away' && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
-                  
+                  const firstInningsBatTeam = (String(tossWinner).toLowerCase() === 'home' && String(tossChoice).toLowerCase() === 'bat') ||
+                    (String(tossWinner).toLowerCase() === 'away' && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
+
                   // Only flip if innings1 is truly active/completed
                   const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
                   if (isFirstInningsDone) {
@@ -2247,8 +2247,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 return (
                   <>
                     <div style={{ background: 'rgba(250, 176, 5, 0.1)', border: '1px solid rgba(250, 176, 5, 0.2)', padding: '10px 16px', borderRadius: 12, marginBottom: 20 }}>
-                       <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', opacity: 0.8, textTransform: 'uppercase' }}>Current Batting Team</p>
-                       <p style={{ margin: '4px 0 0', fontSize: '1rem', fontWeight: 900, color: '#FFF' }}>{batTeamName}</p>
+                      <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', opacity: 0.8, textTransform: 'uppercase' }}>Current Batting Team</p>
+                      <p style={{ margin: '4px 0 0', fontSize: '1rem', fontWeight: 900, color: '#FFF' }}>{batTeamName}</p>
                     </div>
                     <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 12 }}>Select Striker & Non-Striker</p>
                     <SelectionGrid>
@@ -2296,12 +2296,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
               {(() => {
                 const getInningsBowlingTeam = () => {
-                   const firstInningsBatTeam = (String(tossWinner).toLowerCase() === 'home' && String(tossChoice).toLowerCase() === 'bat') || 
-                                               (String(tossWinner).toLowerCase() === 'away' && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
-                   
-                   const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
-                   const batTeamId = isFirstInningsDone ? (firstInningsBatTeam === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeam;
-                   return batTeamId === 'HOME' ? 'AWAY' : 'HOME';
+                  const firstInningsBatTeam = (String(tossWinner).toLowerCase() === 'home' && String(tossChoice).toLowerCase() === 'bat') ||
+                    (String(tossWinner).toLowerCase() === 'away' && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
+
+                  const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
+                  const batTeamId = isFirstInningsDone ? (firstInningsBatTeam === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeam;
+                  return batTeamId === 'HOME' ? 'AWAY' : 'HOME';
                 };
 
                 const bowlTeamId = getInningsBowlingTeam();
@@ -2314,8 +2314,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 return (
                   <>
                     <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.2)', padding: '10px 16px', borderRadius: 12, marginBottom: 20 }}>
-                       <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 900, color: '#38BDF8', opacity: 0.8, textTransform: 'uppercase' }}>Current Bowling Team</p>
-                       <p style={{ margin: '4px 0 0', fontSize: '1rem', fontWeight: 900, color: '#FFF' }}>{bowlTeamName}</p>
+                      <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 900, color: '#38BDF8', opacity: 0.8, textTransform: 'uppercase' }}>Current Bowling Team</p>
+                      <p style={{ margin: '4px 0 0', fontSize: '1rem', fontWeight: 900, color: '#FFF' }}>{bowlTeamName}</p>
                     </div>
                     <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 12 }}>Select Opening Bowler</p>
                     <SelectionGrid>
@@ -2422,31 +2422,31 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         syncToDatabase(store); // retain local state mirror
         return;
       }
-      
+
       setIsSyncing(true);
       setSyncQueue(prev => prev + 1);
 
       try {
         // If coming back online with a queue, do a sanity check on Database "Split-Brain" State
         if (store.offlineQueue.length > 0) {
-           const dbStateRaw = await fetch(`${baseUrl}/matches/${activeMatchId}`);
-           if (dbStateRaw.ok) {
-             const dbMatch = await dbStateRaw.json();
-             // Just pull the current dbBalls via dbMatch innings length if we want split brain logic
-             // For now, we will flush the queue unconditionally, but if you want strict checking:
-             // if (dbMatch.historyLength !== localLength) { flushQueue }
-           }
-           
-           // Flush Offline Queue sequentially
-           for (const queuedBall of store.offlineQueue) {
-             await fetch(`${baseUrl}/score/ball`, {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('authToken')}` },
-               body: JSON.stringify(queuedBall)
-             });
-           }
-           store.clearOfflineQueue();
-           toast.success("Offline queue fully synced!");
+          const dbStateRaw = await fetch(`${baseUrl}/matches/${activeMatchId}`);
+          if (dbStateRaw.ok) {
+            const dbMatch = await dbStateRaw.json();
+            // Just pull the current dbBalls via dbMatch innings length if we want split brain logic
+            // For now, we will flush the queue unconditionally, but if you want strict checking:
+            // if (dbMatch.historyLength !== localLength) { flushQueue }
+          }
+
+          // Flush Offline Queue sequentially
+          for (const queuedBall of store.offlineQueue) {
+            await fetch(`${baseUrl}/score/ball`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('authToken')}` },
+              body: JSON.stringify(queuedBall)
+            });
+          }
+          store.clearOfflineQueue();
+          toast.success("Offline queue fully synced!");
         }
 
         const response = await fetch(`${baseUrl}/score/ball`, {
@@ -2463,12 +2463,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         }
 
         // Success! Force MatchCenter to update so public view is in sync
-        syncWithCloud().catch(() => {});
+        syncWithCloud().catch(() => { });
         syncToDatabase(store);
-        
+
       } catch (err) {
         console.error(`[Sync] Ball sync failed (Attempt ${retryCount + 1}):`, err);
-        
+
         if (retryCount < 2) {
           // Exponential backoff: 1s, 2s
           const delay = (retryCount + 1) * 1000;
@@ -2575,8 +2575,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     // Dynamic substitution
     const strikerName = getPlayerName(store.strikerId);
     comm = comm.replace(/\{batsman\}/g, strikerName)
-               .replace(/\{striker\}/g, strikerName)
-               .replace(/\{bowler\}/g, getPlayerName(store.currentBowlerId));
+      .replace(/\{striker\}/g, strikerName)
+      .replace(/\{bowler\}/g, getPlayerName(store.currentBowlerId));
 
     shufflePreview(typeKey);
 
@@ -2624,7 +2624,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     // NEW: Detect if this wicket results in All Out (10 wickets)
     // currentInnings.wickets is currently 9 if this is the 10th wicket.
     const isNowAllOut = currentInnings && currentInnings.wickets === 9;
-    
+
     if (isNowAllOut || isBattingFinishing) {
       if (isNowAllOut) {
         // Record the wicket IMMEDIATELY since no new batter is needed
@@ -2633,7 +2633,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           const fielder = [...players, ...opponentPlayers].find(fp => fp.id === pendingFielderId);
           dismissal = `${type === 'Caught' ? 'c' : 'st'} ${fielder?.name || 'Fielder'}`;
         }
-        
+
         if (runOutInvolved) {
           handleRecord(runOutInvolved.runs, runOutInvolved.ballType || 'legal', true, 'Run Out', runOutInvolved.subType || 'bat', runOutInvolved.victimId, undefined);
           setRunOutInvolved(null);
@@ -2653,7 +2653,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const handleConfirmInnings = async () => {
     if (!activeMatchId || !currentInnings) return;
-    
+
     // Safety check: Don't finalize an innings that hasn't even started
     if (currentInnings.totalBalls === 0 && currentInnings.totalRuns === 0) {
       console.warn("[Scorer] Finalization blocked: No balls recorded in current innings.");
@@ -2686,7 +2686,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         let sixes = 0;
         let isNotOut = false;
         let playedInnings = false;
-        
+
         let wickets = 0;
         let bowlingRuns = 0;
         let bowlingOvers = 0;
@@ -2698,7 +2698,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
         [store.innings1, store.innings2].forEach((inn) => {
           if (!inn) return;
-          
+
           const bStat = inn.battingStats[pid];
           if (bStat) {
             lastBStat = bStat;
@@ -2717,12 +2717,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             bowlingRuns += (bwStat.runs || 0);
             bowlingOvers += (bwStat.overs || 0);
             maidens += (bwStat.maidens || 0);
-            
+
             // Calculate extras from history
             const bowlerEvents = (inn.history || []).filter(b => String(b.bowlerId) === String(pid));
             wides += bowlerEvents.filter(b => b.type === 'wide').length;
             no_balls += bowlerEvents.filter(b => b.type === 'no-ball').length;
-            
+
             if (bwStat.overs > 0) bowledInnings = true;
           }
         });
@@ -2844,7 +2844,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     try {
       // Ensure element is ready for capture
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       const canvas = await html2canvas(posterRef.current, {
         backgroundColor: '#020617',
         scale: 3, // Higher resolution for premium feel
@@ -2857,7 +2857,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           if (el) (el as HTMLElement).style.left = '0';
         }
       });
-      
+
       const playerName = getPlayerName(store.manOfTheMatch);
       const link = document.createElement('a');
       link.download = `MatchHero_${playerName.replace(/\s+/g, '_')}_${new Date().getTime()}.png`;
@@ -2924,178 +2924,178 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   try {
     return (
-    <DashboardContainer>
-      {/* V2.6.7-Premium: Floating Analytics Triggers */}
-      <FloatingAnalyticsButton 
-        onClick={() => { setActiveChart('manhattan'); setShowAnalyticsDrawer(true); }}
-        style={{ top: '40%' }}
-      >
-        MANHATTAN
-      </FloatingAnalyticsButton>
-      <FloatingAnalyticsButton 
-        onClick={() => { setActiveChart('worm'); setShowAnalyticsDrawer(true); }}
-        style={{ top: '60%' }}
-      >
-        WORM CHART
-      </FloatingAnalyticsButton>
+      <DashboardContainer>
+        {/* V2.6.7-Premium: Floating Analytics Triggers */}
+        <FloatingAnalyticsButton
+          onClick={() => { setActiveChart('manhattan'); setShowAnalyticsDrawer(true); }}
+          style={{ top: '40%' }}
+        >
+          MANHATTAN
+        </FloatingAnalyticsButton>
+        <FloatingAnalyticsButton
+          onClick={() => { setActiveChart('worm'); setShowAnalyticsDrawer(true); }}
+          style={{ top: '60%' }}
+        >
+          WORM CHART
+        </FloatingAnalyticsButton>
 
-      {isQueueFull && (
-        <PremiumModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ zIndex: 9999 }}>
-          <div style={{ background: '#001F3F', padding: '32px', borderRadius: '16px', textAlign: 'center', border: '2px solid #FF4D4D' }}>
-             <CloudOff size={48} color="#FF4D4D" style={{ margin: '0 auto 16px' }} />
-             <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#FFFFFF', marginBottom: 8 }}>WAITING FOR CONNECTION</h2>
-             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: 16 }}>Offline queue limit reached (10 balls). Please reconnect to the internet to sync and continue scoring.</p>
-             <div style={{ fontSize: '0.8rem', color: '#FAB005', fontWeight: 700 }}>{store.offlineQueue?.length || 0} balls waiting to sync.</div>
-          </div>
-        </PremiumModalOverlay>
-      )}
-      <>
-        <Header>
-          <button
-            title="Back to Match Center"
-            onClick={() => {
-              if (window.confirm("Are you sure you want to exit? Unsaved progress for this ball may be lost.")) {
-                navigate('/match-center');
-              }
-            }}
-            className="p-1 hover:bg-slate-100 rounded-lg transition-all text-slate-500 flex items-center"
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%' }}>
-              <img
-                src={store.homeLogo || '/INS%20LOGO.PNG'}
-                style={{ width: 30, height: 30, objectFit: 'contain' }}
-                alt="HOME"
-              />
-              <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
-                INDIAN STRIKERS
-              </span>
-              <span style={{ fontSize: '10px', fontWeight: 900, color: '#FAB005', opacity: 0.8 }}>VS</span>
-              <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
-                {(store.opponentName || matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
-              </span>
-              {store.awayLogo || matchMeta?.opponentLogo ? (
-                <img
-                  src={store.awayLogo || matchMeta?.opponentLogo}
-                  style={{ width: 30, height: 30, objectFit: 'contain' }}
-                  alt="AWAY"
-                />
-              ) : <Shield size={24} color="rgba(255,255,255,0.2)" />}
+        {isQueueFull && (
+          <PremiumModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ zIndex: 9999 }}>
+            <div style={{ background: '#001F3F', padding: '32px', borderRadius: '16px', textAlign: 'center', border: '2px solid #FF4D4D' }}>
+              <CloudOff size={48} color="#FF4D4D" style={{ margin: '0 auto 16px' }} />
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#FFFFFF', marginBottom: 8 }}>WAITING FOR CONNECTION</h2>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: 16 }}>Offline queue limit reached (10 balls). Please reconnect to the internet to sync and continue scoring.</p>
+              <div style={{ fontSize: '0.8rem', color: '#FAB005', fontWeight: 700 }}>{store.offlineQueue?.length || 0} balls waiting to sync.</div>
             </div>
-            <div style={{ fontSize: '7.5px', fontWeight: 900, opacity: 0.9, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2 }}>
-              {store.toss.winnerId && (
-                <div style={{ color: '#FAB005' }}>
-                  {store.toss.winnerId === 'HOME' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT')} won toss & elected to {store.toss.choice}
+          </PremiumModalOverlay>
+        )}
+        <>
+          <Header>
+            <button
+              title="Back to Match Center"
+              onClick={() => {
+                if (window.confirm("Are you sure you want to exit? Unsaved progress for this ball may be lost.")) {
+                  navigate('/match-center');
+                }
+              }}
+              className="p-1 hover:bg-slate-100 rounded-lg transition-all text-slate-500 flex items-center"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%' }}>
+                <img
+                  src={store.homeLogo || '/INS%20LOGO.PNG'}
+                  style={{ width: 30, height: 30, objectFit: 'contain' }}
+                  alt="HOME"
+                />
+                <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
+                  INDIAN STRIKERS
+                </span>
+                <span style={{ fontSize: '10px', fontWeight: 900, color: '#FAB005', opacity: 0.8 }}>VS</span>
+                <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
+                  {(store.opponentName || matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
+                </span>
+                {store.awayLogo || matchMeta?.opponentLogo ? (
+                  <img
+                    src={store.awayLogo || matchMeta?.opponentLogo}
+                    style={{ width: 30, height: 30, objectFit: 'contain' }}
+                    alt="AWAY"
+                  />
+                ) : <Shield size={24} color="rgba(255,255,255,0.2)" />}
+              </div>
+              <div style={{ fontSize: '7.5px', fontWeight: 900, opacity: 0.9, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2 }}>
+                {store.toss.winnerId && (
+                  <div style={{ color: '#FAB005' }}>
+                    {store.toss.winnerId === 'HOME' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT')} won toss & elected to {store.toss.choice}
+                  </div>
+                )}
+                <div style={{ color: 'rgba(255,255,255,0.6)' }}>
+                  {`Innings ${store.currentInnings}  •  ${store.maxOvers || 20} Overs`}
                 </div>
-              )}
-              <div style={{ color: 'rgba(255,255,255,0.6)' }}>
-                {`Innings ${store.currentInnings}  •  ${store.maxOvers || 20} Overs`}
               </div>
             </div>
-          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <SyncStatus />
-            <button
-              title="Match Settings"
-              onClick={() => setShowSettingsDrawer(true)}
-              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
-            >
-              <Settings size={16} />
-            </button>
-          </div>
-        </Header>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <SyncStatus />
+              <button
+                title="Match Settings"
+                onClick={() => setShowSettingsDrawer(true)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+              >
+                <Settings size={16} />
+              </button>
+            </div>
+          </Header>
 
-        <AnimatePresence>
+          <AnimatePresence>
 
-          {showLineups && (
-            <PremiumModalOverlay
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowLineups(false)}
-            >
-              <PremiumModalContent onClick={e => e.stopPropagation()}>
-                <div style={{ padding: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900 }}>TEAM SQUADS</h2>
-                  <button title="Close" onClick={() => setShowLineups(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X size={24} /></button>
-                </div>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '15px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div>
-                    <h3 style={{ fontSize: '1rem', color: 'rgba(84, 147, 202, 1)', marginBottom: 8, textTransform: 'uppercase' }}>Indian Strikers</h3>
-                    <SelectionGrid style={{ maxHeight: '50vh' }}>
-                      {(players || [])
-                        .filter((p: Player) => (homeXI || []).includes(p.id))
-                        .map((p: Player) => (
-                          <div key={p.id} style={{
-                            fontSize: '0.6rem',
-                            padding: '4px 4px',
-                            background: 'rgba(255,255,255,0.08)',
-                            borderRadius: 8,
-                            color: '#FFFFFF',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
-                            <span style={{ fontWeight: 700 }}>{p.name}</span>
-                            <span style={{ opacity: 0.6, fontSize: '0.55rem', fontWeight: 400, textTransform: 'uppercase' }}>{p.role}</span>
-                          </div>
-                        ))}
-                      {homeXI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.55rem' }}>No XI Selected</div>}
-                    </SelectionGrid>
+            {showLineups && (
+              <PremiumModalOverlay
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowLineups(false)}
+              >
+                <PremiumModalContent onClick={e => e.stopPropagation()}>
+                  <div style={{ padding: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900 }}>TEAM SQUADS</h2>
+                    <button title="Close" onClick={() => setShowLineups(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X size={24} /></button>
                   </div>
-                  <div>
-                    <h3 style={{ fontSize: '1rem', color: '#FAB005', marginBottom: 8, textTransform: 'uppercase' }}>{matchMeta?.opponentName || 'OPPONENT'}</h3>
-                    <SelectionGrid style={{ maxHeight: '50vh' }}>
-                      {(opponentPlayers || [])
-                        .filter(p => (awayXI || []).includes(p.id))
-                        .map(p => (
-                          <div key={p.id} style={{
-                            fontSize: '0.6rem',
-                            padding: '4px 4px',
-                            background: 'rgba(255,255,255,0.08)',
-                            borderRadius: 8,
-                            color: '#FFFFFF',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
-                            <span style={{ fontWeight: 600 }}>{p.name}</span>
-                            <span style={{ opacity: 0.6, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>{p.role}</span>
-                          </div>
-                        ))}
-                      {awayXI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.8rem' }}>No XI Selected</div>}
-                    </SelectionGrid>
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '15px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                    <div>
+                      <h3 style={{ fontSize: '1rem', color: 'rgba(84, 147, 202, 1)', marginBottom: 8, textTransform: 'uppercase' }}>Indian Strikers</h3>
+                      <SelectionGrid style={{ maxHeight: '50vh' }}>
+                        {(players || [])
+                          .filter((p: Player) => (homeXI || []).includes(p.id))
+                          .map((p: Player) => (
+                            <div key={p.id} style={{
+                              fontSize: '0.6rem',
+                              padding: '4px 4px',
+                              background: 'rgba(255,255,255,0.08)',
+                              borderRadius: 8,
+                              color: '#FFFFFF',
+                              border: '1px solid rgba(255,255,255,0.05)',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}>
+                              <span style={{ fontWeight: 700 }}>{p.name}</span>
+                              <span style={{ opacity: 0.6, fontSize: '0.55rem', fontWeight: 400, textTransform: 'uppercase' }}>{p.role}</span>
+                            </div>
+                          ))}
+                        {homeXI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.55rem' }}>No XI Selected</div>}
+                      </SelectionGrid>
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1rem', color: '#FAB005', marginBottom: 8, textTransform: 'uppercase' }}>{matchMeta?.opponentName || 'OPPONENT'}</h3>
+                      <SelectionGrid style={{ maxHeight: '50vh' }}>
+                        {(opponentPlayers || [])
+                          .filter(p => (awayXI || []).includes(p.id))
+                          .map(p => (
+                            <div key={p.id} style={{
+                              fontSize: '0.6rem',
+                              padding: '4px 4px',
+                              background: 'rgba(255,255,255,0.08)',
+                              borderRadius: 8,
+                              color: '#FFFFFF',
+                              border: '1px solid rgba(255,255,255,0.05)',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}>
+                              <span style={{ fontWeight: 600 }}>{p.name}</span>
+                              <span style={{ opacity: 0.6, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>{p.role}</span>
+                            </div>
+                          ))}
+                        {awayXI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.8rem' }}>No XI Selected</div>}
+                      </SelectionGrid>
+                    </div>
                   </div>
-                </div>
-              </PremiumModalContent>
-            </PremiumModalOverlay>
-          )}
-        </AnimatePresence>
+                </PremiumModalContent>
+              </PremiumModalOverlay>
+            )}
+          </AnimatePresence>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: !isOnline ? '#EF4444' : (isSyncing ? '#FAB005' : '#10B981'),
-              boxShadow: isOnline && !isSyncing ? '0 0 8px rgba(16,185,129,0.5)' : 'none'
-            }} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#001F3F', opacity: 0.6, letterSpacing: 0.5 }}>
-              {!isOnline ? 'OFFLINE' : (isSyncing ? 'SYNCING...' : 'LIVE TUNNEL')}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {(() => {
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: '50%',
+                background: !isOnline ? '#EF4444' : (isSyncing ? '#FAB005' : '#10B981'),
+                boxShadow: isOnline && !isSyncing ? '0 0 8px rgba(16,185,129,0.5)' : 'none'
+              }} />
+              <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#001F3F', opacity: 0.6, letterSpacing: 0.5 }}>
+                {!isOnline ? 'OFFLINE' : (isSyncing ? 'SYNCING...' : 'LIVE TUNNEL')}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {(() => {
                 const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
                 const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
                 if (cloudBalls > localBalls) {
                   return (
-                    <button 
+                    <button
                       onClick={() => {
                         if (matchMeta?.live_data) {
                           store.initializeMatch({
@@ -3114,9 +3114,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           toast.success("Corrected from Mobile!");
                         }
                       }}
-                      style={{ 
-                        background: '#FAB005', border: 'none', borderRadius: 4, 
-                        padding: '2px 8px', color: '#000', fontSize: '0.6rem', 
+                      style={{
+                        background: '#FAB005', border: 'none', borderRadius: 4,
+                        padding: '2px 8px', color: '#000', fontSize: '0.6rem',
                         fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4
                       }}
                     >
@@ -3125,687 +3125,724 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   );
                 }
                 return null;
-            })()}
-            <button 
-              onClick={() => {
-                const totalBalls = currentInnings?.totalBalls || 0;
-                if (totalBalls % 6 === 0) {
-                  store.updateMatchSettings({ isWaitingForBowler: true, currentBowlerId: null });
-                  toast.success("Ready for new bowler");
-                } else {
-                  toast.error("Over not finished yet");
-                }
-              }}
-              style={{
-                background: 'rgba(51,154,240,0.1)', border: '1px solid rgba(51,154,240,0.2)',
-                borderRadius: 4, padding: '2px 6px', color: '#339AF0', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer'
-              }}
-            >
-              HEAL STATE
-            </button>
-            <button 
-              onClick={() => {
-                toast.promise(syncWithCloud(), {
-                  loading: 'Syncing with cloud...',
-                  success: 'Cloud states aligned!',
-                  error: 'Sync failed'
-                });
-              }}
-              style={{ 
-                background: 'none', border: 'none', color: 'rgba(0,31,63,0.4)', 
-                fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 4
-              }}
-            >
-              <Cloud size={10} /> FORCE RE-SYNC
-            </button>
-          </div>
-        </div>
-
-        <ScoreSection style={{ position: 'relative' }}>
-          {/* FREE HIT BADGE - Moved to main container */}
-          {store.isFreeHit && (
-            <div style={{ position: 'absolute', top: 10, left: 20 }}>
-              <FreeHitBadge
-                animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-                transition={{ repeat: Infinity, duration: 1.5 }}
-                style={{ fontSize: '10px', padding: '4px 12px', background: '#FF4D4D' }}
-              >
-                FREE HIT
-              </FreeHitBadge>
-            </div>
-          )}
-
-          {/* CENTERED STATS & SCORE */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '12px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15%', width: '100%', marginBottom: 10 }}>
-              {/* CRR */}
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>CRR</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#001F3F' }}>
-                  {(() => {
-                    const totalBalls = currentInnings?.totalBalls || 0;
-                    if (totalBalls === 0) return '0.00';
-                    return ((currentInnings?.totalRuns || 0) / (totalBalls / 6)).toFixed(2);
-                  })()}
-                </div>
-              </div>
-
-              {/* PROJECTED */}
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>PROJECTED</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FAB005' }}>
-                  {(() => {
-                    const totalBalls = currentInnings?.totalBalls || 0;
-                    const rr = totalBalls === 0 ? 0 : (currentInnings?.totalRuns || 0) / (totalBalls / 6);
-                    return Math.ceil(rr * (store.maxOvers || 20));
-                  })()}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'scale(1.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                <MainScore style={{ fontSize: '3rem', margin: 0, fontWeight: 900, letterSpacing: '-2px', color: '#001F3F' }}>
-                  {currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}
-                </MainScore>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-                <OversText style={{ fontSize: '1.1rem', fontWeight: 900, opacity: 0.8, color: '#1a73e8', letterSpacing: 1 }}>
-                  {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
-                </OversText>
-                <div style={{ width: 1, height: 12, background: 'rgba(0,0,0,0.1)' }} />
-                <button
-                  onClick={() => setShowScorecardModal(true)}
-                  style={{
-                    border: 'none', padding: '4px 12px', borderRadius: 20,
-                    color: '#1a73e8', fontSize: '0.75rem', fontWeight: 900, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(26,115,232,0.08)',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e: any) => e.currentTarget.style.background = 'rgba(26,115,232,0.12)'}
-                  onMouseLeave={(e: any) => e.currentTarget.style.background = 'rgba(26,115,232,0.08)'}
-                >
-                  <LayoutList size={14} /> SCORECARD
-                </button>
-              </div>
-            </div>
-          </div>
-        </ScoreSection>
-
-
-
-        <ActiveParticipants style={{ borderBottom: 'none' }}>
-          <ParticipantCard $active>
-            <CardHeader>
-              <NameLabel>Striker*</NameLabel>
+              })()}
               <button
-                title="Switch Striker"
                 onClick={() => {
-                  if (isLocked) return;
-                  store.switchStriker();
+                  const totalBalls = currentInnings?.totalBalls || 0;
+                  if (totalBalls % 6 === 0) {
+                    store.updateMatchSettings({ isWaitingForBowler: true, currentBowlerId: null });
+                    toast.success("Ready for new bowler");
+                  } else {
+                    toast.error("Over not finished yet");
+                  }
                 }}
-                style={{ 
-                  color: '#070707ff', 
-                  background: 'rgba(51,154,240,0.1)', 
-                  border: 'none', 
-                  borderRadius: '50%', 
-                  padding: '4px', 
-                  cursor: isLocked ? 'not-allowed' : 'pointer',
-                  opacity: isLocked ? 0.5 : 1
+                style={{
+                  background: 'rgba(51,154,240,0.1)', border: '1px solid rgba(51,154,240,0.2)',
+                  borderRadius: 4, padding: '2px 6px', color: '#339AF0', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer'
                 }}
               >
-                <RefreshCcw size={12} />
+                HEAL STATE
               </button>
-            </CardHeader>
-            <StatValue>{getPlayerName(store.strikerId)}</StatValue>
-            <div style={{ fontSize: '0.8rem' }}>{strikerStats.runs}({strikerStats.balls})</div>
-          </ParticipantCard>
-          <ParticipantCard>
-            <CardHeader>
-              <NameLabel>Non-Striker</NameLabel>
-            </CardHeader>
-            <StatValue>{getPlayerName(store.nonStrikerId)}</StatValue>
-            <div style={{ fontSize: '0.8rem' }}>{nonStrikerStats.runs}({nonStrikerStats.balls})</div>
-          </ParticipantCard>
-          <ParticipantCard style={{ gridColumn: 'span 2' }}>
-            <CardHeader>
-              <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bowler</span>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <button
-                  onClick={() => {
-                    if (isLocked) return;
-                    setShowBowlerModal(true);
-                  }}
-                  style={{
-                    background: 'rgba(51,154,240,0.1)',
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '2px 8px',
-                    color: '#339AF0',
-                    fontSize: '0.6rem',
-                    fontWeight: 800,
-                    cursor: isLocked ? 'not-allowed' : 'pointer',
-                    opacity: isLocked ? 0.5 : 1
-                  }}
-                >
-                  CHANGE
-                </button>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase' }}>This Over</div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#001F3F' }}>
-                    {(() => {
-                      const ballsCount = currentInnings?.totalBalls || 0;
-                      const displayOver = (isOverComplete && ballsCount % 6 === 0)
-                        ? Math.floor(ballsCount / 6) - 1
-                        : Math.floor(ballsCount / 6);
+              <button
+                onClick={() => {
+                  toast.promise(syncWithCloud(), {
+                    loading: 'Syncing with cloud...',
+                    success: 'Cloud states aligned!',
+                    error: 'Sync failed'
+                  });
+                }}
+                style={{
+                  background: 'none', border: 'none', color: 'rgba(0,31,63,0.4)',
+                  fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 4
+                }}
+              >
+                <Cloud size={10} /> FORCE RE-SYNC
+              </button>
+            </div>
+          </div>
 
-                      return (currentInnings?.history || [])
-                        .filter(b => b.overNumber === displayOver)
-                        .reduce((sum, b) => sum + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+          <ScoreSection style={{ position: 'relative' }}>
+            {/* FREE HIT BADGE - Moved to main container */}
+            {store.isFreeHit && (
+              <div style={{ position: 'absolute', top: 10, left: 20 }}>
+                <FreeHitBadge
+                  animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  style={{ fontSize: '10px', padding: '4px 12px', background: '#FF4D4D' }}
+                >
+                  FREE HIT
+                </FreeHitBadge>
+              </div>
+            )}
+
+            {/* CENTERED STATS & SCORE */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '12px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15%', width: '100%', marginBottom: 10 }}>
+                {/* CRR */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>CRR</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#001F3F' }}>
+                    {(() => {
+                      const totalBalls = currentInnings?.totalBalls || 0;
+                      if (totalBalls === 0) return '0.00';
+                      return ((currentInnings?.totalRuns || 0) / (totalBalls / 6)).toFixed(2);
+                    })()}
+                  </div>
+                </div>
+
+                {/* PROJECTED */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>PROJECTED</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FAB005' }}>
+                    {(() => {
+                      const totalBalls = currentInnings?.totalBalls || 0;
+                      const rr = totalBalls === 0 ? 0 : (currentInnings?.totalRuns || 0) / (totalBalls / 6);
+                      return Math.ceil(rr * (store.maxOvers || 20));
                     })()}
                   </div>
                 </div>
               </div>
-            </CardHeader>
-            <StatValue style={{ 
-              color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit'
-            }}>
-              {getPlayerName(store.currentBowlerId)}
-            </StatValue>
-            <div style={{ 
-              fontSize: '0.9rem', 
-              fontWeight: 700,
-              color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit'
-            }}>
-              {bowlerStats.wickets}-{bowlerStats.runs} ({bowlerStats.overs})
-              {bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5) && " • QUOTA DONE"}
+
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'scale(1.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <MainScore style={{ fontSize: '3rem', margin: 0, fontWeight: 900, letterSpacing: '-2px', color: '#001F3F' }}>
+                    {currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}
+                  </MainScore>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                  <OversText style={{ fontSize: '1.1rem', fontWeight: 900, opacity: 0.8, color: '#1a73e8', letterSpacing: 1 }}>
+                    {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
+                  </OversText>
+                  <div style={{ width: 1, height: 12, background: 'rgba(0,0,0,0.1)' }} />
+                  <button
+                    onClick={() => setShowScorecardModal(true)}
+                    style={{
+                      border: 'none', padding: '4px 12px', borderRadius: 20,
+                      color: '#1a73e8', fontSize: '0.75rem', fontWeight: 900, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(26,115,232,0.08)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e: any) => e.currentTarget.style.background = 'rgba(26,115,232,0.12)'}
+                    onMouseLeave={(e: any) => e.currentTarget.style.background = 'rgba(26,115,232,0.08)'}
+                  >
+                    <LayoutList size={14} /> SCORECARD
+                  </button>
+                </div>
+              </div>
             </div>
-          </ParticipantCard>
-        </ActiveParticipants>
+          </ScoreSection>
 
-        <PartnershipRow style={{ background: 'rgba(0, 31, 63, 0.05)', padding: '4px 10px', marginBottom: 0 }}>
-          <PartnershipMain style={{ fontSize: '10px' }}>
-            PARTNERSHIP: <b>{partnershipData.totalRuns}</b> ({partnershipData.totalBalls})
-          </PartnershipMain>
-          <PartnershipSub style={{ fontSize: '10px' }}>
-            {getPlayerName(store.strikerId)} <b>{strikerStats.runs}({strikerStats.balls})*</b> | {getPlayerName(store.nonStrikerId)} <b>{nonStrikerStats.runs}({nonStrikerStats.balls})</b>
-          </PartnershipSub>
-        </PartnershipRow>
 
-        <ScoringInterface style={{ position: 'fixed', padding: '10px 10px 10px' }}>
-          {/* UNDO & UTILITY ROW - FIXED FOOTER */}
-          <div style={{ padding: '0 10px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 30 }}>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                onClick={() => setShowLineups(true)}
-                title="View Lineups"
-                style={{ background: 'rgba(250, 176, 5, 0.15)', border: 'none', borderRadius: 6, padding: '6px 10px', color: '#FAB005', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-              >
-                <Users size={12} />
-                <span style={{ fontSize: '10px', fontWeight: 800 }}>LINEUPS</span>
-              </button>
+
+          <ActiveParticipants style={{ borderBottom: 'none' }}>
+            <ParticipantCard $active>
+              <CardHeader>
+                <NameLabel>Striker*</NameLabel>
+                <button
+                  title="Switch Striker"
+                  onClick={() => {
+                    if (isLocked) return;
+                    store.switchStriker();
+                  }}
+                  style={{
+                    color: '#070707ff',
+                    background: 'rgba(51,154,240,0.1)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    padding: '4px',
+                    cursor: isLocked ? 'not-allowed' : 'pointer',
+                    opacity: isLocked ? 0.5 : 1
+                  }}
+                >
+                  <RefreshCcw size={12} />
+                </button>
+              </CardHeader>
+              <StatValue>{getPlayerName(store.strikerId)}</StatValue>
+              <div style={{ fontSize: '0.8rem' }}>{strikerStats.runs}({strikerStats.balls})</div>
+            </ParticipantCard>
+            <ParticipantCard>
+              <CardHeader>
+                <NameLabel>Non-Striker</NameLabel>
+              </CardHeader>
+              <StatValue>{getPlayerName(store.nonStrikerId)}</StatValue>
+              <div style={{ fontSize: '0.8rem' }}>{nonStrikerStats.runs}({nonStrikerStats.balls})</div>
+            </ParticipantCard>
+            <ParticipantCard style={{ gridColumn: 'span 2' }}>
+              <CardHeader>
+                <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bowler</span>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <button
+                    onClick={() => {
+                      if (isLocked) return;
+                      setShowBowlerModal(true);
+                    }}
+                    style={{
+                      background: 'rgba(51,154,240,0.1)',
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '2px 8px',
+                      color: '#339AF0',
+                      fontSize: '0.6rem',
+                      fontWeight: 800,
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      opacity: isLocked ? 0.5 : 1
+                    }}
+                  >
+                    CHANGE
+                  </button>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase' }}>This Over</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#001F3F' }}>
+                      {(() => {
+                        const ballsCount = currentInnings?.totalBalls || 0;
+                        const displayOver = (isOverComplete && ballsCount % 6 === 0)
+                          ? Math.floor(ballsCount / 6) - 1
+                          : Math.floor(ballsCount / 6);
+
+                        return (currentInnings?.history || [])
+                          .filter(b => b.overNumber === displayOver)
+                          .reduce((sum, b) => sum + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <StatValue style={{
+                color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit'
+              }}>
+                {getPlayerName(store.currentBowlerId)}
+              </StatValue>
+              <div style={{
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit'
+              }}>
+                {bowlerStats.wickets}-{bowlerStats.runs} ({bowlerStats.overs})
+                {bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5) && " • QUOTA DONE"}
+              </div>
+            </ParticipantCard>
+          </ActiveParticipants>
+
+          <PartnershipRow style={{ background: 'rgba(0, 31, 63, 0.05)', padding: '4px 10px', marginBottom: 0 }}>
+            <PartnershipMain style={{ fontSize: '10px' }}>
+              PARTNERSHIP: <b>{partnershipData.totalRuns}</b> ({partnershipData.totalBalls})
+            </PartnershipMain>
+            <PartnershipSub style={{ fontSize: '10px' }}>
+              {getPlayerName(store.strikerId)} <b>{strikerStats.runs}({strikerStats.balls})*</b> | {getPlayerName(store.nonStrikerId)} <b>{nonStrikerStats.runs}({nonStrikerStats.balls})</b>
+            </PartnershipSub>
+          </PartnershipRow>
+
+          <ScoringInterface style={{ position: 'fixed', padding: '10px 10px 10px' }}>
+            {/* UNDO & UTILITY ROW - FIXED FOOTER */}
+            <div style={{ padding: '0 10px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 30 }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={() => setShowLineups(true)}
+                  title="View Lineups"
+                  style={{ background: 'rgba(250, 176, 5, 0.15)', border: 'none', borderRadius: 6, padding: '6px 10px', color: '#FAB005', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Users size={12} />
+                  <span style={{ fontSize: '10px', fontWeight: 800 }}>LINEUPS</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: 'Match Scorecard',
+                        text: `Score: ${currentInnings?.totalRuns}/${currentInnings?.wickets} (${store.getOvers(currentInnings?.totalBalls || 0)} ovs)`,
+                        url: window.location.href
+                      }).catch(console.error);
+                    } else {
+                      toast.success("Link copied!");
+                      navigator.clipboard.writeText(window.location.href);
+                    }
+                  }}
+                  title="Share Scorecard"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 6, padding: '6px 10px', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Share2 size={12} />
+                  <span style={{ fontSize: '10px', fontWeight: 800 }}>SHARE</span>
+                </button>
+              </div>
+
               <button
                 onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({
-                      title: 'Match Scorecard',
-                      text: `Score: ${currentInnings?.totalRuns}/${currentInnings?.wickets} (${store.getOvers(currentInnings?.totalBalls || 0)} ovs)`,
-                      url: window.location.href
-                    }).catch(console.error);
-                  } else {
-                    toast.success("Link copied!");
-                    navigator.clipboard.writeText(window.location.href);
-                  }
+                  if (isLocked) return;
+                  store.undoLastBall();
+                  setIsOverComplete(false);
                 }}
-                title="Share Scorecard"
-                style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 6, padding: '6px 10px', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                title="Undo Last Ball"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '6px 12px',
+                  color: '#ef4444',
+                  cursor: isLocked ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  opacity: isLocked ? 0.5 : 1,
+                  visibility: 'visible'
+                }}
               >
-                <Share2 size={12} />
-                <span style={{ fontSize: '10px', fontWeight: 800 }}>SHARE</span>
+                <div style={{ pointerEvents: 'none' }}><RotateCcw size={14} /></div>
+                <span style={{ fontSize: '11px', fontWeight: 900 }}>UNDO</span>
               </button>
             </div>
 
-            <button
-              onClick={() => { 
-                if (isLocked) return;
-                store.undoLastBall(); 
-                setIsOverComplete(false); 
-              }}
-              title="Undo Last Ball"
-              style={{ 
-                background: 'rgba(239, 68, 68, 0.2)', 
-                border: 'none', 
-                borderRadius: 6, 
-                padding: '6px 12px', 
-                color: '#ef4444', 
-                cursor: isLocked ? 'not-allowed' : 'pointer', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 6, 
-                opacity: isLocked ? 0.5 : 1, 
-                visibility: 'visible' 
-              }}
-            >
-              <div style={{ pointerEvents: 'none' }}><RotateCcw size={14} /></div>
-              <span style={{ fontSize: '11px', fontWeight: 900 }}>UNDO</span>
-            </button>
-          </div>
-
-          <div style={{ background: '#001F3F', margin: '0 0 2px', borderRadius: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            {/* SYSTEM NARRATIVE FEED */}
-            {store.systemCommentary && store.systemCommentary.length > 0 && (
-              <div className="bg-slate-900/80 px-3 py-2 max-h-[80px] overflow-y-auto custom-scrollbar border-b border-white/5 space-y-1.5 flex flex-col-reverse">
-                {[...store.systemCommentary].reverse().map((comm, index) => (
-                  <motion.div 
-                    key={comm.id} 
-                    className="text-xs text-white/90 font-medium leading-tight rounded p-1"
-                    initial={index === 0 ? { backgroundColor: "rgba(16, 185, 129, 0.5)" } : false}
-                    animate={{ backgroundColor: "transparent" }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                  >
-                    <span className="text-amber-500/80 font-bold mr-1.5 text-[10px]">
-                      {new Date(comm.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </span>
-                    {comm.text}
-                  </motion.div>
-                ))}
-              </div>
-            )}
-            <TimelineContainer ref={timelineRef} id="match-timeline" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              {(() => {
-                const balls = currentInnings?.history || [];
-                const last30 = balls.slice(-30);
-                return last30.map((ball: any, idx: number) => {
-                  let display = ball.runs.toString();
-                  if (ball.isWicket) {
-                    const prefix = ball.type === 'no-ball' ? 'NB' : ball.type === 'wide' ? 'WD' : '';
-                    const amount = ball.runs > 0 ? `+${ball.runs}` : '';
-                    display = prefix ? `${prefix}${amount}+W` : 'W';
-                  }
-                  else if (ball.type === 'wide') display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                  else if (ball.type === 'no-ball') display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                  else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
-                  else if (ball.type === 'bye') display = `B${ball.runs}`;
-                  const ballInOverNum = ball.ballNumber;
-                  const isLastBallOfOver = ballInOverNum === 6 && ball.isLegal;
-                  const showSeparator = isLastBallOfOver && idx < last30.length - 1;
-                  return (
-                    <React.Fragment key={`${idx}-${ball.timestamp}`}>
-                      <BallCircle $type={display}>{display}</BallCircle>
-                      {showSeparator && <OverSeparator />}
-                    </React.Fragment>
-                  );
-                });
-              })()}
-              {(currentInnings?.history || []).length === 0 && (
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px' }}>WAITING...</span>
-              )}
-            </TimelineContainer>
-          </div>
-
-          <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {(store.isWaitingForBowler || isLocked) && (
-              <div style={{ 
-                position: 'absolute', 
-                inset: -4, 
-                zIndex: 10, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                background: 'rgba(0,0,0,0.6)', 
-                backdropFilter: 'blur(2px)', 
-                borderRadius: 12 
-              }}>
-                {isLocked ? (
-                  <div style={{ 
-                    background: 'rgba(255,255,255,0.05)', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    padding: '12px 24px', 
-                    borderRadius: 16, 
-                    textAlign: 'center' 
-                  }}>
-                    <LockIcon size={24} color="#FAB005" style={{ marginBottom: 8 }} />
-                    <div style={{ color: '#FFF', fontWeight: 900, fontSize: '0.9rem', letterSpacing: 1 }}>MATCH LOCKED</div>
-                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', fontWeight: 700, marginTop: 4 }}>READ-ONLY MODE ACTIVE</div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowBowlerModal(true)}
-                    style={{ background: '#FAB005', color: '#000', border: 'none', padding: '10px 20px', borderRadius: 10, fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
-                  >
-                    SELECT NEXT BOWLER
-                  </button>
-                )}
-              </div>
-            )}
-
-            <div style={{ opacity: (store.isWaitingForBowler || isLocked) ? 0.3 : 1, pointerEvents: (store.isWaitingForBowler || isLocked) ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <RunGrid>
-                <ScoringBtn onClick={() => attemptRecord(0, 'legal')}>0</ScoringBtn>
-                <ScoringBtn onClick={() => attemptRecord(1, 'legal')}>1</ScoringBtn>
-                <ScoringBtn onClick={() => attemptRecord(2, 'legal')}>2</ScoringBtn>
-                <ScoringBtn onClick={() => attemptRecord(3, 'legal')}>3</ScoringBtn>
-                <ScoringBtn onClick={() => attemptRecord(4, 'legal')}>4</ScoringBtn>
-                <ScoringBtn onClick={() => attemptRecord(5, 'legal')}>5</ScoringBtn>
-                <ScoringBtn onClick={() => attemptRecord(6, 'legal')}>6</ScoringBtn>
-                <ScoringBtn $variant="wicket" style={{ background: '#FF4D4D', color: '#FFF' }} onClick={() => setShowWicketModal(true)}>WKT</ScoringBtn>
-              </RunGrid>
-
-              <ExtraStack>
-                <ScoringBtn $variant="extra" onClick={() => { setExtraType('wd'); setShowNBModal(true); }}>WD</ScoringBtn>
-                <ScoringBtn $variant="extra" onClick={() => { setExtraType('nb'); setShowNBModal(true); }}>NB</ScoringBtn>
-                <ScoringBtn $variant="extra" onClick={() => { setExtraType('byes'); setShowNBModal(true); }}>B</ScoringBtn>
-                <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
-              </ExtraStack>
-            </div>
-          </div>
-        </ScoringInterface>
-
-        {showBowlerModal && (
-          <ModalOverlay onClick={() => setShowBowlerModal(false)}>
-            <ModalContent onClick={e => e.stopPropagation()}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>SELECT NEXT BOWLER</h2>
-              <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Choose the bowler for the next over</p>
-
-              <SelectionGrid style={{ maxHeight: '50vh' }}>
-                {(() => {
-                  const fieldingTeamId = currentInnings.bowlingTeamId;
-                  const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
-                  const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
-                  const maxOversPerB = Math.ceil((store.maxOvers || 20) / 5);
-                  return (fieldingPool || [])
-                    .filter((p: any) => {
-                      const isInXI = (fieldingTeamXI || []).includes(p.id);
-                      const isPrevBowler = p.id === store.currentBowlerId;
-                      const stats = currentInnings.bowlingStats[p.id] || { overs: 0 };
-                      const hasReachedLimit = stats.overs >= maxOversPerB;
-                      return isInXI && !isPrevBowler && !hasReachedLimit;
-                    })
-                    .map((p: any) => {
-                      const bStats = currentInnings.bowlingStats[p.id] || { overs: 0, runs: 0, wickets: 0 };
-                      return (
-                        <PlayerCard
-                          key={p.id}
-                          onClick={() => {
-                            store.setNewBowler(p.id, p.name);
-                            setShowBowlerModal(false);
-                            setIsOverComplete(false);
-                          }}
-                        >
-                          <User size={16} />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
-                            <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{bStats.wickets}-{bStats.runs} ({bStats.overs})</div>
-                          </div>
-                        </PlayerCard>
-                      );
-                    });
-                })()}
-              </SelectionGrid>
-
-              <button
-                onClick={() => setShowBowlerModal(false)}
-                style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 24, cursor: 'pointer', width: '100%' }}
-              >
-                CANCEL
-              </button>
-            </ModalContent>
-          </ModalOverlay>
-        )}
-        {showNBModal && (
-          <ModalOverlay onClick={() => setShowNBModal(false)}>
-            <ModalContent onClick={e => e.stopPropagation()}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>{extraType.toUpperCase()} OPTIONS</h2>
-
-              {extraType === 'nb' && (
-                <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: 'rgba(255,255,255,0.05)', padding: 4, borderRadius: 8 }}>
-                  {(['bat', 'bye', 'lb'] as const).map(t => (
-                    <button
-                      key={t}
-                      onClick={() => setNbSubType(t)}
-                      style={{
-                        flex: 1, padding: '8px', borderRadius: 6, border: 'none', fontSize: '0.7rem', fontWeight: 800,
-                        background: nbSubType === t ? '#FAB005' : 'transparent',
-                        color: nbSubType === t ? '#000' : '#FFF',
-                        cursor: 'pointer'
-                      }}
+            <div style={{ background: '#001F3F', margin: '0 0 2px', borderRadius: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              {/* SYSTEM NARRATIVE FEED */}
+              {store.systemCommentary && store.systemCommentary.length > 0 && (
+                <div className="bg-slate-900/80 px-3 py-2 max-h-[80px] overflow-y-auto custom-scrollbar border-b border-white/5 space-y-1.5 flex flex-col-reverse">
+                  {[...store.systemCommentary].reverse().map((comm, index) => (
+                    <motion.div
+                      key={comm.id}
+                      className="text-xs text-white/90 font-medium leading-tight rounded p-1"
+                      initial={index === 0 ? { backgroundColor: "rgba(16, 185, 129, 0.5)" } : false}
+                      animate={{ backgroundColor: "rgba(16, 185, 129, 0)" }}
+                      transition={{ duration: 1.5, ease: "easeOut" }}
                     >
-                      {t === 'bat' ? 'OFF BAT' : t.toUpperCase()}
-                    </button>
+                      <span className="text-amber-500/80 font-bold mr-1.5 text-[10px]">
+                        {new Date(comm.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      {comm.text}
+                    </motion.div>
                   ))}
                 </div>
               )}
-
-              <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Select additional runs scored</p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
-                {[0, 1, 2, 3, 4, 6].map(runs => (
-                  <ScoringBtn
-                    key={runs}
-                    style={{ height: 60, fontSize: '1.2rem' }}
-                    onClick={() => {
-                      const type = extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye'));
-                      const finalSubType = extraType === 'nb' ? nbSubType : (extraType === 'wd' ? 'bye' : (extraType === 'byes' ? 'bye' : 'lb'));
-                      attemptRecord(runs, type, false, undefined, finalSubType);
-                      setShowNBModal(false);
-                    }}
-                  >
-                    {runs}
-                  </ScoringBtn>
-                ))}
-              </div>
-
-              <button
-                onClick={() => {
-                  const type = extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye'));
-                  const finalSubType = extraType === 'nb' ? nbSubType : (extraType === 'wd' ? 'bye' : (extraType === 'byes' ? 'bye' : 'lb'));
-                  setRunOutInvolved({
-                    victimId: '',
-                    runs: 0,
-                    ballType: type,
-                    subType: finalSubType
+              <TimelineContainer ref={timelineRef} id="match-timeline" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                {(() => {
+                  const balls = currentInnings?.history || [];
+                  const last30 = balls.slice(-30);
+                  return last30.map((ball: any, idx: number) => {
+                    let display = ball.runs.toString();
+                    if (ball.isWicket) {
+                      const prefix = ball.type === 'no-ball' ? 'NB' : ball.type === 'wide' ? 'WD' : '';
+                      const amount = ball.runs > 0 ? `+${ball.runs}` : '';
+                      display = prefix ? `${prefix}${amount}+W` : 'W';
+                    }
+                    else if (ball.type === 'wide') display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                    else if (ball.type === 'no-ball') display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                    else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
+                    else if (ball.type === 'bye') display = `B${ball.runs}`;
+                    const ballInOverNum = ball.ballNumber;
+                    const isLastBallOfOver = ballInOverNum === 6 && ball.isLegal;
+                    const showSeparator = isLastBallOfOver && idx < last30.length - 1;
+                    return (
+                      <React.Fragment key={`${idx}-${ball.timestamp}`}>
+                        <BallCircle $type={display}>{display}</BallCircle>
+                        {showSeparator && <OverSeparator />}
+                      </React.Fragment>
+                    );
                   });
-                }}
-                style={{
-                  width: '100%', padding: '16px', borderRadius: 12, border: '2px solid #FAB005',
-                  background: 'rgba(250, 176, 5, 0.1)', color: '#FAB005', fontWeight: 900,
-                  fontSize: '0.9rem', cursor: 'pointer', marginBottom: 12
-                }}
-              >
-                RUN OUT
-              </button>
+                })()}
+                {(currentInnings?.history || []).length === 0 && (
+                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px' }}>WAITING...</span>
+                )}
+              </TimelineContainer>
+            </div>
 
-              <button
-                onClick={() => setShowNBModal(false)}
-                style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 24, cursor: 'pointer', width: '100%' }}
-              >
-                CANCEL
-              </button>
-            </ModalContent>
-          </ModalOverlay>
-        )}
+            <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {(store.isWaitingForBowler || isLocked) && (
+                <div style={{
+                  position: 'absolute',
+                  inset: -4,
+                  zIndex: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(0,0,0,0.6)',
+                  backdropFilter: 'blur(2px)',
+                  borderRadius: 12
+                }}>
+                  {isLocked ? (
+                    <div style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      padding: '12px 24px',
+                      borderRadius: 16,
+                      textAlign: 'center'
+                    }}>
+                      <LockIcon size={24} color="#FAB005" style={{ marginBottom: 8 }} />
+                      <div style={{ color: '#FFF', fontWeight: 900, fontSize: '0.9rem', letterSpacing: 1 }}>MATCH LOCKED</div>
+                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', fontWeight: 700, marginTop: 4 }}>READ-ONLY MODE ACTIVE</div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowBowlerModal(true)}
+                      style={{ background: '#FAB005', color: '#000', border: 'none', padding: '10px 20px', borderRadius: 10, fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer', boxShadow: '0 8px 25px rgba(250, 176, 5, 0.4)' }}
+                    >
+                      SELECT NEXT BOWLER
+                    </button>
+                  )}
+                </div>
+              )}
 
-        {showWicketModal && !runOutInvolved && !showBatterSelectModal && (
-          <ModalOverlay onClick={() => setShowWicketModal(false)}>
-            <ModalContent onClick={e => e.stopPropagation()}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 20 }}>DISMISSAL TYPE</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                {['Bowled', 'Caught', 'LBW', 'Stumped', 'Hit Wicket', 'Retired Hurt', 'Retired Out'].map(type => (
-                  <button
-                    key={type}
-                    style={{
-                      padding: '12px 8px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
-                      background: 'rgba(255,255,255,0.05)', color: '#FFF', fontWeight: 700, fontSize: '0.75rem'
-                    }}
-                    onClick={() => {
-                      setPendingWicketType(type);
-                      if (type === 'Caught' || type === 'Stumped') {
-                        setShowWicketModal(false);
-                        setShowFielderModal(true);
-                      } else {
-                        setShowWicketModal(false);
-                        triggerWicketSplash(type);
-                      }
-                    }}
-                  >
-                    {type}
-                  </button>
-                ))}
+              <div style={{ opacity: (store.isWaitingForBowler || isLocked) ? 0.3 : 1, pointerEvents: (store.isWaitingForBowler || isLocked) ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <RunGrid>
+                  <ScoringBtn onClick={() => attemptRecord(0, 'legal')}>0</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(1, 'legal')}>1</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(2, 'legal')}>2</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(3, 'legal')}>3</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(4, 'legal')}>4</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(5, 'legal')}>5</ScoringBtn>
+                  <ScoringBtn onClick={() => attemptRecord(6, 'legal')}>6</ScoringBtn>
+                  <ScoringBtn $variant="wicket" style={{ background: '#FF4D4D', color: '#FFF' }} onClick={() => setShowWicketModal(true)}>WKT</ScoringBtn>
+                </RunGrid>
+
+                <ExtraStack>
+                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('wd'); setShowNBModal(true); }}>WD</ScoringBtn>
+                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('nb'); setShowNBModal(true); }}>NB</ScoringBtn>
+                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('byes'); setShowNBModal(true); }}>B</ScoringBtn>
+                  <ScoringBtn $variant="extra" onClick={() => { setExtraType('lb'); setShowNBModal(true); }}>LB</ScoringBtn>
+                </ExtraStack>
+              </div>
+            </div>
+          </ScoringInterface>
+
+          {showBowlerModal && (
+            <ModalOverlay onClick={() => setShowBowlerModal(false)}>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>SELECT NEXT BOWLER</h2>
+                <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Choose the bowler for the next over</p>
+
+                <SelectionGrid style={{ maxHeight: '50vh' }}>
+                  {(() => {
+                    const fieldingTeamId = currentInnings.bowlingTeamId;
+                    const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
+                    const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
+                    const maxOversPerB = Math.ceil((store.maxOvers || 20) / 5);
+                    return (fieldingPool || [])
+                      .filter((p: any) => {
+                        const isInXI = (fieldingTeamXI || []).includes(p.id);
+                        const isPrevBowler = p.id === store.currentBowlerId;
+                        const stats = currentInnings.bowlingStats[p.id] || { overs: 0 };
+                        const hasReachedLimit = stats.overs >= maxOversPerB;
+                        return isInXI && !isPrevBowler && !hasReachedLimit;
+                      })
+                      .map((p: any) => {
+                        const bStats = currentInnings.bowlingStats[p.id] || { overs: 0, runs: 0, wickets: 0 };
+                        return (
+                          <PlayerCard
+                            key={p.id}
+                            onClick={() => {
+                              store.setNewBowler(p.id, p.name);
+                              setShowBowlerModal(false);
+                              setIsOverComplete(false);
+                            }}
+                          >
+                            <User size={16} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
+                              <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{bStats.wickets}-{bStats.runs} ({bStats.overs})</div>
+                            </div>
+                          </PlayerCard>
+                        );
+                      });
+                  })()}
+                </SelectionGrid>
+
                 <button
-                  style={{ gridColumn: 'span 2', padding: 16, borderRadius: 12, border: '2px solid #FAB005', background: 'rgba(250, 176, 5, 0.1)', color: '#FAB005', fontWeight: 900 }}
-                  onClick={() => setRunOutInvolved({ victimId: '', runs: 0, ballType: 'legal', subType: 'bat' })}
+                  onClick={() => setShowBowlerModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 24, cursor: 'pointer', width: '100%' }}
+                >
+                  CANCEL
+                </button>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+          {showNBModal && (
+            <ModalOverlay onClick={() => setShowNBModal(false)}>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>{extraType.toUpperCase()} OPTIONS</h2>
+
+                {extraType === 'nb' && (
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: 'rgba(255,255,255,0.05)', padding: 4, borderRadius: 8 }}>
+                    {(['bat', 'bye', 'lb'] as const).map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setNbSubType(t)}
+                        style={{
+                          flex: 1, padding: '8px', borderRadius: 6, border: 'none', fontSize: '0.7rem', fontWeight: 800,
+                          background: nbSubType === t ? '#FAB005' : 'transparent',
+                          color: nbSubType === t ? '#000' : '#FFF',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {t === 'bat' ? 'OFF BAT' : t.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Select additional runs scored</p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+                  {[0, 1, 2, 3, 4, 6].map(runs => (
+                    <ScoringBtn
+                      key={runs}
+                      style={{ height: 60, fontSize: '1.2rem' }}
+                      onClick={() => {
+                        const type = extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye'));
+                        const finalSubType = extraType === 'nb' ? nbSubType : (extraType === 'wd' ? 'bye' : (extraType === 'byes' ? 'bye' : 'lb'));
+                        attemptRecord(runs, type, false, undefined, finalSubType);
+                        setShowNBModal(false);
+                      }}
+                    >
+                      {runs}
+                    </ScoringBtn>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => {
+                    const type = extraType === 'wd' ? 'wide' : (extraType === 'nb' ? 'no-ball' : (extraType === 'byes' ? 'bye' : 'leg-bye'));
+                    const finalSubType = extraType === 'nb' ? nbSubType : (extraType === 'wd' ? 'bye' : (extraType === 'byes' ? 'bye' : 'lb'));
+                    setRunOutInvolved({
+                      victimId: '',
+                      runs: 0,
+                      ballType: type,
+                      subType: finalSubType
+                    });
+                  }}
+                  style={{
+                    width: '100%', padding: '16px', borderRadius: 12, border: '2px solid #FAB005',
+                    background: 'rgba(250, 176, 5, 0.1)', color: '#FAB005', fontWeight: 900,
+                    fontSize: '0.9rem', cursor: 'pointer', marginBottom: 12
+                  }}
                 >
                   RUN OUT
                 </button>
-              </div>
-            </ModalContent>
-          </ModalOverlay>
-        )}
 
-        {showFielderModal && (
-          <ModalOverlay onClick={() => setShowFielderModal(false)}>
-            <ModalContent onClick={e => e.stopPropagation()}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>SELECT FIELDER</h2>
-              <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Who made the {pendingWicketType === 'Caught' ? 'catch' : 'stumping'}?</p>
+                <button
+                  onClick={() => setShowNBModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 24, cursor: 'pointer', width: '100%' }}
+                >
+                  CANCEL
+                </button>
+              </ModalContent>
+            </ModalOverlay>
+          )}
 
-              <SelectionGrid style={{ maxHeight: '50vh' }}>
-                {(() => {
-                  const fieldingTeamId = currentInnings.bowlingTeamId;
-                  const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
-                  const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
-                  return (fieldingPool || [])
-                    .filter((p: any) => (fieldingTeamXI || []).includes(p.id))
-                    .map((p: any) => (
-                      <PlayerCard key={p.id} onClick={() => {
-                        setPendingFielderId(p.id);
-                        setShowFielderModal(false);
-                        triggerWicketSplash(pendingWicketType);
-                      }}>
-                        <User size={16} />
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
-                      </PlayerCard>
-                    ));
-                })()}
-              </SelectionGrid>
-              <button
-                onClick={() => setShowFielderModal(false)}
-                style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 24, cursor: 'pointer', width: '100%' }}
-              >
-                CANCEL
-              </button>
-            </ModalContent>
-          </ModalOverlay>
-        )}
-
-        {runOutInvolved && (
-          <ModalOverlay>
-            <ModalContent onClick={e => e.stopPropagation()}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>RUN OUT</h2>
-              <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 24 }}>Select details of the run out</p>
-
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>Who is out?</p>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  {[store.strikerId, store.nonStrikerId].map(id => id && (
+          {showWicketModal && !runOutInvolved && !showBatterSelectModal && (
+            <ModalOverlay onClick={() => setShowWicketModal(false)}>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 20 }}>DISMISSAL TYPE</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                  {['Bowled', 'Caught', 'LBW', 'Stumped', 'Hit Wicket', 'Retired Hurt', 'Retired Out'].map(type => (
                     <button
-                      key={id}
-                      onClick={() => setRunOutInvolved({ ...runOutInvolved, victimId: id })}
+                      key={type}
                       style={{
-                        flex: 1, padding: 16, borderRadius: 12, border: 'none', fontWeight: 700,
-                        background: runOutInvolved.victimId === id ? '#FAB005' : 'rgba(255,255,255,0.05)',
-                        color: runOutInvolved.victimId === id ? '#000' : '#FFF'
+                        padding: '12px 8px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'rgba(255,255,255,0.05)', color: '#FFF', fontWeight: 700, fontSize: '0.75rem'
+                      }}
+                      onClick={() => {
+                        setPendingWicketType(type);
+                        if (type === 'Caught' || type === 'Stumped') {
+                          setShowWicketModal(false);
+                          setShowFielderModal(true);
+                        } else {
+                          setShowWicketModal(false);
+                          triggerWicketSplash(type);
+                        }
                       }}
                     >
-                      {getPlayerName(id)}
+                      {type}
                     </button>
                   ))}
+                  <button
+                    style={{ gridColumn: 'span 2', padding: 16, borderRadius: 12, border: '2px solid #FAB005', background: 'rgba(250, 176, 5, 0.1)', color: '#FAB005', fontWeight: 900 }}
+                    onClick={() => setRunOutInvolved({ victimId: '', runs: 0, ballType: 'legal', subType: 'bat' })}
+                  >
+                    RUN OUT
+                  </button>
                 </div>
-              </div>
+              </ModalContent>
+            </ModalOverlay>
+          )}
 
-              <div style={{ marginBottom: 24 }}>
-                <p style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>Runs Completed</p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                  {[0, 1, 2, 3].map(r => (
-                    <button
-                      key={r}
-                      onClick={() => setRunOutInvolved({ ...runOutInvolved, runs: r })}
-                      style={{
-                        padding: 12, borderRadius: 8, border: 'none', fontWeight: 800,
-                        background: runOutInvolved.runs === r ? '#FAB005' : 'rgba(255,255,255,0.05)',
-                        color: runOutInvolved.runs === r ? '#000' : '#FFF'
-                      }}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          {showFielderModal && (
+            <ModalOverlay onClick={() => setShowFielderModal(false)}>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>SELECT FIELDER</h2>
+                <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Who made the {pendingWicketType === 'Caught' ? 'catch' : 'stumping'}?</p>
 
-              <ActionButton
-                $variant="primary"
-                disabled={!runOutInvolved.victimId}
-                onClick={() => {
-                  triggerWicketSplash('Run Out');
-                }}
-              >
-                {currentInnings && currentInnings.wickets === 9 ? 'FINISH INNINGS' : 'SELECT NEXT BATTER'}
-              </ActionButton>
+                <SelectionGrid style={{ maxHeight: '50vh' }}>
+                  {(() => {
+                    const fieldingTeamId = currentInnings.bowlingTeamId;
+                    const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
+                    const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
+                    return (fieldingPool || [])
+                      .filter((p: any) => (fieldingTeamXI || []).includes(p.id))
+                      .map((p: any) => (
+                        <PlayerCard key={p.id} onClick={() => {
+                          setPendingFielderId(p.id);
+                          setShowFielderModal(false);
+                          triggerWicketSplash(pendingWicketType);
+                        }}>
+                          <User size={16} />
+                          <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
+                        </PlayerCard>
+                      ));
+                  })()}
+                </SelectionGrid>
+                <button
+                  onClick={() => setShowFielderModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 24, cursor: 'pointer', width: '100%' }}
+                >
+                  CANCEL
+                </button>
+              </ModalContent>
+            </ModalOverlay>
+          )}
 
-              <button
-                onClick={() => setRunOutInvolved(null)}
-                style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 20, cursor: 'pointer', width: '100%' }}
-              >
-                BACK
-              </button>
-            </ModalContent>
-          </ModalOverlay>
-        )}
+          {runOutInvolved && (
+            <ModalOverlay>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>RUN OUT</h2>
+                <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 24 }}>Select details of the run out</p>
 
-        {showPenaltyModal && (
-          <ModalOverlay onClick={() => setShowPenaltyModal(false)}>
-            <ModalContent onClick={e => e.stopPropagation()}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>AWARD PENALTY</h2>
-              <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 24 }}>Select the incident to award penalty runs</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ background: 'rgba(250, 176, 5, 0.1)', padding: 16, borderRadius: 12, border: '1px solid rgba(250, 176, 5, 0.2)' }}>
-                  <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#FAB005', marginBottom: 12, textTransform: 'uppercase' }}>FIELDING TEAM ERRORS (+5 to Batting Team)</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
-                    {[
-                      'Ball Hit Helmet (on ground)',
-                      'Fake Fielding / Obstruction',
-                      'Illegal Fielder Movement',
-                      'Fielder returning without permission',
-                      'Slow Over Rate Penalty'
-                    ].map(reason => (
+                <div style={{ marginBottom: 20 }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>Who is out?</p>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    {[store.strikerId, store.nonStrikerId].map(id => id && (
                       <button
-                        key={reason}
-                        onClick={() => {
-                          store.recordPenalty('batting', 5);
-                          setShowPenaltyModal(false);
+                        key={id}
+                        onClick={() => setRunOutInvolved({ ...runOutInvolved, victimId: id })}
+                        style={{
+                          flex: 1, padding: 16, borderRadius: 12, border: 'none', fontWeight: 700,
+                          background: runOutInvolved.victimId === id ? '#FAB005' : 'rgba(255,255,255,0.05)',
+                          color: runOutInvolved.victimId === id ? '#000' : '#FFF'
                         }}
-                        style={{ padding: '12px', textAlign: 'left', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 8, color: '#FFF', fontSize: '0.8rem', cursor: 'pointer' }}
                       >
-                        {reason}
+                        {getPlayerName(id)}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div style={{ background: 'rgba(255, 77, 77, 0.1)', padding: 16, borderRadius: 12, border: '1px solid rgba(255, 77, 77, 0.2)' }}>
-                  <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#FF4D4D', marginBottom: 12, textTransform: 'uppercase' }}>BATTING TEAM MISCONDUCT (+5 to Fielding Team)</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
-                    {[
-                      'Running on Protected Area',
-                      'Timewasting by Batsman',
-                      'Damage to the Pitch',
-                      'Deliberate Short Running'
-                    ].map(reason => (
+                <div style={{ marginBottom: 24 }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, marginBottom: 8, textTransform: 'uppercase' }}>Runs Completed</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                    {[0, 1, 2, 3].map(r => (
                       <button
-                        key={reason}
-                        onClick={() => {
-                          store.recordPenalty('bowling', 5);
+                        key={r}
+                        onClick={() => setRunOutInvolved({ ...runOutInvolved, runs: r })}
+                        style={{
+                          padding: 12, borderRadius: 8, border: 'none', fontWeight: 800,
+                          background: runOutInvolved.runs === r ? '#FAB005' : 'rgba(255,255,255,0.05)',
+                          color: runOutInvolved.runs === r ? '#000' : '#FFF'
+                        }}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <ActionButton
+                  $variant="primary"
+                  disabled={!runOutInvolved.victimId}
+                  onClick={() => {
+                    triggerWicketSplash('Run Out');
+                  }}
+                >
+                  {currentInnings && currentInnings.wickets === 9 ? 'FINISH INNINGS' : 'SELECT NEXT BATTER'}
+                </ActionButton>
+
+                <button
+                  onClick={() => setRunOutInvolved(null)}
+                  style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 20, cursor: 'pointer', width: '100%' }}
+                >
+                  BACK
+                </button>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+
+          {showPenaltyModal && (
+            <ModalOverlay onClick={() => setShowPenaltyModal(false)}>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>AWARD PENALTY</h2>
+                <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 24 }}>Select the incident to award penalty runs</p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ background: 'rgba(250, 176, 5, 0.1)', padding: 16, borderRadius: 12, border: '1px solid rgba(250, 176, 5, 0.2)' }}>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#FAB005', marginBottom: 12, textTransform: 'uppercase' }}>FIELDING TEAM ERRORS (+5 to Batting Team)</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+                      {[
+                        'Ball Hit Helmet (on ground)',
+                        'Fake Fielding / Obstruction',
+                        'Illegal Fielder Movement',
+                        'Fielder returning without permission',
+                        'Slow Over Rate Penalty'
+                      ].map(reason => (
+                        <button
+                          key={reason}
+                          onClick={() => {
+                            store.recordPenalty('batting', 5);
+                            setShowPenaltyModal(false);
+                          }}
+                          style={{ padding: '12px', textAlign: 'left', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 8, color: '#FFF', fontSize: '0.8rem', cursor: 'pointer' }}
+                        >
+                          {reason}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(255, 77, 77, 0.1)', padding: 16, borderRadius: 12, border: '1px solid rgba(255, 77, 77, 0.2)' }}>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#FF4D4D', marginBottom: 12, textTransform: 'uppercase' }}>BATTING TEAM MISCONDUCT (+5 to Fielding Team)</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+                      {[
+                        'Running on Protected Area',
+                        'Timewasting by Batsman',
+                        'Damage to the Pitch',
+                        'Deliberate Short Running'
+                      ].map(reason => (
+                        <button
+                          key={reason}
+                          onClick={() => {
+                            store.recordPenalty('bowling', 5);
+                            if (activeMatchId) {
+                              fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
+                                },
+                                body: JSON.stringify({
+                                  match_id: activeMatchId,
+                                  over_number: 0,
+                                  ball_number: 0,
+                                  runs_scored: 0,
+                                  penalty_runs: 5,
+                                  is_penalty: true,
+                                  event_type: 'extra',
+                                  innings_number: store.currentInnings,
+                                  is_legal_ball: false
+                                })
+                              }).catch(err => console.error("[Sync] Penalty sync failed:", err));
+                            }
+                            setShowPenaltyModal(false);
+                          }}
+                          style={{ padding: '12px', textAlign: 'left', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 8, color: '#FFF', fontSize: '0.8rem', cursor: 'pointer', width: '100%' }}
+                        >
+                          {reason}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <button
+                      onClick={() => {
+                        const r = window.prompt("Penalty runs for Batting Team:", "5");
+                        if (r && !isNaN(parseInt(r))) {
+                          const runs = parseInt(r);
+                          store.recordPenalty('batting', runs);
                           if (activeMatchId) {
                             fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
                               method: 'POST',
@@ -3818,7 +3855,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                 over_number: 0,
                                 ball_number: 0,
                                 runs_scored: 0,
-                                penalty_runs: 5,
+                                penalty_runs: runs,
                                 is_penalty: true,
                                 event_type: 'extra',
                                 innings_number: store.currentInnings,
@@ -3827,352 +3864,315 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             }).catch(err => console.error("[Sync] Penalty sync failed:", err));
                           }
                           setShowPenaltyModal(false);
-                        }}
-                        style={{ padding: '12px', textAlign: 'left', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: 8, color: '#FFF', fontSize: '0.8rem', cursor: 'pointer', width: '100%' }}
-                      >
-                        {reason}
-                      </button>
+                        }
+                      }}
+                      style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#FAB005', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer' }}
+                    >
+                      CUSTOM (BAT)
+                    </button>
+                    <button
+                      onClick={() => {
+                        const r = window.prompt("Penalty runs for Fielding Team:", "5");
+                        if (r && !isNaN(parseInt(r))) {
+                          const runs = parseInt(r);
+                          store.recordPenalty('bowling', runs);
+                          if (activeMatchId) {
+                            fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
+                              },
+                              body: JSON.stringify({
+                                match_id: activeMatchId,
+                                over_number: 0,
+                                ball_number: 0,
+                                runs_scored: 0,
+                                penalty_runs: runs,
+                                is_penalty: true,
+                                event_type: 'extra',
+                                innings_number: store.currentInnings,
+                                is_legal_ball: false
+                              })
+                            }).catch(err => console.error("[Sync] Penalty sync failed:", err));
+                          }
+                          setShowPenaltyModal(false);
+                        }
+                      }}
+                      style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#FF4D4D', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer' }}
+                    >
+                      CUSTOM (BOWL)
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowPenaltyModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 20, cursor: 'pointer', width: '100%' }}
+                >
+                  CANCEL
+                </button>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+          {isInningsBreak && (
+            <InningsBreakModal>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '40px 20px' }}>
+                <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 24, marginBottom: 24 }}>
+                    <img src={store.homeLogo || '/INS%20LOGO.PNG'} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="H" />
+                    <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'rgba(0,0,0,0.1)' }}>VS</span>
+                    {store.awayLogo || matchMeta?.opponentLogo ? (
+                      <img src={store.awayLogo || matchMeta?.opponentLogo} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="A" />
+                    ) : <Shield size={40} color="rgba(0,0,0,0.1)" />}
+                  </div>
+                  <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#001F3F', margin: 0 }}>INNINGS BREAK</h1>
+                  <p style={{ fontWeight: 700, opacity: 0.5, letterSpacing: 1 }}>{store.tournament?.toUpperCase() || 'LIVE MATCH'}</p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 40 }}>
+                  <div style={{ background: '#F8F9FA', padding: 24, borderRadius: 24, textAlign: 'center', border: '1px solid #E9ECEF' }}>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>Total Score</p>
+                    <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#001F3F', margin: 0 }}>
+                      {store.innings1?.totalRuns}/{store.innings1?.wickets}
+                    </h2>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.6 }}>in {store.getOvers(store.innings1?.totalBalls || 0)}.0 Overs</p>
+                  </div>
+                  <div style={{ background: '#001F3F', padding: 24, borderRadius: 24, textAlign: 'center', color: '#FFFFFF', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Target</p>
+                    <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#FAB005', margin: 0 }}>{(store.innings1?.totalRuns || 0) + 1}</h2>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.5 }}>Req. RR {(((store.innings1?.totalRuns || 0) + 1) / (store.maxOvers || 20)).toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 40 }}>
+                  <h3 style={{ fontSize: '0.9rem', fontWeight: 900, marginBottom: 16, borderLeft: '4px solid #FAB005', paddingLeft: 12 }}>TOP PERFORMERS</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {calculateTopPerformers().slice(0, 2).map((p, i) => (
+                      <div key={p.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '14px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: 4, color: '#FFF' }}>{p.name}</p>
+                        <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#FAB005' }}>
+                          {p.runs > 0 ? `${p.runs} (${p.balls})` : `${p.wickets} Wickets`}
+                        </p>
+                      </div>
                     ))}
                   </div>
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <button
-                    onClick={() => {
-                      const r = window.prompt("Penalty runs for Batting Team:", "5");
-                      if (r && !isNaN(parseInt(r))) {
-                        const runs = parseInt(r);
-                        store.recordPenalty('batting', runs);
-                        if (activeMatchId) {
-                          fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
-                            },
-                            body: JSON.stringify({
-                              match_id: activeMatchId,
-                              over_number: 0,
-                              ball_number: 0,
-                              runs_scored: 0,
-                              penalty_runs: runs,
-                              is_penalty: true,
-                              event_type: 'extra',
-                              innings_number: store.currentInnings,
-                              is_legal_ball: false
-                            })
-                          }).catch(err => console.error("[Sync] Penalty sync failed:", err));
-                        }
-                        setShowPenaltyModal(false);
-                      }
-                    }}
-                    style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#FAB005', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer' }}
-                  >
-                    CUSTOM (BAT)
-                  </button>
-                  <button
-                    onClick={() => {
-                      const r = window.prompt("Penalty runs for Fielding Team:", "5");
-                      if (r && !isNaN(parseInt(r))) {
-                        const runs = parseInt(r);
-                        store.recordPenalty('bowling', runs);
-                        if (activeMatchId) {
-                          fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/score/ball`, {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
-                            },
-                            body: JSON.stringify({
-                              match_id: activeMatchId,
-                              over_number: 0,
-                              ball_number: 0,
-                              runs_scored: 0,
-                              penalty_runs: runs,
-                              is_penalty: true,
-                              event_type: 'extra',
-                              innings_number: store.currentInnings,
-                              is_legal_ball: false
-                            })
-                          }).catch(err => console.error("[Sync] Penalty sync failed:", err));
-                        }
-                        setShowPenaltyModal(false);
-                      }
-                    }}
-                    style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#FF4D4D', fontSize: '0.7rem', fontWeight: 900, cursor: 'pointer' }}
-                  >
-                    CUSTOM (BOWL)
-                  </button>
-                </div>
               </div>
 
-              <button
-                onClick={() => setShowPenaltyModal(false)}
-                style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 20, cursor: 'pointer', width: '100%' }}
-              >
-                CANCEL
-              </button>
-            </ModalContent>
-          </ModalOverlay>
-        )}
-        {isInningsBreak && (
-          <InningsBreakModal>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '40px 20px' }}>
-              <div style={{ textAlign: 'center', marginBottom: 40 }}>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 24, marginBottom: 24 }}>
-                  <img src={store.homeLogo || '/INS%20LOGO.PNG'} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="H" />
-                  <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'rgba(0,0,0,0.1)' }}>VS</span>
-                  {store.awayLogo || matchMeta?.opponentLogo ? (
-                    <img src={store.awayLogo || matchMeta?.opponentLogo} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="A" />
-                  ) : <Shield size={40} color="rgba(0,0,0,0.1)" />}
-                </div>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#001F3F', margin: 0 }}>INNINGS BREAK</h1>
-                <p style={{ fontWeight: 700, opacity: 0.5, letterSpacing: 1 }}>{store.tournament?.toUpperCase() || 'LIVE MATCH'}</p>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 40 }}>
-                <div style={{ background: '#F8F9FA', padding: 24, borderRadius: 24, textAlign: 'center', border: '1px solid #E9ECEF' }}>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>Total Score</p>
-                  <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#001F3F', margin: 0 }}>
-                    {store.innings1?.totalRuns}/{store.innings1?.wickets}
-                  </h2>
-                  <p style={{ fontSize: '0.8rem', fontWeight: 700, opacity: 0.6 }}>in {store.getOvers(store.innings1?.totalBalls || 0)}.0 Overs</p>
-                </div>
-                <div style={{ background: '#001F3F', padding: 24, borderRadius: 24, textAlign: 'center', color: '#FFFFFF', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Target</p>
-                  <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#FAB005', margin: 0 }}>{(store.innings1?.totalRuns || 0) + 1}</h2>
-                  <p style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.5 }}>Req. RR {(((store.innings1?.totalRuns || 0) + 1) / (store.maxOvers || 20)).toFixed(2)}</p>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 40 }}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 900, marginBottom: 16, borderLeft: '4px solid #FAB005', paddingLeft: 12 }}>TOP PERFORMERS</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {calculateTopPerformers().slice(0, 2).map((p, i) => (
-                    <div key={p.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '14px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: 4, color: '#FFF' }}>{p.name}</p>
-                      <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#FAB005' }}>
-                        {p.runs > 0 ? `${p.runs} (${p.balls})` : `${p.wickets} Wickets`}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ padding: '20px', borderTop: '1px solid #E9ECEF', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <button
-                onClick={() => {
-                  if (window.confirm("Undo last ball and resume 1st Innings?")) {
-                    store.undoLastBall();
-                    setIsOverComplete(false);
-                  }
-                }}
-                style={{
-                  width: '100%', padding: '12px', borderRadius: 12, border: '1px solid #FAB005',
-                  background: 'transparent', color: '#FAB005', fontWeight: 800, fontSize: '0.8rem',
-                  cursor: 'pointer'
-                }}
-              >
-                UNDO LAST BALL
-              </button>
-              <ActionButton
-                $variant="primary"
-                style={{ background: '#001F3F', color: '#FFF', height: 64, borderRadius: 16 }}
-                onClick={() => {
-                  setSetupStep('openers_bat');
-                  setSelStriker(null);
-                  setSelNonStriker(null);
-                  setSelBowler(null);
-                }}
-              >
-                START 2ND INNINGS
-              </ActionButton>
-            </div>
-          </InningsBreakModal>
-        )}
-
-        {isMatchComplete && !store.manOfTheMatch && (
-          <ModalOverlay>
-            <ModalContent style={{ maxWidth: 640 }}>
-              <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                <div style={{ background: 'rgba(250, 176, 5, 0.1)', width: 64, height: 64, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                  <Trophy size={32} color="#FAB005" />
-                </div>
-                <h1 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 4 }}>PERFORMER SPOTLIGHT</h1>
-                <p style={{ opacity: 0.6, fontSize: '0.85rem' }}>Select the Man of the Match based on performance</p>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 24 }}>
-                {calculateTopPerformers().map((p, idx) => (
-                  <button
-                    key={p.id}
-                    onClick={() => store.updateMatchSettings({ manOfTheMatch: p.id })}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 14, padding: '14px', borderRadius: 14,
-                      background: idx === 0 ? 'rgba(250, 176, 5, 0.08)' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${idx === 0 ? 'rgba(250, 176, 5, 0.2)' : 'rgba(255,255,255,0.05)'}`,
-                      color: '#FFF', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s'
-                    }}
-                  >
-                    <div style={{ background: idx === 0 ? '#FAB005' : 'rgba(255,255,255,0.1)', color: idx === 0 ? '#000' : '#FFF', width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.75rem' }}>
-                      #{idx + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFF' }}>{p.name}</div>
-                      <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: 2 }}>
-                        {p.runs > 0 && <span>{p.runs} Runs • </span>}
-                        {p.wickets > 0 && <span>{p.wickets} Wickets • </span>}
-                        {p.maidens > 0 && <span>{p.maidens} Maidens</span>}
-                      </div>
-                    </div>
-                    <Zap size={16} color={idx === 0 ? '#FAB005' : 'rgba(255,255,255,0.2)'} fill={idx === 0 ? '#FAB005' : 'none'} />
-                  </button>
-                ))}
-              </div>
-
-              <p style={{ textAlign: 'center', fontSize: '0.7rem', opacity: 0.4, fontStyle: 'italic' }}>
-                Ranking is suggested based on runs, wickets, and match impact.
-              </p>
-            </ModalContent>
-          </ModalOverlay>
-        )}
-
-        {isMatchComplete && store.manOfTheMatch && (
-          <ModalOverlay>
-            <ModalContent style={{ textAlign: 'center', padding: 40 }}>
-              <div style={{ marginBottom: 24 }}>
-                <Star size={48} color="#FAB005" fill="#FAB005" style={{ filter: 'drop-shadow(0 0 10px rgba(250, 176, 5, 0.5))' }} />
-              </div>
-              <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: 12 }}>MATCH COMPLETED!</h1>
-              <h2 style={{ color: '#FAB005', marginBottom: 12 }}>
-                {(() => {
-                  const i1 = store.innings1?.totalRuns || 0;
-                  const i2 = store.innings2?.totalRuns || 0;
-                  if (i2 > i1) {
-                    return `${store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'Away')} WON BY ${10 - (store.innings2?.wickets || 0)} WICKETS`;
-                  } else if (i1 > i2) {
-                    return `${store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'Away')} WON BY ${i1 - i2} RUNS`;
-                  }
-                  return "MATCH TIED";
-                })()}
-              </h2>
-
-              <div style={{ background: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', marginBottom: 32 }}>
-                <p style={{ fontSize: '0.7rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Man of the Match</p>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0 }}>{getPlayerName(store.manOfTheMatch)}</h3>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <ActionButton
-                  $variant="primary"
-                  onClick={downloadHeroPoster}
-                  disabled={isGeneratingPoster}
-                >
-                  {isGeneratingPoster ? 'GENERATING POSTER...' : 'DOWNLOAD HERO POSTER'}
-                </ActionButton>
-
-                <ActionButton
+              <div style={{ padding: '20px', borderTop: '1px solid #E9ECEF', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <button
                   onClick={() => {
-                    handleUpdateMatchStatus('completed');
-                    store.resetStore(); // Clear scoring state from memory after finishing
-                    navigate('/match-center');
+                    if (window.confirm("Undo last ball and resume 1st Innings?")) {
+                      store.undoLastBall();
+                      setIsOverComplete(false);
+                    }
+                  }}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: 12, border: '1px solid #FAB005',
+                    background: 'transparent', color: '#FAB005', fontWeight: 800, fontSize: '0.8rem',
+                    cursor: 'pointer'
                   }}
                 >
-                  RETURN TO MATCH CENTER
+                  UNDO LAST BALL
+                </button>
+                <ActionButton
+                  $variant="primary"
+                  style={{ background: '#001F3F', color: '#FFF', height: 64, borderRadius: 16 }}
+                  onClick={() => {
+                    setSetupStep('openers_bat');
+                    setSelStriker(null);
+                    setSelNonStriker(null);
+                    setSelBowler(null);
+                  }}
+                >
+                  START 2ND INNINGS
                 </ActionButton>
               </div>
+            </InningsBreakModal>
+          )}
 
-              <PosterContainer>
-                <HeroPosterWrapper ref={posterRef} data-poster-root>
-                  {/* Premium Background Elements */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-[#020617]" />
-                  <div 
-                    className="absolute inset-0 z-0 opacity-15"
-                    style={{ 
-                      backgroundImage: 'url(/assets/cricket_ground_bg.png)',
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center'
-                    }}
-                  />
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
-                  <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[100px] -ml-32 -mb-32" />
-                  <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#FFF 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-
-                  {/* Header: Logos & Status */}
-                  <div className="absolute top-8 inset-x-8 z-20 flex items-center justify-between">
-                    <img src="/INS%20LOGO.PNG" className="w-14 h-14 object-contain filter drop-shadow-2xl" alt="Logo" />
-                    <div className="text-right">
-                      <p className="text-[10px] font-black italic tracking-[0.2em] text-sky-400 uppercase">Indian Strikers Official</p>
-                      <p className="text-xl font-black italic text-white leading-none tracking-tighter">PLAYER OF THE MATCH</p>
-                    </div>
+          {isMatchComplete && !store.manOfTheMatch && (
+            <ModalOverlay>
+              <ModalContent style={{ maxWidth: 640 }}>
+                <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                  <div style={{ background: 'rgba(250, 176, 5, 0.1)', width: 64, height: 64, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                    <Trophy size={32} color="#FAB005" />
                   </div>
+                  <h1 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 4 }}>PERFORMER SPOTLIGHT</h1>
+                  <p style={{ opacity: 0.6, fontSize: '0.85rem' }}>Select the Man of the Match based on performance</p>
+                </div>
 
-                  {/* Hero Content */}
-                  <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 pt-12">
-                    <div className="relative mb-6">
-                       <div className="absolute inset-0 bg-sky-500/20 blur-2xl rounded-full scale-150" />
-                       <div className="relative bg-slate-900/50 p-1.5 rounded-full border border-white/10 backdrop-blur-md overflow-hidden">
-                        {getPlayerAvatar(store.manOfTheMatch) ? (
-                          <img 
-                            src={getPlayerAvatar(store.manOfTheMatch)!} 
-                            crossOrigin="anonymous"
-                            className="w-32 h-32 rounded-full object-cover border-4 border-sky-400/30 shadow-[0_0_20px_rgba(56,189,248,0.2)]"
-                            alt="Hero"
-                          />
-                        ) : (
-                          <div className="w-32 h-32 flex items-center justify-center bg-slate-800 rounded-full border-4 border-sky-400/30">
-                            <Star size={64} color="#FAB005" fill="#FAB005" />
-                          </div>
-                        )}
-                       </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 24 }}>
+                  {calculateTopPerformers().map((p, idx) => (
+                    <button
+                      key={p.id}
+                      onClick={() => store.updateMatchSettings({ manOfTheMatch: p.id })}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 14, padding: '14px', borderRadius: 14,
+                        background: idx === 0 ? 'rgba(250, 176, 5, 0.08)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${idx === 0 ? 'rgba(250, 176, 5, 0.2)' : 'rgba(255,255,255,0.05)'}`,
+                        color: '#FFF', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{ background: idx === 0 ? '#FAB005' : 'rgba(255,255,255,0.1)', color: idx === 0 ? '#000' : '#FFF', width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.75rem' }}>
+                        #{idx + 1}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#FFF' }}>{p.name}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: 2 }}>
+                          {p.runs > 0 && <span>{p.runs} Runs • </span>}
+                          {p.wickets > 0 && <span>{p.wickets} Wickets • </span>}
+                          {p.maidens > 0 && <span>{p.maidens} Maidens</span>}
+                        </div>
+                      </div>
+                      <Zap size={16} color={idx === 0 ? '#FAB005' : 'rgba(255,255,255,0.2)'} fill={idx === 0 ? '#FAB005' : 'none'} />
+                    </button>
+                  ))}
+                </div>
+
+                <p style={{ textAlign: 'center', fontSize: '0.7rem', opacity: 0.4, fontStyle: 'italic' }}>
+                  Ranking is suggested based on runs, wickets, and match impact.
+                </p>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+
+          {isMatchComplete && store.manOfTheMatch && (
+            <ModalOverlay>
+              <ModalContent style={{ textAlign: 'center', padding: 40 }}>
+                <div style={{ marginBottom: 24 }}>
+                  <Star size={48} color="#FAB005" fill="#FAB005" style={{ filter: 'drop-shadow(0 0 10px rgba(250, 176, 5, 0.5))' }} />
+                </div>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: 12 }}>MATCH COMPLETED!</h1>
+                <h2 style={{ color: '#FAB005', marginBottom: 12 }}>
+                  {(() => {
+                    const i1 = store.innings1?.totalRuns || 0;
+                    const i2 = store.innings2?.totalRuns || 0;
+                    if (i2 > i1) {
+                      return `${store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'Away')} WON BY ${10 - (store.innings2?.wickets || 0)} WICKETS`;
+                    } else if (i1 > i2) {
+                      return `${store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'Away')} WON BY ${i1 - i2} RUNS`;
+                    }
+                    return "MATCH TIED";
+                  })()}
+                </h2>
+
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', marginBottom: 32 }}>
+                  <p style={{ fontSize: '0.7rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Man of the Match</p>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 900, margin: 0 }}>{getPlayerName(store.manOfTheMatch)}</h3>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <ActionButton
+                    $variant="primary"
+                    onClick={downloadHeroPoster}
+                    disabled={isGeneratingPoster}
+                  >
+                    {isGeneratingPoster ? 'GENERATING POSTER...' : 'DOWNLOAD HERO POSTER'}
+                  </ActionButton>
+
+                  <ActionButton
+                    onClick={() => {
+                      handleUpdateMatchStatus('completed');
+                      store.resetStore(); // Clear scoring state from memory after finishing
+                      navigate('/match-center');
+                    }}
+                  >
+                    RETURN TO MATCH CENTER
+                  </ActionButton>
+                </div>
+
+                <PosterContainer>
+                  <HeroPosterWrapper ref={posterRef} data-poster-root>
+                    {/* Premium Background Elements */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-[#020617]" />
+                    <div
+                      className="absolute inset-0 z-0 opacity-15"
+                      style={{
+                        backgroundImage: 'url(/assets/cricket_ground_bg.png)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                      }}
+                    />
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[100px] -ml-32 -mb-32" />
+                    <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#FFF 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+
+                    {/* Header: Logos & Status */}
+                    <div className="absolute top-8 inset-x-8 z-20 flex items-center justify-between">
+                      <img src="/INS%20LOGO.PNG" className="w-14 h-14 object-contain filter drop-shadow-2xl" alt="Logo" />
+                      <div className="text-right">
+                        <p className="text-[10px] font-black italic tracking-[0.2em] text-sky-400 uppercase">Indian Strikers Official</p>
+                        <p className="text-xl font-black italic text-white leading-none tracking-tighter">PLAYER OF THE MATCH</p>
+                      </div>
                     </div>
-                    
-                    <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-2xl">
-                      {getPlayerName(store.manOfTheMatch)}
-                    </h2>
-                    
-                    <div className="h-1 w-12 bg-sky-500 rounded-full mb-8 shadow-[0_0_15px_rgba(56,189,248,0.5)]" />
 
-                    {/* Stats Grid */}
-                    {(() => {
-                      const heroStats = calculateTopPerformers().find(p => p.id === store.manOfTheMatch);
-                      const isBowler = heroStats && heroStats.wickets > 0;
-                      
-                      return (
-                        <div className="w-full grid grid-cols-2 gap-3 mb-8">
-                          {heroStats ? (
-                            isBowler ? (
-                              <>
-                                <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
-                                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">Wickets</p>
-                                  <p className="text-3xl font-black text-white italic">{heroStats.wickets}</p>
-                                </div>
-                                <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
-                                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">Econ</p>
-                                  <p className="text-3xl font-black text-white italic">
-                                    {(heroStats.runsConceded / (heroStats.overs || 1)).toFixed(1)}
-                                  </p>
-                                </div>
-                                <div className="col-span-2 bg-white/5 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 flex justify-between items-center">
-                                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">Figures</p>
-                                  <p className="text-xl font-black text-white italic">{heroStats.wickets}/{heroStats.runsConceded} ({heroStats.overs} OV)</p>
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
-                                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">Runs</p>
-                                  <p className="text-3xl font-black text-white italic">{heroStats.runs}</p>
-                                </div>
-                                <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
-                                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">S.R.</p>
-                                  <p className="text-3xl font-black text-white italic">
-                                    {((heroStats.runs / (heroStats.balls || 1)) * 100).toFixed(1)}
-                                  </p>
-                                </div>
-                                <div className="col-span-2 bg-white/5 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 flex justify-between items-center">
-                                   <div className="flex gap-4">
+                    {/* Hero Content */}
+                    <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 pt-12">
+                      <div className="relative mb-6">
+                        <div className="absolute inset-0 bg-sky-500/20 blur-2xl rounded-full scale-150" />
+                        <div className="relative bg-slate-900/50 p-1.5 rounded-full border border-white/10 backdrop-blur-md overflow-hidden">
+                          {getPlayerAvatar(store.manOfTheMatch) ? (
+                            <img
+                              src={getPlayerAvatar(store.manOfTheMatch)!}
+                              crossOrigin="anonymous"
+                              className="w-32 h-32 rounded-full object-cover border-4 border-sky-400/30 shadow-[0_0_20px_rgba(56,189,248,0.2)]"
+                              alt="Hero"
+                            />
+                          ) : (
+                            <div className="w-32 h-32 flex items-center justify-center bg-slate-800 rounded-full border-4 border-sky-400/30">
+                              <Star size={64} color="#FAB005" fill="#FAB005" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-2xl">
+                        {getPlayerName(store.manOfTheMatch)}
+                      </h2>
+
+                      <div className="h-1 w-12 bg-sky-500 rounded-full mb-8 shadow-[0_0_15px_rgba(56,189,248,0.5)]" />
+
+                      {/* Stats Grid */}
+                      {(() => {
+                        const heroStats = calculateTopPerformers().find(p => p.id === store.manOfTheMatch);
+                        const isBowler = heroStats && heroStats.wickets > 0;
+
+                        return (
+                          <div className="w-full grid grid-cols-2 gap-3 mb-8">
+                            {heroStats ? (
+                              isBowler ? (
+                                <>
+                                  <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
+                                    <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">Wickets</p>
+                                    <p className="text-3xl font-black text-white italic">{heroStats.wickets}</p>
+                                  </div>
+                                  <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
+                                    <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">Econ</p>
+                                    <p className="text-3xl font-black text-white italic">
+                                      {(heroStats.runsConceded / (heroStats.overs || 1)).toFixed(1)}
+                                    </p>
+                                  </div>
+                                  <div className="col-span-2 bg-white/5 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 flex justify-between items-center">
+                                    <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">Figures</p>
+                                    <p className="text-xl font-black text-white italic">{heroStats.wickets}/{heroStats.runsConceded} ({heroStats.overs} OV)</p>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
+                                    <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">Runs</p>
+                                    <p className="text-3xl font-black text-white italic">{heroStats.runs}</p>
+                                  </div>
+                                  <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center">
+                                    <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">S.R.</p>
+                                    <p className="text-3xl font-black text-white italic">
+                                      {((heroStats.runs / (heroStats.balls || 1)) * 100).toFixed(1)}
+                                    </p>
+                                  </div>
+                                  <div className="col-span-2 bg-white/5 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/10 flex justify-between items-center">
+                                    <div className="flex gap-4">
                                       <div className="text-center">
                                         <p className="text-[8px] font-bold text-white/40 uppercase">4s</p>
                                         <p className="text-sm font-black text-white italic">{heroStats.fours || 0}</p>
@@ -4181,757 +4181,757 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                         <p className="text-[8px] font-bold text-white/40 uppercase">6s</p>
                                         <p className="text-sm font-black text-white italic">{heroStats.sixes || 0}</p>
                                       </div>
-                                   </div>
-                                   <p className="text-base font-black text-sky-400 italic uppercase">Dominant Performance</p>
-                                </div>
-                              </>
-                            )
-                          ) : (
-                            <div className="col-span-2 p-8 text-white/20 text-center italic">No Statistics Available</div>
-                          )}
-                        </div>
-                      );
-                    })()}
-                    
-                    {/* Fixture Info */}
-                    <div className="w-full text-center">
-                      <p className="text-xs font-black text-white italic uppercase tracking-[0.2em] mb-1">
-                        INDIAN STRIKERS VS {(matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
-                      </p>
-                      <div className="flex items-center justify-center gap-2 text-sky-400/60 font-black italic text-[10px] uppercase">
-                        <span>{venueName}</span>
-                        <span className="w-1 h-1 bg-sky-400/40 rounded-full" />
-                        <span>{matchMeta?.date ? new Date(matchMeta.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'MATCH DAY'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer Branding */}
-                  <div className="relative z-10 px-8 py-6 flex items-center justify-between border-t border-white/5">
-                    <p className="text-[8px] color-white/20 font-black tracking-widest uppercase">official strikers pulse capture</p>
-                    <div className="flex gap-1">
-                      {[1,2,3].map(i => <div key={i} className="w-1 h-1 bg-sky-500 rounded-full" />)}
-                    </div>
-                  </div>
-                </HeroPosterWrapper>
-              </PosterContainer>
-            </ModalContent>
-          </ModalOverlay>
-        )}
-        {showBatterSelectModal && (
-          <ModalOverlay onClick={() => setShowBatterSelectModal(false)}>
-            <ModalContent onClick={e => e.stopPropagation()}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>SELECT NEXT BATTER</h2>
-              <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Choose player from the bench</p>
-
-              <SelectionGrid style={{ maxHeight: '50vh' }}>
-                {(() => {
-                  const battingTeamId = currentInnings.battingTeamId;
-                  const battingTeamXI = battingTeamId === 'HOME' ? homeXI : awayXI;
-                  const battingPool = battingTeamId === 'HOME' ? players : opponentPlayers;
-                  const available = (battingPool || []).filter((p: any) =>
-                    battingTeamXI.includes(p.id) &&
-                    !['out', 'batting', 'retired'].includes(currentInnings.battingStats[p.id]?.status || '')
-                  );
-                  return available
-                    .filter((p: any) => {
-                      const isAlreadyBatting = p.id === store.strikerId || p.id === store.nonStrikerId;
-                      const alreadyOut = currentInnings.battingStats[p.id]?.status === 'out';
-                      return !isAlreadyBatting && !alreadyOut;
-                    })
-                    .map((p: any) => (
-                      <PlayerCard
-                        key={p.id}
-                        onClick={() => {
-                          if (runOutInvolved) {
-                            attemptRecord(
-                              runOutInvolved.runs,
-                              runOutInvolved.ballType || 'legal',
-                              true,
-                              'Run Out',
-                              runOutInvolved.subType || 'bat',
-                              runOutInvolved.victimId,
-                              p.id
-                            );
-                            setRunOutInvolved(null);
-                          } else {
-                            let dismissal = pendingWicketType;
-                            if (pendingFielderId && (pendingWicketType === 'Caught' || pendingWicketType === 'Stumped')) {
-                              const fielder = [...players, ...opponentPlayers].find(fp => fp.id === pendingFielderId);
-                              dismissal = `${pendingWicketType === 'Caught' ? 'c' : 'st'} ${fielder?.name || 'Fielder'}`;
-                            }
-                            attemptRecord(0, 'legal', true, dismissal, 'bat', undefined, p.id);
-                          }
-                          setShowBatterSelectModal(false);
-                          setShowWicketModal(false);
-                          setPendingWicketType(null);
-                          setPendingFielderId(null);
-                        }}
-                      >
-                        <User size={16} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
-                          <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>
-                            {currentInnings.battingStats[p.id]?.status === 'retired_hurt' ? 'RETIRED HURT' : (p.role || 'Player')}
+                                    </div>
+                                    <p className="text-base font-black text-sky-400 italic uppercase">Dominant Performance</p>
+                                  </div>
+                                </>
+                              )
+                            ) : (
+                              <div className="col-span-2 p-8 text-white/20 text-center italic">No Statistics Available</div>
+                            )}
                           </div>
+                        );
+                      })()}
+
+                      {/* Fixture Info */}
+                      <div className="w-full text-center">
+                        <p className="text-xs font-black text-white italic uppercase tracking-[0.2em] mb-1">
+                          INDIAN STRIKERS VS {(matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
+                        </p>
+                        <div className="flex items-center justify-center gap-2 text-sky-400/60 font-black italic text-[10px] uppercase">
+                          <span>{venueName}</span>
+                          <span className="w-1 h-1 bg-sky-400/40 rounded-full" />
+                          <span>{matchMeta?.date ? new Date(matchMeta.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'MATCH DAY'}</span>
                         </div>
-                      </PlayerCard>
-                    ));
-                })()}
-                {(() => {
-                  const battingTeamId = currentInnings.battingTeamId;
-                  const battingXI = battingTeamId === 'HOME' ? homeXI : awayXI;
-                  const battingPool = battingTeamId === 'HOME' ? players : opponentPlayers;
-                  const available = (battingPool || []).filter((p: any) =>
-                    battingXI.includes(p.id) &&
-                    !['out', 'batting', 'retired'].includes(currentInnings.battingStats[p.id]?.status || '')
-                  );
-                  return available.length === 0 ? (
-                    <div style={{ textAlign: 'center', opacity: 0.4, padding: 20 }}>No more players available.</div>
-                  ) : null;
-                })()}
-              </SelectionGrid>
-
-              <button
-                onClick={() => setShowBatterSelectModal(false)}
-                style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 24, cursor: 'pointer', width: '100%' }}
-              >
-                CANCEL
-              </button>
-            </ModalContent>
-          </ModalOverlay>
-        )}
-        {showScorecardModal && (
-          <UniversalScorecard
-            match={matchMeta as any}
-            players={players}
-            opponents={allOpponents}
-            onClose={() => setShowScorecardModal(false)}
-            isLive={true}
-            activeInnings={store.currentInnings}
-          />
-        )}
-
-        {/* ——— INNINGS REVIEW MODAL ——— */}
-        {showInningsReview && (
-          <PremiumModalOverlay
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <PremiumModalContent style={{ padding: '32px 24px', textAlign: 'center' }}>
-              <div style={{ width: 64, height: 64, background: 'rgba(56, 189, 248, 0.1)', borderRadius: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                <Trophy size={32} color="#38BDF8" />
-              </div>
-
-              <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 900 }}>
-                {store.currentInnings === 1 ? 'INNINGS 1 COMPLETE' : 'MATCH COMPLETE'}
-              </h2>
-
-              {store.currentInnings === 2 && store.innings1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 16 }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 900, opacity: 0.5 }}>TARGET</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38BDF8' }}>{(store.innings1?.totalRuns || 0) + 1}</div>
-                  </div>
-                  <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }} />
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 900, opacity: 0.5 }}>SCORE</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FAB005' }}>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</div>
-                  </div>
-                </div>
-              )}
-
-              <p style={{ opacity: 0.6, fontSize: '0.85rem', marginBottom: 24 }}>Review the final stats before proceeding.</p>
-
-              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 20, marginBottom: 32, border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                  <div>
-                    <div style={{ fontSize: '10px', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', marginBottom: 4 }}>Total Score</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 900, color: syncStatus === 'success' ? '#4ADE80' : '#FAB005' }}>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '10px', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', marginBottom: 4 }}>Overs Bowled</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>{store.getOvers(currentInnings?.totalBalls || 0)}</div>
-                  </div>
-                </div>
-              </div>
-
-              {syncStatus === 'error' && (
-                <div style={{ background: 'rgba(255,77,77,0.1)', color: '#FF4D4D', padding: '12px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 600, marginBottom: 20 }}>
-                  Network Error: Could not finalize match data.
-                </div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <ActionButton
-                  $variant="primary"
-                  onClick={handleConfirmInnings}
-                  disabled={syncStatus === 'loading' || syncStatus === 'success'}
-                  style={{ background: syncStatus === 'success' ? '#4ADE80' : undefined }}
-                >
-                  {syncStatus === 'loading' ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                      <div className="animate-spin" style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', borderRadius: '50%' }} />
-                      FINALIZING...
+                      </div>
                     </div>
-                  ) : syncStatus === 'success' ? 'SUCCESS! ✅' : (
-                    syncStatus === 'error' ? 'RETRY SYNC' : (store.currentInnings === 1 ? 'CONFIRM & START 2ND INNINGS' : 'CONFIRM & FINISH MATCH')
-                  )}
-                </ActionButton>
 
-                {syncStatus !== 'success' && (
-                  <button
-                    onClick={() => {
-                      store.undoLastBall();
-                      setIsOverComplete(false);
-                      setShowInningsReview(false);
-                    }}
-                    disabled={syncStatus === 'loading'}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', border: 'none', color: '#FFF', padding: '16px', borderRadius: 12, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    <Undo size={18} />
-                    UNDO LAST BALL
-                  </button>
-                )}
-              </div>
-            </PremiumModalContent>
-          </PremiumModalOverlay>
-        )}
-
-        <AnimatePresence>
-          {showSettingsDrawer && (
-            <DrawerOverlay
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowSettingsDrawer(false)}
-            >
-              <DrawerContent
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                onClick={e => e.stopPropagation()}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h2 style={{ fontSize: '0.8rem', fontWeight: 900, color: '#FFF', fontStyle: 'italic', margin: 0 }}>MATCH SETTINGS</h2>
-                  <IconButton onClick={() => setShowSettingsDrawer(false)} style={{ color: '#FFF' }}>
-                    <X size={14} />
-                  </IconButton>
-                </div>
-
-                {/* Change Scorer Action */}
-                <div style={{ marginTop: 12, marginBottom: 4 }}>
-                  <button
-                    disabled={syncStatus === 'loading'}
-                    onClick={handleChangeScorer}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
-                      background: syncStatus === 'loading' ? 'rgba(56, 189, 248, 0.05)' : 'rgba(56, 189, 248, 0.1)',
-                      border: '1px solid #38BDF8',
-                      borderRadius: 8, color: '#38BDF8', fontWeight: 800, cursor: syncStatus === 'loading' ? 'not-allowed' : 'pointer',
-                      textAlign: 'left', opacity: syncStatus === 'loading' ? 0.7 : 1
-                    }}
-                  >
-                    {syncStatus === 'loading' ? (
-                      <>
-                        <div style={{ width: 12, height: 12, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38BDF8', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-                        <div>
-                          <div style={{ fontSize: '0.5rem' }}>SYNCING...</div>
-                          <div style={{ fontSize: '0.4rem', opacity: 0.6, fontWeight: 500 }}>Please wait, saving to cloud</div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <Repeat size={12} />
-                        <div>
-                          <div style={{ fontSize: '0.5rem' }}>CHANGE SCORER</div>
-                          <div style={{ fontSize: '0.4rem', opacity: 0.6, fontWeight: 500 }}>Handoff match to another device</div>
-                        </div>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* FORCE PUSH TOOL */}
-                <div style={{ marginBottom: 16 }}>
-                   <div style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginBottom: 8, marginTop: 12 }}>EMERGENCY SYNC</div>
-                   <button
-                    onClick={async () => {
-                      if (!activeMatchId) return;
-                      if (!window.confirm("CRITICAL: This will take YOUR local score and overwrite the server. Only do this if THIS device has the correct score. Proceed?")) return;
-                      
-                      try {
-                        toast.loading("Force syncing to cloud...");
-                        await updateMatch(activeMatchId, { 
-                          live_data: store, 
-                          last_updated: new Date().toISOString() 
-                        });
-                        toast.dismiss();
-                        toast.success("Cloud Overwritten successfully!");
-                        setShowSettingsDrawer(false);
-                      } catch (e: any) {
-                        toast.dismiss();
-                        toast.error("Force push failed: " + e.message);
-                      }
-                    }}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
-                      background: 'rgba(250, 176, 5, 0.1)',
-                      border: '1px solid #FAB005',
-                      borderRadius: 8, color: '#FAB005', fontWeight: 800, cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                  >
-                    <CloudLightning size={12} />
-                    <div>
-                      <div style={{ fontSize: '0.5rem' }}>FORCE PUSH TO CLOUD</div>
-                      <div style={{ fontSize: '0.4rem', opacity: 0.6, fontWeight: 500 }}>Make THIS score the master truth</div>
+                    {/* Footer Branding */}
+                    <div className="relative z-10 px-8 py-6 flex items-center justify-between border-t border-white/5">
+                      <p className="text-[8px] color-white/20 font-black tracking-widest uppercase">official strikers pulse capture</p>
+                      <div className="flex gap-1">
+                        {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 bg-sky-500 rounded-full" />)}
+                      </div>
                     </div>
-                  </button>
-                </div>
-
-                <SettingsGroup>
-                  <GroupTitle>Match Controls</GroupTitle>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <ControlButton
-                      $variant="gold"
-                      style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}
-                      onClick={() => {
-                        const val = window.prompt("Edit Max Overs:", String(store.maxOvers || 20));
-                        if (val && !isNaN(parseInt(val))) store.updateMatchSettings({ maxOvers: parseInt(val) });
-                      }}
-                    >
-                      <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontSize: '0.4rem', opacity: 0.6, textTransform: 'uppercase' }}>Overs</div>
-                        <div style={{ fontSize: '0.6rem', fontWeight: 900 }}>{store.maxOvers || 20}</div>
-                      </div>
-                      <Settings size={12} />
-                    </ControlButton>
-                    <ControlButton
-                      $variant={store.useWagonWheel ? "emerald" : "gold"}
-                      style={{ flex: 1, borderColor: store.useWagonWheel ? '#10b981' : '#f59e0b' }}
-                      onClick={() => {
-                        const next = !store.useWagonWheel;
-                        store.updateMatchSettings({ useWagonWheel: next });
-                        localStorage.setItem('ins-wagon-wheel-enabled', String(next));
-                      }}
-                    >
-                      <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontSize: '0.4rem', opacity: 0.6, textTransform: 'uppercase' }}>Wagon Wheel</div>
-                        <div style={{ fontSize: '0.6rem', fontWeight: 900 }}>{store.useWagonWheel ? 'ON' : 'OFF'}</div>
-                      </div>
-                      <Zap size={12} fill={store.useWagonWheel ? '#10b981' : 'none'} />
-                    </ControlButton>
-                  </div>
-                  {store.currentInnings === 2 && (
-                    <ControlButton
-                      $variant="emerald"
-                      style={{ marginTop: 4 }}
-                      onClick={() => {
-                        const val = window.prompt("Override Target Score:", String(store.targetScore || ((store.innings1?.totalRuns || 0) + 1)));
-                        if (val && !isNaN(parseInt(val))) store.updateTargetScore(parseInt(val));
-                      }}
-                    >
-                      <div style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Trophy size={14} />
-                        <div>
-                          <div style={{ fontSize: '0.4rem', opacity: 0.6, textTransform: 'uppercase' }}>Target Score</div>
-                          <div style={{ fontSize: '0.6rem', fontWeight: 900 }}>{store.targetScore || ((store.innings1?.totalRuns || 0) + 1)}</div>
-                        </div>
-                      </div>
-                    </ControlButton>
-                  )}
-                </SettingsGroup>
-
-                <SettingsGroup>
-                  <GroupTitle>Active Player Controls</GroupTitle>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <ControlButton $variant="emerald" style={{ flex: 1 }} onClick={() => { store.switchStriker(); setShowSettingsDrawer(false); }}>
-                      <span>Swap Strike</span>
-                      <Repeat size={14} />
-                    </ControlButton>
-                    <ControlButton $variant="gold" style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }} onClick={() => {
-                      if (store.strikerId && window.confirm(`Retire ${getPlayerName(store.strikerId)}?`)) {
-                        store.retireBatter(store.strikerId);
-                        setShowSettingsDrawer(false);
-                      }
-                    }}>
-                      <span>Retire</span>
-                      <User size={14} />
-                    </ControlButton>
-                  </div>
-                </SettingsGroup>
-
-                <SettingsGroup>
-                  <GroupTitle>Administrative</GroupTitle>
-                  <ControlButton $variant="danger" onClick={handleDeclareInnings}>
-                    <span>Declare Innings</span>
-                    <Zap size={18} />
-                  </ControlButton>
-                </SettingsGroup>
-
-                <SettingsGroup>
-                  <GroupTitle>Fielding Penalties</GroupTitle>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <ControlButton
-                      $variant="gold"
-                      style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}
-                      onClick={() => {
-                        store.recordPenalty('batting', 5);
-                        setShowSettingsDrawer(false);
-                      }}
-                    >
-                      <span>+5 Penalty</span>
-                      <PlusCircle size={18} style={{ color: '#f59e0b' }} />
-                    </ControlButton>
-                    <ControlButton
-                      $variant="gold"
-                      style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}
-                      onClick={() => {
-                        const r = window.prompt("Enter Penalty Runs for Batting Team:", "5");
-                        if (r && !isNaN(parseInt(r))) {
-                          store.recordPenalty('batting', parseInt(r));
-                          setShowSettingsDrawer(false);
-                        }
-                      }}
-                    >
-                      <span>Custom</span>
-                      <Edit3 size={18} style={{ color: '#f59e0b' }} />
-                    </ControlButton>
-                  </div>
-                </SettingsGroup>
-
-                <div style={{ marginTop: 'auto', padding: '16px 0', textAlign: 'center', opacity: 0.4 }}>
-                </div>
-              </DrawerContent>
-            </DrawerOverlay>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showWagonWheelModal && (
-            <ModalOverlay onClick={() => setShowWagonWheelModal(null)}>
-              <ModalContent onClick={e => e.stopPropagation()} style={{ background: '#081c15', maxWidth: 400 }}>
-                <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10b981', margin: 0 }}>SELECT SHOT ZONE</h2>
-                  <p style={{ fontSize: '0.7rem', opacity: 0.6 }}>Tap the field where the ball was hit</p>
-                  {(() => {
-                    const sId = store.strikerId;
-                    const striker = (players.find((p: Player) => p.id === sId) || opponentPlayers.find((p: any) => p.id === sId)) as any;
-                    const isLH = striker?.battingStyle === 'Left Handed';
-                    if (isLH) return <p style={{ fontSize: '0.6rem', color: '#FAB005', fontWeight: 900, marginTop: 4, letterSpacing: 1 }}>BATTING: LEFT-HANDED VIEW</p>;
-                    return null;
-                  })()}
-                </div>
-
-                <div style={{ position: 'relative', width: '100%', aspectRatio: '1', background: '#1b4332', borderRadius: '50%', border: '4px solid #2d6a4f', overflow: 'hidden' }}>
-                  {/* 8 Zones with LH/RH Detection */}
-                  {(() => {
-                    const sId = store.strikerId;
-                    const striker = (players.find((p: Player) => p.id === sId) || opponentPlayers.find((p: any) => p.id === sId)) as any;
-                    const isLH = striker?.battingStyle === 'Left Handed';
-
-                    const zones = [
-                      { name: 'Third Man', top: '15%', left: isLH ? '85%' : '15%', color: '#94a3b8' },
-                      { name: 'Point', top: '50%', left: isLH ? '95%' : '5%', color: '#38bdf8' },
-                      { name: 'Cover', top: '80%', left: isLH ? '85%' : '15%', color: '#60a5fa' },
-                      { name: 'Mid Off', top: '92%', left: '50%', color: '#818cf8' },
-                      { name: 'Mid On', top: '80%', left: isLH ? '15%' : '85%', color: '#a78bfa' },
-                      { name: 'Mid Wicket', top: '50%', left: isLH ? '5%' : '95%', color: '#c084fc' },
-                      { name: 'Square Leg', top: '15%', left: isLH ? '15%' : '85%', color: '#f472b6' },
-                      { name: 'Fine Leg', top: '8%', left: '50%', color: '#fb7185' }
-                    ];
-
-                    return zones.map(zone => (
-                      <button
-                        key={zone.name}
-                        onClick={() => {
-                          const p = showWagonWheelModal;
-                          const strikerN = getPlayerName(store.strikerId);
-                          const finalComm = p.commentary.replace(/\{batsman\}/g, strikerN)
-                                                       .replace(/\{striker\}/g, strikerN)
-                                                       .replace(/\{bowler\}/g, getPlayerName(store.currentBowlerId))
-                                                       .replace(/\{zone\}/g, zone.name);
-                          hapticFeedback(p.score >= 4 ? 'heavy' : 'light');
-                          handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name, finalComm);
-                          setShowWagonWheelModal(null);
-                        }}
-                        style={{
-                          position: 'absolute', top: zone.top, left: zone.left, transform: 'translate(-50%, -50%)',
-                          background: 'rgba(15, 23, 42, 0.8)', border: `1px solid ${zone.color}44`,
-                          borderRadius: 20, padding: '4px 10px', color: zone.color, fontSize: '0.6rem', fontWeight: 900,
-                          cursor: 'pointer', whiteSpace: 'nowrap', zIndex: 10,
-                          boxShadow: `0 4px 12px ${zone.color}22`,
-                          transition: 'all 0.2s',
-                          backdropFilter: 'blur(4px)'
-                        }}
-                        onMouseEnter={(e: any) => e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.1)'}
-                        onMouseLeave={(e: any) => e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)'}
-                      >
-                        {zone.name}
-                      </button>
-                    ));
-                  })()}
-                  {/* Pitch */}
-                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '15%', height: '40%', background: '#b79d71', borderRadius: 4 }}></div>
-                  {/* Field Markings */}
-                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90%', height: '90%', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24 }}>
-                  <div 
-                    onClick={() => store.updateMatchSettings({ wagonWheelQuickSave: !store.wagonWheelQuickSave })}
-                    style={{ 
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, 
-                      padding: '8px 16px', borderRadius: 20, background: store.wagonWheelQuickSave ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${store.wagonWheelQuickSave ? '#38BDF8' : 'rgba(255,255,255,0.1)'}`,
-                      cursor: 'pointer', transition: 'all 0.2s'
-                    }}
-                  >
-                    <Zap size={14} color={store.wagonWheelQuickSave ? '#38BDF8' : '#FFF'} />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: store.wagonWheelQuickSave ? '#38BDF8' : '#FFF' }}>
-                      {store.wagonWheelQuickSave ? 'QUICK SAVE ON' : 'QUICK SAVE OFF'}
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      const p = showWagonWheelModal;
-                      handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, 'Unknown', p.commentary);
-                      setShowWagonWheelModal(null);
-                    }}
-                    style={{ width: '100%', padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: 'none', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    SKIP ZONE
-                  </button>
-                </div>
+                  </HeroPosterWrapper>
+                </PosterContainer>
               </ModalContent>
             </ModalOverlay>
           )}
-        </AnimatePresence>
+          {showBatterSelectModal && (
+            <ModalOverlay onClick={() => setShowBatterSelectModal(false)}>
+              <ModalContent onClick={e => e.stopPropagation()}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>SELECT NEXT BATTER</h2>
+                <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Choose player from the bench</p>
 
-        {showMatchSummaryModal && matchMeta && (
-          <MatchSummaryModal
-            match={{
-              ...matchMeta,
-              finalScoreHome: {
-                runs: store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalRuns : store.innings2?.totalRuns || 0,
-                wickets: store.innings1?.battingTeamId === 'HOME' ? store.innings1.wickets : store.innings2?.wickets || 0,
-                overs: Number(store.getOvers(store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0))
-              },
-              finalScoreAway: {
-                runs: store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalRuns : store.innings2?.totalRuns || 0,
-                wickets: store.innings1?.battingTeamId === 'AWAY' ? store.innings1.wickets : store.innings2?.wickets || 0,
-                overs: Number(store.getOvers(store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0))
-              }
-            }}
-            opponentName={matchMeta.opponentName || 'Opponent'}
-            onClose={() => setShowMatchSummaryModal(false)}
-            onSave={async (summary) => {
-              setSyncStatus('loading');
-              try {
-                // Prepare performer data for career update
-                // Aggregate all participating players across both innings
-                const allParticipatingIds = new Set([
-                  ...Object.keys(store.innings1?.battingStats || {}),
-                  ...Object.keys(store.innings1?.bowlingStats || {}),
-                  ...(store.innings2 ? [
-                    ...Object.keys(store.innings2.battingStats || {}),
-                    ...Object.keys(store.innings2.bowlingStats || {})
-                  ] : [])
-                ]);
+                <SelectionGrid style={{ maxHeight: '50vh' }}>
+                  {(() => {
+                    const battingTeamId = currentInnings.battingTeamId;
+                    const battingTeamXI = battingTeamId === 'HOME' ? homeXI : awayXI;
+                    const battingPool = battingTeamId === 'HOME' ? players : opponentPlayers;
+                    const available = (battingPool || []).filter((p: any) =>
+                      battingTeamXI.includes(p.id) &&
+                      !['out', 'batting', 'retired'].includes(currentInnings.battingStats[p.id]?.status || '')
+                    );
+                    return available
+                      .filter((p: any) => {
+                        const isAlreadyBatting = p.id === store.strikerId || p.id === store.nonStrikerId;
+                        const alreadyOut = currentInnings.battingStats[p.id]?.status === 'out';
+                        return !isAlreadyBatting && !alreadyOut;
+                      })
+                      .map((p: any) => (
+                        <PlayerCard
+                          key={p.id}
+                          onClick={() => {
+                            if (runOutInvolved) {
+                              attemptRecord(
+                                runOutInvolved.runs,
+                                runOutInvolved.ballType || 'legal',
+                                true,
+                                'Run Out',
+                                runOutInvolved.subType || 'bat',
+                                runOutInvolved.victimId,
+                                p.id
+                              );
+                              setRunOutInvolved(null);
+                            } else {
+                              let dismissal = pendingWicketType;
+                              if (pendingFielderId && (pendingWicketType === 'Caught' || pendingWicketType === 'Stumped')) {
+                                const fielder = [...players, ...opponentPlayers].find(fp => fp.id === pendingFielderId);
+                                dismissal = `${pendingWicketType === 'Caught' ? 'c' : 'st'} ${fielder?.name || 'Fielder'}`;
+                              }
+                              attemptRecord(0, 'legal', true, dismissal, 'bat', undefined, p.id);
+                            }
+                            setShowBatterSelectModal(false);
+                            setShowWicketModal(false);
+                            setPendingWicketType(null);
+                            setPendingFielderId(null);
+                          }}
+                        >
+                          <User size={16} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
+                            <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>
+                              {currentInnings.battingStats[p.id]?.status === 'retired_hurt' ? 'RETIRED HURT' : (p.role || 'Player')}
+                            </div>
+                          </div>
+                        </PlayerCard>
+                      ));
+                  })()}
+                  {(() => {
+                    const battingTeamId = currentInnings.battingTeamId;
+                    const battingXI = battingTeamId === 'HOME' ? homeXI : awayXI;
+                    const battingPool = battingTeamId === 'HOME' ? players : opponentPlayers;
+                    const available = (battingPool || []).filter((p: any) =>
+                      battingXI.includes(p.id) &&
+                      !['out', 'batting', 'retired'].includes(currentInnings.battingStats[p.id]?.status || '')
+                    );
+                    return available.length === 0 ? (
+                      <div style={{ textAlign: 'center', opacity: 0.4, padding: 20 }}>No more players available.</div>
+                    ) : null;
+                  })()}
+                </SelectionGrid>
 
-                const performers = Array.from(allParticipatingIds).map(pid => {
-                  const b1 = store.innings1?.battingStats[pid];
-                  const b2 = store.innings2?.battingStats[pid];
-                  const w1 = store.innings1?.bowlingStats[pid];
-                  const w2 = store.innings2?.bowlingStats[pid];
+                <button
+                  onClick={() => setShowBatterSelectModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.9rem', fontWeight: 700, marginTop: 24, cursor: 'pointer', width: '100%' }}
+                >
+                  CANCEL
+                </button>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+          {showScorecardModal && (
+            <UniversalScorecard
+              match={matchMeta as any}
+              players={players}
+              opponents={allOpponents}
+              onClose={() => setShowScorecardModal(false)}
+              isLive={true}
+              activeInnings={store.currentInnings}
+            />
+          )}
 
-                  return {
-                    playerId: pid,
-                    playerName: getPlayerName(pid),
-                    runs: (b1?.runs || 0) + (b2?.runs || 0),
-                    balls: (b1?.balls || 0) + (b2?.balls || 0),
-                    fours: (b1?.fours || 0) + (b2?.fours || 0),
-                    sixes: (b1?.sixes || 0) + (b2?.sixes || 0),
-                    wickets: (w1?.wickets || 0) + (w2?.wickets || 0),
-                    bowlingRuns: (w1?.runs || 0) + (w2?.runs || 0),
-                    bowlingOvers: (w1?.overs || 0) + (w2?.overs || 0),
-                    maidens: (w1?.maidens || 0) + (w2?.maidens || 0),
-                    isNotOut: (b1 && b1.status !== 'out') || (b2 && b2.status !== 'out')
-                  };
-                });
-
-                await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/matches/${activeMatchId}/finalize`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
-                  },
-                  body: JSON.stringify({
-                    matchData: { ...summary, performers },
-                    updatedPlayers: performers
-                  })
-                });
-
-                toast.success("Match Finalized & Career Stats Updated!");
-                localStorage.removeItem('ins-cricket-scorer');
-                localStorage.removeItem('active_match_id');
-                navigate('/match-center');
-              } catch (err) {
-                console.error("Finalization failed:", err);
-                toast.error("Finalization failed. Please check connection.");
-              } finally {
-                setSyncStatus('idle');
-              }
-            }}
-          />
-        )}
-
-        <MilestoneOverlay ref={milestoneRef} />
-
-        <AnimatePresence>
-          {showAnalyticsDrawer && (
-            <AnalyticsDrawerOverlay
+          {/* ——— INNINGS REVIEW MODAL ——— */}
+          {showInningsReview && (
+            <PremiumModalOverlay
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowAnalyticsDrawer(false)}
             >
-              <AnalyticsDrawerContent
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                onClick={e => e.stopPropagation()}
-              >
-                <AnalyticsHeader>
-                  <h2>{activeChart === 'manhattan' ? 'MATCH HEARTBEAT' : 'CHASE PROFILE'}</h2>
-                  <IconButton onClick={() => setShowAnalyticsDrawer(false)} style={{ color: '#FFF' }}>
-                    <X size={20} />
-                  </IconButton>
-                </AnalyticsHeader>
-
-                <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
-                  <FilterChip 
-                    $active={activeChart === 'manhattan'} 
-                    onClick={() => setActiveChart('manhattan')}
-                  >
-                    MANHATTAN
-                  </FilterChip>
-                  <FilterChip 
-                    $active={activeChart === 'worm'} 
-                    onClick={() => setActiveChart('worm')}
-                  >
-                    WORM CHART
-                  </FilterChip>
+              <PremiumModalContent style={{ padding: '32px 24px', textAlign: 'center' }}>
+                <div style={{ width: 64, height: 64, background: 'rgba(56, 189, 248, 0.1)', borderRadius: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                  <Trophy size={32} color="#38BDF8" />
                 </div>
 
-                <ChartContainer style={{ flex: 1, minHeight: 400, display: 'flex', flexDirection: 'column' }}>
-                  <h3 style={{ marginBottom: 20 }}>
-                    {activeChart === 'manhattan' ? 'Runs Per Over (Including Extras)' : 'Cumulative Progress Comparison'}
-                  </h3>
-                  
-                  <div style={{ flex: 1, width: '100%', minHeight: 300 }}>
-                    {activeChart === 'manhattan' ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={manhattanData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-                          <XAxis 
-                            dataKey="over" 
-                            stroke="rgba(255,255,255,0.5)" 
-                            fontSize={10} 
-                            tickLine={false} 
-                            axisLine={false} 
-                            label={{ value: 'OVERS', position: 'insideBottom', offset: -5, fill: 'rgba(255,255,255,0.3)', fontSize: 8, fontWeight: 900 }}
-                          />
-                          <YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} tickLine={false} axisLine={false} />
-                          <Tooltip 
-                            contentStyle={{ background: '#001F3F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
-                            itemStyle={{ color: '#FAB005', fontSize: '12px', fontWeight: 700 }}
-                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                          />
-                          <Bar dataKey="runs" fill="#FAB005" radius={[4, 4, 0, 0]} barSize={16}>
-                            {manhattanData.map((entry, index) => (
-                               <Cell key={`cell-${index}`} fill={entry.wickets > 0 ? '#FF4D4D' : '#FAB005'} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-                          <XAxis 
-                            dataKey="over" 
-                            type="number" 
-                            domain={[0, store.maxOvers || 20]} 
-                            stroke="rgba(255,255,255,0.5)" 
-                            fontSize={10} 
-                            tickLine={false} 
-                            axisLine={false}
-                            label={{ value: 'OVERS', position: 'insideBottom', offset: -5, fill: 'rgba(255,255,255,0.3)', fontSize: 8, fontWeight: 900 }}
-                          />
-                          <YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} tickLine={false} axisLine={false} />
-                          <Tooltip 
-                            contentStyle={{ background: '#001F3F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
-                            itemStyle={{ fontSize: '12px', fontWeight: 700 }}
-                          />
-                          <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700 }} />
-                          
-                          {/* 1st Innings Line */}
-                          {analyticsWormData.innings1.length > 0 && (
-                            <Line 
-                              data={analyticsWormData.innings1}
-                              name="Innings 1"
-                              type="monotone" 
-                              dataKey="runs" 
-                              stroke="#38BDF8" 
-                              strokeWidth={2} 
-                              dot={false}
-                              strokeDasharray={store.currentInnings === 2 ? "5 5" : "0"}
-                            />
-                          )}
+                <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 900 }}>
+                  {store.currentInnings === 1 ? 'INNINGS 1 COMPLETE' : 'MATCH COMPLETE'}
+                </h2>
 
-                          {/* 2nd Innings Line */}
-                          {store.currentInnings === 2 && analyticsWormData.innings2.length > 0 && (
-                            <Line 
-                              data={analyticsWormData.innings2}
-                              name="Innings 2"
-                              type="monotone" 
-                              dataKey="runs" 
-                              stroke="#FAB005" 
-                              strokeWidth={3} 
-                              dot={false}
-                            />
-                          )}
-                        </LineChart>
-                      </ResponsiveContainer>
+                {store.currentInnings === 2 && store.innings1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 16 }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', fontWeight: 900, opacity: 0.5 }}>TARGET</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38BDF8' }}>{(store.innings1?.totalRuns || 0) + 1}</div>
+                    </div>
+                    <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }} />
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '9px', fontWeight: 900, opacity: 0.5 }}>SCORE</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FAB005' }}>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</div>
+                    </div>
+                  </div>
+                )}
+
+                <p style={{ opacity: 0.6, fontSize: '0.85rem', marginBottom: 24 }}>Review the final stats before proceeding.</p>
+
+                <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 20, marginBottom: 32, border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div>
+                      <div style={{ fontSize: '10px', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', marginBottom: 4 }}>Total Score</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 900, color: syncStatus === 'success' ? '#4ADE80' : '#FAB005' }}>{currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '10px', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', marginBottom: 4 }}>Overs Bowled</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>{store.getOvers(currentInnings?.totalBalls || 0)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {syncStatus === 'error' && (
+                  <div style={{ background: 'rgba(255,77,77,0.1)', color: '#FF4D4D', padding: '12px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 600, marginBottom: 20 }}>
+                    Network Error: Could not finalize match data.
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <ActionButton
+                    $variant="primary"
+                    onClick={handleConfirmInnings}
+                    disabled={syncStatus === 'loading' || syncStatus === 'success'}
+                    style={{ background: syncStatus === 'success' ? '#4ADE80' : undefined }}
+                  >
+                    {syncStatus === 'loading' ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                        <div className="animate-spin" style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', borderRadius: '50%' }} />
+                        FINALIZING...
+                      </div>
+                    ) : syncStatus === 'success' ? 'SUCCESS! ✅' : (
+                      syncStatus === 'error' ? 'RETRY SYNC' : (store.currentInnings === 1 ? 'CONFIRM & START 2ND INNINGS' : 'CONFIRM & FINISH MATCH')
                     )}
-                  </div>
+                  </ActionButton>
 
-                  <div style={{ marginTop: 24, padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h4 style={{ fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: 1 }}>Analytic Insight</h4>
-                    <p style={{ fontSize: '0.75rem', opacity: 0.7, margin: 0, lineHeight: 1.5 }}>
-                      {activeChart === 'manhattan' 
-                        ? "Bars show total runs per over. Red highlights indicate overs with wickets, marking momentum shifts."
-                        : "The Worm tracks cumulative progress. In Innings 2, the solid line shows the chase against the dotted target line."
-                      }
-                    </p>
-                  </div>
-                </ChartContainer>
-
-                <div style={{ marginTop: 'auto', textAlign: 'center', opacity: 0.3, fontSize: '0.6rem', fontWeight: 900, letterSpacing: 2 }}>
-                  INDIAN STRIKERS ANALYTICS ENGINE v1.0
+                  {syncStatus !== 'success' && (
+                    <button
+                      onClick={() => {
+                        store.undoLastBall();
+                        setIsOverComplete(false);
+                        setShowInningsReview(false);
+                      }}
+                      disabled={syncStatus === 'loading'}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', border: 'none', color: '#FFF', padding: '16px', borderRadius: 12, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      <Undo size={18} />
+                      UNDO LAST BALL
+                    </button>
+                  )}
                 </div>
-              </AnalyticsDrawerContent>
-            </AnalyticsDrawerOverlay>
+              </PremiumModalContent>
+            </PremiumModalOverlay>
           )}
-        </AnimatePresence>
-      </>
-    </DashboardContainer>
+
+          <AnimatePresence>
+            {showSettingsDrawer && (
+              <DrawerOverlay
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowSettingsDrawer(false)}
+              >
+                <DrawerContent
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h2 style={{ fontSize: '0.8rem', fontWeight: 900, color: '#FFF', fontStyle: 'italic', margin: 0 }}>MATCH SETTINGS</h2>
+                    <IconButton onClick={() => setShowSettingsDrawer(false)} style={{ color: '#FFF' }}>
+                      <X size={14} />
+                    </IconButton>
+                  </div>
+
+                  {/* Change Scorer Action */}
+                  <div style={{ marginTop: 12, marginBottom: 4 }}>
+                    <button
+                      disabled={syncStatus === 'loading'}
+                      onClick={handleChangeScorer}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+                        background: syncStatus === 'loading' ? 'rgba(56, 189, 248, 0.05)' : 'rgba(56, 189, 248, 0.1)',
+                        border: '1px solid #38BDF8',
+                        borderRadius: 8, color: '#38BDF8', fontWeight: 800, cursor: syncStatus === 'loading' ? 'not-allowed' : 'pointer',
+                        textAlign: 'left', opacity: syncStatus === 'loading' ? 0.7 : 1
+                      }}
+                    >
+                      {syncStatus === 'loading' ? (
+                        <>
+                          <div style={{ width: 12, height: 12, border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38BDF8', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                          <div>
+                            <div style={{ fontSize: '0.5rem' }}>SYNCING...</div>
+                            <div style={{ fontSize: '0.4rem', opacity: 0.6, fontWeight: 500 }}>Please wait, saving to cloud</div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <Repeat size={12} />
+                          <div>
+                            <div style={{ fontSize: '0.5rem' }}>CHANGE SCORER</div>
+                            <div style={{ fontSize: '0.4rem', opacity: 0.6, fontWeight: 500 }}>Handoff match to another device</div>
+                          </div>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* FORCE PUSH TOOL */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginBottom: 8, marginTop: 12 }}>EMERGENCY SYNC</div>
+                    <button
+                      onClick={async () => {
+                        if (!activeMatchId) return;
+                        if (!window.confirm("CRITICAL: This will take YOUR local score and overwrite the server. Only do this if THIS device has the correct score. Proceed?")) return;
+
+                        try {
+                          toast.loading("Force syncing to cloud...");
+                          await updateMatch(activeMatchId, {
+                            live_data: store,
+                            last_updated: new Date().toISOString()
+                          });
+                          toast.dismiss();
+                          toast.success("Cloud Overwritten successfully!");
+                          setShowSettingsDrawer(false);
+                        } catch (e: any) {
+                          toast.dismiss();
+                          toast.error("Force push failed: " + e.message);
+                        }
+                      }}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+                        background: 'rgba(250, 176, 5, 0.1)',
+                        border: '1px solid #FAB005',
+                        borderRadius: 8, color: '#FAB005', fontWeight: 800, cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <CloudLightning size={12} />
+                      <div>
+                        <div style={{ fontSize: '0.5rem' }}>FORCE PUSH TO CLOUD</div>
+                        <div style={{ fontSize: '0.4rem', opacity: 0.6, fontWeight: 500 }}>Make THIS score the master truth</div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <SettingsGroup>
+                    <GroupTitle>Match Controls</GroupTitle>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <ControlButton
+                        $variant="gold"
+                        style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}
+                        onClick={() => {
+                          const val = window.prompt("Edit Max Overs:", String(store.maxOvers || 20));
+                          if (val && !isNaN(parseInt(val))) store.updateMatchSettings({ maxOvers: parseInt(val) });
+                        }}
+                      >
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ fontSize: '0.4rem', opacity: 0.6, textTransform: 'uppercase' }}>Overs</div>
+                          <div style={{ fontSize: '0.6rem', fontWeight: 900 }}>{store.maxOvers || 20}</div>
+                        </div>
+                        <Settings size={12} />
+                      </ControlButton>
+                      <ControlButton
+                        $variant={store.useWagonWheel ? "emerald" : "gold"}
+                        style={{ flex: 1, borderColor: store.useWagonWheel ? '#10b981' : '#f59e0b' }}
+                        onClick={() => {
+                          const next = !store.useWagonWheel;
+                          store.updateMatchSettings({ useWagonWheel: next });
+                          localStorage.setItem('ins-wagon-wheel-enabled', String(next));
+                        }}
+                      >
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ fontSize: '0.4rem', opacity: 0.6, textTransform: 'uppercase' }}>Wagon Wheel</div>
+                          <div style={{ fontSize: '0.6rem', fontWeight: 900 }}>{store.useWagonWheel ? 'ON' : 'OFF'}</div>
+                        </div>
+                        <Zap size={12} fill={store.useWagonWheel ? '#10b981' : 'none'} />
+                      </ControlButton>
+                    </div>
+                    {store.currentInnings === 2 && (
+                      <ControlButton
+                        $variant="emerald"
+                        style={{ marginTop: 4 }}
+                        onClick={() => {
+                          const val = window.prompt("Override Target Score:", String(store.targetScore || ((store.innings1?.totalRuns || 0) + 1)));
+                          if (val && !isNaN(parseInt(val))) store.updateTargetScore(parseInt(val));
+                        }}
+                      >
+                        <div style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Trophy size={14} />
+                          <div>
+                            <div style={{ fontSize: '0.4rem', opacity: 0.6, textTransform: 'uppercase' }}>Target Score</div>
+                            <div style={{ fontSize: '0.6rem', fontWeight: 900 }}>{store.targetScore || ((store.innings1?.totalRuns || 0) + 1)}</div>
+                          </div>
+                        </div>
+                      </ControlButton>
+                    )}
+                  </SettingsGroup>
+
+                  <SettingsGroup>
+                    <GroupTitle>Active Player Controls</GroupTitle>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <ControlButton $variant="emerald" style={{ flex: 1 }} onClick={() => { store.switchStriker(); setShowSettingsDrawer(false); }}>
+                        <span>Swap Strike</span>
+                        <Repeat size={14} />
+                      </ControlButton>
+                      <ControlButton $variant="gold" style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }} onClick={() => {
+                        if (store.strikerId && window.confirm(`Retire ${getPlayerName(store.strikerId)}?`)) {
+                          store.retireBatter(store.strikerId);
+                          setShowSettingsDrawer(false);
+                        }
+                      }}>
+                        <span>Retire</span>
+                        <User size={14} />
+                      </ControlButton>
+                    </div>
+                  </SettingsGroup>
+
+                  <SettingsGroup>
+                    <GroupTitle>Administrative</GroupTitle>
+                    <ControlButton $variant="danger" onClick={handleDeclareInnings}>
+                      <span>Declare Innings</span>
+                      <Zap size={18} />
+                    </ControlButton>
+                  </SettingsGroup>
+
+                  <SettingsGroup>
+                    <GroupTitle>Fielding Penalties</GroupTitle>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <ControlButton
+                        $variant="gold"
+                        style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}
+                        onClick={() => {
+                          store.recordPenalty('batting', 5);
+                          setShowSettingsDrawer(false);
+                        }}
+                      >
+                        <span>+5 Penalty</span>
+                        <PlusCircle size={18} style={{ color: '#f59e0b' }} />
+                      </ControlButton>
+                      <ControlButton
+                        $variant="gold"
+                        style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }}
+                        onClick={() => {
+                          const r = window.prompt("Enter Penalty Runs for Batting Team:", "5");
+                          if (r && !isNaN(parseInt(r))) {
+                            store.recordPenalty('batting', parseInt(r));
+                            setShowSettingsDrawer(false);
+                          }
+                        }}
+                      >
+                        <span>Custom</span>
+                        <Edit3 size={18} style={{ color: '#f59e0b' }} />
+                      </ControlButton>
+                    </div>
+                  </SettingsGroup>
+
+                  <div style={{ marginTop: 'auto', padding: '16px 0', textAlign: 'center', opacity: 0.4 }}>
+                  </div>
+                </DrawerContent>
+              </DrawerOverlay>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showWagonWheelModal && (
+              <ModalOverlay onClick={() => setShowWagonWheelModal(null)}>
+                <ModalContent onClick={e => e.stopPropagation()} style={{ background: '#081c15', maxWidth: 400 }}>
+                  <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10b981', margin: 0 }}>SELECT SHOT ZONE</h2>
+                    <p style={{ fontSize: '0.7rem', opacity: 0.6 }}>Tap the field where the ball was hit</p>
+                    {(() => {
+                      const sId = store.strikerId;
+                      const striker = (players.find((p: Player) => p.id === sId) || opponentPlayers.find((p: any) => p.id === sId)) as any;
+                      const isLH = striker?.battingStyle === 'Left Handed';
+                      if (isLH) return <p style={{ fontSize: '0.6rem', color: '#FAB005', fontWeight: 900, marginTop: 4, letterSpacing: 1 }}>BATTING: LEFT-HANDED VIEW</p>;
+                      return null;
+                    })()}
+                  </div>
+
+                  <div style={{ position: 'relative', width: '100%', aspectRatio: '1', background: '#1b4332', borderRadius: '50%', border: '4px solid #2d6a4f', overflow: 'hidden' }}>
+                    {/* 8 Zones with LH/RH Detection */}
+                    {(() => {
+                      const sId = store.strikerId;
+                      const striker = (players.find((p: Player) => p.id === sId) || opponentPlayers.find((p: any) => p.id === sId)) as any;
+                      const isLH = striker?.battingStyle === 'Left Handed';
+
+                      const zones = [
+                        { name: 'Third Man', top: '15%', left: isLH ? '85%' : '15%', color: '#94a3b8' },
+                        { name: 'Point', top: '50%', left: isLH ? '95%' : '5%', color: '#38bdf8' },
+                        { name: 'Cover', top: '80%', left: isLH ? '85%' : '15%', color: '#60a5fa' },
+                        { name: 'Mid Off', top: '92%', left: '50%', color: '#818cf8' },
+                        { name: 'Mid On', top: '80%', left: isLH ? '15%' : '85%', color: '#a78bfa' },
+                        { name: 'Mid Wicket', top: '50%', left: isLH ? '5%' : '95%', color: '#c084fc' },
+                        { name: 'Square Leg', top: '15%', left: isLH ? '15%' : '85%', color: '#f472b6' },
+                        { name: 'Fine Leg', top: '8%', left: '50%', color: '#fb7185' }
+                      ];
+
+                      return zones.map(zone => (
+                        <button
+                          key={zone.name}
+                          onClick={() => {
+                            const p = showWagonWheelModal;
+                            const strikerN = getPlayerName(store.strikerId);
+                            const finalComm = p.commentary.replace(/\{batsman\}/g, strikerN)
+                              .replace(/\{striker\}/g, strikerN)
+                              .replace(/\{bowler\}/g, getPlayerName(store.currentBowlerId))
+                              .replace(/\{zone\}/g, zone.name);
+                            hapticFeedback(p.score >= 4 ? 'heavy' : 'light');
+                            handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name, finalComm);
+                            setShowWagonWheelModal(null);
+                          }}
+                          style={{
+                            position: 'absolute', top: zone.top, left: zone.left, transform: 'translate(-50%, -50%)',
+                            background: 'rgba(15, 23, 42, 0.8)', border: `1px solid ${zone.color}44`,
+                            borderRadius: 20, padding: '4px 10px', color: zone.color, fontSize: '0.6rem', fontWeight: 900,
+                            cursor: 'pointer', whiteSpace: 'nowrap', zIndex: 10,
+                            boxShadow: `0 4px 12px ${zone.color}22`,
+                            transition: 'all 0.2s',
+                            backdropFilter: 'blur(4px)'
+                          }}
+                          onMouseEnter={(e: any) => e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.1)'}
+                          onMouseLeave={(e: any) => e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)'}
+                        >
+                          {zone.name}
+                        </button>
+                      ));
+                    })()}
+                    {/* Pitch */}
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '15%', height: '40%', background: '#b79d71', borderRadius: 4 }}></div>
+                    {/* Field Markings */}
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90%', height: '90%', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24 }}>
+                    <div
+                      onClick={() => store.updateMatchSettings({ wagonWheelQuickSave: !store.wagonWheelQuickSave })}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                        padding: '8px 16px', borderRadius: 20, background: store.wagonWheelQuickSave ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255,255,255,0.05)',
+                        border: `1px solid ${store.wagonWheelQuickSave ? '#38BDF8' : 'rgba(255,255,255,0.1)'}`,
+                        cursor: 'pointer', transition: 'all 0.2s'
+                      }}
+                    >
+                      <Zap size={14} color={store.wagonWheelQuickSave ? '#38BDF8' : '#FFF'} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 900, color: store.wagonWheelQuickSave ? '#38BDF8' : '#FFF' }}>
+                        {store.wagonWheelQuickSave ? 'QUICK SAVE ON' : 'QUICK SAVE OFF'}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const p = showWagonWheelModal;
+                        handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, 'Unknown', p.commentary);
+                        setShowWagonWheelModal(null);
+                      }}
+                      style={{ width: '100%', padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: 'none', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      SKIP ZONE
+                    </button>
+                  </div>
+                </ModalContent>
+              </ModalOverlay>
+            )}
+          </AnimatePresence>
+
+          {showMatchSummaryModal && matchMeta && (
+            <MatchSummaryModal
+              match={{
+                ...matchMeta,
+                finalScoreHome: {
+                  runs: store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalRuns : store.innings2?.totalRuns || 0,
+                  wickets: store.innings1?.battingTeamId === 'HOME' ? store.innings1.wickets : store.innings2?.wickets || 0,
+                  overs: Number(store.getOvers(store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0))
+                },
+                finalScoreAway: {
+                  runs: store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalRuns : store.innings2?.totalRuns || 0,
+                  wickets: store.innings1?.battingTeamId === 'AWAY' ? store.innings1.wickets : store.innings2?.wickets || 0,
+                  overs: Number(store.getOvers(store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0))
+                }
+              }}
+              opponentName={matchMeta.opponentName || 'Opponent'}
+              onClose={() => setShowMatchSummaryModal(false)}
+              onSave={async (summary) => {
+                setSyncStatus('loading');
+                try {
+                  // Prepare performer data for career update
+                  // Aggregate all participating players across both innings
+                  const allParticipatingIds = new Set([
+                    ...Object.keys(store.innings1?.battingStats || {}),
+                    ...Object.keys(store.innings1?.bowlingStats || {}),
+                    ...(store.innings2 ? [
+                      ...Object.keys(store.innings2.battingStats || {}),
+                      ...Object.keys(store.innings2.bowlingStats || {})
+                    ] : [])
+                  ]);
+
+                  const performers = Array.from(allParticipatingIds).map(pid => {
+                    const b1 = store.innings1?.battingStats[pid];
+                    const b2 = store.innings2?.battingStats[pid];
+                    const w1 = store.innings1?.bowlingStats[pid];
+                    const w2 = store.innings2?.bowlingStats[pid];
+
+                    return {
+                      playerId: pid,
+                      playerName: getPlayerName(pid),
+                      runs: (b1?.runs || 0) + (b2?.runs || 0),
+                      balls: (b1?.balls || 0) + (b2?.balls || 0),
+                      fours: (b1?.fours || 0) + (b2?.fours || 0),
+                      sixes: (b1?.sixes || 0) + (b2?.sixes || 0),
+                      wickets: (w1?.wickets || 0) + (w2?.wickets || 0),
+                      bowlingRuns: (w1?.runs || 0) + (w2?.runs || 0),
+                      bowlingOvers: (w1?.overs || 0) + (w2?.overs || 0),
+                      maidens: (w1?.maidens || 0) + (w2?.maidens || 0),
+                      isNotOut: (b1 && b1.status !== 'out') || (b2 && b2.status !== 'out')
+                    };
+                  });
+
+                  await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/matches/${activeMatchId}/finalize`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
+                    },
+                    body: JSON.stringify({
+                      matchData: { ...summary, performers },
+                      updatedPlayers: performers
+                    })
+                  });
+
+                  toast.success("Match Finalized & Career Stats Updated!");
+                  localStorage.removeItem('ins-cricket-scorer');
+                  localStorage.removeItem('active_match_id');
+                  navigate('/match-center');
+                } catch (err) {
+                  console.error("Finalization failed:", err);
+                  toast.error("Finalization failed. Please check connection.");
+                } finally {
+                  setSyncStatus('idle');
+                }
+              }}
+            />
+          )}
+
+          <MilestoneOverlay ref={milestoneRef} />
+
+          <AnimatePresence>
+            {showAnalyticsDrawer && (
+              <AnalyticsDrawerOverlay
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowAnalyticsDrawer(false)}
+              >
+                <AnalyticsDrawerContent
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <AnalyticsHeader>
+                    <h2>{activeChart === 'manhattan' ? 'MATCH HEARTBEAT' : 'CHASE PROFILE'}</h2>
+                    <IconButton onClick={() => setShowAnalyticsDrawer(false)} style={{ color: '#FFF' }}>
+                      <X size={20} />
+                    </IconButton>
+                  </AnalyticsHeader>
+
+                  <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+                    <FilterChip
+                      $active={activeChart === 'manhattan'}
+                      onClick={() => setActiveChart('manhattan')}
+                    >
+                      MANHATTAN
+                    </FilterChip>
+                    <FilterChip
+                      $active={activeChart === 'worm'}
+                      onClick={() => setActiveChart('worm')}
+                    >
+                      WORM CHART
+                    </FilterChip>
+                  </div>
+
+                  <ChartContainer style={{ flex: 1, minHeight: 400, display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ marginBottom: 20 }}>
+                      {activeChart === 'manhattan' ? 'Runs Per Over (Including Extras)' : 'Cumulative Progress Comparison'}
+                    </h3>
+
+                    <div style={{ flex: 1, width: '100%', minHeight: 300 }}>
+                      {activeChart === 'manhattan' ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={manhattanData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                            <XAxis
+                              dataKey="over"
+                              stroke="rgba(255,255,255,0.5)"
+                              fontSize={10}
+                              tickLine={false}
+                              axisLine={false}
+                              label={{ value: 'OVERS', position: 'insideBottom', offset: -5, fill: 'rgba(255,255,255,0.3)', fontSize: 8, fontWeight: 900 }}
+                            />
+                            <YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} tickLine={false} axisLine={false} />
+                            <Tooltip
+                              contentStyle={{ background: '#001F3F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
+                              itemStyle={{ color: '#FAB005', fontSize: '12px', fontWeight: 700 }}
+                              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                            />
+                            <Bar dataKey="runs" fill="#FAB005" radius={[4, 4, 0, 0]} barSize={16}>
+                              {manhattanData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.wickets > 0 ? '#FF4D4D' : '#FAB005'} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                            <XAxis
+                              dataKey="over"
+                              type="number"
+                              domain={[0, store.maxOvers || 20]}
+                              stroke="rgba(255,255,255,0.5)"
+                              fontSize={10}
+                              tickLine={false}
+                              axisLine={false}
+                              label={{ value: 'OVERS', position: 'insideBottom', offset: -5, fill: 'rgba(255,255,255,0.3)', fontSize: 8, fontWeight: 900 }}
+                            />
+                            <YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} tickLine={false} axisLine={false} />
+                            <Tooltip
+                              contentStyle={{ background: '#001F3F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
+                              itemStyle={{ fontSize: '12px', fontWeight: 700 }}
+                            />
+                            <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700 }} />
+
+                            {/* 1st Innings Line */}
+                            {analyticsWormData.innings1.length > 0 && (
+                              <Line
+                                data={analyticsWormData.innings1}
+                                name="Innings 1"
+                                type="monotone"
+                                dataKey="runs"
+                                stroke="#38BDF8"
+                                strokeWidth={2}
+                                dot={false}
+                                strokeDasharray={store.currentInnings === 2 ? "5 5" : "0"}
+                              />
+                            )}
+
+                            {/* 2nd Innings Line */}
+                            {store.currentInnings === 2 && analyticsWormData.innings2.length > 0 && (
+                              <Line
+                                data={analyticsWormData.innings2}
+                                name="Innings 2"
+                                type="monotone"
+                                dataKey="runs"
+                                stroke="#FAB005"
+                                strokeWidth={3}
+                                dot={false}
+                              />
+                            )}
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+
+                    <div style={{ marginTop: 24, padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <h4 style={{ fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: 1 }}>Analytic Insight</h4>
+                      <p style={{ fontSize: '0.75rem', opacity: 0.7, margin: 0, lineHeight: 1.5 }}>
+                        {activeChart === 'manhattan'
+                          ? "Bars show total runs per over. Red highlights indicate overs with wickets, marking momentum shifts."
+                          : "The Worm tracks cumulative progress. In Innings 2, the solid line shows the chase against the dotted target line."
+                        }
+                      </p>
+                    </div>
+                  </ChartContainer>
+
+                  <div style={{ marginTop: 'auto', textAlign: 'center', opacity: 0.3, fontSize: '0.6rem', fontWeight: 900, letterSpacing: 2 }}>
+                    INDIAN STRIKERS ANALYTICS ENGINE v1.0
+                  </div>
+                </AnalyticsDrawerContent>
+              </AnalyticsDrawerOverlay>
+            )}
+          </AnimatePresence>
+        </>
+      </DashboardContainer>
     );
   } catch (error) {
     console.error("[ScorerDashboard] Critical Render Error:", error);
@@ -4940,7 +4940,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         <AlertTriangle size={48} color="#FF4D4D" style={{ marginBottom: 16 }} />
         <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>RENDERING ERROR</h2>
         <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 24 }}>A UI component failed to load. We've captured the error and are synchronizing state.</p>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           style={{ padding: '12px 24px', borderRadius: 12, background: '#10b981', border: 'none', color: '#FFF', fontWeight: 900, cursor: 'pointer' }}
         >

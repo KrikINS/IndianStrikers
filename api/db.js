@@ -2,10 +2,9 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // Cloud SQL Proxy over 127.0.0.1 typically doesn't use SSL
-  ssl: (process.env.DB_HOST === '127.0.0.1' || process.env.DB_HOST === 'localhost' || !process.env.DATABASE_URL?.includes('sslmode=require')) ? false : {
+  ssl: (process.env.DB_HOST?.includes('34.93.230.37') || process.env.DATABASE_URL?.includes('sslmode=no-verify')) ? {
     rejectUnauthorized: false
-  },
+  } : false,
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000
 });
