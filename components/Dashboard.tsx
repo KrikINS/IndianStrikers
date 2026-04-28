@@ -192,34 +192,34 @@ function WeeklyPerformerCarousel({
                       isSuperStriker: player.isSuperStriker
                     });
                   }}
-                  className={`bg-[#0f172a] rounded-[2.5rem] p-6 border ${isActive ? 'border-sky-500/50 shadow-[0_0_50px_rgba(56,189,248,0.3)]' : 'border-white/10'} relative overflow-hidden group transition-all duration-500`}
+                  className={`bg-[#0f172a] rounded-[2rem] p-4 md:p-6 border ${isActive ? 'border-sky-500/50 shadow-[0_0_50px_rgba(56,189,248,0.3)]' : 'border-white/10'} relative overflow-hidden group transition-all duration-500`}
                 >
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-sky-600/20 to-transparent"></div>
                   <div className="relative z-10 flex flex-col items-center">
-                    <div className="relative mb-4">
+                    <div className="relative mb-2 md:mb-4">
                       <div className={`absolute inset-0 bg-sky-400 blur-[40px] ${isActive ? 'opacity-20' : 'opacity-10'} transition-opacityauto`}></div>
-                      <img src={player.avatarUrl} className="w-28 h-36 rounded-[1.5rem] object-cover border-2 border-white/20 shadow-2xl relative z-10" alt={player.name} />
-                      <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${player.isSuperStriker ? 'bg-orange-500 text-white' : 'bg-sky-400 text-slate-950'} text-[8px] font-black px-4 py-1 rounded-full border-[2px] border-slate-950 uppercase z-20 whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.3)]`}>
+                      <img src={player.avatarUrl} className="w-20 h-24 md:w-28 md:h-36 rounded-2xl object-cover border-2 border-white/20 shadow-2xl relative z-10" alt={player.name} />
+                      <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${player.isSuperStriker ? 'bg-orange-500 text-white' : 'bg-sky-400 text-slate-950'} text-[7px] md:text-[8px] font-black px-3 md:px-4 py-1 rounded-full border-[2px] border-slate-950 uppercase z-20 whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.3)]`}>
                         {player.isSuperStriker ? '🚀 Super' : (player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer')}
                       </div>
                     </div>
-                    <h4 className="font-black text-2xl uppercase tracking-[0.2rem] italic text-center mb-1 leading-none text-white">{player.name}</h4>
-                    <p className="text-[9px] font-bold text-sky-400/60 uppercase tracking-[0.3em] mb-4 italic">
+                    <h4 className="font-black text-lg md:text-2xl uppercase tracking-widest italic text-center mb-0.5 leading-none text-white">{player.name}</h4>
+                    <p className="text-[8px] md:text-[9px] font-bold text-sky-400/60 uppercase tracking-[0.2em] md:tracking-[0.3em] mb-2 md:mb-4 italic">
                       vs {opponents.find((o: any) => String(o.id) === String(player.opponentId))?.name || player.opponentName || 'TEAM'}
                     </p>
-                    <div className="mb-6 text-center">
-                      <p className="text-4xl font-black text-sky-400 italic">
+                    <div className="mb-2 md:mb-6 text-center">
+                      <p className="text-2xl md:text-4xl font-black text-sky-400 italic">
                         {player.wickets * 35 > player.runs ? player.wickets : player.runs}
-                        <span className="text-sm font-black text-sky-400/50 ml-1 uppercase">
+                        <span className="text-[10px] md:text-sm font-black text-sky-400/50 ml-1 uppercase">
                           {player.wickets * 35 > player.runs ? 'Wickets' : 'Runs'}
                         </span>
                       </p>
 
                       {/* Dynamic Milestone Tagline */}
                       {(player.runs >= 50 || player.wickets >= 3 || player.isHatTrick) && (
-                        <p className="mt-3 text-[10px] font-black text-white/40 uppercase tracking-widest max-w-[200px] leading-relaxed animate-pulse">
+                        <p className="mt-2 text-[8px] md:text-[10px] font-black text-white/40 uppercase tracking-widest max-w-[180px] md:max-w-[200px] leading-relaxed animate-pulse">
                           {getRandomTagline(
-                            (player.wickets >= 3 || player.isHatTrick) ? 'bowling' : 'batting',
+                            (player.wickets >= 3 || player.isHatTrick) ? 'bowling' : 'batting', 
                             (player.wickets >= 3 || player.isHatTrick) ? player.wickets : player.runs,
                             player.isHatTrick
                           )}
