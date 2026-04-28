@@ -132,7 +132,7 @@ function WeeklyPerformerCarousel({
 
   return (
     <div
-      className="relative w-full h-[500px] flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
+      className="relative w-full h-[320px] md:h-[450px] flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
