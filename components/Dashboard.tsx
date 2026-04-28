@@ -192,34 +192,34 @@ function WeeklyPerformerCarousel({
                       isSuperStriker: player.isSuperStriker
                     });
                   }}
-                  className={`bg-[#0f172a] rounded-[2rem] p-4 md:p-6 border ${isActive ? 'border-sky-500/50 shadow-[0_0_50px_rgba(56,189,248,0.3)]' : 'border-white/10'} relative overflow-hidden group transition-all duration-500`}
+                  className={`bg-[#0f172a] rounded-[1.5rem] p-2 border ${isActive ? 'border-sky-500/50 shadow-[0_0_50px_rgba(56,189,248,0.3)]' : 'border-white/10'} relative overflow-hidden group transition-all duration-500`}
                 >
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-sky-600/20 to-transparent"></div>
                   <div className="relative z-10 flex flex-col items-center">
-                    <div className="relative mb-2 md:mb-4">
+                    <div className="relative mb-4">
                       <div className={`absolute inset-0 bg-sky-400 blur-[40px] ${isActive ? 'opacity-20' : 'opacity-10'} transition-opacityauto`}></div>
-                      <img src={player.avatarUrl} className="w-20 h-24 md:w-28 md:h-36 rounded-2xl object-cover border-2 border-white/20 shadow-2xl relative z-10" alt={player.name} />
-                      <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${player.isSuperStriker ? 'bg-orange-500 text-white' : 'bg-sky-400 text-slate-950'} text-[7px] md:text-[8px] font-black px-3 md:px-4 py-1 rounded-full border-[2px] border-slate-950 uppercase z-20 whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.3)]`}>
+                      <img src={player.avatarUrl} className="w-35 h-40 rounded-[1rem] object-cover border-2 border-white/20 shadow-2xl relative z-10" alt={player.name} />
+                      <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${player.isSuperStriker ? 'bg-orange-500 text-white' : 'bg-sky-400 text-slate-950'} text-[8px] font-black px-4 py-1 rounded-full border-[1px] border-slate-950 uppercase z-20 whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.3)]`}>
                         {player.isSuperStriker ? '🚀 Super' : (player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer')}
                       </div>
                     </div>
-                    <h4 className="font-black text-lg md:text-2xl uppercase tracking-widest italic text-center mb-0.5 leading-none text-white">{player.name}</h4>
-                    <p className="text-[8px] md:text-[9px] font-bold text-sky-400/60 uppercase tracking-[0.2em] md:tracking-[0.3em] mb-2 md:mb-4 italic">
+                    <h4 className="font-black text-2xl uppercase tracking-[0.2rem] italic text-center mb-1 leading-none text-white">{player.name}</h4>
+                    <p className="text-[10px] font-bold text-sky-400/60 uppercase tracking-[0.3em] mb-4 italic">
                       vs {opponents.find((o: any) => String(o.id) === String(player.opponentId))?.name || player.opponentName || 'TEAM'}
                     </p>
-                    <div className="mb-2 md:mb-6 text-center">
-                      <p className="text-2xl md:text-4xl font-black text-sky-400 italic">
+                    <div className="mb-6 text-center">
+                      <p className="text-4xl font-black text-sky-400 italic">
                         {player.wickets * 35 > player.runs ? player.wickets : player.runs}
-                        <span className="text-[10px] md:text-sm font-black text-sky-400/50 ml-1 uppercase">
+                        <span className="text-sm font-black text-sky-400/50 ml-1 uppercase">
                           {player.wickets * 35 > player.runs ? 'Wickets' : 'Runs'}
                         </span>
                       </p>
 
                       {/* Dynamic Milestone Tagline */}
                       {(player.runs >= 50 || player.wickets >= 3 || player.isHatTrick) && (
-                        <p className="mt-2 text-[8px] md:text-[10px] font-black text-white/40 uppercase tracking-widest max-w-[180px] md:max-w-[200px] leading-relaxed animate-pulse">
+                        <p className="mt-3 text-[10px] font-black text-white/40 uppercase tracking-widest max-w-[200px] leading-relaxed animate-pulse">
                           {getRandomTagline(
-                            (player.wickets >= 3 || player.isHatTrick) ? 'bowling' : 'batting', 
+                            (player.wickets >= 3 || player.isHatTrick) ? 'bowling' : 'batting',
                             (player.wickets >= 3 || player.isHatTrick) ? player.wickets : player.runs,
                             player.isHatTrick
                           )}
@@ -779,16 +779,16 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           </div>
         </div>
 
-        <div className="md:col-span-1 bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="md:col-span-1 bg-white rounded-[2rem] p-3 border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-2">
               {nextMatch?.status === 'live' ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4">
                   <span className="flex h-2 w-2 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                   </span>
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-red-600">Live Now</h3>
+                  <h3 className="text-xs font-black uppercase tracking-[0.1em] text-red-600">Live Now</h3>
                 </div>
               ) : (
                 <>
@@ -798,9 +798,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               )}
             </div>
             {nextMatch ? (
-              <div className="space-y-4">
-                <p className="font-black text-slate-900 text-2xl uppercase tracking-tighter italic">VS {nextMatch.opponentName}</p>
-                <div className="space-y-1.5 pt-2">
+              <div className="space-y-0">
+                <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic">vs {nextMatch.opponentName}</p>
+                <div className="space-y-0 pt-2">
                   <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
                     <Calendar size={14} /> {new Date(nextMatch.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
@@ -815,11 +815,11 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           </div>
           {nextMatch?.status === 'live' ? (
             <Link to={`/live/${nextMatch.id}?tab=commentary`} className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black rounded-xl flex items-center justify-center gap-2 uppercase tracking-widest mt-4 transition-all animate-pulse shadow-lg shadow-red-600/20">
-              <Activity size={14} /> VIEW LIVE FEED
+              <Activity size={10} /> LIVE FEED
             </Link>
           ) : (
             <Link to="/match-center" className="text-[10px] font-black text-blue-600 hover:text-blue-700 flex items-center gap-1 uppercase tracking-widest mt-4">
-              View Full Schedule <ChevronRight size={12} />
+              View Full Schedule <ChevronRight size={10} />
             </Link>
           )}
         </div>
@@ -834,9 +834,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           <h3 className="text-xl font-black text-white flex items-center gap-2 uppercase tracking-tighter italic">
             <Zap className="text-sky-400 fill-sky-400" size={24} /> Performer Spotlight
           </h3>
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-400/80 bg-sky-400/10 px-4 py-2 rounded-full border border-sky-400/20">
-            Weekly Highlights
-          </span>
+
         </div>
 
         <div className="relative z-10">
@@ -869,15 +867,15 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-full border border-slate-100 transition-all group active:scale-95"
           >
             <RefreshCw size={16} className={`${isSyncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-            <span className="text-[10px] font-black uppercase tracking-widest">{isSyncing ? 'Syncing...' : 'Sync Stats'}</span>
+            <span className="text-[8px] font-black uppercase tracking-widest">{isSyncing ? 'Syncing...' : 'Sync Stats'}</span>
           </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-14 relative z-10">
           {/* Batting Leaderboard */}
-          <div className="space-y-6">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Flame size={14} className="text-orange-500" /> Run Machines
+          <div className="space-y-4">
+            <h4 className="text-[12px] font-black text-slate-600 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Flame size={16} className="text-orange-500" /> Run Machines
             </h4>
             <div className="space-y-4">
               {topRunScorers.map((p, idx) => (
@@ -905,9 +903,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           </div>
 
           {/* Highest Innings Runs */}
-          <div className="space-y-6">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Award size={14} className="text-yellow-500" /> Best Innings
+          <div className="space-y-4">
+            <h4 className="text-[12px] font-black text-slate-600 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Award size={16} className="text-yellow-500" /> Best Innings
             </h4>
             <div className="space-y-4">
               {topInningsRuns.map((p, idx) => (
@@ -930,9 +928,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           </div>
 
           {/* Leaderboard: Sixes */}
-          <div className="space-y-6">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Zap size={14} className="text-sky-500" /> Six Hitters
+          <div className="space-y-4">
+            <h4 className="text-[12px] font-black text-slate-600 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Zap size={16} className="text-sky-500" /> Six Hitters
             </h4>
             <div className="space-y-4">
               {topSixHitters.map((p, idx) => (
@@ -955,9 +953,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           </div>
 
           {/* Bowling Leaderboard */}
-          <div className="space-y-6">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Activity size={14} className="text-blue-500" /> Wicket Takers
+          <div className="space-y-4">
+            <h4 className="text-[12px] font-black text-slate-600 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Activity size={16} className="text-blue-500" /> Wicket Takers
             </h4>
             <div className="space-y-4">
               {topWicketTakers.map((p, idx) => (
@@ -985,9 +983,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           </div>
 
           {/* Best Bowling Figures */}
-          <div className="space-y-6">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Target size={14} className="text-purple-500" /> Best Spell
+          <div className="space-y-4">
+            <h4 className="text-[12px] font-black text-slate-600 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Target size={16} className="text-purple-500" /> Best Spell
             </h4>
             <div className="space-y-4">
               {topInningsWickets.map((p, idx) => (
@@ -1010,9 +1008,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           </div>
 
           {/* Leaderboard: Fours */}
-          <div className="space-y-6">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Star size={14} className="text-rose-500" /> Boundary Kings
+          <div className="space-y-4">
+            <h4 className="text-[12px] font-black text-slate-600 uppercase tracking-[0.3em] flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Star size={16} className="text-rose-500" /> Boundary Kings
             </h4>
             <div className="space-y-4">
               {topFourHitters.map((p, idx) => (
