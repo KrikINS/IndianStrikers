@@ -87,7 +87,7 @@ export interface MatchScorerState {
     pendingIntroduction: string | null;
     offlineQueue: BallRecord[];
     systemCommentary: SystemCommentary[];
-    
+
     // Central Auth State
     currentUser: AppUser | null;
 
@@ -208,7 +208,7 @@ const getScoringResetState = (state: UnifiedMatchStore) => ({
     toss: { winnerId: null, choice: null },
     innings1: null,
     innings2: null,
-    currentInnings: 1 as (1|2),
+    currentInnings: 1 as (1 | 2),
     strikerId: null,
     nonStrikerId: null,
     currentBowlerId: null,
@@ -248,9 +248,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     setMatches: (matches) => set({ matches }),
 
     resetZombieMatches: () => set((state: UnifiedMatchStore) => {
-        const today = new Date().setHours(0,0,0,0);
+        const today = new Date().setHours(0, 0, 0, 0);
         const updatedMatches: ScheduledMatch[] = state.matches.map(match => {
-            const matchDate = new Date(match.date).setHours(0,0,0,0);
+            const matchDate = new Date(match.date).setHours(0, 0, 0, 0);
             if (match.status === 'live' && matchDate < today) {
                 return { ...match, status: 'upcoming' as MatchStatus };
             }
@@ -262,21 +262,21 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     addMatch: async (match) => {
         const tempId = (match as any).id || crypto.randomUUID();
         const localMatch = { ...match, id: tempId, status: match.status || 'upcoming' };
-        
+
         // OPTIMISTIC UPDATE: Add immediately to local state
         set((state) => ({ matches: [...state.matches, localMatch as ScheduledMatch] }));
-        
+
         try {
             const savedMatch = await api.addMatch(match);
-            
+
             // SYNC UPDATE: Replace temp with real server data
             set((state) => ({
                 matches: state.matches.map(m => m.id === tempId ? savedMatch : m)
             }));
-            
+
             // REFRESH: Force a background sync to ensure tournament links etc are clean
-            get().syncWithCloud().catch(() => {});
-            
+            get().syncWithCloud().catch(() => { });
+
             return savedMatch.id;
         } catch (e) {
             console.error("Cloud save failed:", e);
@@ -344,9 +344,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         try {
             await api.finalizeMatch(id, matchData, updatedPlayers);
             set((state) => ({
-                matches: state.matches.map(m => m.id === id ? { 
-                    ...m, 
-                    ...matchData, 
+                matches: state.matches.map(m => m.id === id ? {
+                    ...m,
+                    ...matchData,
                     status: 'completed' as MatchStatus,
                     isCareerSynced: matchData.isCareerSynced ?? m.isCareerSynced,
                     isLocked: true // Automatically lock on finalize
@@ -363,23 +363,23 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             console.log("[Store] syncWithCloud skipped - already loading");
             return;
         }
-        
+
         set({ isLoading: true, error: null });
         const maxAttempts = 3;
-        
+
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 console.log(`[Store] Syncing matches (attempt ${attempt}/${maxAttempts})...`);
                 const rawDbMatches = (await api.getMatches()) || [];
                 const dbMatches = rawDbMatches.filter(m => !m.is_test && m.id !== '00000000-0000-0000-0000-000000000001');
-                
+
                 // If we got data, set it and break. If we got an empty list on the last attempt, also set it.
                 if (dbMatches.length > 0 || attempt === maxAttempts) {
                     set({ matches: dbMatches, isLoading: false });
                     console.log(`[Store] Sync successful. Found ${dbMatches.length} matches.`);
                     return;
                 }
-                
+
                 // If empty result (race condition fix), wait and retry
                 const delay = attempt * 1000;
                 console.log(`[Store] Match list empty, retrying in ${delay}ms...`);
@@ -413,7 +413,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
     purgeTestData: async () => {
         try {
-            const testMatches = get().matches.filter(m => 
+            const testMatches = get().matches.filter(m =>
                 m.is_test || m.opponentName === 'Sandbox XI' || (m.opponentId && String(m.opponentId).includes('sandbox'))
             );
             if (testMatches.length === 0) return;
@@ -442,10 +442,10 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         // IMMUTABLE LOCK GUARD
         if (data.isLocked) {
             console.log("[Store] Initializing in Read-Only Mode (Locked)");
-            set({ 
+            set({
                 ...getScoringResetState(current),
                 ...data.liveData,
-                matchId: data.matchId,
+                matchId: ensureId(data.matchId),
                 matchType: data.matchType,
                 isFinished: true // Force finished state for UI
             });
@@ -455,10 +455,10 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         if (data.liveData && Object.keys(data.liveData).length > 0) {
             let parsedData = data.liveData;
             if (typeof data.liveData === 'string') {
-                try { parsedData = JSON.parse(data.liveData); } catch (e) {}
+                try { parsedData = JSON.parse(data.liveData); } catch (e) { }
             }
             if (parsedData.innings1) {
-                set({ 
+                set({
                     ...getScoringResetState(current),
                     ...parsedData,
                     matchId: ensureId(data.matchId),
@@ -479,9 +479,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             }
         }
 
-        set({ 
-            ...getScoringResetState(current), 
-            matchId: data.matchId,
+        set({
+            ...getScoringResetState(current),
+            matchId: ensureId(data.matchId),
             matchType: data.matchType,
             tournament: data.tournament,
             ground: data.ground,
@@ -546,7 +546,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         if (num === 1 && state.systemCommentary?.length === 0) {
             const tossWinnerName = state.toss.winnerId === 'HOME' ? 'Home Team' : (state.toss.winnerId === 'AWAY' ? state.opponentName : 'Toss Winner');
             get().addSystemCommentary(`🏏 Toss Update: ${tossWinnerName} has won the toss and elected to ${state.toss.choice?.toLowerCase() || 'bat'} first.`);
-            
+
             const homeXINames = (state.homeXI || []).map(id => getPlayerName(id)).join(', ');
             const awayXINames = (state.awayXI || []).map(id => getPlayerName(id)).join(', ');
             if (homeXINames) get().addSystemCommentary(`📋 Playing XI - Home: ${homeXINames}`);
@@ -562,8 +562,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         // Force Sync on Innings Start
         const updatedState = get();
         if (updatedState.matchId) {
-            api.updateMatch(updatedState.matchId, { 
-                live_data: updatedState.prepareSyncPayload(), 
+            api.updateMatch(updatedState.matchId, {
+                live_data: updatedState.prepareSyncPayload(),
                 last_updated: new Date().toISOString(),
                 force_upsert: true
             }).catch(console.error);
@@ -594,7 +594,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         nextInnings.totalRuns += runs + extraRuns;
         nextInnings.totalBalls += isLegal ? 1 : 0;
         if (isWicket && wicketType !== 'Retired Hurt') nextInnings.wickets += 1;
-        
+
         if (isWide) nextInnings.extras.wides += 1 + runs;
         if (isNoBall) nextInnings.extras.noBalls += 1;
         if (type === 'bye' || (isNoBall && subType === 'bye')) nextInnings.extras.byes += runs;
@@ -627,9 +627,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             const victimId = outPlayerId || state.strikerId;
             if (victimId === sId) sId = newBatterId || null;
             else nsId = newBatterId || null;
-            
+
             const getPlayerName = (id: string) => state.squadPlayers.find(p => p.id === id)?.name || state.opponentPlayers.find(p => p.id === id)?.name || 'Unknown';
-            
+
             if (sId && !nextInnings.battingStats[sId]) {
                 const newName = getPlayerName(sId);
                 nextInnings.battingStats[sId] = { id: sId, name: newName, runs: 0, balls: 0, fours: 0, sixes: 0, status: 'batting', index: Object.keys(nextInnings.battingStats).length, fifty_notified: false, hundred_notified: false };
@@ -655,7 +655,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             if (isWicket) cat = 'WICKET';
             else if (runs === 4 && subType === 'bat') cat = 'FOUR';
             else if (runs === 6 && subType === 'bat') cat = 'SIX';
-            
+
             if (cat) {
                 const dialogue = useCommentaryStore.getState().getRandomDialogue(cat);
                 if (dialogue) {
@@ -663,12 +663,12 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
                     const sName = getPlayerName(state.strikerId || '');
                     const bName = getPlayerName(state.currentBowlerId || '');
                     const zName = zone || 'the gap';
-                    
+
                     finalCommentary = dialogue
                         .replace(/\{batsman\}/g, sName)
                         .replace(/\{bowler\}/g, bName)
                         .replace(/\{zone\}/g, zName);
-                    
+
                     // Push to the Live Narrative Feed
                     get().addSystemCommentary(`🎙️ ${finalCommentary}`);
                 }
@@ -697,7 +697,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
         // --- Milestone Detection (Atomic) ---
         let milestone: { type: string, player: string, subText?: string } | null = null;
-        
+
         // Batting Milestones (50, 100)
         if (subType === 'bat' && b) {
             if (b.runs >= 100 && !b.hundred_notified) {
@@ -771,8 +771,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         try {
             const payload = state.prepareSyncPayload();
             // FORCE UPSERT: Overwrite cloud data with local state regardless of versioning
-            await api.updateMatch(state.matchId, { 
-                live_data: payload, 
+            await api.updateMatch(state.matchId, {
+                live_data: payload,
                 last_updated: new Date().toISOString(),
                 force_upsert: true // Signal to backend to prioritize this payload
             });
@@ -801,8 +801,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         // Force Sync on Penalty
         const updatedState = get();
         if (updatedState.matchId) {
-            api.updateMatch(updatedState.matchId, { 
-                live_data: updatedState.prepareSyncPayload(), 
+            api.updateMatch(updatedState.matchId, {
+                live_data: updatedState.prepareSyncPayload(),
                 last_updated: new Date().toISOString(),
                 force_upsert: true
             }).catch(console.error);
@@ -822,8 +822,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         // Force Sync on Undo
         const updatedState = get();
         if (updatedState.matchId) {
-            api.updateMatch(updatedState.matchId, { 
-                live_data: updatedState.prepareSyncPayload(), 
+            api.updateMatch(updatedState.matchId, {
+                live_data: updatedState.prepareSyncPayload(),
                 last_updated: new Date().toISOString(),
                 force_upsert: true
             }).catch(console.error);
@@ -874,7 +874,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         set({ isFinished: state.currentInnings === 2, isWaitingForBowler: false });
     },
     getOvers: (balls) => `${Math.floor(balls / 6)}.${balls % 6}`,
-    syncOfflineQueue: async () => {},
+    syncOfflineQueue: async () => { },
     enqueueOfflineBall: (payload) => set((s) => ({ offlineQueue: [...s.offlineQueue, payload] })),
     clearOfflineQueue: () => set({ offlineQueue: [] }),
     setMilestoneNotified: (batterId, type) => {
@@ -894,12 +894,12 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         set((state) => ({
             systemCommentary: [{ id, timestamp, text }, ...(state.systemCommentary || [])]
         }));
-        
+
         // Atomic sync
         const updatedState = get();
         if (updatedState.matchId) {
-            api.updateMatch(updatedState.matchId, { 
-                live_data: updatedState.prepareSyncPayload(), 
+            api.updateMatch(updatedState.matchId, {
+                live_data: updatedState.prepareSyncPayload(),
                 last_updated: new Date().toISOString(),
                 force_upsert: true
             }).catch(console.error);
@@ -912,7 +912,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         try {
             const players = await api.getPlayers();
             const allPlayers = players || [];
-            
+
             set({
                 squadPlayers: allPlayers.filter(p => p.teamId === 'IND_STRIKERS'),
                 opponentPlayers: allPlayers.filter(p => p.teamId !== 'IND_STRIKERS'),
@@ -980,7 +980,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             if (targetStatus) {
                 // LOCKING: Extract primitive values to match database schema
                 const score = match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 };
-                
+
                 // Convert overs (e.g. 18.2) to total balls
                 const overs = Number(score.overs || 0);
                 const overParts = String(overs).split('.');
@@ -1018,13 +1018,13 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         // currentUser (has photoURL), or any nested objects not needed for scoring.
         const payload = {
             // Match identity
-            matchId:        state.matchId,
-            matchType:      state.matchType,
-            tournament:     state.tournament,
-            ground:         state.ground,
-            opponentName:   state.opponentName,
-            maxOvers:       state.maxOvers,
-            targetScore:    state.targetScore ?? 0,
+            matchId: state.matchId,
+            matchType: state.matchType,
+            tournament: state.tournament,
+            ground: state.ground,
+            opponentName: state.opponentName,
+            maxOvers: state.maxOvers,
+            targetScore: state.targetScore ?? 0,
 
             // Toss
             toss: state.toss,
@@ -1035,15 +1035,15 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             currentInnings: state.currentInnings,
 
             // Active player IDs only — never full player objects
-            strikerId:      state.strikerId,
-            nonStrikerId:   state.nonStrikerId,
+            strikerId: state.strikerId,
+            nonStrikerId: state.nonStrikerId,
             currentBowlerId: state.currentBowlerId,
 
             // Flags
-            isFreeHit:          state.isFreeHit,
-            isFinished:         state.isFinished,
+            isFreeHit: state.isFreeHit,
+            isFinished: state.isFinished,
             isWaitingForBowler: state.isWaitingForBowler,
-            useWagonWheel:      state.useWagonWheel,
+            useWagonWheel: state.useWagonWheel,
             wagonWheelQuickSave: state.wagonWheelQuickSave,
 
             // XI — IDs only, never full player objects
@@ -1052,7 +1052,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
             // Milestone tracking (tiny)
             partnership_notified: state.partnership_notified ?? [],
-            
+
             // Commentary
             systemCommentary: state.systemCommentary ?? []
         };

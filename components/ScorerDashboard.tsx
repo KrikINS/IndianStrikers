@@ -1330,8 +1330,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   useEffect(() => {
     // Only reset if we are switching to a DIFFERENT match that isn't already the active one
-    if (activeMatchId && activeMatchId !== matchId) {
-      console.log("[Scorer] Different match detected. Preparing fresh session...");
+    // Ensure both are compared as strings to avoid object-mismatch wipes
+    if (activeMatchId && String(activeMatchId) !== String(matchId)) {
+      console.log(`[Scorer] Different match detected (${activeMatchId} vs ${matchId}). Preparing fresh session...`);
       // Reset the one-shot player-fetch guard when the match changes.
       hasFetchedPlayersRef.current = false;
     }
@@ -1509,14 +1510,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         });
       }
     }
-    // Handover dependency: reactive to cloud ball counts
+    // Handover dependency: reactive to match ID changes
+    // Removed ball counts to prevent rehydration wipes when cloud returns partial/empty payload
   }, [
     store.matchId,
     matchMeta?.id,
-    matchMeta?.status,
-    (matchMeta?.live_data as any)?.innings1?.totalBalls,
-    (matchMeta?.live_data as any)?.innings2?.totalBalls,
-    (matchMeta?.live_data as any)?.currentInnings,
+    matchMeta?.status
   ]);
 
   // Real-Time Polling: Check for cloud updates every 30 seconds for seamless handover
@@ -2622,8 +2621,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     }
 
     // NEW: Detect if this wicket results in All Out (10 wickets)
-    // currentInnings.wickets is currently 9 if this is the 10th wicket.
-    const isNowAllOut = currentInnings && currentInnings.wickets === 9;
+    const isNowAllOut = currentInnings && (currentInnings.wickets + 1) >= 10;
 
     if (isNowAllOut || isBattingFinishing) {
       if (isNowAllOut) {
