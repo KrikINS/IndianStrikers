@@ -60,13 +60,13 @@ export default function GlobalChat({ currentUser }: { currentUser: any }) {
         animate={{ 
           scale: [1, 1.1, 1],
           boxShadow: [
-            "0 5px 15px -3px rgba(56,189,248,0.5)", 
-            "0 10px 25px -5px rgba(56,189,248,0.7)", 
-            "0 5px 15px -3px rgba(56,189,248,0.5)"
+            "0 5px 15px -3px rgba(239,68,68,0.5)", 
+            "0 10px 25px -5px rgba(239,68,68,0.8)", 
+            "0 5px 15px -3px rgba(239,68,68,0.5)"
           ]
         }}
         transition={{
-          duration: 3,
+          duration: 1.5,
           repeat: Infinity,
           ease: "easeInOut"
         }}
@@ -75,9 +75,9 @@ export default function GlobalChat({ currentUser }: { currentUser: any }) {
         whileDrag={{ scale: 1.15, boxShadow: "0 20px 40px rgba(0,0,0,0.4)" }}
         onClick={() => setIsOpen(!isOpen)}
         title="Open club chat"
-        className="fixed bottom-[90px] right-6 z-[99998] w-7 h-7 bg-sky-600 hover:bg-sky-500 text-white rounded-full shadow-[0_5px_15px_-3px_rgba(56,189,248,0.5)] flex items-center justify-center transition-colors border-2 border-white/20 touch-none cursor-grab active:cursor-grabbing"
+        className="fixed bottom-[90px] right-6 z-[99998] w-11 h-11 bg-sky-600 hover:bg-sky-500 text-white rounded-full shadow-[0_5px_15px_-3px_rgba(239,68,68,0.5)] flex items-center justify-center transition-colors border-2 border-white/20 touch-none cursor-grab active:cursor-grabbing"
       >
-        <MessageCircle size={14} />
+        <MessageCircle size={22} />
       </motion.button>
 
       <AnimatePresence>
