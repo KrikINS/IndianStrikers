@@ -3417,12 +3417,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   return last30.map((ball: any, idx: number) => {
                     let display = ball.runs.toString();
                     if (ball.isWicket) {
-                      const prefix = ball.type === 'no-ball' ? 'NB' : ball.type === 'wide' ? 'WD' : '';
+                      const prefix = ball.isNoBall ? 'NB' : ball.isWide ? 'WD' : '';
                       const amount = ball.runs > 0 ? `+${ball.runs}` : '';
                       display = prefix ? `${prefix}${amount}+W` : 'W';
                     }
-                    else if (ball.type === 'wide') display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                    else if (ball.type === 'no-ball') display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                    else if (ball.isWide) display = `WD${ball.runs > 0 ? ' + ' + ball.runs : ''}`;
+                    else if (ball.isNoBall) display = `NB${ball.runs > 0 ? ' + ' + ball.runs : ''}`;
                     else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
                     else if (ball.type === 'bye') display = `B${ball.runs}`;
                     const ballInOverNum = ball.ballNumber;

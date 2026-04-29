@@ -781,7 +781,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
         <div className="md:col-span-1 bg-white rounded-[2rem] p-3 border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap- mb-2">
               {nextMatch?.status === 'live' ? (
                 <div className="flex items-center gap-4">
                   <span className="flex h-2 w-2 relative">
@@ -799,7 +799,29 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             </div>
             {nextMatch ? (
               <div className="space-y-0">
-                <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic">vs {nextMatch.opponentName}</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic">vs {nextMatch.opponentName}</p>
+                  {nextMatch.status === 'live' && nextMatch.live_data && (
+                    <div className="flex flex-col items-end">
+                      <div className="text-xl font-black text-red-600 italic">
+                        {(() => {
+                          const ld = nextMatch.live_data;
+                          const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
+                          return inn ? `${inn.totalRuns}/${inn.wickets}` : '0/0';
+                        })()}
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-400">
+                        ({(() => {
+                          const ld = nextMatch.live_data;
+                          const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
+                          if (!inn) return '0.0';
+                          const balls = inn.totalBalls || 0;
+                          return `${Math.floor(balls / 6)}.${balls % 6}`;
+                        })()} ov)
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-0 pt-2">
                   <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
                     <Calendar size={14} /> {new Date(nextMatch.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
