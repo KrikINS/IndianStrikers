@@ -67,13 +67,20 @@ import { SyncStatus } from './common/SyncStatus';
 
 const DashboardContainer = styled.div`
   height: 100dvh;
+  width: 100vw;
   background-color: hsla(210, 100%, 100%, 1.00);
   color: #1A1A1A;
   font-family: 'Inter', system-ui, sans-serif;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  padding-bottom: 320px; // Space for fixed scoring interface
+  overflow: hidden;
+`;
+
+const MiddleWorkspace = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   overflow-y: auto;
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
@@ -166,15 +173,29 @@ const OverSeparator = styled.div`
 
 const ScoreSection = styled.div`
   background: #ffffffff;
-  padding: 4px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 16px 20px;
   display: flex;
   flex-direction: row;
-  align-items: stretch;
+  align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  min-height: 240px;
   gap: 16px;
+`;
+
+const ScorecardPillBtn = styled.button`
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  color: #1a73e8;
+  font-size: 0.8rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(26,115,232,0.08);
+  transition: all 0.2s;
+  &:hover { background: rgba(26,115,232,0.12); }
 `;
 
 const MainScore = styled.h1`
@@ -192,53 +213,59 @@ const OversText = styled.div`
 `;
 
 const ActiveParticipants = styled.div`
-  padding: 2px 12px 4px;
+  padding: 4px 12px 4px;
   background: #FFFFFF;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  border-bottom: 1px solid #F1F3F5;
   flex-shrink: 0;
 
   @media (min-width: 768px) {
-    padding: 2px 12px 8px;
+    padding: 8px 12px 8px;
     gap: 12px;
   }
 `;
 
 const PartnershipRow = styled.div`
-  background: rgba(0, 31, 63, 0.03);
-  border-bottom: 1px solid #F1F3F5;
-  padding: 4px 12px;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  border-bottom: 1px solid #e9ecef;
+  padding: 6px 12px;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  height: 24px;
-  gap: 8px;
+  margin-top: 4px;
+`;
+
+const BowlerRow = styled.div`
+  padding: 8px 12px;
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
 `;
 
 const PartnershipMain = styled.div`
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  color: #1A1A1A;
+  color: #495057;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   
   b {
     font-weight: 900;
-    color: #001F3F;
+    color: #212529;
   }
 `;
 
 const PartnershipSub = styled.div`
-  font-size: 9px;
-  font-weight: 600;
-  color: #6c757d;
-  display: flex;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
   font-weight: 700;
+  color: rgba(73, 80, 87, 0.4);
   letter-spacing: 0.5px;
 `;
 
@@ -359,12 +386,9 @@ const ScoringInterface = styled.div`
   gap: 8px;
   flex-shrink: 0;
   border-top: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   z-index: 100;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
 `;
 
 const RunGrid = styled.div`
@@ -3161,24 +3185,40 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </AnimatePresence>
 
 
-          <ScoreSection style={{ position: 'relative' }}>
-            {/* FREE HIT BADGE - Moved to main container */}
-            {store.isFreeHit && (
-              <div style={{ position: 'absolute', top: 10, left: 20 }}>
-                <FreeHitBadge
-                  animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-                  transition={{ repeat: Infinity, duration: 1.5 }}
-                  style={{ fontSize: '10px', padding: '4px 12px', background: '#FF4D4D' }}
-                >
-                  FREE HIT
-                </FreeHitBadge>
-              </div>
-            )}
+          <MiddleWorkspace>
+            <ScoreSection style={{ position: 'relative' }}>
+              {/* FREE HIT BADGE */}
+              {store.isFreeHit && (
+                <div style={{ position: 'absolute', top: 10, left: 20 }}>
+                  <FreeHitBadge
+                    animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                    style={{ fontSize: '10px', padding: '4px 12px', background: '#FF4D4D' }}
+                  >
+                    FREE HIT
+                  </FreeHitBadge>
+                </div>
+              )}
 
-            {/* CENTERED STATS & SCORE */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '12px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15%', width: '100%', marginBottom: 10 }}>
-                {/* CRR */}
+              {/* LEFT: SCORECARD BUTTON */}
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
+                <ScorecardPillBtn onClick={() => setShowScorecardModal(true)}>
+                  <LayoutList size={14} /> SCORECARD
+                </ScorecardPillBtn>
+              </div>
+
+              {/* CENTER: MAIN SCORE */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <MainScore style={{ fontSize: '3rem', margin: 0, fontWeight: 900, letterSpacing: '-2px', color: '#001F3F' }}>
+                  {currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}
+                </MainScore>
+                <OversText style={{ fontSize: '1.1rem', fontWeight: 900, opacity: 0.8, color: '#1a73e8', letterSpacing: 1, marginTop: 4 }}>
+                  {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
+                </OversText>
+              </div>
+
+              {/* RIGHT: CRR & PROJ */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 24 }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>CRR</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#001F3F' }}>
@@ -3189,152 +3229,109 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     })()}
                   </div>
                 </div>
-
-                {/* PROJECTED */}
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>PROJECTED</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FAB005' }}>
-                    {(() => {
-                      const totalBalls = currentInnings?.totalBalls || 0;
-                      const rr = totalBalls === 0 ? 0 : (currentInnings?.totalRuns || 0) / (totalBalls / 6);
-                      return Math.ceil(rr * (store.maxOvers || 20));
-                    })()}
+                {store.currentInnings === 1 && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>PROJECTED</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FAB005' }}>
+                      {(() => {
+                        const totalBalls = currentInnings?.totalBalls || 0;
+                        const rr = totalBalls === 0 ? 0 : (currentInnings?.totalRuns || 0) / (totalBalls / 6);
+                        return Math.ceil(rr * (store.maxOvers || 20));
+                      })()}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
+            </ScoreSection>
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transform: 'scale(1.05)' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <MainScore style={{ fontSize: '3rem', margin: 0, fontWeight: 900, letterSpacing: '-2px', color: '#001F3F' }}>
-                    {currentInnings?.totalRuns || 0}/{currentInnings?.wickets || 0}
-                  </MainScore>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-                  <OversText style={{ fontSize: '1.1rem', fontWeight: 900, opacity: 0.8, color: '#1a73e8', letterSpacing: 1 }}>
-                    {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
-                  </OversText>
-                  <div style={{ width: 1, height: 12, background: 'rgba(0,0,0,0.1)' }} />
+            <ActiveParticipants>
+              <ParticipantCard $active>
+                <CardHeader>
+                  <NameLabel>Striker*</NameLabel>
                   <button
-                    onClick={() => setShowScorecardModal(true)}
-                    style={{
-                      border: 'none', padding: '4px 12px', borderRadius: 20,
-                      color: '#1a73e8', fontSize: '0.75rem', fontWeight: 900, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(26,115,232,0.08)',
-                      transition: 'all 0.2s'
+                    title="Switch Striker"
+                    onClick={() => {
+                      if (isLocked) return;
+                      store.switchStriker();
                     }}
-                    onMouseEnter={(e: any) => e.currentTarget.style.background = 'rgba(26,115,232,0.12)'}
-                    onMouseLeave={(e: any) => e.currentTarget.style.background = 'rgba(26,115,232,0.08)'}
+                    style={{
+                      color: '#070707ff',
+                      background: 'rgba(51,154,240,0.1)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      padding: '4px',
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      opacity: isLocked ? 0.5 : 1
+                    }}
                   >
-                    <LayoutList size={14} /> SCORECARD
+                    <RefreshCcw size={12} />
                   </button>
-                </div>
-              </div>
-            </div>
-          </ScoreSection>
+                </CardHeader>
+                <StatValue>{getPlayerName(store.strikerId)}</StatValue>
+                <div style={{ fontSize: '0.8rem' }}>{strikerStats.runs}({strikerStats.balls})</div>
+              </ParticipantCard>
+              <ParticipantCard>
+                <CardHeader>
+                  <NameLabel>Non-Striker</NameLabel>
+                </CardHeader>
+                <StatValue>{getPlayerName(store.nonStrikerId)}</StatValue>
+                <div style={{ fontSize: '0.8rem' }}>{nonStrikerStats.runs}({nonStrikerStats.balls})</div>
+              </ParticipantCard>
+            </ActiveParticipants>
 
+            <PartnershipRow>
+              <PartnershipMain>
+                PARTNERSHIP: <b>{partnershipData.totalRuns}</b> ({partnershipData.totalBalls})
+              </PartnershipMain>
+              <PartnershipSub>
+                {getPlayerName(store.strikerId)} <b>{strikerStats.runs}({strikerStats.balls})*</b> &nbsp;|&nbsp; {getPlayerName(store.nonStrikerId)} <b>{nonStrikerStats.runs}({nonStrikerStats.balls})</b>
+              </PartnershipSub>
+            </PartnershipRow>
 
-
-          <ActiveParticipants style={{ borderBottom: 'none' }}>
-            <ParticipantCard $active>
-              <CardHeader>
-                <NameLabel>Striker*</NameLabel>
-                <button
-                  title="Switch Striker"
-                  onClick={() => {
-                    if (isLocked) return;
-                    store.switchStriker();
-                  }}
-                  style={{
-                    color: '#070707ff',
-                    background: 'rgba(51,154,240,0.1)',
-                    border: 'none',
-                    borderRadius: '50%',
-                    padding: '4px',
-                    cursor: isLocked ? 'not-allowed' : 'pointer',
-                    opacity: isLocked ? 0.5 : 1
-                  }}
-                >
-                  <RefreshCcw size={12} />
-                </button>
-              </CardHeader>
-              <StatValue>{getPlayerName(store.strikerId)}</StatValue>
-              <div style={{ fontSize: '0.8rem' }}>{strikerStats.runs}({strikerStats.balls})</div>
-            </ParticipantCard>
-            <ParticipantCard>
-              <CardHeader>
-                <NameLabel>Non-Striker</NameLabel>
-              </CardHeader>
-              <StatValue>{getPlayerName(store.nonStrikerId)}</StatValue>
-              <div style={{ fontSize: '0.8rem' }}>{nonStrikerStats.runs}({nonStrikerStats.balls})</div>
-            </ParticipantCard>
-            <ParticipantCard style={{ gridColumn: 'span 2' }}>
-              <CardHeader>
-                <span style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bowler</span>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <BowlerRow>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.6 }}>Bowler</span>
                   <button
                     onClick={() => {
                       if (isLocked) return;
                       setShowBowlerModal(true);
                     }}
                     style={{
-                      background: 'rgba(51,154,240,0.1)',
-                      border: 'none',
-                      borderRadius: 6,
-                      padding: '2px 8px',
-                      color: '#339AF0',
-                      fontSize: '0.6rem',
-                      fontWeight: 800,
-                      cursor: isLocked ? 'not-allowed' : 'pointer',
-                      opacity: isLocked ? 0.5 : 1
+                      background: 'rgba(51,154,240,0.1)', border: 'none', borderRadius: 12, padding: '2px 8px', color: '#339AF0', fontSize: '9px', fontWeight: 800, cursor: isLocked ? 'not-allowed' : 'pointer', opacity: isLocked ? 0.5 : 1
                     }}
                   >
                     CHANGE
                   </button>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase' }}>This Over</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#001F3F' }}>
-                      {(() => {
-                        const ballsCount = currentInnings?.totalBalls || 0;
-                        const displayOver = (isOverComplete && ballsCount % 6 === 0)
-                          ? Math.floor(ballsCount / 6) - 1
-                          : Math.floor(ballsCount / 6);
-
-                        return (currentInnings?.history || [])
-                          .filter(b => b.overNumber === displayOver)
-                          .reduce((sum, b) => sum + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
-                      })()}
-                    </div>
-                  </div>
                 </div>
-              </CardHeader>
-              <StatValue style={{
-                color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit'
-              }}>
-                {getPlayerName(store.currentBowlerId)}
-              </StatValue>
-              <div style={{
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit'
-              }}>
-                {bowlerStats.wickets}-{bowlerStats.runs} ({bowlerStats.overs})
-                {bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5) && " • QUOTA DONE"}
+                <StatValue style={{ color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit' }}>
+                  {getPlayerName(store.currentBowlerId)}
+                </StatValue>
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: (bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5)) ? '#FF4D4D' : 'inherit' }}>
+                  {bowlerStats.wickets}-{bowlerStats.runs} ({bowlerStats.overs})
+                  {bowlerStats.overs >= Math.ceil((store.maxOvers || 20) / 5) && " • QUOTA DONE"}
+                </div>
               </div>
-            </ParticipantCard>
-          </ActiveParticipants>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '10px', fontWeight: 800, color: '#495057', textTransform: 'uppercase', opacity: 0.6 }}>This Over</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#001F3F' }}>
+                  {(() => {
+                    const ballsCount = currentInnings?.totalBalls || 0;
+                    const displayOver = (isOverComplete && ballsCount % 6 === 0)
+                      ? Math.floor(ballsCount / 6) - 1
+                      : Math.floor(ballsCount / 6);
+                    return (currentInnings?.history || [])
+                      .filter(b => b.overNumber === displayOver)
+                      .reduce((sum, b) => sum + b.runs + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                  })()}
+                </div>
+              </div>
+            </BowlerRow>
+          </MiddleWorkspace>
 
-          <PartnershipRow style={{ background: 'rgba(0, 31, 63, 0.05)', padding: '4px 10px', marginBottom: 0 }}>
-            <PartnershipMain style={{ fontSize: '10px' }}>
-              PARTNERSHIP: <b>{partnershipData.totalRuns}</b> ({partnershipData.totalBalls})
-            </PartnershipMain>
-            <PartnershipSub style={{ fontSize: '10px' }}>
-              {getPlayerName(store.strikerId)} <b>{strikerStats.runs}({strikerStats.balls})*</b> | {getPlayerName(store.nonStrikerId)} <b>{nonStrikerStats.runs}({nonStrikerStats.balls})</b>
-            </PartnershipSub>
-          </PartnershipRow>
-
-          <ScoringInterface style={{ position: 'fixed', padding: '10px 10px 10px' }}>
-            {/* UNDO & UTILITY ROW - FIXED FOOTER */}
-            <div style={{ padding: '0 10px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 30 }}>
+          <ScoringInterface>
+            {/* UNDO & UTILITY ROW */}
+            <div style={{ padding: '0 4px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 30 }}>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button
                   onClick={() => setShowLineups(true)}
