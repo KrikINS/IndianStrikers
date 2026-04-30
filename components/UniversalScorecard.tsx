@@ -979,15 +979,20 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                                   minWidth: 20, textAlign: 'center'
                                 }}>
                                   {(() => {
+                                    const isWide = ball.type === 'wide';
+                                    const isNoBall = ball.type === 'no-ball';
+                                    const isLB = ball.type === 'leg-bye';
+                                    const isB = ball.type === 'bye';
+
                                     if (ball.isWicket) {
-                                      const prefix = ball.isNoBall ? 'NB' : ball.isWide ? 'WD' : '';
+                                      const prefix = isNoBall ? 'NB' : isWide ? 'WD' : '';
                                       const amount = ball.runs > 0 ? `+${ball.runs}` : '';
                                       return prefix ? `${prefix}${amount}+W` : 'W';
                                     }
-                                    if (ball.isWide) return `WD${ball.runs > 0 ? ' + ' + ball.runs : ''}`;
-                                    if (ball.isNoBall) return `NB${ball.runs > 0 ? ' + ' + ball.runs : ''}`;
-                                    if (ball.type === 'leg-bye') return `LB${ball.runs}`;
-                                    if (ball.type === 'bye') return `B${ball.runs}`;
+                                    if (isWide) return `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                                    if (isNoBall) return `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                                    if (isLB) return `LB${ball.runs}`;
+                                    if (isB) return `B${ball.runs}`;
                                     return ball.runs;
                                   })()}
                                 </span>

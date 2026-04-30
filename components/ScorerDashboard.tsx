@@ -3451,17 +3451,22 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 {(() => {
                   const balls = currentInnings?.history || [];
                   const last30 = balls.slice(-30);
-                  return last30.map((ball: any, idx: number) => {
-                    let display = ball.runs.toString();
-                    if (ball.isWicket) {
-                      const prefix = ball.isNoBall ? 'NB' : ball.isWide ? 'WD' : '';
-                      const amount = ball.runs > 0 ? `+${ball.runs}` : '';
-                      display = prefix ? `${prefix}${amount}+W` : 'W';
-                    }
-                    else if (ball.isWide) display = `WD${ball.runs > 0 ? ' + ' + ball.runs : ''}`;
-                    else if (ball.isNoBall) display = `NB${ball.runs > 0 ? ' + ' + ball.runs : ''}`;
-                    else if (ball.type === 'leg-bye') display = `LB${ball.runs}`;
-                    else if (ball.type === 'bye') display = `B${ball.runs}`;
+                    return last30.map((ball: any, idx: number) => {
+                      const isWide = ball.type === 'wide';
+                      const isNoBall = ball.type === 'no-ball';
+                      const isLB = ball.type === 'leg-bye';
+                      const isB = ball.type === 'bye';
+                      
+                      let display = ball.runs.toString();
+                      if (ball.isWicket) {
+                        const prefix = isNoBall ? 'NB' : isWide ? 'WD' : '';
+                        const amount = ball.runs > 0 ? `+${ball.runs}` : '';
+                        display = prefix ? `${prefix}${amount}+W` : 'W';
+                      }
+                      else if (isWide) display = `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                      else if (isNoBall) display = `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                      else if (isLB) display = `LB${ball.runs}`;
+                      else if (isB) display = `B${ball.runs}`;
                     const ballInOverNum = ball.ballNumber;
                     const isLastBallOfOver = ballInOverNum === 6 && ball.isLegal;
                     const showSeparator = isLastBallOfOver && idx < last30.length - 1;
