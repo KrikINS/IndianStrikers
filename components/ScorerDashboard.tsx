@@ -993,17 +993,17 @@ const AnalyticsDrawerOverlay = styled(motion.div)`
 `;
 
 const AnalyticsDrawerContent = styled(motion.div)`
-  width: 75vw;
-  max-width: none;
-  height: 50vh;
+  width: 90vw;
+  max-width: 650px;
+  height: 85vh;
   background: #001F3F;
   border: 2px solid #FAB005;
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 20px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  overflow-y: auto;
+  gap: 16px;
+  overflow: hidden;
   box-shadow: 10px 10px 30px rgba(0,0,0,0.5);
   color: #FFFFFF;
 `;
@@ -1397,22 +1397,26 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   // V2.6.7-Payload-Optimized: DATA TRANSFORMATION FOR ANALYTICS
   const manhattanData = useMemo(() => {
     const currentInn = store.currentInnings === 1 ? store.innings1 : store.innings2;
-    if (!currentInn || !currentInn.history) return [];
+    if (!currentInn || !currentInn.history || !Array.isArray(currentInn.history)) return [];
 
     const overStats: Record<number, { over: number, runs: number, wickets: number }> = {};
 
     // Group history by over number
-    (currentInn.history || []).forEach((ball: any) => {
-      const overNum = (ball.overNumber ?? 0) + 1; // 1-indexed for chart
+    currentInn.history.forEach((ball: any) => {
+      if (!ball) return;
+      const overNum = ((ball.overNumber ?? ball.over_number ?? 0) as number) + 1; // 1-indexed for chart
       if (!overStats[overNum]) {
         overStats[overNum] = { over: overNum, runs: 0, wickets: 0 };
       }
-      overStats[overNum].runs += (ball.runs || 0) + (ball.extraRuns || 0);
+      const bRuns = Number(ball.runs || 0);
+      const bExtras = Number(ball.extraRuns || 0);
+      overStats[overNum].runs += bRuns + bExtras;
       if (ball.isWicket) overStats[overNum].wickets += 1;
     });
 
-    return Object.values(overStats).sort((a, b) => a.over - b.over);
-  }, [store.currentInnings, store.innings1, store.innings2]);
+    const result = Object.values(overStats).sort((a, b) => a.over - b.over);
+    return result;
+  }, [store.currentInnings, store.innings1, store.innings2, store.innings1?.history?.length, store.innings2?.history?.length]);
 
   const analyticsWormData = useMemo(() => {
     const transformHistory = (history: any[]) => {
@@ -4942,12 +4946,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     </FilterChip>
                   </div>
 
-                  <ChartContainer style={{ flex: 1, minHeight: 400, display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ marginBottom: 20 }}>
+                  <ChartContainer style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+                    <h3 style={{ marginBottom: 12 }}>
                       {activeChart === 'manhattan' ? 'Runs Per Over (Including Extras)' : 'Cumulative Progress Comparison'}
                     </h3>
 
-                    <div style={{ flex: 1, width: '100%', minHeight: 300 }}>
+                    <div style={{ flex: 1, width: '100%', position: 'relative' }}>
+                      {manhattanData.length === 0 && (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3, fontSize: '0.9rem', fontWeight: 700, letterSpacing: 2 }}>
+                          NO SCORING DATA YET
+                        </div>
+                      )}
                       {activeChart === 'manhattan' ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={manhattanData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
