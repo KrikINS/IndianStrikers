@@ -49,7 +49,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ReferenceLine
+  ReferenceLine,
+  LabelList
 } from 'recharts';
 import { useStore } from '../store/StoreProvider';
 import { useMatchCenter } from '../store/matchStore';

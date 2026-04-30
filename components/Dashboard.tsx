@@ -821,7 +821,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                           return inn ? inn.wickets : '0';
                       })()}` : `vs ${displayMatch.opponentName}`}
                     </p>
-                    {displayMatch.status === 'live' && displayMatch.live_data && !liveMatch?.score && (
+                    {displayMatch.status === 'live' && displayMatch.live_data && !(liveMatch as any)?.score && (
                       <div className="flex flex-col items-end">
                         <div className="text-xl font-black text-red-600 italic">
                           {(() => {
