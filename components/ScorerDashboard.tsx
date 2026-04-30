@@ -960,21 +960,24 @@ const AnalyticsDrawerOverlay = styled(motion.div)`
   backdrop-filter: blur(12px);
   z-index: 6000;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 80px 20px;
 `;
 
 const AnalyticsDrawerContent = styled(motion.div)`
-  width: 100%;
-  max-width: 500px;
-  height: 100%;
+  width: 75vw;
+  max-width: none;
+  height: 50vh;
   background: #001F3F;
-  border-left: 2px solid #FAB005;
+  border: 2px solid #FAB005;
+  border-radius: 12px;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 24px;
   overflow-y: auto;
-  box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+  box-shadow: 10px 10px 30px rgba(0,0,0,0.5);
   color: #FFFFFF;
 `;
 
@@ -1012,31 +1015,25 @@ const ChartContainer = styled.div`
 `;
 
 const FloatingAnalyticsButton = styled.button`
-  position: fixed;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
   background: #FAB005;
   color: #001F3F;
   border: none;
-  border-radius: 12px 0 0 12px;
-  padding: 12px 6px;
+  border-radius: 8px;
+  padding: 8px 12px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  z-index: 1000;
-  box-shadow: -4px 0 15px rgba(250, 176, 5, 0.4);
+  z-index: 50;
+  box-shadow: 4px 4px 15px rgba(250, 176, 5, 0.4);
   font-weight: 900;
-  font-size: 0.6rem;
-  writing-mode: vertical-rl;
+  font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 1px;
   transition: all 0.2s;
 
   &:hover {
-    padding-right: 12px;
+    transform: scale(1.05);
     background: #FFD43B;
   }
 `;
@@ -1384,7 +1381,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         return {
           ballIndex: idx + 1,
           over: ball.overNumber + (ball.ballNumber / 6),
-          runs: cumulative
+          runs: cumulative,
+          isWicket: ball.isWicket,
+          outPlayer: ball.isWicket ? (ball.strikerId || 'Batsman') : null
         };
       });
     };
@@ -1397,6 +1396,53 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       innings2: inn2Worm
     };
   }, [store.innings1, store.innings2]);
+
+  // Helper for names in chart tooltips
+  const getPlayerNameForChart = (id: string) => {
+    if (!id) return 'Batsman';
+    const p = squadPlayers?.find(p => p.id === id);
+    if (p) return p.name;
+    for (const opp of (allOpponents || [])) {
+      const op = opp.players?.find((op: any) => op.id === id);
+      if (op) return op.name;
+    }
+    return 'Batsman';
+  };
+
+  const ManhattanWicketLabel = (props: any) => {
+    const { x, y, width, index } = props;
+    const entry = manhattanData[index];
+    if (!entry || !entry.wickets) return null;
+    return (
+      <circle cx={x + width / 2} cy={y - 10} r={5} fill="#FF4D4D" stroke="#FFF" strokeWidth={1} />
+    );
+  };
+
+  const WormDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    if (!payload.isWicket) return null;
+    return (
+      <circle cx={cx} cy={cy} r={5} fill="#FF4D4D" stroke="#FFF" strokeWidth={2} />
+    );
+  };
+
+  const WormTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div style={{ background: '#001F3F', padding: '10px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', zIndex: 9999 }}>
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#FFF' }}>Over: {Number(label).toFixed(1)}</p>
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#38BDF8' }}>Runs: {data.runs}</p>
+          {data.isWicket && (
+            <p style={{ margin: '4px 0 0', fontSize: '12px', fontWeight: 900, color: '#FF4D4D' }}>
+              WICKET: {data.outPlayer ? getPlayerNameForChart(data.outPlayer) : 'Batsman'}
+            </p>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Sync with URL ID: Initialize match data into store when navigating from a match card
   useEffect(() => {
@@ -1649,10 +1695,15 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Trigger Review Modal when innings condition is met
   useEffect(() => {
-    if (isBattingFinishing && !showInningsReview && !store.isFinished && !isFinalizingInnings && setupStep === null) {
+    // V5 ROBUST GUARD: Only trigger review if we have actually recorded balls in the current innings
+    // and we are not in the middle of a setup or sync.
+    const hasMeaningfulInningsStarted = currentInnings && (currentInnings.totalBalls > 0 || currentInnings.wickets > 0);
+    
+    if (hasMeaningfulInningsStarted && isBattingFinishing && !showInningsReview && !store.isFinished && !isFinalizingInnings && setupStep === null) {
+      console.log("[Scorer] Innings finish detected. Triggering review modal...");
       setShowInningsReview(true);
     }
-  }, [isBattingFinishing, store.isFinished, isFinalizingInnings, setupStep, showInningsReview]);
+  }, [isBattingFinishing, store.isFinished, isFinalizingInnings, setupStep, showInningsReview, currentInnings?.totalBalls]);
 
   // Trigger Bowler Selection at start of innings or if bowler missing
   React.useEffect(() => {
@@ -1935,6 +1986,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         selNonStriker!,
         selBowler!
       );
+
+      // Force-close any lingering review modals before transitioning
+      setShowInningsReview(false);
 
       // Persist the toss outcome and match status to the metadata store
       if (activeMatchId) {
@@ -2923,19 +2977,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   try {
     return (
       <DashboardContainer>
-        {/* V2.6.7-Premium: Floating Analytics Triggers */}
-        <FloatingAnalyticsButton
-          onClick={() => { setActiveChart('manhattan'); setShowAnalyticsDrawer(true); }}
-          style={{ top: '40%' }}
-        >
-          MANHATTAN
-        </FloatingAnalyticsButton>
-        <FloatingAnalyticsButton
-          onClick={() => { setActiveChart('worm'); setShowAnalyticsDrawer(true); }}
-          style={{ top: '60%' }}
-        >
-          WORM CHART
-        </FloatingAnalyticsButton>
+        {/* Stacked Analytics Buttons on Left */}
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 8, padding: '16px 20px 0 20px' }}>
+          <FloatingAnalyticsButton
+            onClick={() => { setActiveChart('manhattan'); setShowAnalyticsDrawer(true); }}
+          >
+            MANHATTAN
+          </FloatingAnalyticsButton>
+          <FloatingAnalyticsButton
+            onClick={() => { setActiveChart('worm'); setShowAnalyticsDrawer(true); }}
+          >
+            WORM CHART
+          </FloatingAnalyticsButton>
+        </div>
 
         {isQueueFull && (
           <PremiumModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ zIndex: 9999 }}>
@@ -4799,9 +4853,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 onClick={() => setShowAnalyticsDrawer(false)}
               >
                 <AnalyticsDrawerContent
-                  initial={{ x: '100%' }}
+                  initial={{ x: '-100%' }}
                   animate={{ x: 0 }}
-                  exit={{ x: '100%' }}
+                  exit={{ x: '-100%' }}
                   transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                   onClick={e => e.stopPropagation()}
                 >
@@ -4855,6 +4909,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                               {manhattanData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.wickets > 0 ? '#FF4D4D' : '#FAB005'} />
                               ))}
+                              <LabelList content={<ManhattanWicketLabel />} />
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
@@ -4873,10 +4928,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                               label={{ value: 'OVERS', position: 'insideBottom', offset: -5, fill: 'rgba(255,255,255,0.3)', fontSize: 8, fontWeight: 900 }}
                             />
                             <YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} tickLine={false} axisLine={false} />
-                            <Tooltip
-                              contentStyle={{ background: '#001F3F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
-                              itemStyle={{ fontSize: '12px', fontWeight: 700 }}
-                            />
+                            <Tooltip content={<WormTooltip />} cursor={{ strokeDasharray: '3 3' }} />
                             <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700 }} />
 
                             {/* 1st Innings Line */}
@@ -4888,7 +4940,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                 dataKey="runs"
                                 stroke="#38BDF8"
                                 strokeWidth={2}
-                                dot={false}
+                                dot={<WormDot />}
+                                activeDot={{ r: 6 }}
                                 strokeDasharray={store.currentInnings === 2 ? "5 5" : "0"}
                               />
                             )}
@@ -4902,7 +4955,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                 dataKey="runs"
                                 stroke="#FAB005"
                                 strokeWidth={3}
-                                dot={false}
+                                dot={<WormDot />}
+                                activeDot={{ r: 6 }}
                               />
                             )}
                           </LineChart>
