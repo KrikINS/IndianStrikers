@@ -28,8 +28,8 @@ const PremiumModalOverlay = styled(motion.div)`
   left: 0;
   right: 0;
   bottom: 0;
-  background: hsla(0, 0%, 100%, 0.85);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
   z-index: 5000;
   display: flex;
   align-items: center;
@@ -37,8 +37,8 @@ const PremiumModalOverlay = styled(motion.div)`
 `;
 
 const PremiumModalContent = styled.div`
-  background: #FFFFFF;
-  color: #0F172A;
+  background: #0F172A;
+  color: #FFFFFF;
   width: 100vw !important;
   height: 100vh !important;
   max-width: none !important;
@@ -84,9 +84,9 @@ const IconButton = styled.button`
 
 const TabContainer = styled.div`
   display: flex;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding: 0 20px;
-  background: rgba(3, 17, 31, 1);
+  background: #1E293B;
 `;
 
 const TabButton = styled.button<{ $active: boolean }>`
@@ -94,8 +94,8 @@ const TabButton = styled.button<{ $active: boolean }>`
   padding: 14px 0;
   background: none;
   border: none;
-  border-bottom: 2px solid ${props => props.$active ? '#0EA5E9' : 'transparent'};
-  color: ${props => props.$active ? '#0EA5E9' : 'rgba(0,0,0,0.4)'};
+  border-bottom: 2px solid ${props => props.$active ? '#38BDF8' : 'transparent'};
+  color: ${props => props.$active ? '#38BDF8' : 'rgba(255, 255, 255, 0.4)'};
   font-weight: 900;
   font-size: 0.75rem;
   letter-spacing: 1.5px;
@@ -105,7 +105,7 @@ const TabButton = styled.button<{ $active: boolean }>`
   margin-bottom: -1px;
 
   &:hover {
-    color: ${props => props.$active ? '#0EA5E9' : 'rgba(0,0,0,0.7)'};
+    color: ${props => props.$active ? '#38BDF8' : 'rgba(255, 255, 255, 0.7)'};
   }
 `;
 
@@ -113,16 +113,16 @@ const ScrollContent = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background: #FFFFFF;
+  background: #0F172A;
 
   &::-webkit-scrollbar {
     width: 6px;
   }
   &::-webkit-scrollbar-track {
-    background: rgba(0,0,0,0.02);
+    background: rgba(255, 255, 255, 0.02);
   }
   &::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.1);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
   }
 `;
@@ -265,15 +265,15 @@ const MetaItemHeader = styled.div`
 `;
 
 const ScoreSummaryCard = styled.div`
-  background: rgba(5, 5, 5, 1);
-  border: 1px solid rgba(0,0,0,0.05);
+  background: #1E293B;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #0F172A;
+  color: #FFFFFF;
 `;
 
 const TableTitle = styled.h3`
@@ -298,31 +298,31 @@ const ScoreCardTable = styled.table`
 const Th = styled.th`
   text-align: left;
   padding: 10px 8px;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
-  opacity: 0.5;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0.6;
   font-weight: 800;
   text-transform: uppercase;
-  font-size: 0.6rem;
-  letter-spacing: 1px;
-  color: #64748B;
+  font-size: 0.65rem;
+  letter-spacing: 1.5px;
+  color: #38BDF8;
 `;
 
 const Td = styled.td`
   padding: 12px 8px;
-  border-bottom: 1px solid rgba(0,0,0,0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   font-weight: 600;
-  color: #334155;
+  color: #FFFFFF;
 `;
 
 const ExtrasRow = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 14px 12px;
-  background: #F1F5F9;
+  background: #1E293B;
   border-radius: 10px;
   font-size: 0.75rem;
-  border: 1px solid rgba(0,0,0,0.05);
-  color: #475569;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #FFFFFF;
 `;
 
 // --- INTERFACES ---
@@ -589,12 +589,12 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 <ImageIcon size={18} />
               </IconButton>
             </div>
-            <IconButton 
+            <IconButton
               onClick={(e) => {
                 e.stopPropagation();
                 onClose();
-              }} 
-              title="Close" 
+              }}
+              title="Close"
               style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', opacity: 1, padding: 8 }}
             >
               <X size={22} />
@@ -924,23 +924,23 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                       return (
                         <div key={overNum}>
                           <div style={{
-                            background: '#10B981',
+                            background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
                             borderRadius: 12,
                             overflow: 'hidden',
                             display: 'flex',
                             flexDirection: 'row',
                             color: '#FFF',
-                            boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+                            boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
                             marginBottom: 16,
                             minHeight: 60,
                             fontSize: '0.75rem',
                             fontWeight: 700,
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
                             position: 'sticky', top: 0, zIndex: 10
                           }}>
-                            <div style={{ padding: '10px 16px', background: 'rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', minWidth: 90 }}>
-                              <div style={{ opacity: 0.8, fontSize: '0.65rem', letterSpacing: 1 }}>OVER {overNum + 1}</div>
-                              <div style={{ fontSize: '1rem', fontWeight: 900 }}>{overRuns} RUNS</div>
+                            <div style={{ padding: '10px 16px', background: 'rgba(56, 189, 248, 0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(56, 189, 248, 0.2)', minWidth: 90 }}>
+                              <div style={{ color: '#38BDF8', fontSize: '0.65rem', letterSpacing: 2 }}>OVER {overNum + 1}</div>
+                              <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>{overRuns} RUNS</div>
                             </div>
 
                             <div style={{ flex: 1, padding: '10px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2 }}>
@@ -1034,7 +1034,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
                     return (
                       <>
-                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px 10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ background: '#1E293B', padding: '20px 10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
                           <TableTitle style={{ marginLeft: 10 }}><BarChart2 size={14} /> MANHATTAN (Runs per Over)</TableTitle>
                           <div style={{ width: '100%', height: 250, marginTop: 20 }}>
                             <ResponsiveContainer width="100%" height="100%">
@@ -1051,7 +1051,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           </div>
                         </div>
 
-                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px 10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ background: '#1E293B', padding: '20px 10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
                           <TableTitle style={{ marginLeft: 10 }}><BarChart2 size={14} /> WORM (Cumulative Runs)</TableTitle>
                           <div style={{ width: '100%', height: 250, marginTop: 20 }}>
                             <ResponsiveContainer width="100%" height="100%">
