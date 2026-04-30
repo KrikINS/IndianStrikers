@@ -520,6 +520,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             currentBowlerId: ensureId(bwlId),
             isFreeHit: false,
             isFinished: false,
+            isWaitingForBowler: false,
             [num === 1 ? 'innings1' : 'innings2']: {
                 battingTeamId: batId,
                 bowlingTeamId: bowlId,
