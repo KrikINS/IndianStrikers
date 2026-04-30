@@ -86,7 +86,7 @@ const TabContainer = styled.div`
   display: flex;
   border-bottom: 1px solid rgba(0,0,0,0.08);
   padding: 0 20px;
-  background: #F8FAFC;
+  background: rgba(3, 17, 31, 1);
 `;
 
 const TabButton = styled.button<{ $active: boolean }>`
@@ -127,8 +127,145 @@ const ScrollContent = styled.div`
   }
 `;
 
+const MatchHeaderCard = styled.div`
+  background: #001F3F; /* Dark navy from the image */
+  padding: 36px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 3px solid rgba(56, 189, 248, 0.4);
+`;
+
+const TournamentLabel = styled.div`
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: #38BDF8;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-align: center;
+  opacity: 0.9;
+  margin-bottom: 4px;
+`;
+
+const TeamsHorizontalRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+`;
+
+const TeamBlock = styled.div<{ $reverse?: boolean }>`
+  display: flex;
+  flex-direction: ${props => props.$reverse ? 'row-reverse' : 'row'};
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+`;
+
+const TeamLogoFrame = styled.div`
+  width: 54px;
+  height: 54px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  flex-shrink: 0;
+`;
+
+const TeamInfo = styled.div<{ $align?: 'left' | 'right' }>`
+  display: flex;
+  flex-direction: column;
+  align-items: ${props => props.$align === 'right' ? 'flex-end' : 'flex-start'};
+  min-width: 0;
+`;
+
+const TeamNameLabel = styled.div`
+  font-size: 0.9rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+  color: #FFFFFF;
+  letter-spacing: -0.5px;
+`;
+
+const ScoreValue = styled.div`
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  letter-spacing: -1px;
+  
+  span {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+`;
+
+const VSBadgeHeader = styled.div`
+  background: rgba(15, 23, 42, 0.8);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #38BDF8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  flex-shrink: 0;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+`;
+
+const ResultHighlightBar = styled.div`
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.2) 0%, rgba(56, 189, 248, 0.05) 100%);
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-align: center;
+  color: #38BDF8;
+  font-weight: 900;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  margin-top: 4px;
+`;
+
+const MetaGrid = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 4px;
+`;
+
+const MetaItemHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
 const ScoreSummaryCard = styled.div`
-  background: #F8FAFC;
+  background: rgba(5, 5, 5, 1);
   border: 1px solid rgba(0,0,0,0.05);
   border-radius: 16px;
   padding: 20px;
@@ -311,7 +448,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           const wickets = bBalls.filter((b: any) => b.isWicket).length;
           const wides = bBalls.filter((b: any) => b.isWide || b.type === 'wide').length;
           const no_balls = bBalls.filter((b: any) => b.isNoBall || b.type === 'no-ball').length;
-          
+
           return {
             playerId: bowlerId,
             name: bBalls[0].bowlerName || bBalls[0].bowler_name || 'Bowler',
@@ -441,34 +578,80 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
       exit={{ opacity: 0 }}
     >
       <PremiumModalContent onClick={e => e.stopPropagation()} ref={containerRef}>
-        <ModalHeader>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src="/INS%20LOGO.PNG" style={{ height: 32, width: 32, objectFit: 'contain' }} alt="INS" />
-            <div>
-              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, letterSpacing: '-0.5px' }}>FULL SCORECARD</h2>
-              <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                {match.tournament || 'Hayes League'} • {match.opponentName || 'Opponent'}
-              </div>
+        <MatchHeaderCard>
+          {/* TOP UTILITIES */}
+          <div style={{ position: 'absolute', top: 12, left: 16, right: 16, display: 'flex', justifyContent: 'space-between', zIndex: 10 }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <IconButton onClick={handleShare} title="Share Link" style={{ background: 'rgba(255,255,255,0.08)', opacity: 1, padding: 8 }}>
+                <Share2 size={18} />
+              </IconButton>
+              <IconButton onClick={handleDownloadImage} title="Download Image" style={{ background: 'rgba(255,255,255,0.08)', opacity: 1, padding: 8 }}>
+                <ImageIcon size={18} />
+              </IconButton>
             </div>
-          </div>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <IconButton onClick={handleShare} title="Share Link">
-              <Share2 size={20} />
-            </IconButton>
-            <IconButton onClick={handleDownloadImage} title="Download Image">
-              <ImageIcon size={20} />
-            </IconButton>
-            <IconButton
+            <IconButton 
               onClick={(e) => {
                 e.stopPropagation();
                 onClose();
-              }}
-              title="Close"
+              }} 
+              title="Close" 
+              style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', opacity: 1, padding: 8 }}
             >
-              <X size={24} />
+              <X size={22} />
             </IconButton>
           </div>
-        </ModalHeader>
+
+          <TournamentLabel>
+            {match.tournament || 'RCA T20 TOURNAMENT'}
+          </TournamentLabel>
+
+          <TeamsHorizontalRow>
+            {/* HOME TEAM */}
+            <TeamBlock>
+              <TeamLogoFrame>
+                <img src="/INS%20LOGO.PNG" style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="INS" />
+              </TeamLogoFrame>
+              <TeamInfo>
+                <TeamNameLabel>{match.homeTeamName || 'INDIAN STRIKERS'}</TeamNameLabel>
+                <ScoreValue>
+                  {match.finalScoreHome?.runs || 0}/{match.finalScoreHome?.wickets || 0}
+                  <span>({getOvers(match.finalScoreHome?.balls || 0)})</span>
+                </ScoreValue>
+              </TeamInfo>
+            </TeamBlock>
+
+            <VSBadgeHeader>VS</VSBadgeHeader>
+
+            {/* AWAY TEAM */}
+            <TeamBlock $reverse>
+              <TeamLogoFrame>
+                <div style={{ fontSize: '1.4rem' }}>🏏</div>
+              </TeamLogoFrame>
+              <TeamInfo $align="right">
+                <TeamNameLabel>{match.opponentName || 'OPPONENT'}</TeamNameLabel>
+                <ScoreValue>
+                  {match.finalScoreAway?.runs || 0}/{match.finalScoreAway?.wickets || 0}
+                  <span>({getOvers(match.finalScoreAway?.balls || 0)})</span>
+                </ScoreValue>
+              </TeamInfo>
+            </TeamBlock>
+          </TeamsHorizontalRow>
+
+          <ResultHighlightBar>
+            {match.resultNote || 'MATCH IN PROGRESS'}
+          </ResultHighlightBar>
+
+          <MetaGrid>
+            <MetaItemHeader>
+              <Clock size={12} style={{ color: '#38BDF8' }} />
+              {match.date ? new Date(match.date).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : 'TODAY'}
+            </MetaItemHeader>
+            <MetaItemHeader>
+              <Target size={12} style={{ color: '#38BDF8' }} />
+              {typeof match.venue === 'object' ? (match.venue as any)?.name : (match.venue || 'LOCAL GROUND')}
+            </MetaItemHeader>
+          </MetaGrid>
+        </MatchHeaderCard>
 
         {/* Innings Switcher if both exist */}
         {normalizedData.innings1 && normalizedData.innings2 && (
