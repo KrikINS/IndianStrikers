@@ -1425,6 +1425,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const ManhattanWicketLabel = (props: any) => {
     const { x, y, width, index } = props;
+    if (typeof x !== 'number' || typeof y !== 'number' || typeof width !== 'number' || isNaN(x) || isNaN(y) || isNaN(width)) return null;
+    if (typeof index !== 'number' || isNaN(index)) return null;
     const entry = manhattanData[index];
     if (!entry || !entry.wickets) return null;
     return (
@@ -1434,6 +1436,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const WormDot = (props: any) => {
     const { cx, cy, payload } = props;
+    if (typeof cx !== 'number' || typeof cy !== 'number' || isNaN(cx) || isNaN(cy)) return null;
     if (!payload || !payload.isWicket) return null;
     return (
       <circle cx={cx} cy={cy} r={5} fill="#FF4D4D" stroke="#FFF" strokeWidth={2} />
