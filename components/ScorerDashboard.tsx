@@ -1014,27 +1014,41 @@ const ChartContainer = styled.div`
   }
 `;
 
+const AnalyticsHandleContainer = styled.div`
+  position: absolute;
+  left: 0;
+  top: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 999;
+`;
+
 const FloatingAnalyticsButton = styled.button`
   background: #FAB005;
   color: #001F3F;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  padding: 12px 6px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
   cursor: pointer;
-  z-index: 50;
-  box-shadow: 4px 4px 15px rgba(250, 176, 5, 0.4);
+  box-shadow: 4px 2px 10px rgba(0,0,0,0.2);
   font-weight: 900;
-  font-size: 0.65rem;
+  font-size: 0.5rem;
+  writing-mode: vertical-rl;
   text-transform: uppercase;
   letter-spacing: 1px;
   transition: all 0.2s;
+  opacity: 0.9;
 
   &:hover {
-    transform: scale(1.05);
+    opacity: 1;
+    padding-right: 10px;
     background: #FFD43B;
+    transform: translateX(2px);
   }
 `;
 
@@ -1361,8 +1375,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     const overStats: Record<number, { over: number, runs: number, wickets: number }> = {};
 
     // Group history by over number
-    currentInn.history.forEach((ball: any) => {
-      const overNum = ball.overNumber + 1; // 1-indexed for chart
+    (currentInn.history || []).forEach((ball: any) => {
+      const overNum = (ball.overNumber ?? 0) + 1; // 1-indexed for chart
       if (!overStats[overNum]) {
         overStats[overNum] = { over: overNum, runs: 0, wickets: 0 };
       }
@@ -1420,19 +1434,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const WormDot = (props: any) => {
     const { cx, cy, payload } = props;
-    if (!payload.isWicket) return null;
+    if (!payload || !payload.isWicket) return null;
     return (
       <circle cx={cx} cy={cy} r={5} fill="#FF4D4D" stroke="#FFF" strokeWidth={2} />
     );
   };
 
   const WormTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
+    if (active && payload && payload.length > 0) {
+      const data = payload[0]?.payload;
+      if (!data) return null;
       return (
         <div style={{ background: '#001F3F', padding: '10px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', zIndex: 9999 }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#FFF' }}>Over: {Number(label).toFixed(1)}</p>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#38BDF8' }}>Runs: {data.runs}</p>
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#FFF' }}>Over: {Number(label || 0).toFixed(1)}</p>
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#38BDF8' }}>Runs: {data.runs || 0}</p>
           {data.isWicket && (
             <p style={{ margin: '4px 0 0', fontSize: '12px', fontWeight: 900, color: '#FF4D4D' }}>
               WICKET: {data.outPlayer ? getPlayerNameForChart(data.outPlayer) : 'Batsman'}
@@ -2977,8 +2992,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   try {
     return (
       <DashboardContainer>
-        {/* Stacked Analytics Buttons on Left */}
-        <div style={{ display: 'flex', flexDirection: 'row', gap: 8, padding: '16px 20px 0 20px' }}>
+        {/* Vertical Analytics Handles on Left Wall */}
+        <AnalyticsHandleContainer>
           <FloatingAnalyticsButton
             onClick={() => { setActiveChart('manhattan'); setShowAnalyticsDrawer(true); }}
           >
@@ -2989,7 +3004,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           >
             WORM CHART
           </FloatingAnalyticsButton>
-        </div>
+        </AnalyticsHandleContainer>
 
         {isQueueFull && (
           <PremiumModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ zIndex: 9999 }}>
@@ -3049,15 +3064,27 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <SyncStatus />
-              <button
-                title="Match Settings"
-                onClick={() => setShowSettingsDrawer(true)}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
-              >
-                <Settings size={16} />
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <SyncStatus />
+                <button
+                  title="Match Settings"
+                  onClick={() => setShowSettingsDrawer(true)}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+                >
+                  <Settings size={16} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingRight: 4 }}>
+                <div style={{
+                  width: 5, height: 5, borderRadius: '50%',
+                  background: !isOnline ? '#EF4444' : (isSyncing ? '#FAB005' : '#10B981'),
+                  boxShadow: isOnline && !isSyncing ? '0 0 4px rgba(16,185,129,0.5)' : 'none'
+                }} />
+                <span style={{ fontSize: '0.5rem', fontWeight: 900, color: '#FFFFFF', opacity: 0.4, letterSpacing: 0.5 }}>
+                  {!isOnline ? 'OFFLINE' : (isSyncing ? 'SYNCING...' : 'LIVE TUNNEL')}
+                </span>
+              </div>
             </div>
           </Header>
 
@@ -3130,89 +3157,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             )}
           </AnimatePresence>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{
-                width: 8, height: 8, borderRadius: '50%',
-                background: !isOnline ? '#EF4444' : (isSyncing ? '#FAB005' : '#10B981'),
-                boxShadow: isOnline && !isSyncing ? '0 0 8px rgba(16,185,129,0.5)' : 'none'
-              }} />
-              <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#001F3F', opacity: 0.6, letterSpacing: 0.5 }}>
-                {!isOnline ? 'OFFLINE' : (isSyncing ? 'SYNCING...' : 'LIVE TUNNEL')}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {(() => {
-                const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
-                const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
-                if (cloudBalls > localBalls) {
-                  return (
-                    <button
-                      onClick={() => {
-                        if (matchMeta?.live_data) {
-                          store.initializeMatch({
-                            matchId: matchMeta.id,
-                            matchType: matchMeta.matchFormat || 'T20',
-                            tournament: matchMeta.tournament || 'Live Match',
-                            ground: matchMeta.venue || 'Local Ground',
-                            opponentName: matchMeta.opponentName || 'OPPONENT',
-                            maxOvers: matchMeta.maxOvers || 20,
-                            homeXI: matchMeta.homeTeamXI || [],
-                            awayXI: matchMeta.opponentTeamXI || [],
-                            homeLogo: teamLogo,
-                            awayLogo: matchMeta.opponentLogo || '',
-                            liveData: matchMeta.live_data
-                          });
-                          toast.success("Corrected from Mobile!");
-                        }
-                      }}
-                      style={{
-                        background: '#FAB005', border: 'none', borderRadius: 4,
-                        padding: '2px 8px', color: '#000', fontSize: '0.6rem',
-                        fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4
-                      }}
-                    >
-                      <CloudDownload size={10} /> DOWNLOAD CLOUD SCORE
-                    </button>
-                  );
-                }
-                return null;
-              })()}
-              <button
-                onClick={() => {
-                  const totalBalls = currentInnings?.totalBalls || 0;
-                  if (totalBalls % 6 === 0) {
-                    store.updateMatchSettings({ isWaitingForBowler: true, currentBowlerId: null });
-                    toast.success("Ready for new bowler");
-                  } else {
-                    toast.error("Over not finished yet");
-                  }
-                }}
-                style={{
-                  background: 'rgba(51,154,240,0.1)', border: '1px solid rgba(51,154,240,0.2)',
-                  borderRadius: 4, padding: '2px 6px', color: '#339AF0', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer'
-                }}
-              >
-                HEAL STATE
-              </button>
-              <button
-                onClick={() => {
-                  toast.promise(syncWithCloud(), {
-                    loading: 'Syncing with cloud...',
-                    success: 'Cloud states aligned!',
-                    error: 'Sync failed'
-                  });
-                }}
-                style={{
-                  background: 'none', border: 'none', color: 'rgba(0,31,63,0.4)',
-                  fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 4
-                }}
-              >
-                <Cloud size={10} /> FORCE RE-SYNC
-              </button>
-            </div>
-          </div>
 
           <ScoreSection style={{ position: 'relative' }}>
             {/* FREE HIT BADGE - Moved to main container */}
@@ -4657,6 +4601,86 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
                   <div style={{ marginTop: 'auto', padding: '16px 0', textAlign: 'center', opacity: 0.4 }}>
                   </div>
+                  <SettingsGroup>
+                    <GroupTitle>Maintenance & Healing</GroupTitle>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => {
+                            const totalBalls = currentInnings?.totalBalls || 0;
+                            if (totalBalls % 6 === 0) {
+                              store.updateMatchSettings({ isWaitingForBowler: true, currentBowlerId: null });
+                              toast.success("Ready for new bowler");
+                              setShowSettingsDrawer(false);
+                            } else {
+                              toast.error("Over not finished yet");
+                            }
+                          }}
+                          style={{
+                            flex: 1, padding: '10px', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)',
+                            borderRadius: 10, color: '#38BDF8', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer'
+                          }}
+                        >
+                          HEAL STATE
+                        </button>
+                        <button
+                          onClick={() => {
+                            toast.promise(syncWithCloud(), {
+                              loading: 'Syncing with cloud...',
+                              success: 'Cloud states aligned!',
+                              error: 'Sync failed'
+                            });
+                            setShowSettingsDrawer(false);
+                          }}
+                          style={{
+                            flex: 1, padding: '10px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: 10, color: '#FFF', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                          }}
+                        >
+                          <Cloud size={14} /> FORCE RE-SYNC
+                        </button>
+                      </div>
+
+                      {(() => {
+                        const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
+                        const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
+                        if (cloudBalls > localBalls) {
+                          return (
+                            <button
+                              onClick={() => {
+                                if (matchMeta?.live_data) {
+                                  store.initializeMatch({
+                                    matchId: matchMeta.id,
+                                    matchType: matchMeta.matchFormat || 'T20',
+                                    tournament: matchMeta.tournament || 'Live Match',
+                                    ground: matchMeta.venue || 'Local Ground',
+                                    opponentName: matchMeta.opponentName || 'OPPONENT',
+                                    maxOvers: matchMeta.maxOvers || 20,
+                                    homeXI: matchMeta.homeTeamXI || [],
+                                    awayXI: matchMeta.opponentTeamXI || [],
+                                    homeLogo: teamLogo,
+                                    awayLogo: matchMeta.opponentLogo || '',
+                                    liveData: matchMeta.live_data
+                                  });
+                                  toast.success("Corrected from Mobile!");
+                                  setShowSettingsDrawer(false);
+                                }
+                              }}
+                              style={{
+                                width: '100%', background: '#FAB005', border: 'none', borderRadius: 10,
+                                padding: '10px', color: '#000', fontSize: '0.65rem',
+                                fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                              }}
+                            >
+                              <CloudDownload size={14} /> DOWNLOAD CLOUD SCORE
+                            </button>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  </SettingsGroup>
                 </DrawerContent>
               </DrawerOverlay>
             )}
