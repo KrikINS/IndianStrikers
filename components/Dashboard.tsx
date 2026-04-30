@@ -797,43 +797,62 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                 </>
               )}
             </div>
-            {nextMatch ? (
-              <div className="space-y-0">
-                <div className="flex items-center justify-between">
-                  <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic">vs {nextMatch.opponentName}</p>
-                  {nextMatch.status === 'live' && nextMatch.live_data && (
-                    <div className="flex flex-col items-end">
-                      <div className="text-xl font-black text-red-600 italic">
-                        {(() => {
-                          const ld = nextMatch.live_data;
+            {(() => {
+              const liveMatch = matches.find(m => m.status === 'live');
+              const displayMatch = liveMatch || nextMatch;
+              
+              if (!displayMatch) {
+                return <div className="py-6"><p className="text-xs font-bold text-slate-400 italic">Exploring new seasons...</p></div>;
+              }
+
+              return (
+                <div className="space-y-0">
+                  <div className="flex items-center justify-between">
+                    <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic">
+                      {liveMatch ? `${(liveMatch as any).teamA_short || 'IND'} ${(liveMatch as any).score || (() => {
+                          const ld = liveMatch.live_data;
+                          if (!ld) return '0';
                           const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
-                          return inn ? `${inn.totalRuns}/${inn.wickets}` : '0/0';
-                        })()}
-                      </div>
-                      <div className="text-[10px] font-bold text-slate-400">
-                        ({(() => {
-                          const ld = nextMatch.live_data;
+                          return inn ? inn.totalRuns : '0';
+                      })()}/${(liveMatch as any).wickets || (() => {
+                          const ld = liveMatch.live_data;
+                          if (!ld) return '0';
                           const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
-                          if (!inn) return '0.0';
-                          const balls = inn.totalBalls || 0;
-                          return `${Math.floor(balls / 6)}.${balls % 6}`;
-                        })()} ov)
+                          return inn ? inn.wickets : '0';
+                      })()}` : `vs ${displayMatch.opponentName}`}
+                    </p>
+                    {displayMatch.status === 'live' && displayMatch.live_data && !liveMatch?.score && (
+                      <div className="flex flex-col items-end">
+                        <div className="text-xl font-black text-red-600 italic">
+                          {(() => {
+                            const ld = displayMatch.live_data;
+                            const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
+                            return inn ? `${inn.totalRuns}/${inn.wickets}` : '0/0';
+                          })()}
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-400">
+                          ({(() => {
+                            const ld = displayMatch.live_data;
+                            const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
+                            if (!inn) return '0.0';
+                            const balls = inn.totalBalls || 0;
+                            return `${Math.floor(balls / 6)}.${balls % 6}`;
+                          })()} ov)
+                        </div>
                       </div>
+                    )}
+                  </div>
+                  <div className="space-y-0 pt-2">
+                    <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
+                      <Calendar size={14} /> {new Date(displayMatch.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
-                  )}
-                </div>
-                <div className="space-y-0 pt-2">
-                  <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
-                    <Calendar size={14} /> {new Date(nextMatch.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
-                    <MapPin size={14} /> {grounds.find(g => g.id === nextMatch.groundId)?.name || 'Ground TBA'}
+                    <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
+                      <MapPin size={14} /> {grounds.find(g => g.id === displayMatch.groundId)?.name || 'Ground TBA'}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="py-6"><p className="text-xs font-bold text-slate-400 italic">Exploring new seasons...</p></div>
-            )}
+              );
+            })()}
           </div>
           {nextMatch?.status === 'live' ? (
             <Link to={`/live/${nextMatch.id}?tab=commentary`} className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black rounded-xl flex items-center justify-center gap-2 uppercase tracking-widest mt-4 transition-all animate-pulse shadow-lg shadow-red-600/20">

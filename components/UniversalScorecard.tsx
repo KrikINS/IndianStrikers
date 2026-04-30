@@ -296,7 +296,32 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
       }
 
       let bowling: BowlingStat[] = [];
-      if (inn.bowlingStats && typeof inn.bowlingStats === 'object') {
+      const history = inn.history || [];
+      if (history.length > 0) {
+        const allBowlers = [...new Set(history.map((b: any) => b.bowlerId || b.bowler_id).filter(Boolean))];
+        bowling = allBowlers.map((bowlerId: any) => {
+          const bBalls = history.filter((b: any) => (b.bowlerId === bowlerId || b.bowler_id === bowlerId));
+          const legalBalls = bBalls.filter((b: any) => b.isLegal || b.is_legal).length;
+          const oversStr = `${Math.floor(legalBalls / 6)}${legalBalls % 6 > 0 ? '.' + (legalBalls % 6) : ''}`;
+          const oversNum = parseFloat(oversStr) || 0;
+          const runs = bBalls.reduce((s: number, b: any) => s + (Number(b.runs) || 0) + (b.isWide || b.isNoBall || b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+          const wickets = bBalls.filter((b: any) => b.isWicket).length;
+          const wides = bBalls.filter((b: any) => b.isWide || b.type === 'wide').length;
+          const no_balls = bBalls.filter((b: any) => b.isNoBall || b.type === 'no-ball').length;
+          
+          return {
+            playerId: bowlerId,
+            name: bBalls[0].bowlerName || bBalls[0].bowler_name || 'Bowler',
+            overs: oversNum,
+            maidens: 0,
+            runs,
+            wickets,
+            wides,
+            no_balls,
+            index: 0
+          };
+        });
+      } else if (inn.bowlingStats && typeof inn.bowlingStats === 'object') {
         bowling = Object.entries(inn.bowlingStats).map(([id, stat]: [string, any]) => ({
           playerId: id,
           name: stat.name,
