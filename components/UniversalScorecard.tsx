@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useMatchCenter } from '../store/matchStore';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 
 // --- STYLED COMPONENTS (Ported from ScorerDashboard) ---
 
@@ -367,6 +367,7 @@ interface Innings {
   wickets: number;
   totalBalls: number;
   history: any[];
+  battingTeamId?: string;
 }
 
 interface UniversalScorecardProps {
@@ -1016,7 +1017,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                       let cum = 0;
                       const h = Array.isArray(inn.history) ? inn.history : [];
                       const groups: Record<number, any[]> = {};
-                      h.forEach(b => {
+                      h.forEach((b: any) => {
                         const ov = (b.overNumber ?? b.over_number ?? 0) + 1;
                         if (!groups[ov]) groups[ov] = [];
                         groups[ov].push(b);
