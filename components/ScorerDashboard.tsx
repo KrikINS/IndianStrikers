@@ -3217,10 +3217,25 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <OversText style={{ fontSize: '1.1rem', fontWeight: 900, opacity: 0.8, color: '#1a73e8', letterSpacing: 1, marginTop: 4 }}>
                   {store.getOvers(currentInnings?.totalBalls || 0)} OVERS
                 </OversText>
+                
+                {store.currentInnings === 2 && (
+                  <div style={{ fontSize: '0.75rem', fontWeight: 900, marginTop: 8, color: '#495057', background: 'rgba(0,0,0,0.05)', padding: '4px 10px', borderRadius: 12, letterSpacing: 0.5 }}>
+                    {(() => {
+                      const target = (store.innings1?.totalRuns || 0) + 1;
+                      const runsNeeded = target - (store.innings2?.totalRuns || 0);
+                      const ballsRemaining = (store.maxOvers || 20) * 6 - (store.innings2?.totalBalls || 0);
+                      const battingTeam = store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'OPPONENT');
+                      
+                      if (runsNeeded <= 0) return `${battingTeam.toUpperCase()} WON`;
+                      if (ballsRemaining <= 0) return 'INNINGS OVER';
+                      return `${battingTeam.toUpperCase()} REQUIRE ${runsNeeded} IN ${ballsRemaining}`;
+                    })()}
+                  </div>
+                )}
               </div>
 
-              {/* RIGHT: CRR & PROJ */}
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 24 }}>
+              {/* RIGHT: CRR & PROJ & RRR */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 16 }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>CRR</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#001F3F' }}>
@@ -3231,14 +3246,29 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     })()}
                   </div>
                 </div>
-                {store.currentInnings === 1 && (
+                
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>PROJ</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FAB005' }}>
+                    {(() => {
+                      const totalBalls = currentInnings?.totalBalls || 0;
+                      const rr = totalBalls === 0 ? 0 : (currentInnings?.totalRuns || 0) / (totalBalls / 6);
+                      return Math.ceil(rr * (store.maxOvers || 20));
+                    })()}
+                  </div>
+                </div>
+
+                {store.currentInnings === 2 && (
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>PROJECTED</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FAB005' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 800, opacity: 0.5, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>RRR</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#FF4D4D' }}>
                       {(() => {
-                        const totalBalls = currentInnings?.totalBalls || 0;
-                        const rr = totalBalls === 0 ? 0 : (currentInnings?.totalRuns || 0) / (totalBalls / 6);
-                        return Math.ceil(rr * (store.maxOvers || 20));
+                        const target = (store.innings1?.totalRuns || 0) + 1;
+                        const runsNeeded = target - (store.innings2?.totalRuns || 0);
+                        const ballsRemaining = (store.maxOvers || 20) * 6 - (store.innings2?.totalBalls || 0);
+                        if (runsNeeded <= 0) return '0.00';
+                        if (ballsRemaining <= 0) return '-';
+                        return (runsNeeded / (ballsRemaining / 6)).toFixed(2);
                       })()}
                     </div>
                   </div>
