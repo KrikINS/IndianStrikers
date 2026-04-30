@@ -411,28 +411,29 @@ const ExtraStack = styled.div`
 const ScoringBtn = styled.button<{ $variant?: 'run' | 'wicket' | 'extra' | 'undo' }>`
   width: 100%;
   height: 100%;
-  min-height: 48px;
-  border-radius: 14px;
-  border: none;
-  font-size: 1.2rem;
-  font-weight: 800;
+  min-height: 52px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 1.25rem;
+  font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.1s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   
   &:active {
-    transform: scale(0.92);
-    opacity: 0.8;
+    transform: scale(0.94);
+    filter: brightness(1.2);
   }
   
   ${props => {
     switch (props.$variant) {
-      case 'wicket': return 'background: rgba(255, 77, 77, 0.15); color: #FF4D4D; border: 1px solid rgba(255, 77, 77, 0.3);';
-      case 'extra': return 'background: rgba(250, 176, 5, 0.1); color: #FAB005; border: 1px solid rgba(250, 176, 5, 0.3); font-size: 0.75rem;';
-      case 'undo': return 'background: rgba(255, 255, 255, 0.05); color: rgba(255, 255, 255, 0.6);';
-      default: return 'background: rgba(255, 255, 255, 0.05); color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.1);';
+      case 'wicket': return 'background: linear-gradient(135deg, rgba(255, 77, 77, 0.2) 0%, rgba(255, 77, 77, 0.05) 100%); color: #FF4D4D; border-color: rgba(255, 77, 77, 0.3);';
+      case 'extra': return 'background: linear-gradient(135deg, rgba(250, 176, 5, 0.15) 0%, rgba(250, 176, 5, 0.05) 100%); color: #FAB005; border-color: rgba(250, 176, 5, 0.3); font-size: 0.85rem;';
+      case 'undo': return 'background: rgba(255, 255, 255, 0.03); color: rgba(255, 255, 255, 0.5);';
+      default: return 'background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%); color: #FFFFFF;';
     }
   }}
 `;
@@ -3219,7 +3220,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 </OversText>
                 
                 {store.currentInnings === 2 && (
-                  <div style={{ fontSize: '0.75rem', fontWeight: 900, marginTop: 8, color: '#495057', background: 'rgba(0,0,0,0.05)', padding: '4px 10px', borderRadius: 12, letterSpacing: 0.5 }}>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ fontSize: '0.75rem', fontWeight: 900, marginTop: 8, color: '#495057', background: 'rgba(0,0,0,0.05)', padding: '4px 10px', borderRadius: 12, letterSpacing: 0.5 }}
+                  >
                     {(() => {
                       const target = (store.innings1?.totalRuns || 0) + 1;
                       const runsNeeded = target - (store.innings2?.totalRuns || 0);
@@ -3230,7 +3235,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                       if (ballsRemaining <= 0) return 'INNINGS OVER';
                       return `${battingTeam.toUpperCase()} REQUIRE ${runsNeeded} IN ${ballsRemaining}`;
                     })()}
-                  </div>
+                  </motion.div>
                 )}
               </div>
 
