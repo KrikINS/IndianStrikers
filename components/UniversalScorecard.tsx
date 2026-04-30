@@ -37,8 +37,8 @@ const PremiumModalOverlay = styled(motion.div)`
 `;
 
 const PremiumModalContent = styled.div`
-  background: #111;
-  color: #FFFFFF;
+  background: #FFFFFF;
+  color: #0F172A;
   width: 100vw !important;
   height: 100vh !important;
   max-width: none !important;
@@ -52,11 +52,11 @@ const PremiumModalContent = styled.div`
 
 const ModalHeader = styled.div`
   padding: 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255,255,255,0.02);
+  background: #FFFFFF;
   position: sticky;
   top: 0;
   z-index: 50;
@@ -65,7 +65,7 @@ const ModalHeader = styled.div`
 const IconButton = styled.button`
   background: none;
   border: none;
-  color: #FFF;
+  color: #64748B;
   cursor: pointer;
   padding: 8px;
   display: flex;
@@ -73,10 +73,10 @@ const IconButton = styled.button`
   justify-content: center;
   border-radius: 50%;
   transition: all 0.2s;
-  opacity: 0.6;
+  opacity: 0.8;
 
   &:hover { 
-    background: rgba(255, 255, 255, 0.1); 
+    background: rgba(0, 0, 0, 0.05); 
     opacity: 1;
     transform: scale(1.1);
   }
@@ -84,9 +84,9 @@ const IconButton = styled.button`
 
 const TabContainer = styled.div`
   display: flex;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
   padding: 0 20px;
-  background: rgba(255,255,255,0.01);
+  background: #F8FAFC;
 `;
 
 const TabButton = styled.button<{ $active: boolean }>`
@@ -94,8 +94,8 @@ const TabButton = styled.button<{ $active: boolean }>`
   padding: 14px 0;
   background: none;
   border: none;
-  border-bottom: 2px solid ${props => props.$active ? '#38BDF8' : 'transparent'};
-  color: ${props => props.$active ? '#38BDF8' : 'rgba(255,255,255,0.4)'};
+  border-bottom: 2px solid ${props => props.$active ? '#0EA5E9' : 'transparent'};
+  color: ${props => props.$active ? '#0EA5E9' : 'rgba(0,0,0,0.4)'};
   font-weight: 900;
   font-size: 0.75rem;
   letter-spacing: 1.5px;
@@ -105,7 +105,7 @@ const TabButton = styled.button<{ $active: boolean }>`
   margin-bottom: -1px;
 
   &:hover {
-    color: ${props => props.$active ? '#38BDF8' : 'rgba(255,255,255,0.8)'};
+    color: ${props => props.$active ? '#0EA5E9' : 'rgba(0,0,0,0.7)'};
   }
 `;
 
@@ -113,29 +113,30 @@ const ScrollContent = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background: #111;
+  background: #FFFFFF;
 
   &::-webkit-scrollbar {
     width: 6px;
   }
   &::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.02);
+    background: rgba(0,0,0,0.02);
   }
   &::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.1);
     border-radius: 3px;
   }
 `;
 
 const ScoreSummaryCard = styled.div`
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.05);
+  background: #F8FAFC;
+  border: 1px solid rgba(0,0,0,0.05);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: #0F172A;
 `;
 
 const TableTitle = styled.h3`
@@ -160,29 +161,31 @@ const ScoreCardTable = styled.table`
 const Th = styled.th`
   text-align: left;
   padding: 10px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
   opacity: 0.5;
   font-weight: 800;
   text-transform: uppercase;
   font-size: 0.6rem;
   letter-spacing: 1px;
+  color: #64748B;
 `;
 
 const Td = styled.td`
   padding: 12px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(0,0,0,0.03);
   font-weight: 600;
-  color: rgba(255,255,255,0.9);
+  color: #334155;
 `;
 
 const ExtrasRow = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 14px 12px;
-  background: rgba(255,255,255,0.03);
+  background: #F1F5F9;
   border-radius: 10px;
   font-size: 0.75rem;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(0,0,0,0.05);
+  color: #475569;
 `;
 
 // --- INTERFACES ---
@@ -772,9 +775,10 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
                             {balls.map((ball, i) => (
                               <div key={i} style={{
-                                display: 'flex', gap: 14, padding: '12px', background: 'rgba(255,255,255,0.02)',
-                                borderRadius: 10, borderLeft: `3px solid ${ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.08)'}`,
-                                transition: 'all 0.2s'
+                                display: 'flex', gap: 14, padding: '12px', background: '#111827',
+                                borderRadius: 10, borderLeft: `3px solid ${ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.1)'}`,
+                                transition: 'all 0.2s',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                               }}>
                                 <span style={{ opacity: 0.4, fontWeight: 900, fontSize: '0.7rem', minWidth: 28, paddingTop: 2 }}>{overNum}.{ball.ballNumber ?? ball.ball_number ?? i}</span>
                                 <div style={{ flex: 1 }}>
