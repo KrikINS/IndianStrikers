@@ -365,6 +365,13 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     </div>
                 )}
             </div>
+            {isGraphic && (
+                <div className="pb-6 pt-2 text-center border-t border-white/5 bg-[#020617]">
+                    <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] italic">
+                        © WWW.INDIANSTRIKERS.CLUB
+                    </p>
+                </div>
+            )}
         </div>
     );
 };
