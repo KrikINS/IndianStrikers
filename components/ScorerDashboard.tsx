@@ -3233,7 +3233,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                       
                       if (runsNeeded <= 0) return `${battingTeam.toUpperCase()} WON`;
                       if (ballsRemaining <= 0) return 'INNINGS OVER';
-                      return `${battingTeam.toUpperCase()} REQUIRE ${runsNeeded} IN ${ballsRemaining}`;
+                      return `${battingTeam.toUpperCase()} REQUIRE ${runsNeeded} RUNS IN ${ballsRemaining} BALLS`;
                     })()}
                   </motion.div>
                 )}
@@ -3429,7 +3429,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               {/* SYSTEM NARRATIVE FEED */}
               {store.systemCommentary && store.systemCommentary.length > 0 && (
                 <div className="bg-slate-900/80 px-3 py-2 max-h-[80px] overflow-y-auto custom-scrollbar border-b border-white/5 space-y-1.5 flex flex-col-reverse">
-                  {[...store.systemCommentary].reverse().map((comm, index) => (
+                  {[...store.systemCommentary].slice(-10).reverse().map((comm, index) => (
                     <motion.div
                       key={comm.id}
                       className="text-xs text-white/90 font-medium leading-tight rounded p-1"
