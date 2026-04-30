@@ -1396,27 +1396,36 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // V2.6.7-Payload-Optimized: DATA TRANSFORMATION FOR ANALYTICS
   const manhattanData = useMemo(() => {
-    const currentInn = store.currentInnings === 1 ? store.innings1 : store.innings2;
-    if (!currentInn || !currentInn.history || !Array.isArray(currentInn.history)) return [];
+    const overStats: Record<number, { over: number, runs1: number, wickets1: number, runs2: number, wickets2: number }> = {};
+    const maxOvers = store.maxOvers || 20;
 
-    const overStats: Record<number, { over: number, runs: number, wickets: number }> = {};
+    // Pre-populate with all overs to ensure consistent chart width
+    for (let i = 1; i <= maxOvers; i++) {
+      overStats[i] = { over: i, runs1: 0, wickets1: 0, runs2: 0, wickets2: 0 };
+    }
 
-    // Group history by over number
-    currentInn.history.forEach((ball: any) => {
-      if (!ball) return;
-      const overNum = ((ball.overNumber ?? ball.over_number ?? 0) as number) + 1; // 1-indexed for chart
-      if (!overStats[overNum]) {
-        overStats[overNum] = { over: overNum, runs: 0, wickets: 0 };
-      }
-      const bRuns = Number(ball.runs || 0);
-      const bExtras = Number(ball.extraRuns || 0);
-      overStats[overNum].runs += bRuns + bExtras;
-      if (ball.isWicket) overStats[overNum].wickets += 1;
-    });
+    const processHistory = (history: any[], innNum: 1 | 2) => {
+      (history || []).forEach((ball: any) => {
+        if (!ball) return;
+        const overNum = ((ball.overNumber ?? ball.over_number ?? 0) as number) + 1;
+        if (overStats[overNum]) {
+          const bRuns = Number(ball.runs || 0) + Number(ball.extraRuns || 0);
+          if (innNum === 1) {
+            overStats[overNum].runs1 += bRuns;
+            if (ball.isWicket) overStats[overNum].wickets1 += 1;
+          } else {
+            overStats[overNum].runs2 += bRuns;
+            if (ball.isWicket) overStats[overNum].wickets2 += 1;
+          }
+        }
+      });
+    };
 
-    const result = Object.values(overStats).sort((a, b) => a.over - b.over);
-    return result;
-  }, [store.currentInnings, store.innings1, store.innings2, store.innings1?.history?.length, store.innings2?.history?.length]);
+    processHistory(store.innings1?.history || [], 1);
+    processHistory(store.innings2?.history || [], 2);
+
+    return Object.values(overStats).sort((a, b) => a.over - b.over);
+  }, [store.innings1?.history?.length, store.innings2?.history?.length, store.maxOvers]);
 
   const analyticsWormData = useMemo(() => {
     const transformHistory = (history: any[]) => {
@@ -1452,17 +1461,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       if (op) return op.name;
     }
     return 'Batsman';
-  };
-
-  const ManhattanWicketLabel = (props: any) => {
-    const { x, y, width, index } = props;
-    if (typeof x !== 'number' || typeof y !== 'number' || typeof width !== 'number' || isNaN(x) || isNaN(y) || isNaN(width)) return null;
-    if (typeof index !== 'number' || isNaN(index)) return null;
-    const entry = manhattanData[index];
-    if (!entry || !entry.wickets) return null;
-    return (
-      <circle cx={x + width / 2} cy={y - 10} r={5} fill="#FF4D4D" stroke="#FFF" strokeWidth={1} />
-    );
   };
 
   const WormDot = (props: any) => {
@@ -4959,7 +4957,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                       )}
                       {activeChart === 'manhattan' ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={manhattanData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <BarChart data={manhattanData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                             <XAxis
                               dataKey="over"
@@ -4972,14 +4970,31 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             <YAxis stroke="rgba(255,255,255,0.5)" fontSize={10} tickLine={false} axisLine={false} />
                             <Tooltip
                               contentStyle={{ background: '#001F3F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
-                              itemStyle={{ color: '#FAB005', fontSize: '12px', fontWeight: 700 }}
+                              itemStyle={{ fontSize: '12px', fontWeight: 700 }}
                               cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                             />
-                            <Bar dataKey="runs" fill="#FAB005" radius={[4, 4, 0, 0]} barSize={16}>
+                            <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
+                            
+                            <Bar dataKey="runs1" name="Innings 1" fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={10}>
                               {manhattanData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.wickets > 0 ? '#FF4D4D' : '#FAB005'} />
+                                <Cell key={`cell1-${index}`} fill={entry.wickets1 > 0 ? '#ef4444' : '#38BDF8'} />
                               ))}
-                              <LabelList content={<ManhattanWicketLabel />} />
+                              <LabelList content={(props: any) => {
+                                const entry = manhattanData[props.index];
+                                if (!entry || !entry.wickets1) return null;
+                                return <circle cx={props.x + props.width / 2} cy={props.y - 10} r={4} fill="#ef4444" stroke="#FFF" strokeWidth={1} />;
+                              }} />
+                            </Bar>
+
+                            <Bar dataKey="runs2" name="Innings 2" fill="#FAB005" radius={[4, 4, 0, 0]} barSize={10}>
+                              {manhattanData.map((entry, index) => (
+                                <Cell key={`cell2-${index}`} fill={entry.wickets2 > 0 ? '#ef4444' : '#FAB005'} />
+                              ))}
+                              <LabelList content={(props: any) => {
+                                const entry = manhattanData[props.index];
+                                if (!entry || !entry.wickets2) return null;
+                                return <circle cx={props.x + props.width / 2} cy={props.y - 10} r={4} fill="#ef4444" stroke="#FFF" strokeWidth={1} />;
+                              }} />
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
