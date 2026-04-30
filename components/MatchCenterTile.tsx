@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw } from 'lucide-react';
+import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw, Camera, Download } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {
@@ -135,14 +135,14 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
 
                     {/* Tournament Info - Centered Fixed Position for Graphics */}
                     <div className={`${isGraphic ? 'absolute inset-0 flex flex-col items-center justify-center pointer-events-none' : 'text-right flex items-center justify-end gap-3'}`}>
-                        {!isGraphic && isCompleted && (
+                        {!isGraphic && (
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onShareSummary?.(match.id); }}
                                 className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-sky-400 transition-all flex items-center gap-2 border border-white/5"
-                                title="Share Match Summary"
+                                title="Generate Match Card Image"
                             >
-                                <Share2 size={16} />
-                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Summary</span>
+                                <Camera size={16} />
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Capture Card</span>
                             </button>
                         )}
                         <div className={isGraphic ? 'text-center' : ''}>
