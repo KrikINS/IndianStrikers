@@ -3390,7 +3390,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </button>
             </div>
 
-            <div style={{ background: '#001F3F', margin: '0 0 2px', borderRadius: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: '#001F3F', margin: '6px 0 2px', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '10px', padding: '4px 0' }}>
               {/* SYSTEM NARRATIVE FEED */}
               {store.systemCommentary && store.systemCommentary.length > 0 && (
                 <div className="bg-slate-900/80 px-3 py-2 max-h-[80px] overflow-y-auto custom-scrollbar border-b border-white/5 space-y-1.5 flex flex-col-reverse">
