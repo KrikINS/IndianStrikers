@@ -4975,7 +4975,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             />
                             <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
                             
-                            <Bar dataKey="runs1" name="Innings 1" fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={10}>
+                            <Bar dataKey="runs1" name={store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT')} fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={10}>
                               {manhattanData.map((entry, index) => (
                                 <Cell key={`cell1-${index}`} fill={entry.wickets1 > 0 ? '#ef4444' : '#38BDF8'} />
                               ))}
@@ -4986,7 +4986,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                               }} />
                             </Bar>
 
-                            <Bar dataKey="runs2" name="Innings 2" fill="#FAB005" radius={[4, 4, 0, 0]} barSize={10}>
+                            <Bar dataKey="runs2" name={store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT')} fill="#FAB005" radius={[4, 4, 0, 0]} barSize={10}>
                               {manhattanData.map((entry, index) => (
                                 <Cell key={`cell2-${index}`} fill={entry.wickets2 > 0 ? '#ef4444' : '#FAB005'} />
                               ))}
@@ -5020,7 +5020,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             {analyticsWormData.innings1.length > 0 && (
                               <Line
                                 data={analyticsWormData.innings1}
-                                name="Innings 1"
+                                name={store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT')}
                                 type="monotone"
                                 dataKey="runs"
                                 stroke="#38BDF8"
@@ -5035,7 +5035,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             {store.currentInnings === 2 && analyticsWormData.innings2.length > 0 && (
                               <Line
                                 data={analyticsWormData.innings2}
-                                name="Innings 2"
+                                name={store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT')}
                                 type="monotone"
                                 dataKey="runs"
                                 stroke="#FAB005"

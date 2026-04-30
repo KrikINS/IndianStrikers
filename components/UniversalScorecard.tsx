@@ -1004,33 +1004,41 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
               {tab === 'analytics' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
                   {(() => {
-                    const historyData = currentInningsData?.history;
-                    const historyFiltered = (Array.isArray(historyData) ? historyData : [])
-                      .filter(b => b && typeof b === 'object');
+                    const overStats: Record<number, any> = {};
+                    const maxOvers = match.maxOvers || 20;
 
-                    if (historyFiltered.length === 0) {
-                      return <div key="no-comm" style={{ padding: '40px', textAlign: 'center', opacity: 0.4 }}>NO DATA AVAILABLE FOR CHARTS</div>;
+                    for (let i = 1; i <= maxOvers; i++) {
+                      overStats[i] = { over: i, runs1: 0, cumulative1: 0, runs2: 0, cumulative2: 0, wickets1: 0, wickets2: 0 };
                     }
 
-                    const overGroups: Record<number, any[]> = {};
-                    historyFiltered.forEach(ball => {
-                      const ov = ball.overNumber ?? ball.over_number ?? 0;
-                      if (!overGroups[ov]) overGroups[ov] = [];
-                      overGroups[ov].push(ball);
-                    });
-                    const sortedOversAsc = Object.keys(overGroups).map(Number).sort((a, b) => a - b);
+                    const processInn = (inn: any, key: string) => {
+                      if (!inn) return;
+                      let cum = 0;
+                      const h = Array.isArray(inn.history) ? inn.history : [];
+                      const groups: Record<number, any[]> = {};
+                      h.forEach(b => {
+                        const ov = (b.overNumber ?? b.over_number ?? 0) + 1;
+                        if (!groups[ov]) groups[ov] = [];
+                        groups[ov].push(b);
+                      });
 
-                    let cumulativeRuns = 0;
-                    const analyticsData = sortedOversAsc.map(ov => {
-                      const balls = overGroups[ov];
-                      const overRuns = balls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.isWide || b.isNoBall || b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
-                      cumulativeRuns += overRuns;
-                      return {
-                        over: ov + 1,
-                        runs: overRuns,
-                        cumulative: cumulativeRuns
-                      };
-                    });
+                      for (let i = 1; i <= maxOvers; i++) {
+                        const balls = groups[i] || [];
+                        const runs = balls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.isWide || b.isNoBall || b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                        const wkts = balls.filter(b => b.isWicket).length;
+                        cum += runs;
+                        overStats[i][`runs${key}`] = runs;
+                        overStats[i][`cumulative${key}`] = cum;
+                        overStats[i][`wickets${key}`] = wkts;
+                      }
+                    };
+
+                    processInn(normalizedData.innings1, '1');
+                    processInn(normalizedData.innings2, '2');
+
+                    const analyticsData = Object.values(overStats);
+                    const team1Name = normalizedData.innings1?.battingTeamId === 'HOME' ? (match.homeTeamName || 'INDIAN STRIKERS') : (match.opponentName || 'OPPONENT');
+                    const team2Name = normalizedData.innings2?.battingTeamId === 'HOME' ? (match.homeTeamName || 'INDIAN STRIKERS') : (match.opponentName || 'OPPONENT');
 
                     return (
                       <>
@@ -1038,14 +1046,24 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           <TableTitle style={{ marginLeft: 10 }}><BarChart2 size={14} /> MANHATTAN (Runs per Over)</TableTitle>
                           <div style={{ width: '100%', height: 250, marginTop: 20 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={analyticsData}>
+                            <BarChart data={analyticsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <XAxis dataKey="over" stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} />
                                 <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} width={30} />
                                 <Tooltip
                                   contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
                                   cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
-                                <Bar dataKey="runs" fill="#38BDF8" radius={[4, 4, 0, 0]} />
+                                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
+                                <Bar dataKey="runs1" name={team1Name} fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={8}>
+                                  {analyticsData.map((entry, index) => (
+                                    <Cell key={`c1-${index}`} fill={entry.wickets1 > 0 ? '#ef4444' : '#38BDF8'} />
+                                  ))}
+                                </Bar>
+                                <Bar dataKey="runs2" name={team2Name} fill="#FAB005" radius={[4, 4, 0, 0]} barSize={8}>
+                                  {analyticsData.map((entry, index) => (
+                                    <Cell key={`c2-${index}`} fill={entry.wickets2 > 0 ? '#ef4444' : '#FAB005'} />
+                                  ))}
+                                </Bar>
                               </BarChart>
                             </ResponsiveContainer>
                           </div>
@@ -1055,13 +1073,15 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           <TableTitle style={{ marginLeft: 10 }}><BarChart2 size={14} /> WORM (Cumulative Runs)</TableTitle>
                           <div style={{ width: '100%', height: 250, marginTop: 20 }}>
                             <ResponsiveContainer width="100%" height="100%">
-                              <LineChart data={analyticsData}>
+                              <LineChart data={analyticsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <XAxis dataKey="over" stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} />
                                 <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} width={30} />
                                 <Tooltip
                                   contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
                                 />
-                                <Line type="monotone" dataKey="cumulative" stroke="#FAB005" strokeWidth={3} dot={{ r: 4, fill: '#FAB005' }} activeDot={{ r: 6 }} />
+                                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
+                                <Line type="monotone" name={team1Name} dataKey="cumulative1" stroke="#38BDF8" strokeWidth={3} dot={{ r: 3, fill: '#38BDF8' }} />
+                                <Line type="monotone" name={team2Name} dataKey="cumulative2" stroke="#FAB005" strokeWidth={3} dot={{ r: 3, fill: '#FAB005' }} />
                               </LineChart>
                             </ResponsiveContainer>
                           </div>
