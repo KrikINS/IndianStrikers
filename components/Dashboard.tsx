@@ -808,29 +808,22 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               return (
                 <div className="space-y-0">
                   <div className="flex items-center justify-between">
-                    <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic">
-                      {liveMatch ? `${(liveMatch as any).teamA_short || 'IND'} ${(liveMatch as any).score || (() => {
-                          const ld = liveMatch.live_data;
-                          if (!ld) return '0';
-                          const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
-                          return inn ? inn.totalRuns : '0';
-                      })()}/${(liveMatch as any).wickets || (() => {
-                          const ld = liveMatch.live_data;
-                          if (!ld) return '0';
-                          const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
-                          return inn ? inn.wickets : '0';
-                      })()}` : `vs ${displayMatch.opponentName}`}
-                    </p>
-                    {displayMatch.status === 'live' && displayMatch.live_data && !(liveMatch as any)?.score && (
-                      <div className="flex flex-col items-end">
-                        <div className="text-xl font-black text-red-600 italic">
-                          {(() => {
-                            const ld = displayMatch.live_data;
+                    <div className="flex flex-col">
+                      <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic leading-none">
+                        {liveMatch ? `${(liveMatch as any).teamA_short || 'IND'} ${(liveMatch as any).score || (() => {
+                            const ld = liveMatch.live_data;
+                            if (!ld) return '0';
                             const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
-                            return inn ? `${inn.totalRuns}/${inn.wickets}` : '0/0';
-                          })()}
-                        </div>
-                        <div className="text-[10px] font-bold text-slate-400">
+                            return inn ? inn.totalRuns : '0';
+                        })()}/${(liveMatch as any).wickets || (() => {
+                            const ld = liveMatch.live_data;
+                            if (!ld) return '0';
+                            const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
+                            return inn ? inn.wickets : '0';
+                        })()}` : `vs ${displayMatch.opponentName}`}
+                      </p>
+                      {displayMatch.status === 'live' && displayMatch.live_data && (
+                        <div className="text-[13px] font-bold text-slate-400 mt-1 uppercase tracking-widest italic">
                           ({(() => {
                             const ld = displayMatch.live_data;
                             const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
@@ -839,13 +832,17 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                             return `${Math.floor(balls / 6)}.${balls % 6}`;
                           })()} ov)
                         </div>
+                      )}
+                    </div>
+                    {displayMatch.status === 'live' && displayMatch.live_data && displayMatch.live_data.currentInnings === 2 && (
+                      <div className="flex flex-col items-end">
+                        <div className="text-xl font-black text-red-600 italic uppercase tracking-tighter">
+                          TARGET: {displayMatch.live_data.innings1?.totalRuns + 1}
+                        </div>
                       </div>
                     )}
                   </div>
                   <div className="space-y-0 pt-2">
-                    <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
-                      <Calendar size={14} /> {new Date(displayMatch.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </div>
                     <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
                       <MapPin size={14} /> {grounds.find(g => g.id === displayMatch.groundId)?.name || 'Ground TBA'}
                     </div>
