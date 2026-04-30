@@ -67,7 +67,8 @@ import { SyncStatus } from './common/SyncStatus';
 
 const DashboardContainer = styled.div`
   height: 100dvh;
-  width: 100vw;
+  width: 100%;
+  box-sizing: border-box;
   background-color: hsla(210, 100%, 100%, 1.00);
   color: #1A1A1A;
   font-family: 'Inter', system-ui, sans-serif;
