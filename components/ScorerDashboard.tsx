@@ -4870,8 +4870,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     ...Object.keys(store.innings1?.battingStats || {}),
                     ...Object.keys(store.innings1?.bowlingStats || {}),
                     ...(store.innings2 ? [
-                      ...Object.keys(store.innings2.battingStats || {}),
-                      ...Object.keys(store.innings2.bowlingStats || {})
+                      ...Object.keys(store.innings2?.battingStats || {}),
+                      ...Object.keys(store.innings2?.bowlingStats || {})
                     ] : [])
                   ]);
 

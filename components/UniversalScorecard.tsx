@@ -497,8 +497,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
       };
 
       return {
-        batting: batting.sort((a, b) => (a.index ?? 0) - (b.index ?? 0)),
-        bowling: bowling.sort((a, b) => (a.index ?? 0) - (b.index ?? 0)),
+        batting: (batting || []).sort((a, b) => (a.index ?? 0) - (b.index ?? 0)),
+        bowling: (bowling || []).sort((a, b) => (a.index ?? 0) - (b.index ?? 0)),
         extras,
         totalRuns: inn.totalRuns || 0,
         wickets: inn.wickets || inn.totalWickets || 0,
@@ -748,13 +748,13 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     <div>
                       <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800, textTransform: 'uppercase' }}>TOTAL SCORE</div>
                       <div style={{ fontSize: '2rem', fontWeight: 900, color: '#FAB005' }}>
-                        {currentInningsData.totalRuns}/{currentInningsData.wickets}
+                        {currentInningsData?.totalRuns || 0}/{currentInningsData?.wickets || 0}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800, textTransform: 'uppercase' }}>OVERS</div>
                       <div style={{ fontSize: '1.4rem', fontWeight: 900 }}>
-                        {getOvers(currentInningsData.totalBalls)}
+                        {getOvers(currentInningsData?.totalBalls || 0)}
                       </div>
                     </div>
                   </ScoreSummaryCard>
@@ -775,7 +775,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {currentInningsData.batting.map(stat => (
+                      {(currentInningsData.batting || []).map(stat => (
                         <tr key={stat.playerId}>
                           <Td>{getPlayerNameResolved(stat.playerId, stat.name)}</Td>
                           <Td style={{ textAlign: 'center', color: '#FAB005', fontWeight: 700 }}>{stat.runs}</Td>
@@ -800,7 +800,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                   </ScoreCardTable>
 
                   {(() => {
-                    const batters = currentInningsData.batting;
+                    const batters = currentInningsData?.batting || [];
                     // Detect if Home team is batting by checking if any batter exists in the Home players list
                     let isHomeBatting = batters.some(b => players.some(p => p.id === b.playerId || p.player_id === b.playerId));
 
@@ -850,7 +850,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {currentInningsData.bowling.map(stat => (
+                      {(currentInningsData.bowling || []).map(stat => (
                         <tr key={stat.playerId}>
                           <Td>{getPlayerNameResolved(stat.playerId, stat.name)}</Td>
                           <Td style={{ textAlign: 'center' }}>{stat.overs}</Td>
