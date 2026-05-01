@@ -3237,7 +3237,23 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    style={{ fontSize: '0.75rem', fontWeight: 900, marginTop: 8, color: '#495057', background: 'rgba(0,0,0,0.05)', padding: '4px 10px', borderRadius: 12, letterSpacing: 0.5 }}
+                    style={{ 
+                      fontSize: '0.75rem', 
+                      fontWeight: 900, 
+                      marginTop: 8, 
+                      color: '#001F3F', 
+                      background: '#FFF', 
+                      padding: '6px 14px', 
+                      borderRadius: 100, 
+                      letterSpacing: 0.5,
+                      whiteSpace: 'nowrap',
+                      border: '1px solid rgba(0,0,0,0.1)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 10
+                    }}
                   >
                     {(() => {
                       const target = (store.innings1?.totalRuns || 0) + 1;
