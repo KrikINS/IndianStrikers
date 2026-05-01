@@ -2853,8 +2853,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         updatePayload.targetScore = target;
       } else {
         updatePayload.status = 'completed';
-        updatePayload.finalScoreHome = store.innings1?.totalRuns;
-        updatePayload.finalScoreAway = store.innings2?.totalRuns;
+        updatePayload.finalScoreHome = { 
+          runs: store.innings1?.totalRuns || 0, 
+          wickets: store.innings1?.wickets || 0, 
+          overs: store.getOvers(store.innings1?.totalBalls || 0) 
+        };
+        updatePayload.finalScoreAway = { 
+          runs: store.innings2?.totalRuns || 0, 
+          wickets: store.innings2?.wickets || 0, 
+          overs: store.getOvers(store.innings2?.totalBalls || 0) 
+        };
+        updatePayload.scorecard = {
+          innings1: store.innings1,
+          innings2: store.innings2
+        };
 
         let resultMessage = '';
         if (totalScore >= target) {

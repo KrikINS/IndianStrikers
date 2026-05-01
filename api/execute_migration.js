@@ -32,7 +32,15 @@ async function runMigration() {
 
         // 7. PERFORMANCE INDEXES
         `CREATE INDEX IF NOT EXISTS idx_ball_by_ball_match_id ON ball_by_ball (match_id);`,
-        `CREATE INDEX IF NOT EXISTS idx_ball_by_ball_striker_id ON ball_by_ball (striker_id);`
+        `CREATE INDEX IF NOT EXISTS idx_ball_by_ball_striker_id ON ball_by_ball (striker_id);`,
+
+        // 8. UNIQUE CONSTRAINT FOR PLAYER STATS SYNC
+        `ALTER TABLE player_match_stats DROP CONSTRAINT IF EXISTS unique_player_match;`,
+        `ALTER TABLE player_match_stats ADD CONSTRAINT unique_player_match UNIQUE (match_id, player_id);`,
+
+        // 9. ENSURE MATCH COLUMNS EXIST FOR FINALIZE
+        `ALTER TABLE matches ADD COLUMN IF NOT EXISTS toss_winner_id UUID;`,
+        `ALTER TABLE matches ADD COLUMN IF NOT EXISTS toss_choice VARCHAR(50);`
     ];
 
     for (const cmd of commands) {

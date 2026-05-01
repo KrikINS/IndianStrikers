@@ -665,14 +665,25 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
 
     // 1. Update match status/data
     // Map matchData fields to DB columns
-    const scorecard = matchData.scorecard;
-    const finalScoreHome = matchData.finalScoreHome || (scorecard?.innings1 ? { runs: scorecard.innings1.totalRuns, wickets: scorecard.innings1.totalWickets, overs: scorecard.innings1.totalOvers } : null);
-    const finalScoreAway = matchData.finalScoreAway || (scorecard?.innings2 ? { runs: scorecard.innings2.totalRuns, wickets: scorecard.innings2.totalWickets, overs: scorecard.innings2.totalOvers } : null);
+    const scorecard = matchData.scorecard || {
+      innings1: matchData.live_data?.innings1,
+      innings2: matchData.live_data?.innings2
+    };
+    
+    const getRuns = (val) => {
+      if (typeof val === 'number') return val;
+      if (val && typeof val === 'object') return Number(val.runs || 0);
+      return 0;
+    };
+
+    const finalScoreHomeValue = getRuns(matchData.finalScoreHome) || (scorecard?.innings1 ? Number(scorecard.innings1.totalRuns || 0) : 0);
+    const finalScoreAwayValue = getRuns(matchData.finalScoreAway) || (scorecard?.innings2 ? Number(scorecard.innings2.totalRuns || 0) : 0);
     
     // Toss Handling
     let tossWinnerId = matchData.toss_winner_id;
     if (!tossWinnerId && matchData.toss?.winner) {
-      if (matchData.toss.winner === 'Indian Strikers') {
+      const winnerName = String(matchData.toss.winner).toLowerCase();
+      if (winnerName.includes('strikers') || winnerName.includes('home')) {
         tossWinnerId = '00000000-0000-0000-0000-000000000000';
       } else {
         // Find opponent ID for this match
@@ -707,10 +718,10 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
       [
         id, 'completed', !is_test,
         JSON.stringify(scorecard || {}),
-        finalScoreHome?.runs || 0,
-        finalScoreAway?.runs || 0,
-        finalScoreHome?.runs || 0,
-        finalScoreHome?.wickets || 0,
+        finalScoreHomeValue,
+        finalScoreAwayValue,
+        finalScoreHomeValue,
+        (matchData.finalScoreHome?.wickets || scorecard?.innings1?.totalWickets || 0),
         (() => {
           const overs = parseFloat(finalScoreHome?.overs || 0);
           const parts = String(overs).split('.');
