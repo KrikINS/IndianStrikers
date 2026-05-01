@@ -600,6 +600,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         if (isNoBall) nextInnings.extras.noBalls += 1;
         if (type === 'bye' || (isNoBall && subType === 'bye')) nextInnings.extras.byes += runs;
         if (type === 'leg-bye' || (isNoBall && subType === 'lb')) nextInnings.extras.legByes += runs;
+        
+        const getPlayerName = (id: string) => state.squadPlayers.find(p => p.id === id)?.name || state.opponentPlayers.find(p => p.id === id)?.name || 'Unknown';
 
         const b = nextInnings.battingStats[state.strikerId];
         if (b) {
@@ -613,6 +615,10 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             }
         }
 
+        if (!nextInnings.bowlingStats[state.currentBowlerId]) {
+            const bName = getPlayerName(state.currentBowlerId);
+            nextInnings.bowlingStats[state.currentBowlerId] = { id: state.currentBowlerId, name: bName, overs: 0, maidens: 0, runs: 0, wickets: 0, index: Object.keys(nextInnings.bowlingStats).length };
+        }
         const bw = nextInnings.bowlingStats[state.currentBowlerId];
         if (bw) {
             const isTrulyExtra = type === 'bye' || type === 'leg-bye' || (isNoBall && subType !== 'bat');
@@ -628,8 +634,6 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             const victimId = outPlayerId || state.strikerId;
             if (victimId === sId) sId = newBatterId || null;
             else nsId = newBatterId || null;
-
-            const getPlayerName = (id: string) => state.squadPlayers.find(p => p.id === id)?.name || state.opponentPlayers.find(p => p.id === id)?.name || 'Unknown';
 
             if (sId && !nextInnings.battingStats[sId]) {
                 const newName = getPlayerName(sId);
@@ -755,7 +759,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             nonStrikerId: nsId,
             isFinished: finished,
             isWaitingForBowler: isOverComplete,
-            currentBowlerId: isOverComplete ? null : state.currentBowlerId,
+            currentBowlerId: state.currentBowlerId, // Retain for display until new one selected
             pendingMilestone: milestone,
             historyStack: [...state.historyStack, prevState].slice(-20)
         });
