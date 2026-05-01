@@ -874,7 +874,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                   <ExtrasRow>
                     <span style={{ opacity: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>EXTRAS</span>
                     <span style={{ fontWeight: 900 }}>
-                      {Object.values(currentInningsData.extras).reduce((a, b) => a + b, 0)}{' '}
+                      {Object.values(currentInningsData.extras || {}).reduce((a: any, b: any) => (Number(a) || 0) + (Number(b) || 0), 0)}{' '}
                       <span style={{ opacity: 0.4, fontSize: '0.65rem', marginLeft: 4 }}>
                         (wd {currentInningsData?.extras?.wides || 0}, nb {currentInningsData?.extras?.noBalls || 0}, b {currentInningsData?.extras?.byes || 0}, lb {currentInningsData?.extras?.legByes || 0})
                       </span>

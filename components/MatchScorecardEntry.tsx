@@ -59,28 +59,38 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   };
 
   const [scorecard, setScorecard] = useState<FullScorecardData>(() => {
-    // Determine if we bat first or second to align summary totals
-    const homeInningsKey = innings1BattingTeam === 'home' ? 'innings1' : 'innings2';
-    const awayInningsKey = innings1BattingTeam === 'away' ? 'innings1' : 'innings2';
-
-    const base = match.scorecard || {
-      innings1: { 
-        ...initialInnings,
-        totalRuns: (innings1BattingTeam === 'home' ? match.finalScoreHome?.runs : match.finalScoreAway?.runs) || 0,
-        totalWickets: (innings1BattingTeam === 'home' ? match.finalScoreHome?.wickets : match.finalScoreAway?.wickets) || 0,
-        totalOvers: (innings1BattingTeam === 'home' ? match.finalScoreHome?.overs : match.finalScoreAway?.overs) || 0
-      },
-      innings2: { 
-        ...initialInnings,
-        totalRuns: (innings1BattingTeam === 'home' ? match.finalScoreAway?.runs : match.finalScoreHome?.runs) || 0,
-        totalWickets: (innings1BattingTeam === 'home' ? match.finalScoreAway?.wickets : match.finalScoreHome?.wickets) || 0,
-        totalOvers: (innings1BattingTeam === 'home' ? match.finalScoreAway?.overs : match.finalScoreHome?.overs) || 0
-      },
+    const raw = match.scorecard || {};
+    const base = {
+      innings1: { ...initialInnings, ...(raw.innings1 || {}) },
+      innings2: { ...initialInnings, ...(raw.innings2 || {}) }
     };
-    // Ensure extras exists for both innings
-    if (base.innings1 && !base.innings1.extras) base.innings1.extras = { wide: 0, no_ball: 0, legByes: 0, byes: 0 };
-    if (base.innings2 && !base.innings2.extras) base.innings2.extras = { wide: 0, no_ball: 0, legByes: 0, byes: 0 };
-    return base;
+    
+    // Fallback to summary scores if innings data is completely missing
+    if (!raw.innings1) {
+       base.innings1.totalRuns = (innings1BattingTeam === 'home' ? match.finalScoreHome?.runs : match.finalScoreAway?.runs) || 0;
+       base.innings1.totalWickets = (innings1BattingTeam === 'home' ? match.finalScoreHome?.wickets : match.finalScoreAway?.wickets) || 0;
+       base.innings1.totalOvers = (innings1BattingTeam === 'home' ? match.finalScoreHome?.overs : match.finalScoreAway?.overs) || 0;
+    }
+    if (!raw.innings2) {
+       base.innings2.totalRuns = (innings1BattingTeam === 'home' ? match.finalScoreAway?.runs : match.finalScoreHome?.runs) || 0;
+       base.innings2.totalWickets = (innings1BattingTeam === 'home' ? match.finalScoreAway?.wickets : match.finalScoreHome?.wickets) || 0;
+       base.innings2.totalOvers = (innings1BattingTeam === 'home' ? match.finalScoreAway?.overs : match.finalScoreHome?.overs) || 0;
+    }
+
+    // Ensure extras exists and has all properties for internal state stability
+    const ensureExtras = (inn: InningsData) => {
+      if (!inn.extras) inn.extras = { wide: 0, no_ball: 0, legByes: 0, byes: 0 };
+      else {
+        inn.extras.wide = inn.extras.wide || 0;
+        inn.extras.no_ball = inn.extras.no_ball || 0;
+        inn.extras.legByes = inn.extras.legByes || 0;
+        inn.extras.byes = inn.extras.byes || 0;
+      }
+    };
+    ensureExtras(base.innings1);
+    ensureExtras(base.innings2);
+    
+    return base as FullScorecardData;
   });
 
   const [battingRowIds, setBattingRowIds] = useState<Record<1 | 2, string[]>>(() => {
@@ -128,8 +138,11 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
 
   const liveTotal = (inn: 1 | 2) => {
     const innKey = inn === 1 ? 'innings1' : 'innings2';
-    const battingRuns = scorecard[innKey].batting.reduce((s, b) => s + (b.runs || 0), 0);
-    const extrasTotal = (scorecard[innKey].extras.legByes || 0) + (scorecard[innKey].extras.byes || 0)
+    const innData = scorecard[innKey];
+    if (!innData) return 0;
+    
+    const battingRuns = (innData.batting || []).reduce((s, b) => s + (b.runs || 0), 0);
+    const extrasTotal = (innData.extras?.legByes || 0) + (innData.extras?.byes || 0)
       + autoWides(inn) + autoNoBalls(inn);
     return battingRuns + extrasTotal;
   };
@@ -302,11 +315,11 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         };
       });
 
-    const inn1Runs = buildBatting(1).reduce((s, b) => s + (b.runs || 0), 0) + (scorecard.innings1.extras.legByes || 0) + (scorecard.innings1.extras.byes || 0) + autoWides(1) + autoNoBalls(1);
+    const inn1Runs = buildBatting(1).reduce((s, b) => s + (b.runs || 0), 0) + (scorecard.innings1?.extras?.legByes || 0) + (scorecard.innings1?.extras?.byes || 0) + autoWides(1) + autoNoBalls(1);
     const inn1Wickets = buildBatting(1).filter(b => !['Not Out', 'Did Not Bat', 'Retired Hurt'].includes(b.outHow)).length;
     const inn1Overs = buildBowling(1).reduce((s, b) => addCricketOvers(s, b.overs || 0), 0);
 
-    const inn2Runs = buildBatting(2).reduce((s, b) => s + (b.runs || 0), 0) + (scorecard.innings2.extras.legByes || 0) + (scorecard.innings2.extras.byes || 0) + autoWides(2) + autoNoBalls(2);
+    const inn2Runs = buildBatting(2).reduce((s, b) => s + (b.runs || 0), 0) + (scorecard.innings2?.extras?.legByes || 0) + (scorecard.innings2?.extras?.byes || 0) + autoWides(2) + autoNoBalls(2);
     const inn2Wickets = buildBatting(2).filter(b => !['Not Out', 'Did Not Bat', 'Retired Hurt'].includes(b.outHow)).length;
     const inn2Overs = buildBowling(2).reduce((s, b) => addCricketOvers(s, b.overs || 0), 0);
 
