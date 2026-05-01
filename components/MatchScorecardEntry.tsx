@@ -59,7 +59,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   };
 
   const [scorecard, setScorecard] = useState<FullScorecardData>(() => {
-    const raw = match.scorecard || {};
+    const raw: any = match.scorecard || {};
     const base = {
       innings1: { ...initialInnings, ...(raw.innings1 || {}) },
       innings2: { ...initialInnings, ...(raw.innings2 || {}) }

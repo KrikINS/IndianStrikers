@@ -764,39 +764,35 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     <thead>
                       <tr>
                         <Th>Batter</Th>
-                        <Th>Status</Th>
                         <Th style={{ textAlign: 'center' }}>R</Th>
                         <Th style={{ textAlign: 'center' }}>B</Th>
                         <Th style={{ textAlign: 'center' }}>4s</Th>
                         <Th style={{ textAlign: 'center' }}>6s</Th>
                         <Th style={{ textAlign: 'right' }}>SR</Th>
+                        <Th>Out</Th>
+                        <Th>F</Th>
+                        <Th>B</Th>
                       </tr>
                     </thead>
                     <tbody>
                       {currentInningsData.batting.map(stat => (
                         <tr key={stat.playerId}>
                           <Td>{getPlayerNameResolved(stat.playerId, stat.name)}</Td>
-                          <Td style={{ fontSize: '0.65rem', opacity: 0.6 }}>
-                            {stat.status === 'batting' ? 'not out' : (() => {
-                              const outHow = stat.outHow || 'out';
-                              const fName = stat.fielderId ? getPlayerNameResolved(stat.fielderId) : '';
-                              const bName = stat.bowlerId ? getPlayerNameResolved(stat.bowlerId) : '';
-
-                              if (outHow === 'Caught') return `ct ${fName} b ${bName}`;
-                              if (outHow === 'Bowled') return `b ${bName}`;
-                              if (outHow === 'LBW') return `lbw b ${bName}`;
-                              if (outHow === 'Run Out') return `run out (${fName})`;
-                              if (outHow === 'Stumped') return `st ${fName} b ${bName}`;
-                              if (outHow === 'Hit Wicket') return `hit wicket b ${bName}`;
-                              return outHow.toLowerCase();
-                            })()}
-                          </Td>
-                          <Td style={{ textAlign: 'center', color: '#FAB005' }}>{stat.runs}</Td>
+                          <Td style={{ textAlign: 'center', color: '#FAB005', fontWeight: 700 }}>{stat.runs}</Td>
                           <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.balls}</Td>
                           <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.fours || 0}</Td>
                           <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.sixes || 0}</Td>
                           <Td style={{ textAlign: 'right', opacity: 0.8 }}>
                             {stat.balls > 0 ? ((stat.runs / stat.balls) * 100).toFixed(1) : '0.0'}
+                          </Td>
+                          <Td style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 600 }}>
+                            {stat.status === 'batting' ? <span style={{ color: '#38BDF8' }}>not out</span> : (stat.outHow || 'out')}
+                          </Td>
+                          <Td style={{ fontSize: '0.65rem', opacity: 0.5 }}>
+                            {stat.fielderId ? getPlayerNameResolved(stat.fielderId) : '—'}
+                          </Td>
+                          <Td style={{ fontSize: '0.65rem', opacity: 0.5 }}>
+                            {stat.bowlerId ? getPlayerNameResolved(stat.bowlerId) : '—'}
                           </Td>
                         </tr>
                       ))}
