@@ -1907,7 +1907,7 @@ app.get('/api/tournament-performers', async (req, res) => {
 
     const latestTournament = tournaments[0];
 
-    // Helper to fetch and filter Top 7 Standout Performances
+    // Helper to fetch and filter Standout Performances
     const getPerformersForTournament = async (tId) => {
       let q = `
         SELECT pms.*, m.id as m_id, m.date as m_date, m.status as m_status, m.tournament_id as m_t_id, m.ground_id as m_g_id, m.opponent_id as m_o_id,
@@ -1915,7 +1915,7 @@ app.get('/api/tournament-performers', async (req, res) => {
         FROM player_match_stats pms
         JOIN matches m ON pms.match_id = m.id
         JOIN players p ON pms.player_id = p.id
-        WHERE m.is_test = false AND m.status = 'completed'
+        WHERE m.is_test = false AND m.status = 'completed' AND p.is_club_player = true
       `;
       let params = [];
       if (tId) {
@@ -1948,15 +1948,12 @@ app.get('/api/tournament-performers', async (req, res) => {
         const isHero = !!row.is_hero;
         const runs = Number(row.runs || 0);
         const wkts = Number(row.wickets || 0);
-        const overs = Number(row.overs_bowled || 0);
-        const runsC = Number(row.runs_conceded || 0);
-        const econ = (overs > 0) ? (runsC / overs) : 99;
         const isSuperStrikerMatch = row.player_id === superStrikerId;
         
         if (isHero || isSuperStrikerMatch) return true;
         
-        // Auto-Criteria: 40+ runs OR 2+ wickets OR <=7.0 econ (min 2 ov) OR All-rounder (30+ / 1+)
-        return (runs >= 40) || (wkts >= 2) || (overs >= 2 && econ <= 7.0) || (runs >= 30 && wkts >= 1);
+        // Auto-Criteria: 40+ runs OR 2+ wickets
+        return (runs >= 40) || (wkts >= 2);
       })
       .sort((a,b) => {
         if (a.is_hero && !b.is_hero) return -1;
@@ -1965,7 +1962,6 @@ app.get('/api/tournament-performers', async (req, res) => {
         const scoreB = (Number(b.runs || 0)) + (Number(b.wickets || 0) * 35);
         return scoreB - scoreA;
       })
-      .slice(0, 7)
       .map(row => ({
         id: row.id,
         playerId: row.player_id,
