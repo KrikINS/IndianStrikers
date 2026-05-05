@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Player, OpponentTeam, UserRole, ScheduledMatch, Ground, AppUser } from '../types';
 import { getOpponents, getTournamentPerformers, getMatches, getLegacyStats } from '../services/storageService';
-import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, Bell, MapPin, Clock, Loader2, RefreshCw, Shield } from 'lucide-react';
+import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, Bell, MapPin, Clock, Loader2, RefreshCw, Shield, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import html2canvas from 'html2canvas';
+import { toPng, toBlob } from 'html-to-image';
+import { toast } from 'react-hot-toast';
 import { useMasterData } from '../store/tournamentStore';
 import { StoreProvider, useStore } from '../store/StoreProvider';
 import './Dashboard.css';
@@ -569,13 +570,81 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const handleGenerateHeroPoster = async () => {
     if (!heroPosterRef.current || !selectedHero) return;
     setIsGenerating(true);
+    const toastId = toast.loading("Generating your premium poster...");
+    
     try {
-      const canvas = await html2canvas(heroPosterRef.current, { backgroundColor: '#0c1222', scale: 3, useCORS: true });
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const blob = await toBlob(heroPosterRef.current, {
+        cacheBust: true,
+        pixelRatio: 3,
+        backgroundColor: '#0c1222'
+      });
+
+      if (!blob) throw new Error("Failed to capture image");
+
+      const fileName = `Hero_${selectedHero.player.name.replace(/\s+/g, '_')}_${new Date().getTime()}.png`;
+      const url = URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
-      link.download = `Hero_${selectedHero.player.name.replace(/\s+/g, '_')}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.download = fileName;
+      link.href = url;
+      document.body.appendChild(link);
       link.click();
-    } catch (err) { console.error(err); } finally { setIsGenerating(false); }
+      document.body.removeChild(link);
+      
+      // Cleanup URL object after a short delay
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      toast.success("Poster downloaded successfully!", { id: toastId });
+    } catch (err) { 
+      console.error("Poster Generation Failed:", err);
+      toast.error("Failed to generate poster. Please try again.", { id: toastId });
+    } finally { 
+      setIsGenerating(false); 
+    }
+  };
+
+  const handleShareHeroPoster = async () => {
+    if (!heroPosterRef.current || !selectedHero) return;
+    setIsGenerating(true);
+    const toastId = toast.loading("Preparing for share...");
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const blob = await toBlob(heroPosterRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: '#0c1222',
+      });
+
+      if (!blob) throw new Error("Failed to generate image blob");
+
+      const fileName = `Hero_${selectedHero.player.name.replace(/\s+/g, '_')}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Indian Strikers Hero Poster',
+          text: `Check out this performance from ${selectedHero.player.name}!`,
+        });
+        toast.success("Shared successfully!", { id: toastId });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = url;
+        link.click();
+        toast.success("Sharing not supported - downloaded instead!", { id: toastId });
+      }
+    } catch (err) {
+      console.error("Share Failed:", err);
+      toast.error("Could not share. Download instead.", { id: toastId });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -674,14 +743,25 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={handleGenerateHeroPoster}
-                  disabled={isGenerating}
-                  className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {isGenerating ? <Loader2 className="animate-spin" /> : <Download />}
-                  {isGenerating ? 'GENERATING...' : 'DOWNLOAD POSTER'}
-                </button>
+                <div className="flex flex-col gap-4">
+                  <button
+                    onClick={handleGenerateHeroPoster}
+                    disabled={isGenerating}
+                    className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isGenerating ? <Loader2 className="animate-spin" /> : <Download />}
+                    {isGenerating ? 'GENERATING...' : 'DOWNLOAD POSTER'}
+                  </button>
+
+                  <button
+                    onClick={handleShareHeroPoster}
+                    disabled={isGenerating}
+                    className="w-full py-5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Share2 />
+                    SHARE PERFORMANCE
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

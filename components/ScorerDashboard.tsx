@@ -62,7 +62,7 @@ import _ from 'lodash';
 import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
 import { Player, ScheduledMatch, Ball, CommentaryTemplate, BallRecord, CommentaryEventType, MatchStatus } from '../types';
 import { toast } from 'react-hot-toast';
-import html2canvas from 'html2canvas';
+import { toPng, toBlob } from 'html-to-image';
 import { useCommentaryStore } from '../store/commentaryStore';
 import { SyncStatus } from './common/SyncStatus';
 
@@ -2952,30 +2952,79 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const downloadHeroPoster = async () => {
     if (!posterRef.current || isGeneratingPoster) return;
     setIsGeneratingPoster(true);
+    const toastId = toast.loading("Generating Match Day Hero Poster...");
+    
     try {
-      // Ensure element is ready for capture
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      const canvas = await html2canvas(posterRef.current, {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const blob = await toBlob(posterRef.current, {
+        cacheBust: true,
+        pixelRatio: 3,
         backgroundColor: '#020617',
-        scale: 3, // Higher resolution for premium feel
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        onclone: (clonedDoc) => {
-          // You can modify the clone here if needed to fix rendering issues
-          const el = clonedDoc.querySelector('[data-poster-root]');
-          if (el) (el as HTMLElement).style.left = '0';
-        }
       });
 
+      if (!blob) throw new Error("Failed to capture image");
+
       const playerName = getPlayerName(store.manOfTheMatch);
+      const fileName = `MatchHero_${playerName.replace(/\s+/g, '_')}_${new Date().getTime()}.png`;
+      const url = URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
-      link.download = `MatchHero_${playerName.replace(/\s+/g, '_')}_${new Date().getTime()}.png`;
-      link.href = canvas.toDataURL('image/png', 1.0);
+      link.download = fileName;
+      link.href = url;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      toast.success("Hero poster downloaded!", { id: toastId });
     } catch (err) {
       console.error("Poster Generation Failed:", err);
+      toast.error("Failed to generate poster.", { id: toastId });
+    } finally {
+      setIsGeneratingPoster(false);
+    }
+  };
+
+  const handleShareHeroPoster = async () => {
+    if (!posterRef.current || isGeneratingPoster) return;
+    setIsGeneratingPoster(true);
+    const toastId = toast.loading("Preparing for share...");
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const blob = await toBlob(posterRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: '#020617',
+      });
+
+      if (!blob) throw new Error("Failed to generate image blob");
+
+      const playerName = getPlayerName(store.manOfTheMatch);
+      const fileName = `Hero_${playerName.replace(/\s+/g, '_')}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Indian Strikers Hero Poster',
+          text: `Check out the Player of the Match: ${playerName}!`,
+        });
+        toast.success("Shared successfully!", { id: toastId });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = url;
+        link.click();
+        toast.success("Sharing not supported - downloaded instead!", { id: toastId });
+      }
+    } catch (err) {
+      console.error("Share Failed:", err);
+      toast.error("Could not share. Download instead.", { id: toastId });
     } finally {
       setIsGeneratingPoster(false);
     }
@@ -4138,6 +4187,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     disabled={isGeneratingPoster}
                   >
                     {isGeneratingPoster ? 'GENERATING POSTER...' : 'DOWNLOAD HERO POSTER'}
+                  </ActionButton>
+
+                  <ActionButton
+                    onClick={handleShareHeroPoster}
+                    disabled={isGeneratingPoster}
+                    style={{ background: 'rgba(255,255,255,0.05)', color: '#FFF' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <Share2 size={18} />
+                      SHARE POSTER
+                    </div>
                   </ActionButton>
 
                   <ActionButton
