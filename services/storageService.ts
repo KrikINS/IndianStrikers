@@ -1014,6 +1014,18 @@ export const updateLeagueFixture = async (id: string, f: Partial<LeagueFixture>)
   return handleResponse(res);
 };
 
+export const submitLeagueResult = async (
+  id: string,
+  result: { home_runs: number; home_overs: number; away_runs: number; away_overs: number; result_type: 'normal' | 'tie' | 'abandoned' }
+) => {
+  const res = await fetch(`${API_URL}/league/fixtures/${id}/result`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(result)
+  });
+  return handleResponse(res);
+};
+
 export const deleteLeagueFixture = async (id: string) => {
   const res = await fetch(`${API_URL}/league/fixtures/${id}`, {
     method: 'DELETE',
@@ -1033,6 +1045,48 @@ export const syncAllPlayerStats = async () => {
 export const forceRecalculatePlayer = async (playerId: string) => {
   const res = await fetch(`${API_URL}/admin/recalculate/${playerId}`, {
     method: 'POST',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
+// ─── KNOCKOUT STAGE ────────────────────────────────────────────────────────
+
+export const getKnockoutMatches = async (tournamentId: string) => {
+  const res = await fetch(`${API_URL}/league/knockout?tournament_id=${tournamentId}`, { headers: getHeaders() });
+  return (await handleResponse(res)) || [];
+};
+
+export const setupKnockoutStage = async (tournamentId: string, rounds: string[], crossovers?: any[]) => {
+  const res = await fetch(`${API_URL}/league/knockout/setup`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ tournament_id: tournamentId, rounds, crossovers })
+  });
+  return handleResponse(res);
+};
+
+export const updateKnockoutMatch = async (id: string, data: Record<string, unknown>) => {
+  const res = await fetch(`${API_URL}/league/knockout/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(data)
+  });
+  return handleResponse(res);
+};
+
+export const submitKnockoutResult = async (id: string, result: { home_runs: number; home_overs: number; away_runs: number; away_overs: number }) => {
+  const res = await fetch(`${API_URL}/league/knockout/${id}/result`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(result)
+  });
+  return handleResponse(res);
+};
+
+export const deleteKnockoutMatch = async (id: string) => {
+  const res = await fetch(`${API_URL}/league/knockout/${id}`, {
+    method: 'DELETE',
     headers: getHeaders()
   });
   return handleResponse(res);

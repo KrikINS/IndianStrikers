@@ -2280,20 +2280,86 @@ app.delete('/api/league/teams/:id', authGuard(), async (req, res) => {
 
 app.get('/api/league/fixtures', authGuard(), async (req, res) => {
   const { tournament_id } = req.query;
-  const { data, error } = await db.query('SELECT * FROM league_fixtures WHERE tournament_id = $1 ORDER BY date ASC', [tournament_id]);
+  const { data, error } = await db.query(`
+    SELECT f.*, 
+           h.team_name as home_team_name, h.logo_url as home_team_logo,
+           a.team_name as away_team_name, a.logo_url as away_team_logo,
+           g.name as group_name
+    FROM league_fixtures f
+    JOIN league_teams h ON f.home_team_id = h.id
+    JOIN league_teams a ON f.away_team_id = a.id
+    LEFT JOIN league_groups g ON f.group_id = g.id
+    WHERE f.tournament_id = $1 
+    ORDER BY f.date ASC
+  `, [tournament_id]);
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
 app.post('/api/league/fixtures', authGuard(), async (req, res) => {
   const fixtures = req.body; // Array
-  const values = fixtures.map(f => `('${f.tournament_id}', ${f.group_id ? `'${f.group_id}'` : 'NULL'}, '${f.home_team_id}', '${f.away_team_id}', '${f.home_team_name}', '${f.away_team_name}', '${f.home_team_logo || ''}', '${f.away_team_logo || ''}', '${f.date}', '${f.venue}', '${f.group_name || ''}')`).join(',');
+  if (!fixtures || fixtures.length === 0) return res.json([]);
+  
+  const values = fixtures.map(f => `('${f.tournament_id}', ${f.group_id ? `'${f.group_id}'` : 'NULL'}, '${f.home_team_id}', '${f.away_team_id}', '${f.date}', '${(f.venue || '').replace(/'/g, "''")}', 'scheduled')`).join(',');
   
   const { data, error } = await db.query(
-    `INSERT INTO league_fixtures (tournament_id, group_id, home_team_id, away_team_id, home_team_name, away_team_name, home_team_logo, away_team_logo, date, venue, group_name) VALUES ${values} RETURNING *`
+    `INSERT INTO league_fixtures (tournament_id, group_id, home_team_id, away_team_id, date, venue, status) VALUES ${values} RETURNING *`
   );
   if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(data);
+});
+
+app.put('/api/league/fixtures/:id', authGuard(), async (req, res) => {
+  const { date, venue, status } = req.body;
+  const { error } = await db.query(
+    'UPDATE league_fixtures SET date=$1, venue=$2, status=$3 WHERE id=$4',
+    [date, venue, status, req.params.id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// Submit match result — calculates winner and NRR-contributing data
+app.post('/api/league/fixtures/:id/result', authGuard(), async (req, res) => {
+  const { home_runs, home_overs, away_runs, away_overs, result_type } = req.body;
+  const { id } = req.params;
+
+  // Fetch fixture to know team ids
+  const { data: rows, error: fetchErr } = await db.query(
+    'SELECT home_team_id, away_team_id FROM league_fixtures WHERE id=$1', [id]
+  );
+  if (fetchErr || !rows || rows.length === 0) return res.status(404).json({ error: 'Fixture not found' });
+  const { home_team_id, away_team_id } = rows[0];
+
+  let winner_id = null;
+  let status = 'completed';
+
+  if (result_type === 'abandoned') {
+    status = 'abandoned';
+    winner_id = null;
+  } else if (result_type === 'tie') {
+    winner_id = null; // tie — no winner_id → NR point awarded via view logic (winner_id IS NULL)
+  } else {
+    // Normal result — higher runs wins
+    if (home_runs > away_runs) winner_id = home_team_id;
+    else if (away_runs > home_runs) winner_id = away_team_id;
+    else winner_id = null; // tie by equal runs (super over edge case)
+  }
+
+  const { error } = await db.query(
+    `UPDATE league_fixtures 
+     SET home_team_runs=$1, home_team_overs=$2, away_team_runs=$3, away_team_overs=$4, winner_id=$5, status=$6
+     WHERE id=$7`,
+    [home_runs, home_overs, away_runs, away_overs, winner_id, status, id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true, winner_id });
+});
+
+app.delete('/api/league/fixtures/:id', authGuard(), async (req, res) => {
+  const { error } = await db.query('DELETE FROM league_fixtures WHERE id = $1', [req.params.id]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
 });
 
 app.get('/api/league/standings', authGuard(), async (req, res) => {
@@ -2304,6 +2370,120 @@ app.get('/api/league/standings', authGuard(), async (req, res) => {
   );
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
+});
+
+// ─── KNOCKOUT STAGE ────────────────────────────────────────────────────────
+
+// Auto-create table on startup
+db.query(`
+  CREATE TABLE IF NOT EXISTS league_knockout_matches (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    tournament_id UUID REFERENCES league_tournaments(id) ON DELETE CASCADE,
+    round VARCHAR(20) NOT NULL,
+    slot_number INTEGER NOT NULL,
+    home_team_id UUID REFERENCES league_teams(id),
+    away_team_id UUID REFERENCES league_teams(id),
+    home_team_name VARCHAR(255),
+    away_team_name VARCHAR(255),
+    home_team_logo TEXT,
+    away_team_logo TEXT,
+    home_runs INTEGER,
+    home_overs NUMERIC(4,1),
+    away_runs INTEGER,
+    away_overs NUMERIC(4,1),
+    winner_id UUID REFERENCES league_teams(id),
+    winner_name VARCHAR(255),
+    winner_logo TEXT,
+    date DATE,
+    venue VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'scheduled',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).then(r => { if (r.error) console.error('[Knockout] Table creation error:', r.error.message); else console.log('[Knockout] Table ready.'); });
+
+app.get('/api/league/knockout', authGuard(), async (req, res) => {
+  const { tournament_id } = req.query;
+  const { data, error } = await db.query(
+    `SELECT * FROM league_knockout_matches WHERE tournament_id=$1 ORDER BY 
+     CASE round WHEN 'QF' THEN 1 WHEN 'SF' THEN 2 WHEN 'Final' THEN 3 END, slot_number`,
+    [tournament_id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// Setup knockout slots (creates empty match slots for the chosen rounds)
+app.post('/api/league/knockout/setup', authGuard(), async (req, res) => {
+  const { tournament_id, rounds, crossovers } = req.body;
+  // rounds = ['QF','SF','Final'] or ['SF','Final'] etc.
+  if (!tournament_id || !rounds || !rounds.length) return res.status(400).json({ error: 'Missing params' });
+
+  const slotCounts = { 'QF': 4, 'SF': 2, 'Final': 1 };
+  const inserts = [];
+  for (const round of rounds) {
+    const n = slotCounts[round] || 1;
+    for (let i = 1; i <= n; i++) {
+      let home_seed = 'NULL', away_seed = 'NULL';
+      if (round === 'QF' && crossovers && crossovers.length > 0) {
+        const cross = crossovers.find(c => c.slot_number === i);
+        if (cross) {
+          if (cross.home_seed) home_seed = `'${cross.home_seed}'`;
+          if (cross.away_seed) away_seed = `'${cross.away_seed}'`;
+        }
+      }
+      inserts.push(`('${tournament_id}', '${round}', ${i}, 'scheduled', ${home_seed}, ${away_seed})`);
+    }
+  }
+  // Clear existing slots first, then re-insert
+  await db.query('DELETE FROM league_knockout_matches WHERE tournament_id=$1', [tournament_id]);
+  const { data, error } = await db.query(
+    `INSERT INTO league_knockout_matches (tournament_id, round, slot_number, status, home_seed, away_seed) VALUES ${inserts.join(',')} RETURNING *`
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data);
+});
+
+// Assign a team to a slot
+app.put('/api/league/knockout/:id', authGuard(), async (req, res) => {
+  const { home_team_id, home_team_name, home_team_logo, away_team_id, away_team_name, away_team_logo, date, venue, status } = req.body;
+  const { error } = await db.query(
+    `UPDATE league_knockout_matches SET home_team_id=$1, home_team_name=$2, home_team_logo=$3,
+     away_team_id=$4, away_team_name=$5, away_team_logo=$6, date=$7, venue=$8, status=$9 WHERE id=$10`,
+    [home_team_id || null, home_team_name || null, home_team_logo || null,
+     away_team_id || null, away_team_name || null, away_team_logo || null,
+     date || null, venue || null, status || 'scheduled', req.params.id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// Submit knockout result
+app.post('/api/league/knockout/:id/result', authGuard(), async (req, res) => {
+  const { home_runs, home_overs, away_runs, away_overs } = req.body;
+  const { id } = req.params;
+
+  const { data: rows, error: fetchErr } = await db.query(
+    'SELECT home_team_id, away_team_id, home_team_name, away_team_name, home_team_logo, away_team_logo FROM league_knockout_matches WHERE id=$1', [id]
+  );
+  if (fetchErr || !rows || !rows.length) return res.status(404).json({ error: 'Match not found' });
+  const m = rows[0];
+
+  let winner_id = null, winner_name = null, winner_logo = null;
+  if (home_runs > away_runs) { winner_id = m.home_team_id; winner_name = m.home_team_name; winner_logo = m.home_team_logo; }
+  else if (away_runs > home_runs) { winner_id = m.away_team_id; winner_name = m.away_team_name; winner_logo = m.away_team_logo; }
+
+  const { error } = await db.query(
+    `UPDATE league_knockout_matches SET home_runs=$1, home_overs=$2, away_runs=$3, away_overs=$4, winner_id=$5, winner_name=$6, winner_logo=$7, status='completed' WHERE id=$8`,
+    [home_runs, home_overs, away_runs, away_overs, winner_id, winner_name, winner_logo, id]
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true, winner_id, winner_name });
+});
+
+app.delete('/api/league/knockout/:id', authGuard(), async (req, res) => {
+  const { error } = await db.query('DELETE FROM league_knockout_matches WHERE id=$1', [req.params.id]);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
 });
 
 
