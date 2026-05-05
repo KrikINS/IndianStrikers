@@ -70,11 +70,11 @@ const LeagueCenter: React.FC = () => {
   const [scheduleGroupTab, setScheduleGroupTab] = useState<string>('all');
   const [koCrossoverTarget, setKoCrossoverTarget] = useState<string>('');
   const [fixtureSearchQuery, setFixtureSearchQuery] = useState('');
-  const [scoreForm, setScoreForm] = useState({ home_runs: '', home_overs: '', away_runs: '', away_overs: '', result_type: 'normal' as 'normal' | 'tie' | 'abandoned' });
+  const [scoreForm, setScoreForm] = useState({ home_runs: '', home_wickets: '', home_overs: '', away_runs: '', away_wickets: '', away_overs: '', result_type: 'normal' as 'normal' | 'tie' | 'abandoned' });
   const [knockoutMatches, setKnockoutMatches] = useState<any[]>([]);
   const [scoringKnockout, setScoringKnockout] = useState<any | null>(null);
   const [editingKnockout, setEditingKnockout] = useState<any | null>(null);
-  const [knockoutScoreForm, setKnockoutScoreForm] = useState({ home_runs: '', home_overs: '', away_runs: '', away_overs: '' });
+  const [knockoutScoreForm, setKnockoutScoreForm] = useState({ home_runs: '', home_wickets: '', home_overs: '', away_runs: '', away_wickets: '', away_overs: '' });
 
   // Form states for setup
   const [isSettingUp, setIsSettingUp] = useState(false);
@@ -167,19 +167,61 @@ const LeagueCenter: React.FC = () => {
   }, [teams, standings, selectedTournament]);
 
   const resolveSeed = useCallback((seed: string) => {
-    if (!seed || !seed.trim()) return null;
+    if (!seed || !seed.trim() || !selectedTournament) return null;
     const match = seed.trim().match(/^([A-Za-z]+)(\d+)$/);
     if (!match) return null;
+    
     const [_, groupNameLetter, rankStr] = match;
     const rank = parseInt(rankStr, 10);
     const group = groups.find(g => g.name.toLowerCase() === groupNameLetter.toLowerCase());
     if (!group) return null;
+
     const groupStandings = enrichedStandings.filter(s => s.group_id === group.id);
-    if (groupStandings.length >= rank) {
-      return groupStandings[rank - 1]; // 0-indexed
+    const groupFixtures = fixtures.filter(f => f.group_id === group.id);
+    if (groupStandings.length < rank) return null;
+
+    // Helper to get max possible points for a team
+    const getMaxPoints = (teamId: string, currentPts: number) => {
+      const remaining = groupFixtures.filter(f => 
+        (f.home_team_id === teamId || f.away_team_id === teamId) && f.status !== 'completed'
+      ).length;
+      return currentPts + (remaining * 2);
+    };
+
+    // Calculate all teams' ranges
+    const teamRanges = groupStandings.map(s => ({
+      id: s.team_id,
+      min: s.pts,
+      max: getMaxPoints(s.team_id, s.pts)
+    }));
+
+    const targetTeam = teamRanges[rank - 1];
+
+    // Position is confirmed if:
+    // 1. It is impossible for more than rank-1 teams to finish above this team.
+    // 2. It is impossible for this team to finish higher than its current rank (if rank > 1).
+    
+    // Check how many OTHER teams can finish with more points than our MINIMUM
+    // (We use >= to be safe about NRR/Tie-breakers)
+    const couldBeAbove = teamRanges.filter(t => t.id !== targetTeam.id && t.max >= targetTeam.min).length;
+    
+    // Check how many OTHER teams will DEFINITELY finish with more points than our MAXIMUM
+    const definitelyAbove = teamRanges.filter(t => t.id !== targetTeam.id && t.min > targetTeam.max).length;
+
+    // A position is confirmed if:
+    // - At most rank-1 teams could potentially be above us.
+    // - At least rank-1 teams are guaranteed to be above us.
+    const isConfirmed = couldBeAbove <= rank - 1 && definitelyAbove === rank - 1;
+
+    // Fallback: If all group matches are done, it's definitely confirmed
+    const allDone = groupFixtures.length > 0 && groupFixtures.every(f => f.status === 'completed');
+
+    if (isConfirmed || allDone) {
+      return groupStandings[rank - 1];
     }
+
     return null;
-  }, [groups, enrichedStandings]);
+  }, [groups, enrichedStandings, fixtures, selectedTournament]);
 
   const handleCreateTournament = async () => {
     if (!newTournament.name) return toast.error('Name is required');
@@ -282,7 +324,7 @@ const LeagueCenter: React.FC = () => {
 
   const handleSubmitResult = async () => {
     if (!scoringFixture) return;
-    const { home_runs, home_overs, away_runs, away_overs, result_type } = scoreForm;
+    const { home_runs, home_wickets, home_overs, away_runs, away_wickets, away_overs, result_type } = scoreForm;
     if (!home_runs || !home_overs || !away_runs || !away_overs) {
       toast.error('Please fill in all scores and overs');
       return;
@@ -290,13 +332,15 @@ const LeagueCenter: React.FC = () => {
     try {
       await submitLeagueResult(scoringFixture.id, {
         home_runs: parseFloat(home_runs),
+        home_wickets: home_wickets ? parseInt(home_wickets) : 0,
         home_overs: parseFloat(home_overs),
         away_runs: parseFloat(away_runs),
+        away_wickets: away_wickets ? parseInt(away_wickets) : 0,
         away_overs: parseFloat(away_overs),
         result_type
       });
       setScoringFixture(null);
-      setScoreForm({ home_runs: '', home_overs: '', away_runs: '', away_overs: '', result_type: 'normal' });
+      setScoreForm({ home_runs: '', home_wickets: '', home_overs: '', away_runs: '', away_wickets: '', away_overs: '', result_type: 'normal' });
       loadTournamentData(selectedTournament!.id);
       toast.success('Result saved — points table updated!');
     } catch (e) {
@@ -390,7 +434,7 @@ const LeagueCenter: React.FC = () => {
 
   const handleSubmitKnockoutResult = async () => {
     if (!scoringKnockout) return;
-    const { home_runs, home_overs, away_runs, away_overs } = knockoutScoreForm;
+    const { home_runs, home_wickets, home_overs, away_runs, away_wickets, away_overs } = knockoutScoreForm;
     if (!home_runs || !home_overs || !away_runs || !away_overs) {
       toast.error('Please enter all scores and overs');
       return;
@@ -413,12 +457,14 @@ const LeagueCenter: React.FC = () => {
 
       await submitKnockoutResult(scoringKnockout.id, {
         home_runs: parseFloat(home_runs),
+        home_wickets: home_wickets ? parseInt(home_wickets) : 0,
         home_overs: parseFloat(home_overs),
         away_runs: parseFloat(away_runs),
+        away_wickets: away_wickets ? parseInt(away_wickets) : 0,
         away_overs: parseFloat(away_overs)
       });
       setScoringKnockout(null);
-      setKnockoutScoreForm({ home_runs: '', home_overs: '', away_runs: '', away_overs: '' });
+      setKnockoutScoreForm({ home_runs: '', home_wickets: '', home_overs: '', away_runs: '', away_wickets: '', away_overs: '' });
       loadTournamentData(selectedTournament!.id);
       toast.success('Result saved!');
     } catch (e) {
@@ -862,7 +908,16 @@ const LeagueCenter: React.FC = () => {
                                  <td className="px-8 py-5 text-right">
                                    <div className="flex justify-end gap-1.5">
                                      <button
-                                       onClick={() => { setScoringFixture(f); setScoreForm({ home_runs: String((f as any).home_team_runs ?? ''), home_overs: String((f as any).home_team_overs ?? ''), away_runs: String((f as any).away_team_runs ?? ''), away_overs: String((f as any).away_team_overs ?? ''), result_type: 'normal' }); }}
+                                       onClick={() => { setScoringFixture(f); 
+                                          setScoreForm({ 
+                                            home_runs: String((f as any).home_team_runs ?? ''), 
+                                            home_wickets: String((f as any).home_team_wickets ?? ''), 
+                                            home_overs: String((f as any).home_team_overs ?? ''), 
+                                            away_runs: String((f as any).away_team_runs ?? ''), 
+                                            away_wickets: String((f as any).away_team_wickets ?? ''), 
+                                            away_overs: String((f as any).away_team_overs ?? ''), 
+                                            result_type: 'normal' 
+                                          }); }}
                                        title="Enter Score"
                                        className="p-2 text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all active:scale-95"
                                      >
@@ -938,7 +993,17 @@ const LeagueCenter: React.FC = () => {
                    tournament={selectedTournament}
                    onReset={() => handleSetupKnockout(['QF','SF','Final'])}
                    onSetup={handleSetupKnockout}
-                   onScore={(m) => { setScoringKnockout(m); setKnockoutScoreForm({ home_runs: '', home_overs: '', away_runs: '', away_overs: '' }); }}
+                   onScore={(m) => { 
+                     setScoringKnockout(m); 
+                     setKnockoutScoreForm({ 
+                       home_runs: '', 
+                       home_wickets: '', 
+                       home_overs: '', 
+                       away_runs: '', 
+                       away_wickets: '', 
+                       away_overs: '' 
+                     }); 
+                   }}
                    onEdit={(m) => setEditingKnockout({ ...m })}
                    resolveSeed={resolveSeed}
                  />
@@ -1227,10 +1292,14 @@ const LeagueCenter: React.FC = () => {
               <div className="p-8 space-y-5">
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">{scoringFixture.home_team_name}</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Runs</label>
                       <input type="number" placeholder="e.g. 145" value={scoreForm.home_runs} onChange={e => setScoreForm({...scoreForm, home_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Wickets</label>
+                      <input type="number" max="10" placeholder="e.g. 10" value={scoreForm.home_wickets} onChange={e => setScoreForm({...scoreForm, home_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
                     </div>
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Overs</label>
@@ -1240,10 +1309,14 @@ const LeagueCenter: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">{scoringFixture.away_team_name}</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Runs</label>
                       <input type="number" placeholder="e.g. 138" value={scoreForm.away_runs} onChange={e => setScoreForm({...scoreForm, away_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Wickets</label>
+                      <input type="number" max="10" placeholder="e.g. 10" value={scoreForm.away_wickets} onChange={e => setScoreForm({...scoreForm, away_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
                     </div>
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Overs</label>
@@ -1285,13 +1358,19 @@ const LeagueCenter: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">{scoringKnockout.home_team_name}</label>
-                    <input title="Home Runs" type="number" placeholder="Runs" value={knockoutScoreForm.home_runs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, home_runs: e.target.value})} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
-                    <input title="Home Overs" type="number" placeholder="Overs" value={knockoutScoreForm.home_overs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, home_overs: e.target.value})} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 mt-2" />
+                    <div className="space-y-2">
+                      <input title="Home Runs" type="number" placeholder="Runs" value={knockoutScoreForm.home_runs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, home_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      <input title="Home Wickets" type="number" max="10" placeholder="Wickets" value={knockoutScoreForm.home_wickets} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, home_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      <input title="Home Overs" type="number" placeholder="Overs" value={knockoutScoreForm.home_overs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, home_overs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                    </div>
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">{scoringKnockout.away_team_name}</label>
-                    <input title="Away Runs" type="number" placeholder="Runs" value={knockoutScoreForm.away_runs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, away_runs: e.target.value})} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
-                    <input title="Away Overs" type="number" placeholder="Overs" value={knockoutScoreForm.away_overs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, away_overs: e.target.value})} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 mt-2" />
+                    <div className="space-y-2">
+                      <input title="Away Runs" type="number" placeholder="Runs" value={knockoutScoreForm.away_runs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, away_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      <input title="Away Wickets" type="number" max="10" placeholder="Wickets" value={knockoutScoreForm.away_wickets} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, away_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      <input title="Away Overs" type="number" placeholder="Overs" value={knockoutScoreForm.away_overs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, away_overs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-4">
@@ -1648,26 +1727,26 @@ const KOMatchCard: React.FC<{ m: any; barClass: string; onScore: (m: any) => voi
 
   return (
     <motion.div layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-      className={`bg-white rounded-2xl border-2 overflow-hidden shadow-sm hover:shadow-lg transition-all w-52 flex-shrink-0 ${done ? 'border-emerald-200' : 'border-slate-100'}`}>
-      <div className={`h-1 ${barClass}`} />
-      <div className="p-4 space-y-1.5">
+      className={`bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-2xl hover:border-white/30 hover:bg-white/10 transition-all w-52 flex-shrink-0`}>
+      <div className={`h-1 ${barClass} shadow-[0_0_15px_currentColor] opacity-80`} />
+      <div className="p-4 space-y-2">
         {sides.map((s, si) => (
-          <div key={si} className={`flex items-center gap-2 p-2 rounded-xl ${s.won ? 'bg-emerald-50' : 'bg-slate-50'}`}>
-            <div className="w-6 h-6 rounded-full bg-white border border-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-              {s.logo ? <img src={s.logo} className="w-full h-full object-contain" alt="" /> : <Shield size={10} className="text-slate-200" />}
+          <div key={si} className={`flex items-center gap-2 p-2 rounded-xl transition-colors ${s.won ? 'bg-white/10 border border-white/20' : 'bg-white/5 border border-transparent'}`}>
+            <div className="w-6 h-6 rounded-full bg-slate-900 border border-white/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {s.logo ? <img src={s.logo} className="w-full h-full object-contain" alt="" /> : <Shield size={10} className="text-white/20" />}
             </div>
-            <p className={`text-[10px] font-black uppercase truncate flex-1 ${s.won ? 'text-emerald-700' : s.name ? 'text-slate-700' : 'text-slate-300'}`}>{s.name || 'TBD'}</p>
-            {done && <span className={`text-sm font-black ${s.won ? 'text-emerald-700' : 'text-slate-400'}`}>{s.runs}</span>}
+            <p className={`text-[10px] font-black uppercase truncate flex-1 ${s.won ? 'text-white' : s.name ? 'text-white/70' : 'text-white/30'}`}>{s.name || 'TBD'}</p>
+            {done && <span className={`text-sm font-black ${s.won ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]' : 'text-white/40'}`}>{s.runs}</span>}
           </div>
         ))}
-        {done && m.home_overs && <p className="text-[8px] text-slate-300 font-bold uppercase text-center pt-1">{m.home_overs}ov / {m.away_overs}ov</p>}
-        {m.date && <p className="text-[8px] text-slate-300 font-bold text-center">{new Date(m.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</p>}
+        {done && m.home_overs && <p className="text-[8px] text-white/40 font-bold uppercase text-center pt-1">{m.home_overs}ov / {m.away_overs}ov</p>}
+        {m.date && <p className="text-[8px] text-white/40 font-bold text-center">{new Date(m.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</p>}
       </div>
-      <div className="px-4 pb-3 flex gap-1 justify-end">
+      <div className="px-4 pb-3 flex gap-1 justify-end border-t border-white/5 pt-2">
         {ready && !done && (
-          <button title="Enter Score" onClick={handleScoreClick} className="p-1.5 rounded-lg text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 transition-all"><TrendingUp size={12} /></button>
+          <button title="Enter Score" onClick={handleScoreClick} className="p-1.5 rounded-lg text-white/30 hover:text-amber-400 hover:bg-amber-400/10 transition-all"><TrendingUp size={12} /></button>
         )}
-        <button title="Edit Match" onClick={() => onEdit(m)} className="p-1.5 rounded-lg text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-all"><Edit2 size={12} /></button>
+        <button title="Edit Match" onClick={() => onEdit(m)} className="p-1.5 rounded-lg text-white/30 hover:text-blue-400 hover:bg-blue-400/10 transition-all"><Edit2 size={12} /></button>
       </div>
     </motion.div>
   );
@@ -1709,15 +1788,22 @@ const KnockoutBracket: React.FC<KOProps> = ({ matches, teams: _teams, tournament
   }
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h3 className="text-2xl font-black text-slate-900 italic uppercase tracking-tighter">Road to the Trophy</h3>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{tournament?.name} · Knockout Stage</p>
+    <div className="p-6 md:p-8 bg-slate-950 rounded-[2.5rem] relative overflow-hidden border border-slate-800 shadow-2xl m-2"
+      style={{ backgroundImage: "url('/assets/cricket_ground_bg.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      {/* Dark Overlay for Depth and Readability */}
+      <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-[2px] z-0" />
+      
+      <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none z-0" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] -ml-48 -mb-48 pointer-events-none z-0" />
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-10">
+          <div>
+            <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter drop-shadow-md">Road to the Trophy</h3>
+            <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest mt-1 glow-amber">{tournament?.name} · Knockout Stage</p>
+          </div>
+          <button onClick={onReset} className="text-[9px] font-black text-white/50 hover:text-white uppercase tracking-widest border border-white/10 hover:border-white/30 hover:bg-white/5 px-4 py-2 rounded-xl transition-all">Reset Bracket</button>
         </div>
-        <button onClick={onReset} className="text-[9px] font-black text-rose-400 hover:text-rose-600 uppercase tracking-widest border border-rose-100 hover:border-rose-300 px-4 py-2 rounded-xl transition-all">Reset Bracket</button>
-      </div>
-      <div className="overflow-x-auto pb-6">
+        <div className="overflow-x-auto pb-6">
         <div className="flex items-center gap-6 min-w-max">
           {qfMatches.length > 0 && (
             <div>
@@ -1741,29 +1827,31 @@ const KnockoutBracket: React.FC<KOProps> = ({ matches, teams: _teams, tournament
               <KOMatchCard m={finalMatch} barClass="bg-gradient-to-r from-amber-500 to-orange-500" onScore={onScore} onEdit={onEdit} resolveSeed={resolveSeed} />
             </div>
           )}
-          <div className="flex flex-col items-center gap-3 pl-4">
+          <div className="flex flex-col items-center gap-3 pl-8">
             <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4, type: 'spring', stiffness: 200 }}>
               <motion.div
-                animate={champion ? { rotate: [0,-10,10,-5,5,0] } : {}}
-                transition={{ delay: 0.8, duration: 0.6 }}
-                className={`w-20 h-20 rounded-full flex items-center justify-center shadow-2xl ${champion ? 'bg-gradient-to-br from-amber-400 to-yellow-500 shadow-amber-300' : 'bg-slate-100'}`}
+                animate={champion ? { rotate: [0,-10,10,-5,5,0], scale: [1, 1.1, 1] } : {}}
+                transition={{ delay: 0.8, duration: 1.5, ease: "easeInOut" }}
+                className={`w-24 h-24 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(245,158,11,0.3)] relative ${champion ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600' : 'bg-white/10 border border-white/10'}`}
               >
-                <Trophy className={champion ? 'text-white' : 'text-slate-300'} size={36} />
+                {champion && <div className="absolute inset-0 bg-white/20 rounded-full animate-ping opacity-20" />}
+                <Trophy className={champion ? 'text-white drop-shadow-md' : 'text-white/20'} size={40} />
               </motion.div>
               {champion ? (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }} className="text-center mt-3">
-                  <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">🏆 Champion</p>
-                  <p className="text-sm font-black text-slate-900 uppercase italic tracking-tight mt-1 max-w-[120px] leading-tight">{champion}</p>
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }} className="text-center mt-4">
+                  <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest drop-shadow-sm">🏆 Champions</p>
+                  <p className="text-xl font-black text-white uppercase italic tracking-tighter mt-1 max-w-[160px] leading-tight drop-shadow-md">{champion}</p>
                 </motion.div>
               ) : (
-                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest text-center mt-3">Champions TBD</p>
+                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest text-center mt-4">Champions TBD</p>
               )}
             </motion.div>
           </div>
         </div>
       </div>
-      <div className="mt-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-        <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Edit to assign teams and set match details. Enter score once teams are assigned.</p>
+      <div className="mt-8 p-4 bg-white/5 rounded-2xl border border-white/10 text-center">
+        <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Edit to assign teams and set match details. Enter score once teams are assigned.</p>
+      </div>
       </div>
     </div>
   );

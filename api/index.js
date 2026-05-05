@@ -2321,15 +2321,18 @@ app.put('/api/league/fixtures/:id', authGuard(), async (req, res) => {
 
 // Submit match result — calculates winner and NRR-contributing data
 app.post('/api/league/fixtures/:id/result', authGuard(), async (req, res) => {
-  const { home_runs, home_overs, away_runs, away_overs, result_type } = req.body;
+  const { home_runs, home_overs, away_runs, away_overs, home_wickets = 0, away_wickets = 0, result_type } = req.body;
   const { id } = req.params;
 
-  // Fetch fixture to know team ids
+  // Fetch fixture to know team ids and tournament format
   const { data: rows, error: fetchErr } = await db.query(
-    'SELECT home_team_id, away_team_id FROM league_fixtures WHERE id=$1', [id]
+    `SELECT f.home_team_id, f.away_team_id, t.format 
+     FROM league_fixtures f 
+     JOIN league_tournaments t ON f.tournament_id = t.id 
+     WHERE f.id=$1`, [id]
   );
   if (fetchErr || !rows || rows.length === 0) return res.status(404).json({ error: 'Fixture not found' });
-  const { home_team_id, away_team_id } = rows[0];
+  const { home_team_id, away_team_id, format } = rows[0];
 
   let winner_id = null;
   let status = 'completed';
@@ -2346,11 +2349,24 @@ app.post('/api/league/fixtures/:id/result', authGuard(), async (req, res) => {
     else winner_id = null; // tie by equal runs (super over edge case)
   }
 
+  // Calculate NRR overs
+  let max_overs = 20; // Default T20
+  if (format === 'T10') max_overs = 10;
+  else if (format === 'ODI') max_overs = 50;
+
+  let home_nrr_overs = home_overs;
+  if (home_wickets >= 10 && home_overs < max_overs) home_nrr_overs = max_overs;
+  
+  let away_nrr_overs = away_overs;
+  if (away_wickets >= 10 && away_overs < max_overs) away_nrr_overs = max_overs;
+
   const { error } = await db.query(
     `UPDATE league_fixtures 
-     SET home_team_runs=$1, home_team_overs=$2, away_team_runs=$3, away_team_overs=$4, winner_id=$5, status=$6
-     WHERE id=$7`,
-    [home_runs, home_overs, away_runs, away_overs, winner_id, status, id]
+     SET home_team_runs=$1, home_team_overs=$2, away_team_runs=$3, away_team_overs=$4, 
+         home_team_wickets=$5, away_team_wickets=$6, home_nrr_overs=$7, away_nrr_overs=$8, 
+         winner_id=$9, status=$10
+     WHERE id=$11`,
+    [home_runs, home_overs, away_runs, away_overs, home_wickets, away_wickets, home_nrr_overs, away_nrr_overs, winner_id, status, id]
   );
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true, winner_id });
@@ -2459,7 +2475,7 @@ app.put('/api/league/knockout/:id', authGuard(), async (req, res) => {
 
 // Submit knockout result
 app.post('/api/league/knockout/:id/result', authGuard(), async (req, res) => {
-  const { home_runs, home_overs, away_runs, away_overs } = req.body;
+  const { home_runs, home_overs, away_runs, away_overs, home_wickets = 0, away_wickets = 0 } = req.body;
   const { id } = req.params;
 
   const { data: rows, error: fetchErr } = await db.query(
@@ -2473,8 +2489,8 @@ app.post('/api/league/knockout/:id/result', authGuard(), async (req, res) => {
   else if (away_runs > home_runs) { winner_id = m.away_team_id; winner_name = m.away_team_name; winner_logo = m.away_team_logo; }
 
   const { error } = await db.query(
-    `UPDATE league_knockout_matches SET home_runs=$1, home_overs=$2, away_runs=$3, away_overs=$4, winner_id=$5, winner_name=$6, winner_logo=$7, status='completed' WHERE id=$8`,
-    [home_runs, home_overs, away_runs, away_overs, winner_id, winner_name, winner_logo, id]
+    `UPDATE league_knockout_matches SET home_runs=$1, home_overs=$2, away_runs=$3, away_overs=$4, home_wickets=$5, away_wickets=$6, winner_id=$7, winner_name=$8, winner_logo=$9, status='completed' WHERE id=$10`,
+    [home_runs, home_overs, away_runs, away_overs, home_wickets, away_wickets, winner_id, winner_name, winner_logo, id]
   );
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true, winner_id, winner_name });

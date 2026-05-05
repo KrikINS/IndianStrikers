@@ -374,7 +374,7 @@ const mapMatch = (m: any): ScheduledMatch => {
         live_state: m.live_state,
         toss_winner_id: m.toss_winner_id,
         toss_choice: m.toss_choice,
-        is_home_batting_first: m.is_home_batting_first,
+        isHomeBattingFirst: m.is_home_batting_first,
         is_test: m.is_test
     };
 };
@@ -1016,7 +1016,7 @@ export const updateLeagueFixture = async (id: string, f: Partial<LeagueFixture>)
 
 export const submitLeagueResult = async (
   id: string,
-  result: { home_runs: number; home_overs: number; away_runs: number; away_overs: number; result_type: 'normal' | 'tie' | 'abandoned' }
+  result: { home_runs: number; home_wickets: number; home_overs: number; away_runs: number; away_wickets: number; away_overs: number; result_type: 'normal' | 'tie' | 'abandoned' }
 ) => {
   const res = await fetch(`${API_URL}/league/fixtures/${id}/result`, {
     method: 'POST',
@@ -1075,7 +1075,7 @@ export const updateKnockoutMatch = async (id: string, data: Record<string, unkno
   return handleResponse(res);
 };
 
-export const submitKnockoutResult = async (id: string, result: { home_runs: number; home_overs: number; away_runs: number; away_overs: number }) => {
+export const submitKnockoutResult = async (id: string, result: { home_runs: number; home_wickets: number; home_overs: number; away_runs: number; away_wickets: number; away_overs: number }) => {
   const res = await fetch(`${API_URL}/league/knockout/${id}/result`, {
     method: 'POST',
     headers: getHeaders(),
