@@ -332,11 +332,13 @@ const mapMatch = (m: any): ScheduledMatch => {
             };
         }
         // Option 2: Fallback to the detailed scorecard object
-        if (inningsData && (inningsData.totalRuns !== undefined || inningsData.totalWickets !== undefined)) {
+        if (inningsData && (inningsData.totalRuns !== undefined || inningsData.totalWickets !== undefined || inningsData.totalBalls !== undefined)) {
+            const balls = Number(inningsData.totalBalls || 0);
+            const calculatedOvers = balls > 0 ? parseFloat(`${Math.floor(balls / 6)}.${balls % 6}`) : 0;
             return {
                 runs: Number(inningsData.totalRuns || 0),
-                wickets: Number(inningsData.totalWickets || 0),
-                overs: Number(inningsData.totalOvers || 0)
+                wickets: Number(inningsData.wickets || inningsData.totalWickets || 0),
+                overs: Number(inningsData.totalOvers || calculatedOvers)
             };
         }
         // Option 3: Fallback to the legacy integer score (no wickets/overs available)
@@ -358,8 +360,8 @@ const mapMatch = (m: any): ScheduledMatch => {
         maxOvers: m.max_overs,
         homeTeamXI: Array.isArray(m.home_team_xi) ? m.home_team_xi : [],
         opponentTeamXI: Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : [],
-        finalScoreHome: normalizeScore(m.final_score_home, rawScorecard?.innings1),
-        finalScoreAway: normalizeScore(m.final_score_away, rawScorecard?.innings2),
+        finalScoreHome: normalizeScore(m.final_score_home, m.is_home_batting_first ? rawScorecard?.innings1 : rawScorecard?.innings2),
+        finalScoreAway: normalizeScore(m.final_score_away, m.is_home_batting_first ? rawScorecard?.innings2 : rawScorecard?.innings1),
         scorecard: rawScorecard,
         resultNote: m.result_note,
         isLocked: !!m.is_locked,
@@ -372,6 +374,7 @@ const mapMatch = (m: any): ScheduledMatch => {
         live_state: m.live_state,
         toss_winner_id: m.toss_winner_id,
         toss_choice: m.toss_choice,
+        is_home_batting_first: m.is_home_batting_first,
         is_test: m.is_test
     };
 };

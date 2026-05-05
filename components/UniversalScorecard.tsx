@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useMatchCenter } from '../store/matchStore';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell, LabelList } from 'recharts';
 
 // --- STYLED COMPONENTS (Ported from ScorerDashboard) ---
 
@@ -348,8 +348,8 @@ interface BowlingStat {
   maidens: number;
   runs: number;
   wickets: number;
-  wides?: number;
-  no_balls?: number;
+  wides: number;
+  no_balls: number;
   index?: number;
 }
 
@@ -401,7 +401,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   // Helper: Normalize data from different formats
   const normalizedData = useMemo(() => {
     const transform = (inn: any): Innings | null => {
-      if (!inn || (!inn.battingStats && !inn.batting && !inn.bowlingStats && !inn.bowling && !inn.extras)) return null;
+      if (!inn || (!inn.battingStats && !inn.batting && !inn.bowlingStats && !inn.bowling && !inn.extras && !inn.history)) return null;
 
       // Handle Store format (Map)
       let batting: BattingStat[] = [];
@@ -503,7 +503,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
         totalRuns: inn.totalRuns || 0,
         wickets: inn.wickets || inn.totalWickets || 0,
         totalBalls: inn.totalBalls || (inn.totalOvers ? Math.floor(inn.totalOvers) * 6 + Math.round((inn.totalOvers % 1) * 10) : 0),
-        history: inn.history || []
+        history: inn.history || [],
+        battingTeamId: inn.battingTeamId || inn.batting_team_id
       };
     };
 
@@ -615,8 +616,15 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
               <TeamInfo>
                 <TeamNameLabel>{match.homeTeamName || 'INDIAN STRIKERS'}</TeamNameLabel>
                 <ScoreValue>
-                  {match.finalScoreHome?.runs || 0}/{match.finalScoreHome?.wickets || 0}
-                  <span>({getOvers(match.finalScoreHome?.balls || 0)})</span>
+                  {(() => {
+                    const inn = match.is_home_batting_first ? normalizedData.innings1 : normalizedData.innings2;
+                    return (
+                      <>
+                        {inn?.totalRuns || 0}/{inn?.wickets || 0}
+                        <span>({getOvers(inn?.totalBalls || 0)})</span>
+                      </>
+                    );
+                  })()}
                 </ScoreValue>
               </TeamInfo>
             </TeamBlock>
@@ -631,15 +639,22 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
               <TeamInfo $align="right">
                 <TeamNameLabel>{match.opponentName || 'OPPONENT'}</TeamNameLabel>
                 <ScoreValue>
-                  {match.finalScoreAway?.runs || 0}/{match.finalScoreAway?.wickets || 0}
-                  <span>({getOvers(match.finalScoreAway?.balls || 0)})</span>
+                  {(() => {
+                    const inn = match.is_home_batting_first ? normalizedData.innings2 : normalizedData.innings1;
+                    return (
+                      <>
+                        {inn?.totalRuns || 0}/{inn?.wickets || 0}
+                        <span>({getOvers(inn?.totalBalls || 0)})</span>
+                      </>
+                    );
+                  })()}
                 </ScoreValue>
               </TeamInfo>
             </TeamBlock>
           </TeamsHorizontalRow>
 
           <ResultHighlightBar>
-            {match.resultNote || 'MATCH IN PROGRESS'}
+            {match.resultNote || (match.status === 'completed' ? 'MATCH COMPLETED' : 'MATCH IN PROGRESS')}
           </ResultHighlightBar>
 
           <MetaGrid>
@@ -666,7 +681,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer'
               }}
             >
-              1ST INNINGS
+              {match.is_home_batting_first ? (match.homeTeamName || 'INDIAN STRIKERS') : (match.opponentName || 'OPPONENT')}
             </button>
             <button
               onClick={() => setSelectedInnings(2)}
@@ -677,7 +692,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer'
               }}
             >
-              2ND INNINGS
+              {match.is_home_batting_first ? (match.opponentName || 'OPPONENT') : (match.homeTeamName || 'INDIAN STRIKERS')}
             </button>
           </div>
         )}
@@ -699,7 +714,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
         <ScrollContent>
           {!currentInningsData ? (
-            <div style={{ padding: '40px', textAlign: 'center', opacity: 0.4 }}>NO DATA AVAILABLE FOR THIS INNINGS</div>
+            <div style={{ padding: '40px', textAlign: 'center', opacity: 0.4 }}>NO DATA AVAILABLE FOR THIS TEAM</div>
           ) : (
             <>
               {tab === 'info' && (
@@ -857,8 +872,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.maidens}</Td>
                           <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
                           <Td style={{ textAlign: 'center', color: '#38BDF8' }}>{stat.wickets}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.wides || 0}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.no_balls || 0}</Td>
+                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.wides}</Td>
+                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.no_balls}</Td>
                           <Td style={{ textAlign: 'right', opacity: 0.8 }}>
                             {stat.overs > 0 ? (stat.runs / stat.overs).toFixed(2) : '0.00'}
                           </Td>
@@ -872,7 +887,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     <span style={{ fontWeight: 900 }}>
                       {Object.values(currentInningsData?.extras || {}).reduce((a: any, b: any) => (Number(a) || 0) + (Number(b) || 0), 0)}{' '}
                       <span style={{ opacity: 0.4, fontSize: '0.65rem', marginLeft: 4 }}>
-                        (wd {currentInningsData?.extras?.wides || 0}, nb {currentInningsData?.extras?.noBalls || 0}, b {currentInningsData?.extras?.byes || 0}, lb {currentInningsData?.extras?.legByes || 0})
+                      (wd {currentInningsData?.extras?.wides ?? 0}, nb {currentInningsData?.extras?.noBalls ?? 0}, b {currentInningsData?.extras?.byes ?? 0}, lb {currentInningsData?.extras?.legByes ?? 0})
                       </span>
                     </span>
                   </ExtrasRow>
@@ -946,7 +961,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                                 <span style={{ fontWeight: 900, color: '#FAB005' }}>{bOvers}-{bWkts}-{bRuns}</span>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ opacity: 0.6, fontSize: '0.65rem' }}>INNINGS TOTAL:</span>
+                                <span style={{ opacity: 0.6, fontSize: '0.65rem' }}>TOTAL:</span>
                                 <span style={{ fontWeight: 900 }}>{runsAtEnd}/{wktsAtEnd}</span>
                               </div>
                             </div>
@@ -1039,8 +1054,18 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     processInn(normalizedData.innings2, '2');
 
                     const analyticsData = Object.values(overStats);
-                    const team1Name = normalizedData.innings1?.battingTeamId === 'HOME' ? (match.homeTeamName || 'INDIAN STRIKERS') : (match.opponentName || 'OPPONENT');
-                    const team2Name = normalizedData.innings2?.battingTeamId === 'HOME' ? (match.homeTeamName || 'INDIAN STRIKERS') : (match.opponentName || 'OPPONENT');
+                    const getTeamName = (inn: any, num: number) => {
+                      const bId = inn?.battingTeamId;
+                      if (bId === 'HOME') return match.homeTeamName || 'INDIAN STRIKERS';
+                      if (bId === 'AWAY') return match.opponentName || 'SAUDI KNIGHTS';
+                      
+                      // Fallback: If battingTeamId is missing, guess based on innings number and isHomeBattingFirst
+                      const isHome = num === 1 ? match.isHomeBattingFirst : !match.isHomeBattingFirst;
+                      return isHome ? (match.homeTeamName || 'INDIAN STRIKERS') : (match.opponentName || 'SAUDI KNIGHTS');
+                    };
+
+                    const team1Name = getTeamName(normalizedData.innings1, 1);
+                    const team2Name = getTeamName(normalizedData.innings2, 2);
 
                     return (
                       <>
@@ -1057,14 +1082,42 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                                 />
                                 <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
                                 <Bar dataKey="runs1" name={team1Name} fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={8}>
-                                  {analyticsData.map((entry, index) => (
-                                    <Cell key={`c1-${index}`} fill={entry.wickets1 > 0 ? '#ef4444' : '#38BDF8'} />
-                                  ))}
+                                  <LabelList 
+                                    dataKey="wickets1" 
+                                    content={(props: any) => {
+                                      const { x, y, width, value } = props;
+                                      if (!value || value <= 0) return null;
+                                      return (
+                                        <circle 
+                                          cx={x + width / 2} 
+                                          cy={y - 10} 
+                                          r={4} 
+                                          fill="#ef4444" 
+                                          stroke="#FFF" 
+                                          strokeWidth={1} 
+                                        />
+                                      );
+                                    }}
+                                  />
                                 </Bar>
                                 <Bar dataKey="runs2" name={team2Name} fill="#FAB005" radius={[4, 4, 0, 0]} barSize={8}>
-                                  {analyticsData.map((entry, index) => (
-                                    <Cell key={`c2-${index}`} fill={entry.wickets2 > 0 ? '#ef4444' : '#FAB005'} />
-                                  ))}
+                                  <LabelList 
+                                    dataKey="wickets2" 
+                                    content={(props: any) => {
+                                      const { x, y, width, value } = props;
+                                      if (!value || value <= 0) return null;
+                                      return (
+                                        <circle 
+                                          cx={x + width / 2} 
+                                          cy={y - 10} 
+                                          r={4} 
+                                          fill="#ef4444" 
+                                          stroke="#FFF" 
+                                          strokeWidth={1} 
+                                        />
+                                      );
+                                    }}
+                                  />
                                 </Bar>
                               </BarChart>
                             </ResponsiveContainer>

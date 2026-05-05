@@ -58,12 +58,17 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     history: []
   };
 
-  const [scorecard, setScorecard] = useState<FullScorecardData>(() => {
-    const raw: any = match.scorecard || {};
-    const base = {
-      innings1: { ...initialInnings, ...(raw.innings1 || {}) },
-      innings2: { ...initialInnings, ...(raw.innings2 || {}) }
+  const ensureScorecardStructure = (raw: any): FullScorecardData => {
+    const data = raw || {};
+    return {
+      innings1: { ...initialInnings, ...(data.innings1 || {}) },
+      innings2: { ...initialInnings, ...(data.innings2 || {}) }
     };
+  };
+
+  const [scorecard, setScorecard] = useState<FullScorecardData>(() => {
+    const raw: any = match.scorecard || (match.live_data as any) || {};
+    const base = ensureScorecardStructure(raw);
     
     // Fallback to summary scores if innings data is completely missing
     if (!raw.innings1) {
@@ -90,7 +95,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     ensureExtras(base.innings1);
     ensureExtras(base.innings2);
     
-    return base as FullScorecardData;
+    return base;
   });
 
   const [battingRowIds, setBattingRowIds] = useState<Record<1 | 2, string[]>>(() => {
@@ -178,7 +183,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
       // Prioritize immediately available live_data/scorecard from props
       const initialData = match.scorecard || (match.live_data as any);
       if (initialData) {
-        const s = initialData;
+        const s = ensureScorecardStructure(initialData);
         setScorecard(s);
         if (s.innings1?.batting) setBattingRowIds(prev => ({ ...prev, 1: s.innings1.batting.map((b: any) => b.playerId) }));
         if (s.innings2?.batting) setBattingRowIds(prev => ({ ...prev, 2: s.innings2.batting.map((b: any) => b.playerId) }));
@@ -203,8 +208,9 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         try {
           const fresh = await api.getMatch(match.id);
           if (fresh) {
-            const s = fresh.scorecard || (fresh.live_data as any);
-            if (s) {
+            const raw = fresh.scorecard || (fresh.live_data as any);
+            if (raw) {
+              const s = ensureScorecardStructure(raw);
               setScorecard(s);
               if (s.innings1?.batting) setBattingRowIds(prev => ({ ...prev, 1: s.innings1.batting.map((b: any) => b.playerId) }));
               if (s.innings2?.batting) setBattingRowIds(prev => ({ ...prev, 2: s.innings2.batting.map((b: any) => b.playerId) }));
@@ -261,14 +267,15 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     if (!pId) return;
     setScorecard(prev => {
       const key = inn === 1 ? 'innings1' : 'innings2';
-      const existing = prev[key].batting.find(b => b.playerId === pId);
-      let newBatting = [...prev[key].batting];
+      const innData = prev[key] || { ...initialInnings };
+      const existing = (innData.batting || []).find(b => b.playerId === pId);
+      let newBatting = [...(innData.batting || [])];
       if (existing) {
         newBatting = newBatting.map(b => b.playerId === pId ? { ...b, [field]: value } : b);
       } else {
         newBatting.push({ playerId: pId, name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false, [field]: value });
       }
-      return { ...prev, [key]: { ...prev[key], batting: newBatting } };
+      return { ...prev, [key]: { ...innData, batting: newBatting } };
     });
   };
 
@@ -279,9 +286,12 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     });
   };
 
-  const getBattingEntry = (inn: 1 | 2, pId: string) =>
-    scorecard[inn === 1 ? 'innings1' : 'innings2'].batting.find(b => b.playerId === pId)
-    || { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false, fielderId: '', bowlerId: '' };
+  const getBattingEntry = (inn: 1 | 2, pId: string) => {
+    const innKey = inn === 1 ? 'innings1' : 'innings2';
+    const innData = scorecard[innKey];
+    if (!innData || !innData.batting) return { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false, fielderId: '', bowlerId: '' };
+    return innData.batting.find(b => b.playerId === pId) || { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false, fielderId: '', bowlerId: '' };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -295,7 +305,12 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         const innKey = inn === 1 ? 'innings1' : 'innings2';
         // Only return players who actually have an entry in the scorecard
         return scorecard[innKey].batting.map(entry => {
-             return { ...entry, fielderId: entry.fielderId || '', bowlerId: entry.bowlerId || '' };
+             return { 
+               ...entry, 
+               fielderId: entry.fielderId || '', 
+               bowlerId: entry.bowlerId || '',
+               status: entry.outHow === 'Not Out' ? 'batting' : 'out'
+             };
         });
     };
     const buildBowling = (inn: 1 | 2) => bowlingRows[inn]
@@ -307,7 +322,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
           name: p?.name || '',
           overs: parseFloat(String(r.overs)) || 0,
           maidens: parseInt(String(r.maidens)) || 0,
-          runsConceded: parseInt(String(r.runs)) || 0,
+          runs: parseInt(String(r.runs)) || 0,
           wickets: parseInt(String(r.wickets)) || 0,
           wides: parseInt(String(r.wd)) || 0,
           no_balls: parseInt(String(r.nb)) || 0,
@@ -328,7 +343,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         ...scorecard.innings1, 
         batting: buildBatting(1), 
         bowling: buildBowling(1), 
-        extras: { ...scorecard.innings1.extras, wide: autoWides(1), no_ball: autoNoBalls(1) },
+        extras: { ...scorecard.innings1.extras, wides: autoWides(1), noBalls: autoNoBalls(1) },
         totalRuns: inn1Runs,
         totalWickets: inn1Wickets,
         totalOvers: inn1Overs
@@ -337,7 +352,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         ...scorecard.innings2, 
         batting: buildBatting(2), 
         bowling: buildBowling(2), 
-        extras: { ...scorecard.innings2.extras, wide: autoWides(2), no_ball: autoNoBalls(2) },
+        extras: { ...scorecard.innings2.extras, wides: autoWides(2), noBalls: autoNoBalls(2) },
         totalRuns: inn2Runs,
         totalWickets: inn2Wickets,
         totalOvers: inn2Overs
@@ -381,7 +396,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
       performerMap.set(b.playerId, { 
         ...ex, 
         wickets: b.wickets, 
-        bowlingRuns: b.runsConceded, 
+        bowlingRuns: b.runs, 
         bowlingOvers: b.overs, 
         maidens: b.maidens,
         wides: b.wides || 0,
@@ -502,7 +517,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
             {[1, 2].map(i => (
               <button key={i} type="button" onClick={() => setActiveInnings(i as 1 | 2)}
                 className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase ${activeInnings === i ? 'bg-sky-600 text-white shadow-lg' : 'text-slate-400'}`}>
-                Innings {i}: {i === 1 ? inn1BatLabel : inn2BatLabel}
+                {i === 1 ? inn1BatLabel : inn2BatLabel}
               </button>
             ))}
           </div>

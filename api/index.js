@@ -550,12 +550,31 @@ app.get('/api/matches', async (_req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   // Exclude legacy match from generic listing
   const filtered = (data || []).filter(m => m.id !== '00000000-0000-0000-0000-000000000001')
-    .map(m => ({
-      ...m,
-      // Map integer columns to the objects the frontend expects
-      finalScoreHome: m.final_score_home !== null ? { runs: m.final_score_home, wickets: m.total_wickets || 0, overs: 0 } : null,
-      finalScoreAway: m.final_score_away !== null ? { runs: m.final_score_away, wickets: 0, overs: 0 } : null
-    }));
+    .map(m => {
+      const sc = typeof m.scorecard === 'string' ? JSON.parse(m.scorecard) : m.scorecard;
+      const isHomeFirst = m.is_home_batting_first;
+      const homeInn = isHomeFirst ? sc?.innings1 : sc?.innings2;
+      const awayInn = isHomeFirst ? sc?.innings2 : sc?.innings1;
+      
+      const getOversNum = (balls) => {
+        if (!balls) return 0;
+        return parseFloat(`${Math.floor(balls / 6)}.${balls % 6}`);
+      };
+
+      return {
+        ...m,
+        finalScoreHome: (m.final_score_home !== null || homeInn) ? { 
+          runs: m.final_score_home ?? homeInn?.totalRuns ?? 0, 
+          wickets: homeInn?.wickets ?? m.total_wickets ?? 0, 
+          overs: getOversNum(homeInn?.totalBalls ?? m.total_balls ?? 0)
+        } : null,
+        finalScoreAway: (m.final_score_away !== null || awayInn) ? { 
+          runs: m.final_score_away ?? awayInn?.totalRuns ?? 0, 
+          wickets: awayInn?.wickets ?? 0, 
+          overs: getOversNum(awayInn?.totalBalls ?? 0)
+        } : null
+      };
+    });
   res.json(filtered);
 });
 
@@ -574,11 +593,28 @@ app.get('/api/matches/:id', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: "Match not found" });
   
-  // Map integer columns to the objects the frontend expects
+  const sc = typeof data.scorecard === 'string' ? JSON.parse(data.scorecard) : data.scorecard;
+  const isHomeFirst = data.is_home_batting_first;
+  const homeInn = isHomeFirst ? sc?.innings1 : sc?.innings2;
+  const awayInn = isHomeFirst ? sc?.innings2 : sc?.innings1;
+  
+  const getOversNum = (balls) => {
+    if (!balls) return 0;
+    return parseFloat(`${Math.floor(balls / 6)}.${balls % 6}`);
+  };
+
   const formatted = {
     ...data,
-    finalScoreHome: data.final_score_home !== null ? { runs: data.final_score_home, wickets: data.total_wickets || 0, overs: 0 } : null,
-    finalScoreAway: data.final_score_away !== null ? { runs: data.final_score_away, wickets: 0, overs: 0 } : null
+    finalScoreHome: (data.final_score_home !== null || homeInn) ? { 
+      runs: data.final_score_home ?? homeInn?.totalRuns ?? 0, 
+      wickets: homeInn?.wickets ?? data.total_wickets ?? 0, 
+      overs: getOversNum(homeInn?.totalBalls ?? data.total_balls ?? 0)
+    } : null,
+    finalScoreAway: (data.final_score_away !== null || awayInn) ? { 
+      runs: data.final_score_away ?? awayInn?.totalRuns ?? 0, 
+      wickets: awayInn?.wickets ?? 0, 
+      overs: getOversNum(awayInn?.totalBalls ?? 0)
+    } : null
   };
   
   res.json(formatted);
@@ -676,8 +712,15 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
       return 0;
     };
 
-    const finalScoreHomeValue = getRuns(matchData.finalScoreHome) || (scorecard?.innings1 ? Number(scorecard.innings1.totalRuns || 0) : 0);
-    const finalScoreAwayValue = getRuns(matchData.finalScoreAway) || (scorecard?.innings2 ? Number(scorecard.innings2.totalRuns || 0) : 0);
+    const isHomeBattingFirst = matchData.is_home_batting_first ?? (matchData.live_data?.isHomeBattingFirst);
+    
+    const finalScoreHomeValue = isHomeBattingFirst 
+      ? (getRuns(matchData.finalScoreHome) || Number(scorecard?.innings1?.totalRuns || 0))
+      : (getRuns(matchData.finalScoreHome) || Number(scorecard?.innings2?.totalRuns || 0));
+      
+    const finalScoreAwayValue = isHomeBattingFirst
+      ? (getRuns(matchData.finalScoreAway) || Number(scorecard?.innings2?.totalRuns || 0))
+      : (getRuns(matchData.finalScoreAway) || Number(scorecard?.innings1?.totalRuns || 0));
     
     // Toss Handling
     let tossWinnerId = matchData.toss_winner_id;
@@ -721,12 +764,17 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
         finalScoreHomeValue,
         finalScoreAwayValue,
         finalScoreHomeValue,
-        (matchData.finalScoreHome?.wickets || scorecard?.innings1?.totalWickets || 0),
+        (matchData.finalScoreHome?.wickets || (isHomeBattingFirst ? scorecard?.innings1?.totalWickets : scorecard?.innings2?.totalWickets) || 0),
         (() => {
-          const overs = parseFloat(finalScoreHome?.overs || 0);
+          // Fix: Use matchData.finalScoreHome?.overs or fallback to scorecard history length
+          const overs = matchData.finalScoreHome?.overs || 
+                        (isHomeBattingFirst ? scorecard?.innings1?.totalOvers : scorecard?.innings2?.totalOvers) || 0;
           const parts = String(overs).split('.');
-          return (parseInt(parts[0]) * 6) + (parseInt(parts[1]) || 0);
-        })(), // total_balls calculated from overs
+          const balls = (parseInt(parts[0]) * 6) + (parseInt(parts[1]) || 0);
+          if (balls > 0) return balls;
+          // Last fallback: count history length
+          return (isHomeBattingFirst ? scorecard?.innings1?.history?.length : scorecard?.innings2?.history?.length) || 0;
+        })(),
         matchData.resultSummary || matchData.result_note || null,
         matchData.resultNote || matchData.resultSummary || null,
         tossWinnerId || null,
@@ -734,6 +782,35 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
         parseInt(matchData.maxOvers || matchData.max_overs || 20)
       ]
     );
+
+    if (matchError) throw matchError;
+
+    // RESILIENCE: Backfill ball_by_ball table from history if empty
+    try {
+      const { data: existingBalls } = await db.query('SELECT id FROM ball_by_ball WHERE match_id = $1 LIMIT 1', [id]);
+      if (!existingBalls || existingBalls.length === 0) {
+        console.log(`[Resilience] Backfilling ball_by_ball for match ${id}...`);
+        const allBalls = [
+          ...(scorecard?.innings1?.history || []).map(b => ({ ...b, innings_no: 1 })),
+          ...(scorecard?.innings2?.history || []).map(b => ({ ...b, innings_no: 2 }))
+        ];
+        for (const b of allBalls) {
+          await db.query(`
+            INSERT INTO ball_by_ball (
+              match_id, innings_number, over_number, ball_number, striker_id, non_striker_id, bowler_id,
+              runs_scored, extras_runs, extras_type, wicket_type, commentary, wagon_wheel_zone, is_legal_ball
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          `, [
+            id, b.innings_no, b.overNumber, b.ballNumber, b.strikerId, b.nonStrikerId, b.bowlerId,
+            b.runs || 0, (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0),
+            b.type || null, b.isWicket ? (b.wicketType || 'out') : null,
+            b.commentary || '', b.wagon_wheel_zone || null, b.isLegal !== false
+          ]).catch(err => console.warn(`[Resilience] Ball insert failed:`, err.message));
+        }
+      }
+    } catch (backfillErr) {
+      console.error(`[Resilience] Backfill failed for match ${id}:`, backfillErr.message);
+    }
 
     if (matchError) throw matchError;
 
@@ -781,7 +858,7 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
           [
             String(id), playerId, Number(perf.runs || 0), Number(perf.balls || 0), Number(perf.fours || 0), Number(perf.sixes || 0), 
             perf.outHow || (perf.isNotOut ? 'Not Out' : 'Out'), Number(perf.wickets || 0), 
-            Number(perf.bowlingRuns || 0), Number(perf.bowlingOvers || 0), Number(perf.maidens || 0), 
+            Number(perf.bowlingRuns || perf.runsConceded || 0), Number(perf.bowlingOvers || perf.overs_bowled || 0), Number(perf.maidens || 0), 
             Number(perf.runs) >= 100 ? 1 : 0, (Number(perf.runs) >= 50 && Number(perf.runs) < 100) ? 1 : 0,
             (Number(perf.runs || 0) === 0 && (perf.outHow && !['not out', 'did not bat', 'dnb', 'retired hurt', 'absent'].includes(perf.outHow.toLowerCase()))) ? 1 : 0,
             Number(perf.wickets) === 4 ? 1 : 0, Number(perf.wickets) >= 5 ? 1 : 0, 
@@ -1278,7 +1355,7 @@ async function recalculateCareerStats(playerId) {
                 const sc = typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard;
                 const bowl = [...(sc.innings1?.bowling || []), ...(sc.innings2?.bowling || [])]
                             .find(b => String(b.playerId) === String(playerId));
-                if (bowl) r = Number(bowl.runs) || Number(bowl.runsConceded) || 0;
+                if (bowl) r = Number(bowl.runs) || Number(bowl.bowlingRuns) || Number(bowl.runsConceded) || 0;
             } catch(e) {}
         }
         return s + r;
@@ -1298,7 +1375,22 @@ async function recalculateCareerStats(playerId) {
     const totalNoBalls = m.reduce((s, row) => s + (Number(row.no_balls) || 0), 0) + (Number(l.no_balls) || 0);
 
     // BBI Comparison logic (Derived from raw data)
-    const allBBI = m.map(row => (Number(row.wickets) > 0 || Number(row.runs_conceded) > 0) ? `${row.wickets}/${row.runs_conceded}` : null).filter(Boolean);
+    const allBBI = m.map(row => {
+        let w = Number(row.wickets) || 0;
+        let r = Number(row.runs_conceded) || 0;
+        if (row.scorecard) {
+            try {
+                const sc = typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard;
+                const bowl = [...(sc.innings1?.bowling || []), ...(sc.innings2?.bowling || [])]
+                            .find(b => String(b.playerId) === String(playerId));
+                if (bowl) {
+                    w = Number(bowl.wickets) || 0;
+                    r = Number(bowl.runs) || Number(bowl.bowlingRuns) || Number(bowl.runsConceded) || 0;
+                }
+            } catch(e) {}
+        }
+        return (w > 0 || r > 0) ? `${w}/${r}` : null;
+    }).filter(Boolean);
     if (l.best_bowling && l.best_bowling !== '0/0') allBBI.push(l.best_bowling);
     let bestBBI = '0/0';
     if (allBBI.length > 0) {
@@ -1461,10 +1553,12 @@ app.get('/api/players/:id/stats', async (req, res) => {
                             pStatus = bat.outHow || (bat.isNotOut ? 'not out' : 'out');
                         }
                         if (bowl) {
-                            bOvers = Number(bowl.overs) || 0;
+                            bOvers = Number(bowl.overs) || Number(bowl.bowlingOvers) || 0;
                             bMaidens = Number(bowl.maidens) || 0;
-                            bRuns = Number(bowl.runs) || Number(bowl.runsConceded) || 0;
+                            bRuns = Number(bowl.runs) || Number(bowl.bowlingRuns) || Number(bowl.runsConceded) || 0;
                             bWickets = Number(bowl.wickets) || 0;
+                            bWides = Number(bowl.wides) || 0;
+                            bNB = Number(bowl.no_balls) || Number(bowl.noBalls) || 0;
                         }
                     }
                     
@@ -1481,10 +1575,12 @@ app.get('/api/players/:id/stats', async (req, res) => {
                             pStatus = bat.outHow || (bat.isNotOut ? 'not out' : (bat.isOut ? 'out' : 'batting'));
                         }
                         if (bowl) {
-                            bOvers = Number(bowl.overs) || 0;
+                            bOvers = Number(bowl.overs) || Number(bowl.bowlingOvers) || 0;
                             bMaidens = Number(bowl.maidens) || 0;
-                            bRuns = Number(bowl.runs) || Number(bowl.runsConceded) || 0;
+                            bRuns = Number(bowl.runs) || Number(bowl.bowlingRuns) || Number(bowl.runsConceded) || 0;
                             bWickets = Number(bowl.wickets) || 0;
+                            bWides = Number(bowl.wides) || 0;
+                            bNB = Number(bowl.no_balls) || Number(bowl.noBalls) || 0;
                         }
                     }
                 } catch(e) {

@@ -73,6 +73,12 @@ export interface Performer {
   is_hero?: boolean;
 }
 
+export const getInningsBattingTeam = (tossWinner: string, tossChoice: string) => {
+  const firstInningsBatTeam = ((String(tossWinner).toLowerCase() === 'home' || String(tossWinner).toLowerCase() === 'indian strikers') && String(tossChoice).toLowerCase() === 'bat') ||
+    ((String(tossWinner).toLowerCase() === 'away' || String(tossWinner).toLowerCase() === 'opponent') && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
+  return firstInningsBatTeam;
+};
+
 export interface InningsBattingEntry {
   playerId: string;
   name: string;
@@ -92,10 +98,10 @@ export interface InningsBowlingEntry {
   name: string;
   overs: number;
   maidens: number;
-  runsConceded: number;
+  runs: number;
   wickets: number;
   wides?: number;
-  no_balls?: number;
+  noBalls?: number;
   is_hero?: boolean;
   index?: number;
 }
@@ -121,8 +127,8 @@ export interface BallRecord {
 export type Ball = BallRecord;
 
 export interface InningsExtras {
-  wide: number;
-  no_ball: number;
+  wides: number;
+  noBalls: number;
   legByes: number;
   byes: number;
 }

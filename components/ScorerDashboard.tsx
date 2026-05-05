@@ -2326,8 +2326,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               {(() => {
                 // V5 ROBUST DERIVATION: Determine who bats now based on toss and innings
                 const getInningsBattingTeam = () => {
-                  const firstInningsBatTeam = (String(tossWinner).toLowerCase() === 'home' && String(tossChoice).toLowerCase() === 'bat') ||
-                    (String(tossWinner).toLowerCase() === 'away' && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
+                  const firstInningsBatTeam = ((String(tossWinner).toLowerCase() === 'home' || String(tossWinner).toLowerCase() === 'indian strikers') && String(tossChoice).toLowerCase() === 'bat') ||
+                    ((String(tossWinner).toLowerCase() === 'away' || String(tossWinner).toLowerCase() === 'opponent') && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
 
                   // Only flip if innings1 is truly active/completed
                   const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
@@ -2396,8 +2396,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
               {(() => {
                 const getInningsBowlingTeam = () => {
-                  const firstInningsBatTeam = (String(tossWinner).toLowerCase() === 'home' && String(tossChoice).toLowerCase() === 'bat') ||
-                    (String(tossWinner).toLowerCase() === 'away' && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
+                  const firstInningsBatTeam = ((String(tossWinner).toLowerCase() === 'home' || String(tossWinner).toLowerCase() === 'indian strikers') && String(tossChoice).toLowerCase() === 'bat') ||
+                    ((String(tossWinner).toLowerCase() === 'away' || String(tossWinner).toLowerCase() === 'opponent') && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
 
                   const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
                   const batTeamId = isFirstInningsDone ? (firstInningsBatTeam === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeam;
@@ -2445,7 +2445,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
                 <ActionButton onClick={() => setSetupStep('openers_bat')}>Back to Batsmen</ActionButton>
                 <ActionButton $variant="primary" disabled={!isReadyToStart} onClick={handleStartMatch}>
-                  {store.innings1 ? 'Start 2nd Innings' : 'Start Match'}
+                  {store.innings1 ? `Start ${(store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.opponentName || 'Opponent') : 'Indian Strikers') : (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.opponentName || 'Opponent')))} Innings` : 'Start Match'}
                 </ActionButton>
               </div>
             </>
@@ -3103,7 +3103,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   </div>
                 )}
                 <div style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  {`Innings ${store.currentInnings}  •  ${store.maxOvers || 20} Overs`}
+                  {`${(store.currentInnings === 1 ? (store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT')) : (store.toss.choice === 'Bat' ? (store.opponentName || 'OPPONENT') : 'Indian Strikers')) : (store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.opponentName || 'OPPONENT') : 'Indian Strikers') : (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT'))))}  •  ${store.maxOvers || 20} Overs`}
                 </div>
               </div>
             </div>
@@ -4054,7 +4054,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     setSelBowler(null);
                   }}
                 >
-                  START 2ND INNINGS
+                  START {(store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.opponentName || 'OPPONENT') : 'INDIAN STRIKERS') : (store.toss.choice === 'Bat' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT')))} INNINGS
                 </ActionButton>
               </div>
             </InningsBreakModal>

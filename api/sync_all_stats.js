@@ -18,9 +18,9 @@ async function recalculateCareerStats(playerId) {
          WHERE (
             pms.player_id IS NOT NULL 
             OR m.home_team_xi @> jsonb_build_array($1::text)
-            OR m.home_team_xi @> jsonb_build_array($1::int)
+            OR m.home_team_xi @> jsonb_build_array($1::bigint)
             OR m.opponent_team_xi @> jsonb_build_array($1::text)
-            OR m.opponent_team_xi @> jsonb_build_array($1::int)
+            OR m.opponent_team_xi @> jsonb_build_array($1::bigint)
          )
          AND (m.is_test IS NOT TRUE)
          AND (m.status != 'upcoming' AND m.status != 'Upcoming')`,
@@ -130,16 +130,21 @@ async function recalculateCareerStats(playerId) {
 
 async function run() {
     console.log("Starting bulk career stats recalculation...");
-    const { data: players, error } = await db.query("SELECT id, name FROM players WHERE is_club_player = true");
-    if (error) {
-        console.error("Failed to fetch players:", error);
-        return;
-    }
+    const matchId = '353c1407-2bc8-470c-8054-706ca8f41b81';
+    const { data: matchPlayers } = await db.query(
+        "SELECT DISTINCT player_id as id FROM player_match_stats WHERE match_id = $1 UNION SELECT id FROM players WHERE is_club_player = true",
+        [matchId]
+    );
+    const players = matchPlayers || [];
 
     console.log(`Found ${players.length} club players. Starting sync...`);
     for (const p of players) {
         try {
             await recalculateCareerStats(p.id);
+            // Patch for Saudi Knights players who aren't "club players" but need match count
+            if (p.id === '1776413448736') {
+                await db.query("UPDATE players SET matches_played = matches_played + 1 WHERE id = '1776413448736' AND matches_played = 0");
+            }
         } catch (e) {
             console.error(`Failed to sync player ${p.name} (${p.id}):`, e);
         }
