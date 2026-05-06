@@ -426,6 +426,8 @@ const mapMatchToDB = (m) => {
     'matchFormat': 'match_format',
     'is_test': 'is_test',
     'tournamentId': 'tournament_id',
+    'isNeutral': 'is_neutral',
+    'homeTeamId': 'home_team_id',
     'tossWinnerId': 'toss_winner_id',
     'tossChoice': 'toss_choice',
     'tossDetails': 'toss_details',
@@ -448,7 +450,7 @@ const mapMatchToDB = (m) => {
     'is_locked', 'toss_winner_id', 'toss_choice', 'toss_details', 
     'max_overs', 'result_summary', 'result_note', 'result_type', 
     'final_score_home', 'final_score_away', 'is_live_scored', 
-    'is_home_batting_first', 'tournament_id', 'performers', 'scorecard', 'is_career_synced', 'is_test',
+    'is_home_batting_first', 'tournament_id', 'is_neutral', 'home_team_id', 'performers', 'scorecard', 'is_career_synced', 'is_test',
     'live_data', 'target_score', 'live_state', 'total_runs', 'total_wickets', 'total_balls'
   ];
 
@@ -527,7 +529,7 @@ const mapMatchToDB = (m) => {
   });
   
   // Architect Fix: Ensure UUID columns never receive empty strings (Postgres strictly requires valid UUID or NULL)
-  const uuidColumns = ['opponent_id', 'ground_id', 'tournament_id', 'toss_winner_id'];
+  const uuidColumns = ['opponent_id', 'ground_id', 'tournament_id', 'toss_winner_id', 'home_team_id'];
   uuidColumns.forEach(col => {
     if (final[col] === '') final[col] = null;
   });
@@ -569,6 +571,8 @@ app.get('/api/matches', async (_req, res) => {
 
       return {
         ...m,
+        isNeutral: m.is_neutral,
+        homeTeamId: m.home_team_id,
         finalScoreHome: (m.final_score_home !== null || homeInn) ? { 
           runs: m.final_score_home ?? homeInn?.totalRuns ?? 0, 
           wickets: homeInn?.wickets ?? m.total_wickets ?? 0, 
@@ -611,6 +615,8 @@ app.get('/api/matches/:id', async (req, res) => {
 
   const formatted = {
     ...data,
+    isNeutral: data.is_neutral,
+    homeTeamId: data.home_team_id,
     finalScoreHome: (data.final_score_home !== null || homeInn) ? { 
       runs: data.final_score_home ?? homeInn?.totalRuns ?? 0, 
       wickets: homeInn?.wickets ?? data.total_wickets ?? 0, 
