@@ -697,7 +697,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                   />
                   {/* Poster Content */}
                   <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
-                    <img src="/INS%20LOGO.PNG" className="w-16 h-16 object-contain" alt="Logo" crossOrigin="anonymous" />
+                    <img src="/INS%20LOGO.PNG" className="w-16 h-16 object-contain" alt="Logo" />
                     <div className="text-white">
                       <p className="text-[10px] font-black italic tracking-widest leading-none">MATCH DAY</p>
                       <p className={`text-2xl font-black italic ${selectedHero.isSuperStriker ? 'text-orange-500' : 'text-sky-400'} leading-none`}>
@@ -706,7 +706,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                     </div>
                   </div>
                   <div className="flex-1 flex flex-col items-center justify-center pt-16 px-6">
-                    <img src={selectedHero.player.avatarUrl} className="h-[320px] w-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)] mb-6" alt="Player" crossOrigin="anonymous" />
+                    <img src={selectedHero.player.avatarUrl} className="h-[320px] w-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)] mb-6" alt="Player" />
                     <h2 className="text-3xl font-black text-sky-400 uppercase italic tracking-tighter text-center leading-none mb-2">{selectedHero.player.name}</h2>
                     <div className="h-1 w-12 bg-white/20 rounded-full mb-4"></div>
                     <p className="text-white font-black text-lg uppercase italic tracking-widest">{selectedHero.statsValue}</p>
@@ -861,7 +861,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
         <div className="md:col-span-1 bg-white rounded-[2rem] p-3 border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap- mb-2">
+            <div className="flex items-center gap-2 mb-2">
               {nextMatch?.status === 'live' ? (
                 <div className="flex items-center gap-4">
                   <span className="flex h-2 w-2 relative">
@@ -871,12 +871,13 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                   <h3 className="text-xs font-black uppercase tracking-[0.1em] text-red-600">Live Now</h3>
                 </div>
               ) : (
-                <>
+                <div className="flex items-center gap-2">
                   <Bell size={18} className="text-blue-600" />
                   <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Match Alert</h3>
-                </>
+                </div>
               )}
             </div>
+
             {(() => {
               const liveMatch = matches.find(m => m.status === 'live');
               const displayMatch = liveMatch || nextMatch;
@@ -885,34 +886,37 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                 return <div className="py-6"><p className="text-xs font-bold text-slate-400 italic">Exploring new seasons...</p></div>;
               }
 
+              const opponentLogo = displayMatch.opponentId ? opponents.find(o => o.id === displayMatch.opponentId)?.logoUrl : null;
+
               return (
-                <div className="space-y-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic leading-none">
-                        {liveMatch ? `${(liveMatch as any).teamA_short || 'IND'} ${(liveMatch as any).score || (() => {
-                            const ld = liveMatch.live_data;
-                            if (!ld) return '0';
-                            const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
-                            return inn ? inn.totalRuns : '0';
-                        })()}/${(liveMatch as any).wickets || (() => {
-                            const ld = liveMatch.live_data;
-                            if (!ld) return '0';
-                            const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
-                            return inn ? inn.wickets : '0';
-                        })()}` : `vs ${displayMatch.opponentName}`}
-                      </p>
-                      {displayMatch.status === 'live' && displayMatch.live_data && (
-                        <div className="text-[13px] font-bold text-slate-400 mt-1 uppercase tracking-widest italic">
-                          ({(() => {
-                            const ld = displayMatch.live_data;
-                            const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
-                            if (!inn) return '0.0';
-                            const balls = inn.totalBalls || 0;
-                            return `${Math.floor(balls / 6)}.${balls % 6}`;
-                          })()} ov)
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      {opponentLogo && (
+                        <div className="w-10 h-10 rounded-lg bg-slate-50 p-1 flex items-center justify-center border border-slate-100 shrink-0">
+                          <img 
+                            src={opponentLogo} 
+                            className="w-full h-full object-contain" 
+                            alt="Opponent" 
+                          />
                         </div>
                       )}
+                      <div className="flex flex-col">
+                        <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic leading-none">
+                          {liveMatch ? `${(liveMatch as any).teamA_short || 'IND'} ${(liveMatch as any).score || '0'}/${(liveMatch as any).wickets || '0'}` : `vs ${displayMatch.opponentName}`}
+                        </p>
+                        {displayMatch.status === 'live' && displayMatch.live_data && (
+                          <div className="text-[13px] font-bold text-slate-400 mt-1 uppercase tracking-widest italic">
+                            ({(() => {
+                              const ld = displayMatch.live_data;
+                              const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
+                              if (!inn) return '0.0';
+                              const balls = inn.totalBalls || 0;
+                              return `${Math.floor(balls / 6)}.${balls % 6}`;
+                            })()} ov)
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {displayMatch.status === 'live' && displayMatch.live_data && displayMatch.live_data.currentInnings === 2 && (
                       <div className="flex flex-col items-end">
@@ -922,15 +926,14 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                       </div>
                     )}
                   </div>
-                  <div className="space-y-0 pt-2">
-                    <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
-                      <MapPin size={14} /> {grounds.find(g => g.id === displayMatch.groundId)?.name || 'Ground TBA'}
-                    </div>
+                  <div className="flex items-center gap-2 text-slate-500 text-xs font-bold pt-2 border-t border-slate-100">
+                    <MapPin size={14} /> {grounds.find(g => g.id === displayMatch.groundId)?.name || 'Ground TBA'}
                   </div>
                 </div>
               );
             })()}
           </div>
+
           {nextMatch?.status === 'live' ? (
             <Link to={`/live/${nextMatch.id}?tab=commentary`} className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black rounded-xl flex items-center justify-center gap-2 uppercase tracking-widest mt-4 transition-all animate-pulse shadow-lg shadow-red-600/20">
               <Activity size={10} /> LIVE FEED
@@ -999,7 +1002,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topRunScorers.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
+                    <img src={p.avatarUrl} crossOrigin="anonymous" className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
@@ -1029,7 +1032,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topInningsRuns.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-yellow-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
+                    <img src={p.avatarUrl} crossOrigin="anonymous" className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-yellow-500 transition-colors" alt={p.name} />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
@@ -1054,7 +1057,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topSixHitters.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-sky-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
+                    <img src={p.avatarUrl} crossOrigin="anonymous" className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-sky-500 transition-colors" alt={p.name} />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
@@ -1079,7 +1082,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topWicketTakers.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
+                    <img src={p.avatarUrl} crossOrigin="anonymous" className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
@@ -1109,7 +1112,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topInningsWickets.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-purple-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
+                    <img src={p.avatarUrl} crossOrigin="anonymous" className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-purple-500 transition-colors" alt={p.name} />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
@@ -1134,7 +1137,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topFourHitters.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-rose-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
+                    <img src={p.avatarUrl} crossOrigin="anonymous" className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-rose-500 transition-colors" alt={p.name} />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>

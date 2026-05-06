@@ -692,7 +692,7 @@ const StandingTable = ({ entries, qCount = 4 }: { entries: TMStanding[], qCount?
                 <td className="px-4 py-5">
                    <div className="flex items-center gap-3">
                      <div className="w-8 h-8 rounded-full bg-white border border-slate-200 overflow-hidden shadow-sm flex items-center justify-center">
-                       {ent.logo_url ? <img src={ent.logo_url} className="w-full h-full object-contain" alt="" crossOrigin="anonymous" /> : <Shield size={14} className="text-slate-300" />}
+                       {ent.logo_url ? <img src={ent.logo_url} className="w-full h-full object-contain" alt="" /> : <Shield size={14} className="text-slate-300" />}
                      </div>
                      <span className="text-[11px] font-black text-slate-900 uppercase italic tracking-tight leading-none truncate max-w-[150px]">{ent.team_name}</span>
                    </div>

@@ -131,18 +131,12 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             );
                         })()}
                         <div className="text-[11px] font-bold uppercase tracking-widest mt-0.5" style={{ color: '#94a3b8' }}>
-                            {match.stage || 'Official'}
+                            {match.stage === 'League' ? 'League Match' : (match.stage || 'Official')}
                         </div>
                     </div>
 
                     {/* Branding/Status - Right Side */}
-                    {!isGraphic && (
-                        <div className="flex items-center gap-3">
-                            <div className="px-3 py-1 rounded bg-white/5 border border-white/10 text-[10px] font-black text-white/40 tracking-[0.2em]">
-                                ID: {match.id.substring(0, 8).toUpperCase()}
-                            </div>
-                        </div>
-                    )}
+
                 </div>
             </div>
 
@@ -152,10 +146,10 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 <div className="team-vertical">
                     <div className="logo-wrapper">
                         {homeTeamLogo
-                            ? <img src={homeTeamLogo} className="team-logo-md object-contain" alt={homeTeamName} crossOrigin="anonymous" />
+                            ? <img src={homeTeamLogo} crossOrigin="anonymous" className="team-logo-md object-contain" alt={homeTeamName} />
                             : (match.isNeutral 
                                 ? <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(homeTeamName).slice(0, 3).toUpperCase()}</div>
-                                : <img src="/INS LOGO.PNG" className="team-logo-md object-contain" alt="INS" crossOrigin="anonymous" />
+                                : <img src="/INS LOGO.PNG" crossOrigin="anonymous" className="team-logo-md object-contain" alt="INS" />
                               )
                         }
                         {!isGraphic && (
@@ -192,7 +186,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 <div className="team-vertical">
                     <div className="logo-wrapper">
                         {opponentLogo
-                            ? <img src={opponentLogo} className="team-logo-md object-contain" alt={opponentName} crossOrigin="anonymous" />
+                            ? <img src={opponentLogo} crossOrigin="anonymous" className="team-logo-md object-contain" alt={opponentName} />
                             : <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(opponentName).slice(0, 3).toUpperCase()}</div>
                         }
                         {!isGraphic && (
@@ -256,28 +250,26 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 {/* Info + Admin Controls */}
                 <div className="flex flex-col gap-3 mb-6">
                     <div className="flex items-center justify-between">
-                        <div className="flex flex-col gap-2">
-                            <div className="flex flex-wrap gap-2 items-center">
-                                {/* Moved Status Badges here */}
-                                {isLive && (
-                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-900/40 text-red-500 text-[9px] font-black border border-red-500/30 shadow-lg shadow-red-500/10">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                                        LIVE
-                                    </div>
-                                )}
-                                {isUpcoming && (
-                                    <div className="px-2 py-0.5 rounded bg-blue-900/40 text-blue-400 text-[9px] font-black border border-blue-500/30">UPCOMING</div>
-                                )}
-                                {isCompleted && (
-                                    <div className="px-2 py-0.5 rounded bg-emerald-900/40 text-emerald-400 text-[9px] font-black border border-emerald-500/30">COMPLETED</div>
-                                )}
-                                
-                                <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-tight text-slate-300">
-                                    <Calendar size={13} className="text-blue-500" /> {dateFormatted}
-                                </span>
-                            </div>
+                        <div className="flex items-center flex-wrap gap-3">
+                            {/* Consolidated Status, Date, and Ground into one horizontal line */}
+                            {isLive && (
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-900/40 text-red-500 text-[9px] font-black border border-red-500/30">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                                    LIVE
+                                </div>
+                            )}
+                            {isUpcoming && (
+                                <div className="px-2 py-0.5 rounded bg-blue-900/40 text-blue-400 text-[9px] font-black border border-blue-500/30">UPCOMING</div>
+                            )}
+                            {isCompleted && (
+                                <div className="px-2 py-0.5 rounded bg-emerald-900/40 text-emerald-400 text-[9px] font-black border border-emerald-500/30">COMPLETED</div>
+                            )}
+                            
+                            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-tight text-slate-300">
+                                <Calendar size={13} className="text-blue-500" /> {dateFormatted}
+                            </span>
 
-                            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-tight text-slate-400">
+                            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-tight text-slate-400">
                                 <MapPin size={13} className="text-emerald-500" /> 
                                 {(() => {
                                     const ground = grounds.find(g => g.id === match.groundId);

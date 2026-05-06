@@ -78,7 +78,6 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         }
     };
 
-    const isNeutralActive = formData.isNeutral ? "true" : "false";
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
@@ -110,7 +109,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                             onClick={() => setFormData(prev => ({ ...prev, isNeutral: !prev.isNeutral }))}
                             className={`w-12 h-6 rounded-full transition-all relative ${formData.isNeutral ? 'bg-blue-600' : 'bg-slate-700'}`}
                             title="Toggle Neutral Match"
-                            aria-pressed={formData.isNeutral ? "true" : "false"}
+                            aria-pressed={formData.isNeutral}
                         >
                             <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isNeutral ? 'left-7' : 'left-1'}`} />
                         </button>

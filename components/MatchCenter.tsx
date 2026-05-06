@@ -475,8 +475,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             
             // Extract more detail if it's an Event or DOMException
             let detail = "Check console for technical details.";
-            if (err instanceof Event) detail = "An image resource failed to load or has CORS restrictions.";
+            if (err instanceof Event) detail = "An image resource failed to load or has CORS restrictions. Ensure your GCS bucket allows 'http://localhost:3000'.";
             else if (err?.message) detail = err.message;
+            else if (err?.name === 'SecurityError') detail = "Security Error: Likely due to external assets (logos/fonts) without correct CORS headers.";
             
             alert(`Failed to generate image: ${detail}`);
         } finally {
@@ -671,7 +672,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             font-family: 'Outfit', sans-serif;
             color: #f8fafc;
             font-weight: 900;
-            font-size: 28px;
+            font-size: 20px;
             text-transform: uppercase;
             text-align: center;
             letter-spacing: 0.05em;
@@ -1070,7 +1071,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                             <img src="/INS%20LOGO.PNG" alt="INS" className="team-avatar" />
                                                                             <span>INDIAN STRIKERS</span>
                                                                             <span className="vs-cell">VS</span>
-                                                                            {opp?.logoUrl ? <img src={opp.logoUrl} alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback text-slate-500">?</div>}
+                                                                            {opp?.logoUrl ? <img src={opp.logoUrl} crossOrigin="anonymous" alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback text-slate-500">?</div>}
                                                                             <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
                                                                         </div>
                                                                         <div className="match-meta-info pl-1.5 opacity-70">

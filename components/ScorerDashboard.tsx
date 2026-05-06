@@ -4245,7 +4245,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           {getPlayerAvatar(store.manOfTheMatch) ? (
                             <img
                               src={getPlayerAvatar(store.manOfTheMatch)!}
-                              crossOrigin="anonymous"
                               className="w-32 h-32 rounded-full object-cover border-4 border-sky-400/30 shadow-[0_0_20px_rgba(56,189,248,0.2)]"
                               alt="Hero"
                             />
