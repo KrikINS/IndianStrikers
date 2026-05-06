@@ -20,6 +20,21 @@ const BroadcastOverlay = () => {
   };
 
   useEffect(() => {
+    // Set background to transparent for broadcasting software (e.g. PRISM)
+    const originalBodyBg = document.body.style.backgroundColor;
+    const originalHtmlBg = document.documentElement.style.backgroundColor;
+    
+    document.body.style.backgroundColor = 'transparent';
+    document.documentElement.style.backgroundColor = 'transparent';
+    
+    // Also target the root container if it has a background
+    const root = document.getElementById('root');
+    let originalRootBg = '';
+    if (root) {
+      originalRootBg = root.style.backgroundColor;
+      root.style.backgroundColor = 'transparent';
+    }
+
     const init = async () => {
       await fetchEverything();
       setLoading(false);
@@ -31,7 +46,13 @@ const BroadcastOverlay = () => {
       store.syncWithCloud();
     }, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      // Revert to original background colors
+      document.body.style.backgroundColor = originalBodyBg;
+      document.documentElement.style.backgroundColor = originalHtmlBg;
+      if (root) root.style.backgroundColor = originalRootBg;
+    };
   }, []);
 
   const liveMatch = useMemo(() => {
