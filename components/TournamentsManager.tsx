@@ -217,12 +217,12 @@ const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false
                                     <div className="flex -space-x-2">
                                       {/* Home Logo */}
                                       <div className="w-8 h-8 rounded-full border-2 border-white overflow-hidden bg-slate-100 shadow-sm z-10">
-                                        <img src="/INS%20LOGO.PNG" className="w-full h-full object-contain" alt="INS" />
+                                        <img src="/INS%20LOGO.PNG" className="w-full h-full object-contain" alt="INS" crossOrigin="anonymous" />
                                       </div>
                                       {/* Away Logo */}
                                       <div className="w-8 h-8 rounded-full border-2 border-white overflow-hidden bg-white shadow-sm flex items-center justify-center text-[10px] font-black">
                                         {oppLogo ? (
-                                          <img src={oppLogo} className="w-full h-full object-contain" alt={oppName} />
+                                          <img src={oppLogo} className="w-full h-full object-contain" alt={oppName} crossOrigin="anonymous" />
                                         ) : (
                                           <span className="text-slate-400">{String(oppName).substring(0,2).toUpperCase()}</span>
                                         )}

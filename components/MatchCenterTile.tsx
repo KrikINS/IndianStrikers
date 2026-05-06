@@ -172,10 +172,10 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 <div className="team-vertical">
                     <div className="logo-wrapper">
                         {homeTeamLogo
-                            ? <img src={homeTeamLogo} className="team-logo-md object-contain" alt={homeTeamName} />
+                            ? <img src={homeTeamLogo} className="team-logo-md object-contain" alt={homeTeamName} crossOrigin="anonymous" />
                             : (match.isNeutral 
                                 ? <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(homeTeamName).slice(0, 3).toUpperCase()}</div>
-                                : <img src="/INS%20LOGO.PNG" className="team-logo-md object-contain" alt="INS" />
+                                : <img src="/INS%20LOGO.PNG" className="team-logo-md object-contain" alt="INS" crossOrigin="anonymous" />
                               )
                         }
                         {!isGraphic && (
@@ -212,7 +212,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 <div className="team-vertical">
                     <div className="logo-wrapper">
                         {opponentLogo
-                            ? <img src={opponentLogo} className="team-logo-md object-contain" alt={opponentName} />
+                            ? <img src={opponentLogo} className="team-logo-md object-contain" alt={opponentName} crossOrigin="anonymous" />
                             : <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(opponentName).slice(0, 3).toUpperCase()}</div>
                         }
                         {!isGraphic && (

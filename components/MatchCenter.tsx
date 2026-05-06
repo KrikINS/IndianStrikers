@@ -457,7 +457,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 },
                 // Skip problematic external stylesheets that trigger SecurityError
                 filter: (node: any) => {
+                    // Skip problematic external stylesheets
                     if (node?.tagName === 'LINK' && node?.href?.includes('fonts.googleapis')) return false;
+                    // Respect ignore attributes
+                    if (node?.hasAttribute?.('data-html2canvas-ignore')) return false;
                     return true;
                 }
             });

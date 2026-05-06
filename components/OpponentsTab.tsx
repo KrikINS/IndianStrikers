@@ -203,7 +203,7 @@ const OpponentsTab: React.FC<OpponentsTabProps> = ({ userRole, currentUser }) =>
                       ${avatarColor}
                     `}>
                       {team.logoUrl ? (
-                        <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover" />
+                        <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover" crossOrigin="anonymous" />
                       ) : (
                         getInitials(team.name)
                       )}

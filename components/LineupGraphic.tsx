@@ -77,7 +77,7 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
             <div className="relative flex items-center justify-between px-20 py-16 bg-white/5 border-y border-white/10 backdrop-blur-md">
                 <div className="flex flex-col items-center gap-6 flex-1">
                     <div className="w-48 h-48 rounded-[3rem] bg-[#0f172a] p-4 border-2 border-white/20 shadow-2xl overflow-hidden flex items-center justify-center">
-                        <img src={homeTeamLogo} className="w-full h-full object-contain" alt="Home" />
+                        <img src={homeTeamLogo} className="w-full h-full object-contain" alt="Home" crossOrigin="anonymous" />
                     </div>
                     <div className="text-3xl font-black uppercase tracking-tight text-center">{homeTeamName}</div>
                 </div>
@@ -90,7 +90,7 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
                 <div className="flex flex-col items-center gap-6 flex-1">
                     <div className="w-48 h-48 rounded-[3rem] bg-[#0f172a] p-4 border-2 border-white/20 shadow-2xl overflow-hidden flex items-center justify-center">
                         {opponentLogo ? (
-                            <img src={opponentLogo} className="w-full h-full object-contain" alt="Away" />
+                            <img src={opponentLogo} className="w-full h-full object-contain" alt="Away" crossOrigin="anonymous" />
                         ) : (
                             <div className="text-6xl font-black text-white/20">{opponentName.substring(0,3).toUpperCase()}</div>
                         )}
@@ -162,7 +162,7 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
             {/* BRANDING FOOTER */}
             <div className="bg-[#020617] border-t-8 border-blue-600 py-16 px-24 flex items-center justify-between">
                 <div className="flex items-center gap-8">
-                    <img src={homeTeamLogo} alt="Logo" className="w-24 h-24 object-contain" />
+                    <img src={homeTeamLogo} alt="Logo" className="w-24 h-24 object-contain" crossOrigin="anonymous" />
                     <div>
                         <div className="text-4xl font-black uppercase tracking-tighter">INDIAN STRIKERS</div>
                         <div className="text-xl font-bold uppercase tracking-widest text-blue-500">Official Team Sheet</div>

@@ -182,7 +182,7 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
         <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row items-center gap-8">
           <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] bg-white p-4 shadow-2xl flex items-center justify-center border-4 border-white/10 group overflow-hidden">
             {(tournament.logo_url || tournament.logoUrl) ? (
-              <img src={tournament.logo_url || tournament.logoUrl} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt={tournament.name} />
+              <img src={tournament.logo_url || tournament.logoUrl} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt={tournament.name} crossOrigin="anonymous" />
             ) : (
               <Trophy size={64} className="text-slate-200" />
             )}
@@ -245,7 +245,7 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
               <div className="absolute inset-0 bg-blue-600 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
               <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-slate-50 overflow-hidden shadow-2xl bg-slate-100 flex items-center justify-center">
                 {focusedPlayer.avatarUrl ? (
-                  <img src={focusedPlayer.avatarUrl} className="w-full h-full object-cover" alt={focusedPlayer.name} />
+                  <img src={focusedPlayer.avatarUrl} className="w-full h-full object-cover" alt={focusedPlayer.name} crossOrigin="anonymous" />
                 ) : (
                   <Users size={48} className="text-slate-300" />
                 )}
@@ -363,7 +363,7 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
                              <Award size={32} className="text-amber-400" />
                            </div>
                            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-lg p-1">
-                             <img src={tournamentStats?.topScorer?.avatarUrl || "/INS LOGO.PNG"} className="w-full h-full object-cover rounded-xl" alt="" />
+                             <img src={tournamentStats?.topScorer?.avatarUrl || "/INS LOGO.PNG"} className="w-full h-full object-cover rounded-xl" alt="" crossOrigin="anonymous" />
                            </div>
                            <div>
                              <p className="text-[9px] font-black text-blue-600 uppercase tracking-[0.2em] mb-1">BATTING ORANGE CAP</p>
@@ -378,7 +378,7 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
                              <Shield size={32} className="text-sky-400" />
                            </div>
                            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-lg p-1">
-                             <img src={tournamentStats?.topWicketTaker?.avatarUrl || "/INS LOGO.PNG"} className="w-full h-full object-cover rounded-xl" alt="" />
+                             <img src={tournamentStats?.topWicketTaker?.avatarUrl || "/INS LOGO.PNG"} className="w-full h-full object-cover rounded-xl" alt="" crossOrigin="anonymous" />
                            </div>
                            <div>
                              <p className="text-[9px] font-black text-sky-600 uppercase tracking-[0.2em] mb-1">BOWLING PURPLE CAP</p>
@@ -504,11 +504,11 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
                     <div className="flex items-center gap-6 mb-8">
                        <div className="flex -space-x-3">
                           <div className="w-14 h-14 rounded-2xl border-4 border-white bg-slate-100 shadow-lg overflow-hidden z-10 flex items-center justify-center p-2">
-                             <img src="/INS%20LOGO.PNG" className="w-full h-full object-contain" alt="" />
+                             <img src="/INS%20LOGO.PNG" className="w-full h-full object-contain" alt="" crossOrigin="anonymous" />
                           </div>
                           <div className="w-14 h-14 rounded-2xl border-4 border-white bg-white shadow-lg overflow-hidden flex items-center justify-center text-[10px] font-black uppercase text-slate-300">
                              {match.opponentLogo ? (
-                               <img src={match.opponentLogo} className="w-full h-full object-contain" alt="" />
+                               <img src={match.opponentLogo} className="w-full h-full object-contain" alt="" crossOrigin="anonymous" />
                              ) : (
                                match.opponentName?.substring(0,2) || 'OP'
                              )}
@@ -600,7 +600,7 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
                                   <td className="p-4 flex items-center gap-3">
                                      <span className="text-[10px] font-black text-slate-300 font-mono">#{idx+1}</span>
                                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
-                                        <img src={leader.avatarUrl || "/INS LOGO.PNG"} className="w-full h-full object-cover" alt="" />
+                                        <img src={leader.avatarUrl || "/INS LOGO.PNG"} className="w-full h-full object-cover" alt="" crossOrigin="anonymous" />
                                      </div>
                                      <span className="text-xs font-black text-slate-900 uppercase italic">{leader.playerName}</span>
                                   </td>
@@ -658,7 +658,7 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
                                   <td className="p-4 flex items-center gap-3">
                                      <span className="text-[10px] font-black text-slate-300 font-mono">#{idx+1}</span>
                                      <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
-                                        <img src={leader.avatarUrl || "/INS LOGO.PNG"} className="w-full h-full object-cover" alt="" />
+                                        <img src={leader.avatarUrl || "/INS LOGO.PNG"} className="w-full h-full object-cover" alt="" crossOrigin="anonymous" />
                                      </div>
                                      <span className="text-xs font-black text-slate-900 uppercase italic">{leader.playerName}</span>
                                   </td>

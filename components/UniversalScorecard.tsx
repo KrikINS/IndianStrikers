@@ -662,7 +662,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
             <TeamBlock>
               <TeamLogoFrame>
                 {homeTeamLogoUrl 
-                  ? <img src={homeTeamLogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={homeTeamName} />
+                  ? <img src={homeTeamLogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={homeTeamName} crossOrigin="anonymous" />
                   : <span style={{ fontSize: '3rem' }}>🏏</span>
                 }
               </TeamLogoFrame>
@@ -687,7 +687,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
             {/* AWAY TEAM */}
             <TeamBlock $reverse>
               {opponentLogoUrl
-                ? <TeamLogoFrame><img src={opponentLogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={match.opponentName} /></TeamLogoFrame>
+                ? <TeamLogoFrame><img src={opponentLogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={match.opponentName} crossOrigin="anonymous" /></TeamLogoFrame>
                 : <TeamLogoFrame><span style={{ fontSize: '3rem' }}>🏏</span></TeamLogoFrame>
               }
               <TeamInfo $align="right">

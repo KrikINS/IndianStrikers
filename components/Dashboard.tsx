@@ -697,7 +697,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                   />
                   {/* Poster Content */}
                   <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
-                    <img src="/INS%20LOGO.PNG" className="w-16 h-16 object-contain" alt="Logo" />
+                    <img src="/INS%20LOGO.PNG" className="w-16 h-16 object-contain" alt="Logo" crossOrigin="anonymous" />
                     <div className="text-white">
                       <p className="text-[10px] font-black italic tracking-widest leading-none">MATCH DAY</p>
                       <p className={`text-2xl font-black italic ${selectedHero.isSuperStriker ? 'text-orange-500' : 'text-sky-400'} leading-none`}>
