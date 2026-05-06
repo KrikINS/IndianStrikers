@@ -419,12 +419,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
                    <span className="font-medium text-slate-300 group-hover:text-white transition-colors">Not a Member?</span> Apply Here
                  </button>
                  <button
-                   onClick={() => window.location.hash = '#/league-center'}
-                   className="w-full py-1.5 text-xs text-blue-400 hover:text-blue-300 group transition-colors flex items-center justify-center gap-2"
-                 >
-                   <Trophy size={14} /> View League Standings <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                 </button>
-                 <button
                    onClick={handleGuestEntry}
                    className="w-full py-1.5 text-xs text-orange-400 hover:text-orange-300 group transition-colors flex items-center justify-center gap-2"
                  >

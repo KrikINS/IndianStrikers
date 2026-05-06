@@ -2190,7 +2190,7 @@ app.get('/api/tm/standings', authGuard(), async (req, res) => {
 });
 
 // STANDALONE LEAGUE CENTER ENDPOINTS
-app.get('/api/league/tournaments', authGuard(), async (req, res) => {
+app.get('/api/league/tournaments', async (req, res) => {
   const { data, error } = await db.query('SELECT * FROM league_tournaments ORDER BY created_at DESC');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
@@ -2222,7 +2222,7 @@ app.delete('/api/league/tournaments/:id', authGuard(), async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/league/groups', authGuard(), async (req, res) => {
+app.get('/api/league/groups', async (req, res) => {
   const { tournament_id } = req.query;
   const { data, error } = await db.query('SELECT * FROM league_groups WHERE tournament_id = $1', [tournament_id]);
   if (error) return res.status(500).json({ error: error.message });
@@ -2245,7 +2245,7 @@ app.delete('/api/league/groups/:id', authGuard(), async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/league/teams', authGuard(), async (req, res) => {
+app.get('/api/league/teams', async (req, res) => {
   const { tournament_id } = req.query;
   const { data, error } = await db.query('SELECT * FROM league_teams WHERE tournament_id = $1', [tournament_id]);
   if (error) return res.status(500).json({ error: error.message });
@@ -2278,7 +2278,7 @@ app.delete('/api/league/teams/:id', authGuard(), async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/league/fixtures', authGuard(), async (req, res) => {
+app.get('/api/league/fixtures', async (req, res) => {
   const { tournament_id } = req.query;
   const { data, error } = await db.query(`
     SELECT f.*, 
@@ -2378,7 +2378,7 @@ app.delete('/api/league/fixtures/:id', authGuard(), async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/league/standings', authGuard(), async (req, res) => {
+app.get('/api/league/standings', async (req, res) => {
   const { tournament_id } = req.query;
   const { data, error } = await db.query(
     'SELECT * FROM league_standings WHERE tournament_id = $1 ORDER BY pts DESC, nrr DESC',
@@ -2417,7 +2417,7 @@ db.query(`
   )
 `).then(r => { if (r.error) console.error('[Knockout] Table creation error:', r.error.message); else console.log('[Knockout] Table ready.'); });
 
-app.get('/api/league/knockout', authGuard(), async (req, res) => {
+app.get('/api/league/knockout', async (req, res) => {
   const { tournament_id } = req.query;
   const { data, error } = await db.query(
     `SELECT * FROM league_knockout_matches WHERE tournament_id=$1 ORDER BY 
