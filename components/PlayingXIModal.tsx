@@ -7,7 +7,7 @@ interface PlayingXIModalProps {
     matchId: string;
     homePlayers: Player[]; // Roster from PlayerList/SquadRoster
     opponentTeams: OpponentTeam[];
-    opponentId: string;
+    opponentId: string | null;
     teamType: 'home' | 'opponent' | 'view';
     initialSelection?: string[];
     onClose: () => void;

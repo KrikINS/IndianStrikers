@@ -286,12 +286,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         isOpen: boolean;
         matchId: string;
         teamType: 'home' | 'opponent' | 'view';
-        opponentId: string;
+        opponentId: string | null;
     }>({
         isOpen: false,
         matchId: '',
         teamType: 'home',
-        opponentId: ''
+        opponentId: null
     });
     const [summaryMatchId, setSummaryMatchId] = useState<string | null>(null);
     const [summaryPreviewUrl, setSummaryPreviewUrl] = useState<string | null>(null);
