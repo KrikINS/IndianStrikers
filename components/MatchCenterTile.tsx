@@ -185,7 +185,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             </button>
                         )}
                     </div>
-                    <h4 className="team-name-display" style={{ color: '#ffffff' }}>{(homeTeamName === 'Home Team' ? 'Indian Strikers' : (homeTeamName || 'Indian Strikers')).toUpperCase()}</h4>
+                    <h4 className="team-name-display" style={{ color: '#ffffff' }}>{(homeTeamName || (match.isNeutral ? 'Team A' : 'Indian Strikers')).toUpperCase()}</h4>
                     {(isLive || isCompleted) && match.finalScoreHome && (
                         <div className="team-score-display font-black text-2xl mt-1.5" style={{ color: '#ffffff' }}>
                             <span>{match.finalScoreHome.runs ?? 0}/{match.finalScoreHome.wickets ?? 0}</span>

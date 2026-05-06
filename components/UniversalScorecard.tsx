@@ -742,7 +742,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer'
               }}
             >
-              {match.is_home_batting_first ? (match.homeTeamName || 'INDIAN STRIKERS') : (match.opponentName || 'OPPONENT')}
+              {match.is_home_batting_first ? homeTeamName : (match.opponentName || 'OPPONENT')}
             </button>
             <button
               onClick={() => setSelectedInnings(2)}
@@ -753,7 +753,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer'
               }}
             >
-              {match.is_home_batting_first ? (match.opponentName || 'OPPONENT') : (match.homeTeamName || 'INDIAN STRIKERS')}
+              {match.is_home_batting_first ? (match.opponentName || 'OPPONENT') : homeTeamName}
             </button>
           </div>
         )}
@@ -795,7 +795,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
                   <div style={{ display: 'flex', gap: 20 }}>
                     <div style={{ flex: 1 }}>
-                      <TableTitle style={{ color: '#38BDF8' }}>INDIAN STRIKERS XI</TableTitle>
+                      <TableTitle style={{ color: '#38BDF8' }}>{homeTeamName} XI</TableTitle>
                       <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                         {(match.homeTeamXI || []).map((id: string) => (
                           <div key={id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', fontWeight: 600 }}>
@@ -1162,12 +1162,12 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     const analyticsData = Object.values(overStats);
                     const getTeamName = (inn: any, num: number) => {
                       const bId = inn?.battingTeamId;
-                      if (bId === 'HOME') return match.homeTeamName || 'INDIAN STRIKERS';
-                      if (bId === 'AWAY') return match.opponentName || 'SAUDI KNIGHTS';
+                      if (bId === 'HOME') return homeTeamName;
+                      if (bId === 'AWAY') return match.opponentName || 'OPPONENT';
                       
                       // Fallback: If battingTeamId is missing, guess based on innings number and isHomeBattingFirst
                       const isHome = num === 1 ? match.isHomeBattingFirst : !match.isHomeBattingFirst;
-                      return isHome ? (match.homeTeamName || 'INDIAN STRIKERS') : (match.opponentName || 'SAUDI KNIGHTS');
+                      return isHome ? homeTeamName : (match.opponentName || 'OPPONENT');
                     };
 
                     const team1Name = getTeamName(normalizedData.innings1, 1);

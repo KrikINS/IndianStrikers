@@ -22,6 +22,11 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
     const opponent = opponents.find(o => o.id === match.opponentId);
     const opponentName = opponent?.name || match.opponentName || 'Opponent';
     const opponentLogo = opponent?.logoUrl || match.opponentLogo;
+    
+    const homeTeam = match.isNeutral ? opponents.find(o => o.id === match.homeTeamId) : null;
+    const resolvedHomeName = match.isNeutral ? (homeTeam?.name || 'Team A') : homeTeamName;
+    const resolvedHomeLogo = match.isNeutral ? (homeTeam?.logoUrl || '') : homeTeamLogo;
+
     const ground = grounds.find(g => g.id === match.groundId);
     
     // Get home XI players from the full squad roster
@@ -77,9 +82,13 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
             <div className="relative flex items-center justify-between px-20 py-16 bg-white/5 border-y border-white/10 backdrop-blur-md">
                 <div className="flex flex-col items-center gap-6 flex-1">
                     <div className="w-48 h-48 rounded-[3rem] bg-[#0f172a] p-4 border-2 border-white/20 shadow-2xl overflow-hidden flex items-center justify-center">
-                        <img src={homeTeamLogo} className="w-full h-full object-contain" alt="Home" crossOrigin="anonymous" />
+                        {resolvedHomeLogo ? (
+                            <img src={resolvedHomeLogo} className="w-full h-full object-contain" alt="Home" crossOrigin="anonymous" />
+                        ) : (
+                            <div className="text-6xl font-black text-white/20">{resolvedHomeName.substring(0,3).toUpperCase()}</div>
+                        )}
                     </div>
-                    <div className="text-3xl font-black uppercase tracking-tight text-center">{homeTeamName}</div>
+                    <div className="text-3xl font-black uppercase tracking-tight text-center">{resolvedHomeName}</div>
                 </div>
 
                 <div className="flex flex-col items-center">

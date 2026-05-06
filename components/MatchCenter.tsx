@@ -207,19 +207,21 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         if (!match) return;
 
         const diff = Math.abs(summary.homeScore.runs - summary.awayScore.runs);
+        const homeTeam = match.isNeutral ? opponents.find(o => o.id === match.homeTeamId) : null;
+        const homeName = match.isNeutral ? (homeTeam?.name || 'Team A') : 'Indian Strikers';
         const opponent = opponents.find(o => o.id === match.opponentId);
         const oppName = opponent?.name || 'Opponent';
 
         const autoResult = summary.resultType === 'Abandoned' ? 'Match Abandoned'
             : summary.resultType === 'Tie' ? 'Match Tied'
-                : summary.resultType === 'Forfeit (Home)' ? `${oppName} won (Indian Strikers Forfeit)`
-                    : summary.resultType === 'Forfeit (Opponent)' ? `Indian Strikers won (${oppName} Forfeit)`
-                        : summary.homeScore.runs > summary.awayScore.runs ? `Indian Strikers won by ${diff} runs`
+                : summary.resultType === 'Forfeit (Home)' ? `${oppName} won (${homeName} Forfeit)`
+                    : summary.resultType === 'Forfeit (Opponent)' ? `${homeName} won (${oppName} Forfeit)`
+                        : summary.homeScore.runs > summary.awayScore.runs ? `${homeName} won by ${diff} runs`
                             : summary.awayScore.runs > summary.homeScore.runs ? `${oppName} won by ${diff} runs`
                                 : 'Match Tied';
 
         const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
-        const tossWinnerName = summary.tossWinner === HOME_TEAM_ID ? 'Indian Strikers' : oppName;
+        const tossWinnerName = summary.tossWinner === HOME_TEAM_ID ? homeName : oppName;
 
         const summaryScorecard = match.scorecard || {
             innings1: { 
@@ -357,7 +359,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         }
 
         if (match.homeTeamXI.length !== 11) {
-            alert("Please select exactly 11 players for Indian Strikers before starting.");
+            alert(`Please select exactly 11 players for ${match.isNeutral ? (opponents.find(o => o.id === match.homeTeamId)?.name || 'Home Team') : 'Indian Strikers'} before starting.`);
             handleSelectPlayingXI(matchId, 'home');
             return;
         }
@@ -906,7 +908,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                     title="Cloud Sync Player Stats"
                                     disabled={isSyncingStats}
                                     onClick={async () => {
-                                        if (window.confirm("This will recalculate career statistics for all Indian Strikers players based on finalized match data. Proceed?")) {
+                                        if (window.confirm("This will recalculate career statistics for all players based on finalized match data. Proceed?")) {
                                             setIsSyncingStats(true);
                                             try {
                                                 await syncAllPlayerStats();
@@ -1074,8 +1076,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                 <td>
                                                                     <div className="flex flex-col gap-1 py-1">
                                                                         <div className="team-cell">
-                                                                            <img src="/INS%20LOGO.PNG" alt="INS" className="team-avatar" />
-                                                                            <span>INDIAN STRIKERS</span>
+                                                                            {m.isNeutral ? (opponents.find(o => o.id === m.homeTeamId)?.logoUrl ? <img src={opponents.find(o => o.id === m.homeTeamId)?.logoUrl} crossOrigin="anonymous" className="team-avatar" /> : <div className="team-avatar-fallback text-slate-500">?</div>) : <img src="/INS%20LOGO.PNG" alt="INS" className="team-avatar" />}
+                                                                            <span>{m.isNeutral ? (opponents.find(o => o.id === m.homeTeamId)?.name || 'Team A') : 'INDIAN STRIKERS'}</span>
                                                                             <span className="vs-cell">VS</span>
                                                                             {opp?.logoUrl ? <img src={opp.logoUrl} crossOrigin="anonymous" alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback text-slate-500">?</div>}
                                                                             <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
