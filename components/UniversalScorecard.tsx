@@ -38,6 +38,9 @@ const PremiumModalOverlay = styled(motion.div)`
 
 const PremiumModalContent = styled.div`
   background: #0F172A;
+  background-image: linear-gradient(rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.95)), url('/assets/cricket_ground_bg.png');
+  background-size: cover;
+  background-position: center;
   color: #FFFFFF;
   width: 100vw !important;
   height: 100vh !important;
@@ -86,7 +89,8 @@ const TabContainer = styled.div`
   display: flex;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding: 0 20px;
-  background: #1E293B;
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(8px);
 `;
 
 const TabButton = styled.button<{ $active: boolean }>`
@@ -113,7 +117,7 @@ const ScrollContent = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background: #0F172A;
+  background: transparent;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -128,8 +132,11 @@ const ScrollContent = styled.div`
 `;
 
 const MatchHeaderCard = styled.div`
-  background: #001F3F; /* Dark navy from the image */
-  padding: 36px 20px 20px;
+  background: #001f3f; /* Fallback */
+  background-image: linear-gradient(rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.85)), url('/assets/cricket_ground_bg.png');
+  background-size: cover;
+  background-position: center;
+  padding: 36px 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;

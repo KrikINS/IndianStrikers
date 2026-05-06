@@ -89,13 +89,22 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     return (
         <div 
             className={`match-card-compact border transition-all duration-300 ${isLive ? 'border-red-500' : isCarouselActive ? 'border-blue-500/50 shadow-2xl shadow-blue-500/10' : 'border-white/5'}`}
-            style={{ backgroundColor: isCarouselActive ? '#0f172a' : '#020617' }}
+            style={{ 
+                backgroundColor: isCarouselActive ? '#0f172a' : '#020617',
+                backgroundImage: isGraphic ? `linear-gradient(rgba(2, 6, 23, 0.95), rgba(2, 6, 23, 0.95)), url('/assets/cricket_ground_bg.png')` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+            }}
         >
 
             {/* HEADER HERO SECTION (Mirroring Player Profile Style) */}
             <div 
-                className={`relative h-20 overflow-hidden border-b border-white/5 flex items-center px-6`}
-                style={{ backgroundColor: isLive ? 'rgba(69, 10, 10, 0.2)' : '#0f172a' }}
+                className={`relative ${isGraphic ? 'py-8' : 'h-20'} overflow-hidden border-b border-white/5 flex items-center px-6`}
+                style={{ 
+                    backgroundImage: `linear-gradient(rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.85)), url('/assets/cricket_ground_bg.png')`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                }}
             >
                 {/* Jersey-style Watermark */}
                 <div 
@@ -133,6 +142,19 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         <div className="text-[11px] font-bold uppercase tracking-widest mt-0.5" style={{ color: '#94a3b8' }}>
                             {match.stage === 'League' ? 'League Match' : (match.stage || 'Official')}
                         </div>
+
+                        {/* Graphic Mode Metadata */}
+                        {isGraphic && (
+                            <div className="flex flex-col items-center mt-3 gap-1.5 animate-in fade-in slide-in-from-top-1 duration-500">
+                                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[9px] font-black text-blue-400 uppercase tracking-widest">
+                                    <Calendar size={10} className="text-blue-500" /> {dateFormatted}
+                                </div>
+                                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+                                    <MapPin size={10} className="text-emerald-500" /> 
+                                    {grounds.find(g => g.id === match.groundId)?.name || 'TBD'}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Branding/Status - Right Side */}
@@ -386,7 +408,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 )}
             </div>
             {isGraphic && (
-                <div className="pb-6 pt-2 text-center border-t border-white/5 bg-[#020617]">
+                <div className="pb-6 pt-2 text-center border-t border-white/5 bg-transparent">
                     <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] italic">
                         © WWW.INDIANSTRIKERS.CLUB
                     </p>
