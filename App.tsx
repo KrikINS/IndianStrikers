@@ -8,6 +8,7 @@ import PlayerList from './components/PlayerList';
 import FieldingMap from './components/FieldingMap';
 import Memories from './components/Memories';
 import SplashScreen from './components/SplashScreen';
+import BroadcastOverlay from './components/BroadcastOverlay';
 const ScorerDashboard = lazy(() => 
   import('./components/ScorerDashboard').catch(err => {
     console.error("[ChunkLoad] Failed to fetch ScorerDashboard, refreshing...", err);
@@ -165,10 +166,11 @@ const AppContent: React.FC<{
   }, [location, navigate]);
 
   const isScorerActive = location.pathname.startsWith('/scorer');
+  const isBroadcastOverlay = location.pathname === '/broadcast-overlay';
 
   return (
     <>
-      <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
+      <div className={`flex min-h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden`}>
           <div className={`${isScorerActive ? 'hidden md:block' : ''}`}>
             <Sidebar
               userRole={userRole}
@@ -256,8 +258,9 @@ const AppContent: React.FC<{
                   </Suspense>
                 } 
               />
-              
-              <Route path="*" element={<Navigate to="/home" replace />} />
+                
+
+                <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
 
               {/* Trust Signals Footer */}
@@ -302,13 +305,18 @@ const AppContent: React.FC<{
 
 const App: React.FC = () => {
   return (
-    <StoreProvider>
-      <AppInternal />
-    </StoreProvider>
+    <HashRouter>
+      <StoreProvider>
+        <AppInternal />
+      </StoreProvider>
+    </HashRouter>
   );
 };
 
 const AppInternal: React.FC = () => {
+    const location = useLocation();
+    const isBroadcastOverlay = location.pathname === '/broadcast-overlay';
+
     // Player Management from matchStore
     const fetchPlayers = useMatchCenter(state => state.fetchPlayers);
     const squadPlayers = useMatchCenter(state => state.squadPlayers);
@@ -489,8 +497,12 @@ const AppInternal: React.FC = () => {
     await saveTeamLogo(url);
   };
 
+  if (isBroadcastOverlay) {
+    return <BroadcastOverlay />;
+  }
+
   return (
-    <HashRouter>
+    <>
       {showSplash ? (
         <SplashScreen onComplete={handleLoginComplete} teamLogo={teamLogo} />
       ) : (
@@ -511,7 +523,7 @@ const AppInternal: React.FC = () => {
           isOffline={isOffline}
         />
       )}
-    </HashRouter>
+    </>
   );
 };
 
