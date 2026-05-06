@@ -525,6 +525,12 @@ const mapMatchToDB = (m) => {
       final[col] = val;
     }
   });
+  
+  // Architect Fix: Ensure UUID columns never receive empty strings (Postgres strictly requires valid UUID or NULL)
+  const uuidColumns = ['opponent_id', 'ground_id', 'tournament_id', 'toss_winner_id'];
+  uuidColumns.forEach(col => {
+    if (final[col] === '') final[col] = null;
+  });
 
   // If ID starts with 'match_', remove it for inserts (let Database generate UUID)
   if (final.id && String(final.id).startsWith('match_')) {

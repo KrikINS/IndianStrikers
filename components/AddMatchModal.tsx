@@ -52,17 +52,17 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
 
             const newMatch: Omit<ScheduledMatch, 'id'> = {
                 isNeutral: formData.isNeutral,
-                homeTeamId: formData.isNeutral ? formData.homeTeamId : 'IND_STRIKERS',
-                opponentId: formData.opponentId,
+                homeTeamId: formData.isNeutral ? (formData.homeTeamId || null) : 'IND_STRIKERS',
+                opponentId: formData.opponentId || null,
                 opponentName,
                 opponentLogo,
                 date: (formData.date && !isNaN(new Date(formData.date).getTime())) 
                     ? new Date(formData.date).toISOString() 
                     : new Date().toISOString(),
-                groundId: formData.groundId,
+                groundId: formData.groundId || null,
                 venue: selectedVenue,
                 tournament: selectedTournament,
-                tournamentId: formData.isFriendly ? '' : formData.tournamentId,
+                tournamentId: formData.isFriendly ? null : (formData.tournamentId || null),
                 stage: formData.stage,
                 status: formData.status,
                 matchFormat: formData.matchFormat,
