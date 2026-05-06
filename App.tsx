@@ -316,8 +316,8 @@ const App: React.FC = () => {
 const AppInternal: React.FC = () => {
     const location = useLocation();
     const hash = window.location.hash;
-    const isBroadcastOverlay = hash.includes('broadcast-overlay');
-    const isLeagueCenterPublic = hash.includes('league-center') && !sessionStorage.getItem('authToken');
+    const isBroadcastOverlay = window.location.href.includes('broadcast-overlay');
+    const isLeagueCenterPublic = window.location.href.includes('league-center') && !sessionStorage.getItem('authToken');
 
     // Player Management from matchStore
     const fetchPlayers = useMatchCenter(state => state.fetchPlayers);
