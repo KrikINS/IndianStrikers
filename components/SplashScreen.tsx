@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Ticket, Lock, Loader2, ChevronRight, X, User, Eye, EyeOff, Trophy } from 'lucide-react';
+import { Shield, Users, Ticket, Lock, Loader2, ChevronRight, X, User, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserRole } from '../types';
 import KirikINSLogo from './KirikINSLogo';
