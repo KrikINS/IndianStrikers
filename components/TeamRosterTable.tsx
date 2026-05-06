@@ -189,7 +189,7 @@ export const TeamRosterTable: React.FC<TeamRosterTableProps> = ({
             <div className="flex items-center gap-6">
               <div className="w-20 h-20 rounded-[1.5rem] bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shadow-inner group-hover:scale-105 transition-transform">
                 {team.logo_url ? (
-                  <img src={team.logo_url} className="w-full h-full object-contain p-2" alt={team.name} />
+                  <img src={team.logo_url} className="w-full h-full object-contain p-2" alt={team.name} crossOrigin="anonymous" />
                 ) : (
                   <Shield size={32} className="text-slate-200" />
                 )}

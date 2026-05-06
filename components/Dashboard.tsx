@@ -999,7 +999,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topRunScorers.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} />
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
@@ -1029,7 +1029,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topInningsRuns.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-yellow-500 transition-colors" alt={p.name} />
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-yellow-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
@@ -1054,7 +1054,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topSixHitters.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-sky-500 transition-colors" alt={p.name} />
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-sky-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
@@ -1079,7 +1079,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topWicketTakers.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} />
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-blue-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
@@ -1109,7 +1109,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topInningsWickets.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-purple-500 transition-colors" alt={p.name} />
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-purple-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>
@@ -1134,7 +1134,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
               {topFourHitters.map((p, idx) => (
                 <div key={p.id} className="flex items-center gap-3 group">
                   <div className="relative shrink-0">
-                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-rose-500 transition-colors" alt={p.name} />
+                    <img src={p.avatarUrl} className="w-10 h-10 rounded-full border-2 border-slate-100 object-cover shadow-sm group-hover:border-rose-500 transition-colors" alt={p.name} crossOrigin="anonymous" />
                     <span className="absolute -bottom-1 -right-1 bg-slate-900 text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white">
                       {idx + 1}
                     </span>

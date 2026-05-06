@@ -461,6 +461,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     if (node?.tagName === 'LINK' && node?.href?.includes('fonts.googleapis')) return false;
                     // Respect ignore attributes
                     if (node?.hasAttribute?.('data-html2canvas-ignore')) return false;
+                    // Skip dropdown menu and other UI if they leaked in
+                    if (node?.classList?.contains('action-dropdown')) return false;
                     return true;
                 }
             });
@@ -468,9 +470,15 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             // Set the preview URL instead of direct download
             setSummaryPreviewUrl(dataUrl);
             console.log("[Generator] ✅ Summary generated successfully via html-to-image.");
-        } catch (err) {
+        } catch (err: any) {
             console.error("[Generator] ❌ Fatal error during summary capture:", err);
-            alert("Failed to generate image. Please check console for details.");
+            
+            // Extract more detail if it's an Event or DOMException
+            let detail = "Check console for technical details.";
+            if (err instanceof Event) detail = "An image resource failed to load or has CORS restrictions.";
+            else if (err?.message) detail = err.message;
+            
+            alert(`Failed to generate image: ${detail}`);
         } finally {
             setIsGenerating(false);
             setSummaryMatchId(null);

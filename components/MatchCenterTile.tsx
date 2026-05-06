@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw, Camera, Download } from 'lucide-react';
+import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw, Camera, Download, Zap } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {
@@ -48,6 +48,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     onShareSummary,
     tournaments = []
 }) => {
+    const [showActions, setShowActions] = useState(false);
     const isScorerOrAdmin = userRole === 'admin' || canScore;
     const isLive = match.status === 'live';
     const isUpcoming = match.status === 'upcoming';
@@ -79,10 +80,11 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
         : defaultHomeTeamName;
     const homeTeamLogo = match.isNeutral
         ? (allOpponents.find(o => o.id === match.homeTeamId)?.logoUrl || '')
-        : defaultHomeTeamLogo;
+        : (defaultHomeTeamLogo || '/INS LOGO.PNG');
 
     const opponentName = opponent?.name || match.opponentName || (match.opponentId && !match.opponentId.includes('-') ? match.opponentId : 'Opponent');
-    const opponentLogo = match.opponentLogo || opponent?.logoUrl;
+    // Task #1: Use fresh logo from store/database if available
+    const opponentLogo = (opponent?.logoUrl && opponent.logoUrl !== '') ? opponent.logoUrl : (match.opponentLogo || '');
 
     return (
         <div 
@@ -107,62 +109,40 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 </div>
 
                 <div className={`relative z-10 flex items-center w-full h-full ${isGraphic ? 'justify-center' : 'justify-between'}`}>
-                    {/* Status Badge - Hidden in Graphic Mode */}
-                    {!isGraphic && (
-                        <div className="flex items-center gap-4">
-                            {isLive && (
-                                <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl text-[15px] font-black" style={{ background: '#FF0000', color: '#ffffff', boxShadow: '0 10px 15px -3px rgba(239, 68, 68, 0.4)', border: '1px solid rgba(255,255,255,0.2)' }}>
-                                    <span className="relative flex h-3.5 w-3.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-white"></span>
-                                    </span>
-                                    LIVE
-                                </div>
-                            )}
-                            {isUpcoming && (
-                                <div className="px-3 py-1.5 rounded-xl text-[14px] font-black uppercase tracking-wider" style={{ background: '#2563eb', color: '#ffffff', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.1)' }}>Upcoming</div>
-                            )}
-                            {/* Task #12: Removed Completed badge from here */}
-                        </div>
-                    )}
-
-                    {/* Tournament Info - Centered Fixed Position for Graphics */}
-                    <div className={`${isGraphic ? 'absolute inset-0 flex flex-col items-center justify-center pointer-events-none' : 'text-right flex items-center justify-end gap-3'}`}>
-                        {!isGraphic && !match.isNeutral && (
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onShareSummary?.(match.id); }}
-                                className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-sky-400 transition-all flex items-center gap-2 border border-white/5"
-                                title="Generate Match Card Image"
-                            >
-                                <Camera size={16} />
-                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Capture Card</span>
-                            </button>
-                        )}
-                        <div className={isGraphic ? 'text-center' : ''}>
-                            {(() => {
-                                const tId = match.tournamentId || tournaments.find(t => t.name === match.tournament)?.id;
-                                if (tId) {
-                                    return (
-                                        <Link 
-                                            to={`/tournaments/${tId}`}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="text-[16px] font-black text-white uppercase tracking-tighter leading-tight hover:text-blue-400 hover:underline transition-all block"
-                                        >
-                                            {match.tournament || 'Exhibition Match'}
-                                        </Link>
-                                    );
-                                }
+                    {/* Header Info - Left Side (Tournament) */}
+                    <div className={isGraphic ? 'text-center' : 'flex flex-col'}>
+                        {(() => {
+                            const tId = match.tournamentId || tournaments.find(t => t.name === match.tournament)?.id;
+                            if (tId) {
                                 return (
-                                    <div className="text-[16px] font-black text-white uppercase tracking-tighter leading-tight">
+                                    <Link 
+                                        to={`/tournaments/${tId}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-[16px] font-black text-white uppercase tracking-tighter leading-tight hover:text-blue-400 hover:underline transition-all block"
+                                    >
                                         {match.tournament || 'Exhibition Match'}
-                                    </div>
+                                    </Link>
                                 );
-                            })()}
-                            <div className="text-[11px] font-bold uppercase tracking-widest mt-0.5" style={{ color: '#94a3b8' }}>
-                                {match.stage || 'Official'}
-                            </div>
+                            }
+                            return (
+                                <div className="text-[16px] font-black text-white uppercase tracking-tighter leading-tight">
+                                    {match.tournament || 'Exhibition Match'}
+                                </div>
+                            );
+                        })()}
+                        <div className="text-[11px] font-bold uppercase tracking-widest mt-0.5" style={{ color: '#94a3b8' }}>
+                            {match.stage || 'Official'}
                         </div>
                     </div>
+
+                    {/* Branding/Status - Right Side */}
+                    {!isGraphic && (
+                        <div className="flex items-center gap-3">
+                            <div className="px-3 py-1 rounded bg-white/5 border border-white/10 text-[10px] font-black text-white/40 tracking-[0.2em]">
+                                ID: {match.id.substring(0, 8).toUpperCase()}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -175,7 +155,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             ? <img src={homeTeamLogo} className="team-logo-md object-contain" alt={homeTeamName} crossOrigin="anonymous" />
                             : (match.isNeutral 
                                 ? <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(homeTeamName).slice(0, 3).toUpperCase()}</div>
-                                : <img src="/INS%20LOGO.PNG" className="team-logo-md object-contain" alt="INS" crossOrigin="anonymous" />
+                                : <img src="/INS LOGO.PNG" className="team-logo-md object-contain" alt="INS" crossOrigin="anonymous" />
                               )
                         }
                         {!isGraphic && (
@@ -272,77 +252,141 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
             )}
 
             {/* ACTION FOOTER */}
-            <div className="px-6 pb-6 mt-auto">
+            <div className="px-6 pb-6 mt-auto" data-html2canvas-ignore="true">
                 {/* Info + Admin Controls */}
-                <div className="flex items-center justify-between mb-4 text-[20px] match-meta-info uppercase tracking-tight px-1.5">
-                    <div className="flex gap-6 items-center">
-                        {/* Task #12: Moved Completed badge to Meta Footer */}
-                        {isCompleted && (
-                            <div className="px-2 py-0.5 rounded bg-blue-900/50 text-blue-400 text-[10px] font-black border border-blue-500/30">COMPLETED</div>
-                        )}
-                        <span className="flex items-center gap-2.5" style={{ color: '#cbd5e1' }}><Calendar size={20} style={{ color: '#38bdf8' }} /> {dateFormatted}</span>
-                        <span className="flex items-center gap-2.5" style={{ color: '#cbd5e1' }}>
-                            <MapPin size={20} style={{ color: '#10b981' }} /> 
-                            {(() => {
-                                const ground = grounds.find(g => g.id === match.groundId);
-                                return ground?.name || 'TBD';
-                            })()}
-                        </span>
-                    </div>
-                    {!isGraphic && isAdmin && (
-                        <div className="flex gap-3">
-                             <button 
-                                onClick={(match.isLocked || (match as any).is_locked) ? undefined : (e) => { e.stopPropagation(); onEditMatch(match); }} 
-                                className={`transition-colors ${(match.isLocked || (match as any).is_locked) ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-blue-600'}`} 
-                                title={(match.isLocked || (match as any).is_locked) ? "Match is Locked" : "Edit Match"}
-                                disabled={!!(match.isLocked || (match as any).is_locked)}
-                             >
-                                <Edit2 size={14} />
-                             </button>
-                             <button 
-                                onClick={(match.isLocked || (match as any).is_locked) ? undefined : (e) => { e.stopPropagation(); if (window.confirm('Delete?')) onDeleteMatch(match.id); }} 
-                                className={`transition-colors ${(match.isLocked || (match as any).is_locked) ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-red-600'}`} 
-                                title={(match.isLocked || (match as any).is_locked) ? "Match is Locked" : "Delete Match"}
-                                disabled={!!(match.isLocked || (match as any).is_locked)}
-                             >
-                                <Trash2 size={14} />
-                             </button>
+                <div className="flex flex-col gap-3 mb-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-2">
+                            <div className="flex flex-wrap gap-2 items-center">
+                                {/* Moved Status Badges here */}
+                                {isLive && (
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-900/40 text-red-500 text-[9px] font-black border border-red-500/30 shadow-lg shadow-red-500/10">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                                        LIVE
+                                    </div>
+                                )}
+                                {isUpcoming && (
+                                    <div className="px-2 py-0.5 rounded bg-blue-900/40 text-blue-400 text-[9px] font-black border border-blue-500/30">UPCOMING</div>
+                                )}
+                                {isCompleted && (
+                                    <div className="px-2 py-0.5 rounded bg-emerald-900/40 text-emerald-400 text-[9px] font-black border border-emerald-500/30">COMPLETED</div>
+                                )}
+                                
+                                <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-tight text-slate-300">
+                                    <Calendar size={13} className="text-blue-500" /> {dateFormatted}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-tight text-slate-400">
+                                <MapPin size={13} className="text-emerald-500" /> 
+                                {(() => {
+                                    const ground = grounds.find(g => g.id === match.groundId);
+                                    return ground?.name || 'TBD';
+                                })()}
+                            </div>
                         </div>
-                    )}
+
+                        {/* Moved Admin Actions to Dropdown */}
+                    </div>
                 </div>
 
-                {/* Footer Buttons - Task #13: Match Center Dropdown */}
+                {/* Footer Buttons - Action Dropdown */}
                 {!isGraphic && (
-                    <div className="flex flex-col gap-3">
-                        <button 
-                            onClick={() => onViewScorecard(match)} 
-                            className="btn-primary-full bg-blue-600 text-white border-blue-500 hover:bg-blue-700 flex items-center justify-center gap-3 py-4 font-black text-lg shadow-lg shadow-blue-500/20"
-                        >
-                            <Users size={20} /> MATCH CENTER
-                        </button>
-                        
-                        {isScorerOrAdmin && (
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                                {isLive ? (
-                                    <button onClick={() => onStartScoring(match.id)} className="col-span-2 btn-action-dark bg-red-600 text-white border-red-500 hover:bg-red-700 flex items-center justify-center gap-2">
-                                        <Radio size={16} /> SCORING
-                                    </button>
-                                ) : (
-                                    <>
-                                        {!match.isLocked && (
+                        <div className="flex gap-2 relative">
+                            {/* Primary View Action */}
+                            <button 
+                                onClick={() => onViewScorecard(match)} 
+                                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-3.5 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98] text-[11px] uppercase tracking-widest"
+                            >
+                                <Users size={16} /> MATCH CENTER
+                            </button>
+
+                            {/* Action Menu Toggle */}
+                            <div className="relative">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
+                                    className={`px-6 h-full font-black rounded-xl border flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest transition-all ${showActions ? 'bg-white border-white text-slate-900' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+                                >
+                                    {showActions ? <X size={16} /> : <Zap size={16} className="text-yellow-400" />} 
+                                    {showActions ? 'CLOSE' : 'ACTIONS'}
+                                </button>
+
+                                {/* Dropdown Menu */}
+                                {showActions && (
+                                    <div 
+                                        className="absolute bottom-full right-0 mb-3 w-56 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2 duration-200 action-dropdown"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {/* 1. Primary Feature Actions (Available to Everyone) */}
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setShowActions(false); onShareSummary?.(match.id); }}
+                                            className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-white/5 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
+                                        >
+                                            <Camera size={14} className="text-sky-400" /> CAPTURE CARD
+                                        </button>
+
+                                        {/* 2. Admin/Scorer Actions */}
+                                        {isScorerOrAdmin && (
                                             <>
-                                                <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark text-[10px]">SUMMARY</button>
-                                                <button onClick={() => onUpdateManualScore(match.id, 'full')} className="btn-action-dark text-[10px]">SCORECARD</button>
+                                                {isLive ? (
+                                                    <button 
+                                                        onClick={() => { setShowActions(false); onStartScoring(match.id); }} 
+                                                        className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-red-600/20 hover:text-red-400 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
+                                                    >
+                                                        <Radio size={14} className="text-red-500" /> CONTINUE SCORING
+                                                    </button>
+                                                ) : (
+                                                    <>
+                                                        {!match.isLocked && (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => { setShowActions(false); onUpdateManualScore(match.id, 'summary'); }} 
+                                                                    className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-blue-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
+                                                                >
+                                                                    <Edit2 size={14} className="text-blue-500" /> EDIT SUMMARY
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => { setShowActions(false); onUpdateManualScore(match.id, 'full'); }} 
+                                                                    className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-emerald-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
+                                                                >
+                                                                    <RefreshCcw size={14} className="text-emerald-500" /> FULL SCORECARD
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {isToday && !isCompleted && (
+                                                            <button 
+                                                                onClick={() => { setShowActions(false); onStartScoring(match.id); }} 
+                                                                className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-yellow-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
+                                                            >
+                                                                <Zap size={14} className="text-yellow-400" /> START SCORING
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+
+                                                {/* Admin Only: Edit/Delete */}
+                                                {isAdmin && !match.isLocked && (
+                                                    <>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); setShowActions(false); onEditMatch(match); }}
+                                                            className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-blue-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
+                                                        >
+                                                            <Edit2 size={14} className="text-slate-400" /> CONFIGURE MATCH
+                                                        </button>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); setShowActions(false); if (window.confirm('Delete this match?')) onDeleteMatch(match.id); }}
+                                                            className="w-full px-5 py-4 text-left text-[11px] font-black text-rose-500 hover:bg-rose-600/20 flex items-center gap-3 transition-colors uppercase tracking-widest"
+                                                        >
+                                                            <Trash2 size={14} /> DELETE MATCH
+                                                        </button>
+                                                    </>
+                                                )}
                                             </>
                                         )}
-                                        {isToday && !isCompleted && (
-                                            <button onClick={() => onStartScoring(match.id)} className="col-span-2 btn-action-dark bg-emerald-600 text-white border-emerald-500">START MATCH</button>
-                                        )}
-                                    </>
+                                    </div>
                                 )}
                             </div>
-                        )}
-                    </div>
+                        </div>
                 )}
             </div>
             {isGraphic && (
