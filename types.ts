@@ -328,6 +328,7 @@ export interface Tournament {
   year: number;
   status: 'active' | 'completed' | 'upcoming';
   logoUrl?: string;
+  logo_url?: string;
 }
 
 export interface PlayerLegacyStats {
@@ -423,6 +424,7 @@ export interface LeagueTournament {
   type: 'League' | 'Groups';
   is_home_away: boolean;
   status: 'upcoming' | 'ongoing' | 'completed';
+  logo_url?: string;
   created_at?: string;
 }
 

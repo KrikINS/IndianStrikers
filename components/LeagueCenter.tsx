@@ -43,6 +43,7 @@ import {
   updateKnockoutMatch,
   submitKnockoutResult
 } from '../services/storageService';
+import { useMasterData } from '../store/tournamentStore';
 import { 
   LeagueTournament, 
   LeagueGroup, 
@@ -51,6 +52,7 @@ import {
   LeagueStanding 
 } from '../types';
 import LeagueTeamManager from './LeagueTeamManager';
+import LeagueStandingTable from './LeagueStandingTable';
 import { toast } from 'react-hot-toast';
 
 const LeagueCenter: React.FC = () => {
@@ -60,6 +62,7 @@ const LeagueCenter: React.FC = () => {
   const [teams, setTeams] = useState<LeagueTeam[]>([]);
   const [fixtures, setFixtures] = useState<LeagueFixture[]>([]);
   const [standings, setStandings] = useState<LeagueStanding[]>([]);
+  const { grounds } = useMasterData();
   const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'schedule' | 'standings' | 'knockout'>('overview');
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -884,12 +887,22 @@ const LeagueCenter: React.FC = () => {
                                    <div className="flex items-center justify-center gap-3">
                                      <div className="text-right">
                                        <p className={`text-xs font-black uppercase italic truncate max-w-[110px] ${isCompleted && winnerId === f.home_team_id ? 'text-emerald-600' : 'text-slate-800'}`}>{f.home_team_name}</p>
-                                       {isCompleted && homeRuns != null && <p className="text-sm font-black text-slate-900">{homeRuns}<span className="text-[9px] text-slate-400 ml-1">({homeOvers} ov)</span></p>}
+                                       {isCompleted && homeRuns != null && (
+                                          <p className="text-sm font-black text-slate-900">
+                                            {homeRuns}/{(f as any).home_team_wickets ?? 0}
+                                            <span className="text-[9px] text-slate-400 ml-1">({parseFloat(homeOvers).toString()} overs)</span>
+                                          </p>
+                                        )}
                                      </div>
                                      <span className="text-[9px] font-black text-slate-300 italic">VS</span>
                                      <div className="text-left">
                                        <p className={`text-xs font-black uppercase italic truncate max-w-[110px] ${isCompleted && winnerId === f.away_team_id ? 'text-emerald-600' : 'text-slate-800'}`}>{f.away_team_name}</p>
-                                       {isCompleted && awayRuns != null && <p className="text-sm font-black text-slate-900">{awayRuns}<span className="text-[9px] text-slate-400 ml-1">({awayOvers} ov)</span></p>}
+                                       {isCompleted && awayRuns != null && (
+                                          <p className="text-sm font-black text-slate-900">
+                                            {awayRuns}/{(f as any).away_team_wickets ?? 0}
+                                            <span className="text-[9px] text-slate-400 ml-1">({parseFloat(awayOvers).toString()} overs)</span>
+                                          </p>
+                                        )}
                                      </div>
                                    </div>
                                    {isCompleted && <p className="text-center text-[9px] font-black uppercase mt-1 text-slate-400">{winnerId ? (winnerId === f.home_team_id ? f.home_team_name + ' Won' : f.away_team_name + ' Won') : 'Tie / NR'}</p>}
@@ -964,7 +977,7 @@ const LeagueCenter: React.FC = () => {
                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-300 opacity-30" />
                               </div>
                             </div>
-                            <StandingTable 
+                            <LeagueStandingTable 
                               entries={enrichedStandings.filter(s => s.group_id === g.id)} 
                               qCount={g.top_q_count || 2} 
                             />
@@ -979,7 +992,7 @@ const LeagueCenter: React.FC = () => {
                              <LayoutGrid size={24} className="text-slate-200" />
                            </div>
                         </div>
-                        <StandingTable entries={enrichedStandings} qCount={4} />
+                        <LeagueStandingTable entries={enrichedStandings} qCount={4} />
                       </div>
                     )}
                   </div>
@@ -1152,12 +1165,17 @@ const LeagueCenter: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Venue</label>
-                      <input 
-                        value={newFixture.venue}
-                        onChange={e => setNewFixture({...newFixture, venue: e.target.value})}
-                        placeholder="E.G. Ground A"
-                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
-                      />
+                      <select 
+                         title="Select Venue"
+                         value={newFixture.venue}
+                         onChange={e => setNewFixture({...newFixture, venue: e.target.value})}
+                         className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none"
+                       >
+                         <option value="">Select Venue</option>
+                         {grounds.map(g => (
+                           <option key={g.id} value={g.name}>{g.name}</option>
+                         ))}
+                       </select>
                     </div>
                  </div>
 
@@ -1228,13 +1246,17 @@ const LeagueCenter: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Venue</label>
-                      <input 
-                        title="Edit Venue"
-                        placeholder="Venue"
-                        value={editingFixture.venue}
-                        onChange={e => setEditingFixture({...editingFixture, venue: e.target.value})}
-                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
-                      />
+                      <select 
+                        title="Select Venue"
+                        value={editingFixture.venue} 
+                        onChange={e => setEditingFixture({...editingFixture, venue: e.target.value})} 
+                        className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none"
+                      >
+                        <option value="">Select Venue</option>
+                        {grounds.map(g => (
+                          <option key={g.id} value={g.name}>{g.name}</option>
+                        ))}
+                      </select>
                     </div>
                  </div>
 
@@ -1418,7 +1440,17 @@ const LeagueCenter: React.FC = () => {
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Venue</label>
-                    <input title="Venue" placeholder="Venue" value={editingKnockout.venue || ''} onChange={e => setEditingKnockout({...editingKnockout, venue: e.target.value})} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20" />
+                    <select 
+                      title="Select Venue"
+                      value={editingKnockout.venue || ''} 
+                      onChange={e => setEditingKnockout({...editingKnockout, venue: e.target.value})} 
+                      className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none"
+                    >
+                      <option value="">Select Venue</option>
+                      {grounds.map(g => (
+                        <option key={g.id} value={g.name}>{g.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="flex gap-4 mt-2">
@@ -1717,8 +1749,8 @@ const KOMatchCard: React.FC<{ m: any; barClass: string; onScore: (m: any) => voi
   const ready = hName && aName && hName !== m.home_seed && aName !== m.away_seed;
 
   const sides = [
-    { name: hName as string, logo: hLogo as string, runs: m.home_runs, overs: m.home_overs, won: hw },
-    { name: aName as string, logo: aLogo as string, runs: m.away_runs, overs: m.away_overs, won: aw }
+    { name: hName as string, logo: hLogo as string, runs: m.home_runs, wickets: m.home_team_wickets, overs: m.home_overs, won: hw },
+    { name: aName as string, logo: aLogo as string, runs: m.away_runs, wickets: m.away_team_wickets, overs: m.away_overs, won: aw }
   ];
 
   const handleScoreClick = () => {
@@ -1736,10 +1768,19 @@ const KOMatchCard: React.FC<{ m: any; barClass: string; onScore: (m: any) => voi
               {s.logo ? <img src={s.logo} className="w-full h-full object-contain" alt="" /> : <Shield size={10} className="text-white/20" />}
             </div>
             <p className={`text-[10px] font-black uppercase truncate flex-1 ${s.won ? 'text-white' : s.name ? 'text-white/70' : 'text-white/30'}`}>{s.name || 'TBD'}</p>
-            {done && <span className={`text-sm font-black ${s.won ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]' : 'text-white/40'}`}>{s.runs}</span>}
+            {done && (
+              <div className="text-right">
+                <p className={`text-[10px] font-black ${s.won ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]' : 'text-white/40'}`}>
+                  {s.runs}/{s.wickets || 0}
+                </p>
+                <p className="text-[7px] text-white/30 font-bold uppercase tracking-tighter">
+                  ({parseFloat(s.overs || '0').toString()} overs)
+                </p>
+              </div>
+            )}
           </div>
         ))}
-        {done && m.home_overs && <p className="text-[8px] text-white/40 font-bold uppercase text-center pt-1">{m.home_overs}ov / {m.away_overs}ov</p>}
+        {done && m.home_overs && <p className="text-[8px] text-white/20 font-bold uppercase text-center pt-1 italic tracking-widest opacity-50">Match Completed</p>}
         {m.date && <p className="text-[8px] text-white/40 font-bold text-center">{new Date(m.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</p>}
       </div>
       <div className="px-4 pb-3 flex gap-1 justify-end border-t border-white/5 pt-2">
@@ -1858,68 +1899,6 @@ const KnockoutBracket: React.FC<KOProps> = ({ matches, teams: _teams, tournament
 };
 
 
-const StandingTable = ({ entries, qCount = 4 }: { entries: LeagueStanding[], qCount?: number }) => {
-  if (entries.length === 0) {
-    return (
-      <div className="py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-        No Data Available
-      </div>
-    );
-  }
 
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left">
-        <thead>
-          <tr className="bg-slate-50/50">
-            <th className="pl-8 pr-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Psn</th>
-            <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Team</th>
-            <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">P</th>
-            <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">W</th>
-            <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">L</th>
-            <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">NR</th>
-            <th className="px-4 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Pts</th>
-            <th className="px-8 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">NRR</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {entries.map((ent, idx) => {
-            const isQualifying = idx < qCount;
-            return (
-              <tr key={`${ent.team_id}-${idx}`} className={`hover:bg-blue-50/30 transition-all group ${isQualifying ? 'bg-emerald-50/10' : ''} relative`}>
-                <td className="pl-8 pr-4 py-5">
-                   <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shadow-sm ${
-                     isQualifying ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-slate-100 text-slate-400 border border-slate-200'
-                   }`}>
-                     {idx + 1}
-                   </div>
-                   {isQualifying && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 shadow-[2px_0_10px_rgba(16,185,129,0.3)]" />}
-                </td>
-                <td className="px-4 py-5">
-                   <div className="flex items-center gap-3">
-                     <div className="w-8 h-8 rounded-full bg-white border border-slate-200 overflow-hidden shadow-sm flex items-center justify-center">
-                       {ent.logo_url ? <img src={ent.logo_url} className="w-full h-full object-contain" alt="" /> : <Shield size={14} className="text-slate-300" />}
-                     </div>
-                     <span className="text-[11px] font-black text-slate-900 uppercase italic tracking-tight leading-none truncate max-w-[150px]">{ent.team_name}</span>
-                   </div>
-                </td>
-                <td className="px-4 py-5 text-center text-xs font-bold text-slate-600">{ent.p}</td>
-                <td className="px-4 py-5 text-center text-xs font-bold text-emerald-600">{ent.w}</td>
-                <td className="px-4 py-5 text-center text-xs font-bold text-red-500">{ent.l}</td>
-                <td className="px-4 py-5 text-center text-xs font-bold text-slate-400">{ent.nr}</td>
-                <td className="px-4 py-5 text-center text-xs font-black text-slate-900 italic tracking-tighter">{ent.pts}</td>
-                <td className="px-8 py-5 text-center">
-                   <span className={`text-[11px] font-black italic tracking-tighter ${ent.nrr >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                     {ent.nrr >= 0 ? '+' : ''}{parseFloat(String(ent.nrr)).toFixed(3)}
-                   </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-};
 
 export default LeagueCenter;

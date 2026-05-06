@@ -24,12 +24,12 @@ import { useStore } from '../store/StoreProvider';
 import { useMasterData } from '../store/tournamentStore';
 import { 
   getMatches, 
-  getTournamentTable, 
+  getLeagueStandings, 
   getTournamentPerformers,
   getOpponents
 } from '../services/storageService';
-import { ScheduledMatch, TournamentTableEntry, OpponentTeam, Player, UserRole, AppUser } from '../types';
-import PointsTable from './PointsTable';
+import { ScheduledMatch, LeagueStanding, OpponentTeam, Player, UserRole, AppUser } from '../types';
+import LeagueStandingTable from './LeagueStandingTable';
 
 const TabButton = ({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: any, label: string }) => (
   <button
@@ -61,7 +61,7 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
   const [activeTab, setActiveTab] = useState<'overview' | 'standings' | 'fixtures' | 'stats'>('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [tournamentMatches, setTournamentMatches] = useState<ScheduledMatch[]>([]);
-  const [standings, setStandings] = useState<TournamentTableEntry[]>([]);
+  const [standings, setStandings] = useState<LeagueStanding[]>([]);
   const [performers, setPerformers] = useState<any[]>([]);
   const [opponents, setOpponents] = useState<OpponentTeam[]>([]);
   
@@ -80,7 +80,7 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
       try {
         const [allMatches, table, perf, opps] = await Promise.all([
           getMatches(),
-          getTournamentTable(tournament.name),
+          getLeagueStandings(tournament.id),
           getTournamentPerformers(),
           getOpponents()
         ]);
@@ -181,8 +181,8 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
         
         <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row items-center gap-8">
           <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] bg-white p-4 shadow-2xl flex items-center justify-center border-4 border-white/10 group overflow-hidden">
-            {tournament.logoUrl ? (
-              <img src={tournament.logoUrl} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt={tournament.name} />
+            {(tournament.logo_url || tournament.logoUrl) ? (
+              <img src={tournament.logo_url || tournament.logoUrl} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt={tournament.name} />
             ) : (
               <Trophy size={64} className="text-slate-200" />
             )}
@@ -462,12 +462,10 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
           )}
 
           {activeTab === 'standings' && (
-            <div className="space-y-8 max-w-5xl mx-auto">
-               <PointsTable 
-                  opponents={opponents} 
-                  tournaments={tournaments} 
-                  userRole={userRole} 
-                  currentUser={currentUser as any}
+            <div className="space-y-8 max-w-5xl mx-auto bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm">
+               <LeagueStandingTable 
+                  entries={standings} 
+                  qCount={4} 
                />
                
                <div className="bg-blue-50/50 p-6 rounded-3xl border border-blue-100/50 flex items-center gap-6">

@@ -19,7 +19,7 @@ import { useMasterData } from '../store/tournamentStore';
 import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
 import { useCricketScorer } from '../store/matchStore';
 import { useStore } from '../store/StoreProvider';
-import PointsTable from './PointsTable';
+import LeagueStandingsMirror from './LeagueStandingsMirror';
 import TournamentsManager from './TournamentsManager';
 import { syncAllPlayerStats } from '../services/storageService';
 import OpponentsTab from './OpponentsTab';
@@ -1141,12 +1141,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
                         {activeTab === 'standings' && (
                             <div className="px-6 pb-20 pt-4">
-                                <PointsTable 
-                                    userRole={userRole}
-                                    currentUser={currentUser}
-                                    tournaments={tournaments}
-                                    opponents={opponents}
-                                />
+                                <LeagueStandingsMirror />
                             </div>
                         )}
 
