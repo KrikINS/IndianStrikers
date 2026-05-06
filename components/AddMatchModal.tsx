@@ -82,6 +82,9 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
     };
 
 
+    const neutralPressed = formData.isNeutral ? "true" : "false";
+    const friendlyPressed = formData.isFriendly ? "true" : "false";
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -113,7 +116,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                                 onClick={() => setFormData(prev => ({ ...prev, isNeutral: !prev.isNeutral }))}
                                 className={`w-12 h-6 rounded-full transition-all relative shrink-0 ${formData.isNeutral ? 'bg-blue-600' : 'bg-slate-700'}`}
                                 title="Toggle Neutral Match"
-                                aria-pressed={formData.isNeutral ? "true" : "false"}
+                                aria-pressed={neutralPressed}
                             >
                                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isNeutral ? 'left-7' : 'left-1'}`} />
                             </button>
@@ -130,7 +133,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                                 onClick={() => setFormData(prev => ({ ...prev, isFriendly: !prev.isFriendly, tournamentId: prev.isFriendly ? prev.tournamentId : '' }))}
                                 className={`w-12 h-6 rounded-full transition-all relative shrink-0 ${formData.isFriendly ? 'bg-amber-600' : 'bg-slate-700'}`}
                                 title="Toggle Friendly Match"
-                                aria-pressed={formData.isFriendly ? "true" : "false"}
+                                aria-pressed={friendlyPressed}
                             >
                                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isFriendly ? 'left-7' : 'left-1'}`} />
                             </button>

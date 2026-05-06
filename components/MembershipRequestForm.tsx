@@ -6,6 +6,8 @@ interface MembershipRequestFormProps {
     onClose: () => void;
 }
 
+const ariaPressed = (val: boolean) => (val ? "true" : "false") as "true" | "false";
+
 const MembershipRequestForm: React.FC<MembershipRequestFormProps> = ({ onClose }) => {
     const [formData, setFormData] = useState({
         name: '',
@@ -102,7 +104,7 @@ const MembershipRequestForm: React.FC<MembershipRequestFormProps> = ({ onClose }
                                 type="button"
                                 onClick={() => setFormData({ ...formData, associatedBefore: 'Yes' })}
                                 className={`flex-1 py-2 rounded-md text-sm font-bold transition-all ${formData.associatedBefore === 'Yes' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-                                aria-pressed={formData.associatedBefore === 'Yes' ? "true" : "false"}
+                                aria-pressed={ariaPressed(formData.associatedBefore === 'Yes')}
                             >
                                 Yes
                             </button>
@@ -110,7 +112,7 @@ const MembershipRequestForm: React.FC<MembershipRequestFormProps> = ({ onClose }
                                 type="button"
                                 onClick={() => setFormData({ ...formData, associatedBefore: 'No' })}
                                 className={`flex-1 py-2 rounded-md text-sm font-bold transition-all ${formData.associatedBefore === 'No' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-                                aria-pressed={formData.associatedBefore === 'No' ? "true" : "false"}
+                                aria-pressed={ariaPressed(formData.associatedBefore === 'No')}
                             >
                                 No
                             </button>

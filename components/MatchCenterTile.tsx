@@ -293,14 +293,19 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
 
                             {/* Action Menu Toggle */}
                             <div className="relative">
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
-                                    className={`px-6 h-full font-black rounded-xl border flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest transition-all ${showActions ? 'bg-white border-white text-slate-900' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
-                                    aria-pressed={showActions ? "true" : "false"}
-                                >
-                                    {showActions ? <X size={16} /> : <Zap size={16} className="text-yellow-400" />} 
-                                    {showActions ? 'CLOSE' : 'ACTIONS'}
-                                </button>
+                                {(() => {
+                                    const isPressed = showActions ? "true" : "false";
+                                    return (
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
+                                            className={`px-6 h-full font-black rounded-xl border flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest transition-all ${showActions ? 'bg-white border-white text-slate-900' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+                                            aria-pressed={isPressed}
+                                        >
+                                            {showActions ? <X size={16} /> : <Zap size={16} className="text-yellow-400" />} 
+                                            {showActions ? 'CLOSE' : 'ACTIONS'}
+                                        </button>
+                                    );
+                                })()}
 
                                 {/* Dropdown Menu */}
                                 {showActions && (

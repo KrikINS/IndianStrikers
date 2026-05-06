@@ -66,13 +66,15 @@ const MatchAction: React.FC<{
 
     if (!isAdmin) return null;
 
+    const isLockedPressed = localLocked ? "true" : "false";
+
     return (
         <button 
             onClick={handleAction} 
             disabled={isProcessing}
             className={`p-1.5 transition-all duration-200 ${localLocked ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-400 hover:text-amber-500'}`} 
             title={localLocked ? "Unlock Match (Now Internal)" : "Lock Match (Finalize Stats)"}
-            aria-pressed={localLocked ? "true" : "false"}
+            aria-pressed={isLockedPressed}
         >
             {isProcessing ? (
                 <Loader2 size={14} className="animate-spin text-blue-500" />

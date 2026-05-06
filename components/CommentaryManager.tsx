@@ -154,21 +154,24 @@ const CommentaryManager: React.FC = () => {
               <div>
                 <label className="block text-[11px] font-black text-white/40 uppercase tracking-widest mb-2 px-1">Trigger Event</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setForm({...form, event_type: cat})}
-                      className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
-                        form.event_type === cat 
-                        ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-900/40' 
-                        : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
-                      } uppercase tracking-widest`}
-                      aria-pressed={form.event_type === cat ? "true" : "false"}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+                  {categories.map(cat => {
+                    const isPressed = form.event_type === cat ? "true" : "false";
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setForm({...form, event_type: cat})}
+                        className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
+                          form.event_type === cat 
+                          ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-900/40' 
+                          : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
+                        } uppercase tracking-widest`}
+                        aria-pressed={isPressed}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
