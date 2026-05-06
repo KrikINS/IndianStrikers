@@ -232,12 +232,12 @@ export interface OpponentTeam {
 export interface ScheduledMatch {
   id: string;
   isNeutral?: boolean;
-  homeTeamId?: string; // If neutral, references OpponentTeam.id. If not neutral, this is IND_STRIKERS
-  opponentId: string; // References the ID in OpponentTeam
+  homeTeamId?: string | null; // If neutral, references OpponentTeam.id. If not neutral, this is IND_STRIKERS
+  opponentId: string | null; // References the ID in OpponentTeam
   date: string;
-  groundId: string;
+  groundId: string | null;
   tournament: string;
-  tournamentId?: string;
+  tournamentId?: string | null;
   stage: MatchStage;
   status: MatchStatus;
   homeTeamXI: string[]; // Array of Player IDs from Squad Roster

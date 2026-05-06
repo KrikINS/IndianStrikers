@@ -321,7 +321,7 @@ const UserManagement: React.FC = () => {
                   onClick={() => setForm({...form, canScore: !form.canScore})}
                   title={form.canScore ? "Revoke Scoring Access" : "Grant Scoring Access"}
                   aria-label={form.canScore ? "Revoke Scoring Access" : "Grant Scoring Access"}
-                  aria-pressed={form.canScore ? "true" : "false" as any}
+                  aria-pressed={form.canScore ? "true" : "false"}
                   className={`w-12 h-6 rounded-full transition-all relative ${form.canScore ? 'bg-purple-600' : 'bg-white/10'}`}
                 >
                   <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${form.canScore ? 'left-7' : 'left-1'}`}></div>
