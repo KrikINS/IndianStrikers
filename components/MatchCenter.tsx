@@ -621,10 +621,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
           .vs-container-revised {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 32px 26px 22px;
-            gap: 12px;
-            background: radial-gradient(circle at center, rgba(30,58,138,0.1) 0%, transparent 70%);
+            justify-content: center;
+            padding: 40px 20px;
+            gap: 60px;
+            background: radial-gradient(circle at center, rgba(30,58,138,0.15) 0%, transparent 75%);
           }
           .team-vertical {
             display: flex;
@@ -641,19 +641,18 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             display: inline-block;
           }
           .team-logo-md {
-            width: 126px;
-            height: 126px;
-            border-radius: 34px;
-            border: 2px solid rgba(255,255,255,0.1);
-            background: #0f172a !important;
+            width: 160px;
+            height: 160px;
+            border-radius: 0;
+            border: none;
+            background: transparent !important;
             object-fit: contain;
             display: block;
-            box-shadow: 0 14px 28px rgba(0,0,0,0.4);
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
           }
           .team-logo-md:hover {
-            transform: scale(1.1) rotate(2deg);
-            border-color: #3b82f6;
+            transform: scale(1.15) rotate(3deg);
           }
 
           /* ─── TEAM TEXT ─── */
@@ -661,26 +660,28 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             font-family: 'Outfit', sans-serif;
             color: #f8fafc;
             font-weight: 900;
-            font-size: 22px;
+            font-size: 28px;
             text-transform: uppercase;
             text-align: center;
             letter-spacing: 0.05em;
-            line-height: 1.2;
-            max-width: 168px;
-            min-height: 2.4em;
+            line-height: 1.1;
+            max-width: 240px;
+            min-height: 2.2em;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.5);
           }
 
           .team-score-display {
             color: #3b82f6;
             font-weight: 950;
-            font-size: 28px;
+            font-size: 36px;
             text-align: center;
             line-height: 1;
-            text-shadow: 0 0 20px rgba(59,130,246,0.3);
+            text-shadow: 0 0 25px rgba(59,130,246,0.4);
+            margin-top: 4px;
           }
 
           .match-meta-info {
@@ -1184,6 +1185,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                 match={selectedCardMatch}
                                 homeTeamName="Indian Strikers"
                                 homeTeamLogo={teamLogo || '/INS%20LOGO.PNG'}
+                                allOpponents={opponents}
                                 opponent={opponents.find(o => o.id === selectedCardMatch.opponentId)}
                                 onSelectPlayingXI={handleSelectPlayingXI}
                                 onShareSummary={captureMatchSummary}

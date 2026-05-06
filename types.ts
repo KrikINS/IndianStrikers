@@ -231,6 +231,8 @@ export interface OpponentTeam {
 
 export interface ScheduledMatch {
   id: string;
+  isNeutral?: boolean;
+  homeTeamId?: string; // If neutral, references OpponentTeam.id. If not neutral, this is IND_STRIKERS
   opponentId: string; // References the ID in OpponentTeam
   date: string;
   groundId: string;

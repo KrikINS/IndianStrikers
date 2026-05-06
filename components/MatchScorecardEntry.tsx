@@ -14,20 +14,23 @@ interface MatchScorecardEntryProps {
   onSubmit: (finalData: any) => void;
 }
 
-const RESULT_OPTIONS = [
-  { value: '', label: 'Normal Result' },
-  { value: 'Abandoned', label: 'Abandoned' },
-  { value: 'Tie', label: 'Tie' },
-  { value: 'Forfeit-Home', label: 'Forfeit (Indian Strikers)' },
-  { value: 'Forfeit-Away', label: 'Forfeit (Opponent)' },
-];
-
 export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit }: MatchScorecardEntryProps) {
-  const { squadPlayers: masterHomePlayers, opponentPlayers: masterOpponentPlayers } = useStore();
+  const { squadPlayers: masterHomePlayers, opponentPlayers: masterOpponentPlayers, opponents: allOpponentTeams } = useStore();
+  const homeTeamName = match.isNeutral 
+    ? (allOpponentTeams.opponents.find(o => o.id === match.homeTeamId)?.name || 'Home Team')
+    : 'Indian Strikers';
   const opponentName = opponent?.name || match.opponentName || 'Opponent';
 
-  const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
-  const [tossWinner, setTossWinner] = useState<string>(match.toss?.winner || 'Indian Strikers');
+  const RESULT_OPTIONS = [
+    { value: '', label: 'Normal Result' },
+    { value: 'Abandoned', label: 'Abandoned' },
+    { value: 'Tie', label: 'Tie' },
+    { value: 'Forfeit-Home', label: `Forfeit (${homeTeamName})` },
+    { value: 'Forfeit-Away', label: `Forfeit (${opponentName})` },
+  ];
+
+  const HOME_TEAM_ID = match.isNeutral ? (match.homeTeamId || 'HOME') : '00000000-0000-0000-0000-000000000000';
+  const [tossWinner, setTossWinner] = useState<string>(match.toss?.winner || homeTeamName);
   const [tossChoice, setTossChoice] = useState<'Bat' | 'Field'>(match.toss?.choice as any || 'Bat');
   const [maxOvers, setMaxOvers] = useState<number>(match.maxOvers || (match.matchFormat === 'One Day' ? 50 : 20));
   const [resultType, setResultType] = useState(match.resultType || '');
@@ -37,10 +40,10 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   const isLocked = !!(match.isLocked || (match as any).is_locked);
 
   const innings1BattingTeam: 'home' | 'away' = useMemo(() => {
-    const homeWon = tossWinner === 'Indian Strikers';
+    const homeWon = tossWinner === homeTeamName || tossWinner === HOME_TEAM_ID;
     if ((homeWon && tossChoice === 'Bat') || (!homeWon && tossChoice === 'Field')) return 'home';
     return 'away';
-  }, [tossWinner, tossChoice]);
+  }, [tossWinner, tossChoice, homeTeamName, HOME_TEAM_ID]);
 
   const overOptions = match.matchFormat === 'One Day'
     ? [50, 40, 35, 30, 25, 20]
@@ -53,7 +56,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   const initialInnings: InningsData = {
     batting: [],
     bowling: [],
-    extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 },
+    extras: { wides: 0, noBalls: 0, legByes: 0, byes: 0 },
     totalRuns: 0, totalWickets: 0, totalOvers: 0,
     history: []
   };
@@ -84,10 +87,10 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
 
     // Ensure extras exists and has all properties for internal state stability
     const ensureExtras = (inn: InningsData) => {
-      if (!inn.extras) inn.extras = { wide: 0, no_ball: 0, legByes: 0, byes: 0 };
+      if (!inn.extras) inn.extras = { wides: 0, noBalls: 0, legByes: 0, byes: 0 };
       else {
-        inn.extras.wide = inn.extras.wide || 0;
-        inn.extras.no_ball = inn.extras.no_ball || 0;
+        (inn.extras as any).wides = (inn.extras as any).wides || (inn.extras as any).wide || 0;
+        (inn.extras as any).noBalls = (inn.extras as any).noBalls || (inn.extras as any).no_ball || 0;
         inn.extras.legByes = inn.extras.legByes || 0;
         inn.extras.byes = inn.extras.byes || 0;
       }
@@ -101,8 +104,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   const [battingRowIds, setBattingRowIds] = useState<Record<1 | 2, string[]>>(() => {
     const s = match.scorecard || (match.live_data as any);
     return {
-      1: s?.innings1?.batting?.map((b: any) => b.playerId) || [],
-      2: s?.innings2?.batting?.map((b: any) => b.playerId) || []
+      1: s?.innings1?.batting?.map((b: any) => String(b.playerId || b.player_id || '')) || [],
+      2: s?.innings2?.batting?.map((b: any) => String(b.playerId || b.player_id || '')) || []
     };
   });
 
@@ -153,13 +156,22 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   };
 
   const homeSquad = useMemo(() => {
+    // If neutral, home team is an opponent team
+    if (match.isNeutral && match.homeTeamId) {
+        // If they have a specific XI, use it
+        if (Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0) {
+            return masterOpponentPlayers.filter(p => match.homeTeamXI!.includes(p.id));
+        }
+        return masterOpponentPlayers.filter(p => p.teamId === match.homeTeamId);
+    }
+
     // 1. Strict Filter: Only show players assigned to the Match Day XI if it exists
     if (Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0) {
       return masterHomePlayers.filter(p => match.homeTeamXI!.includes(p.id));
     }
     // 2. Fallback: Show all club players (Case-insensitive check)
     return masterHomePlayers.filter(p => p.teamId?.toUpperCase() === 'IND_STRIKERS');
-  }, [masterHomePlayers, match.homeTeamXI]);
+  }, [masterHomePlayers, masterOpponentPlayers, match.homeTeamXI, match.isNeutral, match.homeTeamId]);
 
   const awaySquad = useMemo(() => {
     // 1. Strict Filter: Only show players assigned to the Match Day XI if it exists
@@ -185,11 +197,11 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
       if (initialData) {
         const s = ensureScorecardStructure(initialData);
         setScorecard(s);
-        if (s.innings1?.batting) setBattingRowIds(prev => ({ ...prev, 1: s.innings1.batting.map((b: any) => b.playerId) }));
-        if (s.innings2?.batting) setBattingRowIds(prev => ({ ...prev, 2: s.innings2.batting.map((b: any) => b.playerId) }));
+        if (s.innings1?.batting) setBattingRowIds(prev => ({ ...prev, 1: s.innings1.batting.map((b: any) => String(b.playerId || b.player_id || '')) }));
+        if (s.innings2?.batting) setBattingRowIds(prev => ({ ...prev, 2: s.innings2.batting.map((b: any) => String(b.playerId || b.player_id || '')) }));
         
         const mapRow = (r: any) => ({
-          playerId: r.playerId || '',
+          playerId: String(r.playerId || r.player_id || ''),
           overs: r.overs || 0,
           maidens: r.maidens || 0,
           runs: r.runsConceded || r.runs || 0,
@@ -212,11 +224,11 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
             if (raw) {
               const s = ensureScorecardStructure(raw);
               setScorecard(s);
-              if (s.innings1?.batting) setBattingRowIds(prev => ({ ...prev, 1: s.innings1.batting.map((b: any) => b.playerId) }));
-              if (s.innings2?.batting) setBattingRowIds(prev => ({ ...prev, 2: s.innings2.batting.map((b: any) => b.playerId) }));
+              if (s.innings1?.batting) setBattingRowIds(prev => ({ ...prev, 1: s.innings1.batting.map((b: any) => String(b.playerId || b.player_id || '')) }));
+              if (s.innings2?.batting) setBattingRowIds(prev => ({ ...prev, 2: s.innings2.batting.map((b: any) => String(b.playerId || b.player_id || '')) }));
               
               const mapRow = (r: any) => ({
-                playerId: r.playerId || '',
+                playerId: String(r.playerId || r.player_id || ''),
                 overs: r.overs || 0,
                 maidens: r.maidens || 0,
                 runs: r.runsConceded || r.runs || 0,
@@ -408,9 +420,9 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     const diff = Math.abs(fScoreHome.runs - fScoreAway.runs);
     const resultSummary = resultType === 'Abandoned' ? 'Match Abandoned'
       : resultType === 'Tie' ? 'Match Tied'
-        : resultType === 'Forfeit-Home' ? `${opponentName} won (Indian Strikers Forfeit)`
-          : resultType === 'Forfeit-Away' ? `Indian Strikers won (${opponentName} Forfeit)`
-            : fScoreHome.runs > fScoreAway.runs ? `Indian Strikers won by ${diff} runs`
+        : resultType === 'Forfeit-Home' ? `${opponentName} won (${homeTeamName} Forfeit)`
+          : resultType === 'Forfeit-Away' ? `${homeTeamName} won (${opponentName} Forfeit)`
+            : fScoreHome.runs > fScoreAway.runs ? `${homeTeamName} won by ${diff} runs`
               : fScoreAway.runs > fScoreHome.runs ? `${opponentName} won by ${diff} runs`
                 : 'Match Tied';
 
@@ -440,8 +452,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     }
   };
 
-  const inn1BatLabel = innings1BattingTeam === 'home' ? 'Indian Strikers' : opponentName;
-  const inn2BatLabel = innings1BattingTeam === 'home' ? opponentName : 'Indian Strikers';
+  const inn1BatLabel = innings1BattingTeam === 'home' ? homeTeamName : opponentName;
+  const inn2BatLabel = innings1BattingTeam === 'home' ? opponentName : homeTeamName;
   const homeTeamBattingInnings = innings1BattingTeam === 'home' ? 1 : 2;
   const currentBatLabel = activeInnings === 1 ? inn1BatLabel : inn2BatLabel;
   const currentBowlLabel = activeInnings === 1 ? inn2BatLabel : inn1BatLabel;
@@ -489,7 +501,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
             <div>
               <label className="text-[10px] font-black text-slate-500 uppercase">Toss Won By</label>
               <div className="flex gap-2 mt-1">
-                {['Indian Strikers', opponentName].map(team => (
+                {[homeTeamName, opponentName].map(team => (
                   <button key={team} type="button" onClick={() => !isLocked && setTossWinner(team)}
                     className={`flex-1 py-1 px-3 rounded-lg text-[11px] font-black border ${tossWinner === team ? 'bg-sky-500/20 border-sky-500/50 text-sky-300' : 'bg-white/[0.02] border-white/10 text-white'} ${isLocked ? 'cursor-default opacity-80' : ''}`}
                   >{team}</button>
@@ -526,11 +538,12 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
               <div className="px-4 py-2 border-b border-white/5 font-black text-[10px] uppercase tracking-wider text-white">Batting: {currentBatLabel}</div>
               <div className="table-container">
               <table className="compact-score-table">
-                <thead><tr><th className="text-left pl-4">Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>Out</th><th>F</th><th>B</th></tr></thead>
+                <thead><tr><th className="text-left pl-4">Batter</th><th>Out</th><th>F</th><th>B</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
                 <tbody>
                   {battingRowIds[activeInnings].map((pId, idx) => {
                     const entry = getBattingEntry(activeInnings, pId);
                     const p = battingSquad.find(pl => pl.id === pId);
+                    const sr = entry.balls > 0 ? ((entry.runs / entry.balls) * 100).toFixed(1) : '0.0';
                     return (
                       <tr key={idx}>
                         <td className="pl-4">
@@ -543,10 +556,6 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                             </select>
                           </div>
                         </td>
-                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Runs" placeholder="0" type="number" className="compact-input" value={entry.runs} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'runs', e.target.valueAsNumber || 0)} />}</td>
-                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Balls" placeholder="0" type="number" className="compact-input" value={entry.balls} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'balls', e.target.valueAsNumber || 0)} />}</td>
-                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Fours" placeholder="0" type="number" className="compact-input" value={entry.fours} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fours', e.target.valueAsNumber || 0)} />}</td>
-                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Sixes" placeholder="0" type="number" className="compact-input" value={entry.sixes} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'sixes', e.target.valueAsNumber || 0)} />}</td>
                         <td><select title="Wicket Type" className="player-select-dropdown" style={{ width: '90px' }} value={entry.outHow} disabled={!pId || isLocked} onChange={e => {
                           const val = e.target.value;
                           updateBatting(activeInnings, pId, p?.name || '', 'outHow', val);
@@ -574,6 +583,11 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                             {bowlingSquad.map(pl => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
                           </select>
                         </td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Runs" placeholder="0" type="number" className="compact-input" value={entry.runs} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'runs', e.target.valueAsNumber || 0)} />}</td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Balls" placeholder="0" type="number" className="compact-input" value={entry.balls} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'balls', e.target.valueAsNumber || 0)} />}</td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Fours" placeholder="0" type="number" className="compact-input" value={entry.fours} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'fours', e.target.valueAsNumber || 0)} />}</td>
+                        <td>{entry.outHow === 'Did Not Bat' ? <span className="text-slate-600 font-bold block text-center">—</span> : <input title="Sixes" placeholder="0" type="number" className="compact-input" value={entry.sixes} disabled={!pId || isLocked} onChange={e => updateBatting(activeInnings, pId, p?.name || '', 'sixes', e.target.valueAsNumber || 0)} />}</td>
+                        <td className="text-center font-bold text-slate-400 text-[11px]">{sr}</td>
                       </tr>
                     );
                   })}

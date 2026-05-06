@@ -151,9 +151,9 @@ const TournamentLabel = styled.div`
 
 const TeamsHorizontalRow = styled.div`
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
 `;
 
@@ -161,21 +161,16 @@ const TeamBlock = styled.div<{ $reverse?: boolean }>`
   display: flex;
   flex-direction: ${props => props.$reverse ? 'row-reverse' : 'row'};
   align-items: center;
-  gap: 12px;
-  flex: 1;
+  gap: 10px;
+  flex: 0 1 auto;
 `;
 
 const TeamLogoFrame = styled.div`
-  width: 54px;
-  height: 54px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 14px;
+  width: 108px;
+  height: 108px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
   flex-shrink: 0;
 `;
 
@@ -187,15 +182,16 @@ const TeamInfo = styled.div<{ $align?: 'left' | 'right' }>`
 `;
 
 const TeamNameLabel = styled.div`
-  font-size: 0.9rem;
+  font-size: 1.8rem;
   font-weight: 900;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 130px;
+  max-width: 200px;
   color: #FFFFFF;
-  letter-spacing: -0.5px;
+  letter-spacing: -1px;
+  line-height: 1;
 `;
 
 const ScoreValue = styled.div`
@@ -374,6 +370,7 @@ interface UniversalScorecardProps {
   match: any;
   players: any[];
   opponents?: any[];
+  grounds?: any[];
   onClose: () => void;
   isLive?: boolean;
   activeInnings?: number;
@@ -385,6 +382,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   match: initialMatch,
   players,
   opponents = [],
+  grounds = [],
   onClose,
   isLive = false,
   activeInnings = 1
@@ -533,6 +531,58 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     return `${Math.floor(balls / 6)}.${balls % 6}`;
   };
 
+  // Task #2: Format overs — hide .0 for complete overs, show 'X Overs' when maxOvers reached
+  const formatOvers = (balls: number, maxOvers?: number): string => {
+    const fullOvers = Math.floor(balls / 6);
+    const rem = balls % 6;
+    if (maxOvers && fullOvers >= maxOvers) return `${fullOvers} Overs`;
+    if (rem === 0 && fullOvers > 0) return `${fullOvers} Overs`;
+    return `${fullOvers}.${rem}`;
+  };
+
+  // Resolve ground name from match
+  const resolvedGround = (() => {
+    if (match.groundId && grounds.length > 0) {
+      const g = grounds.find((g: any) => g.id === match.groundId);
+      if (g) return g.name;
+    }
+    if (typeof match.venue === 'string' && match.venue) return match.venue;
+    if (typeof match.venue === 'object' && (match as any).venue?.name) return (match as any).venue.name;
+    return match.venue || 'TBD';
+  })();
+
+  // Resolve toss string
+  const tossString = (() => {
+    const winnerId = match.toss?.winnerId || match.toss_winner_id;
+    const choice = match.toss?.choice || match.toss_choice || '';
+    
+    let winnerName = match.toss?.winner || match.toss_winner_name || '';
+    
+    if (!winnerName && winnerId) {
+        if (winnerId === '00000000-0000-0000-0000-000000000000') winnerName = 'Indian Strikers';
+        else if (winnerId === match.opponentId) winnerName = match.opponentName || 'Opponent';
+    }
+
+    if (winnerName && choice) return `${winnerName} won the toss and elected to ${choice}`;
+    if (winnerName) return `${winnerName} won the toss`;
+    return null;
+  })();
+
+  // Resolve team logos and names
+  const homeTeamName = match.isNeutral 
+    ? (opponents.find((o: any) => o.id === match.homeTeamId)?.name || 'Team A')
+    : 'INDIAN STRIKERS';
+
+  const homeTeamLogoUrl = match.isNeutral
+    ? (opponents.find((o: any) => o.id === match.homeTeamId)?.logoUrl || null)
+    : '/INS%20LOGO.PNG';
+
+  const opponentLogoUrl = (() => {
+    if (match.opponentLogo) return match.opponentLogo;
+    const opp = opponents.find((o: any) => o.id === match.opponentId);
+    return opp?.logoUrl || null;
+  })();
+
   const handleDownloadImage = async () => {
     if (!containerRef.current) return;
     try {
@@ -611,17 +661,20 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
             {/* HOME TEAM */}
             <TeamBlock>
               <TeamLogoFrame>
-                <img src="/INS%20LOGO.PNG" style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="INS" />
+                {homeTeamLogoUrl 
+                  ? <img src={homeTeamLogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={homeTeamName} />
+                  : <span style={{ fontSize: '3rem' }}>🏏</span>
+                }
               </TeamLogoFrame>
               <TeamInfo>
-                <TeamNameLabel>{match.homeTeamName || 'INDIAN STRIKERS'}</TeamNameLabel>
+                <TeamNameLabel style={{ color: match.isNeutral ? '#FFF' : '#38BDF8' }}>{homeTeamName}</TeamNameLabel>
                 <ScoreValue>
                   {(() => {
                     const inn = match.is_home_batting_first ? normalizedData.innings1 : normalizedData.innings2;
                     return (
                       <>
                         {inn?.totalRuns || 0}/{inn?.wickets || 0}
-                        <span>({getOvers(inn?.totalBalls || 0)})</span>
+                        <span>({formatOvers(inn?.totalBalls || 0, match.maxOvers)})</span>
                       </>
                     );
                   })()}
@@ -633,18 +686,19 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
             {/* AWAY TEAM */}
             <TeamBlock $reverse>
-              <TeamLogoFrame>
-                <div style={{ fontSize: '1.4rem' }}>🏏</div>
-              </TeamLogoFrame>
+              {opponentLogoUrl
+                ? <TeamLogoFrame><img src={opponentLogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={match.opponentName} /></TeamLogoFrame>
+                : <TeamLogoFrame><span style={{ fontSize: '3rem' }}>🏏</span></TeamLogoFrame>
+              }
               <TeamInfo $align="right">
-                <TeamNameLabel>{match.opponentName || 'OPPONENT'}</TeamNameLabel>
+                <TeamNameLabel>{(match.opponentName || 'OPPONENT').toUpperCase()}</TeamNameLabel>
                 <ScoreValue>
                   {(() => {
                     const inn = match.is_home_batting_first ? normalizedData.innings2 : normalizedData.innings1;
                     return (
                       <>
                         {inn?.totalRuns || 0}/{inn?.wickets || 0}
-                        <span>({getOvers(inn?.totalBalls || 0)})</span>
+                        <span>({formatOvers(inn?.totalBalls || 0, match.maxOvers)})</span>
                       </>
                     );
                   })()}
@@ -664,7 +718,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
             </MetaItemHeader>
             <MetaItemHeader>
               <Target size={12} style={{ color: '#38BDF8' }} />
-              {typeof match.venue === 'object' ? (match.venue as any)?.name : (match.venue || 'LOCAL GROUND')}
+              {resolvedGround}
             </MetaItemHeader>
           </MetaGrid>
         </MatchHeaderCard>
@@ -726,13 +780,15 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     </div>
                     <div>
                       <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800, textTransform: 'uppercase' }}>TOSS</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 700, color: '#FAB005' }}>{match.tossResult || 'Toss result pending'}</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: '#FAB005' }}>
+                        {tossString || match.tossResult || match.tossDetails || 'Toss result pending'}
+                      </div>
                     </div>
                   </ScoreSummaryCard>
 
                   <div style={{ display: 'flex', gap: 20 }}>
                     <div style={{ flex: 1 }}>
-                      <TableTitle>{match.homeTeamName || 'Home Team'} XI</TableTitle>
+                      <TableTitle style={{ color: '#38BDF8' }}>INDIAN STRIKERS XI</TableTitle>
                       <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                         {(match.homeTeamXI || []).map((id: string) => (
                           <div key={id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', fontWeight: 600 }}>
@@ -769,7 +825,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800, textTransform: 'uppercase' }}>OVERS</div>
                       <div style={{ fontSize: '1.4rem', fontWeight: 900 }}>
-                        {getOvers(currentInningsData?.totalBalls || 0)}
+                        {formatOvers(currentInningsData?.totalBalls || 0, match.maxOvers)}
                       </div>
                     </div>
                   </ScoreSummaryCard>
@@ -779,27 +835,20 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     <thead>
                       <tr>
                         <Th>Batter</Th>
+                        <Th>Out</Th>
+                        <Th>Fielder</Th>
+                        <Th>Bowler</Th>
                         <Th style={{ textAlign: 'center' }}>R</Th>
                         <Th style={{ textAlign: 'center' }}>B</Th>
                         <Th style={{ textAlign: 'center' }}>4s</Th>
                         <Th style={{ textAlign: 'center' }}>6s</Th>
                         <Th style={{ textAlign: 'right' }}>SR</Th>
-                        <Th>Out</Th>
-                        <Th>F</Th>
-                        <Th>B</Th>
                       </tr>
                     </thead>
                     <tbody>
                       {(currentInningsData?.batting || []).map(stat => (
                         <tr key={stat.playerId}>
                           <Td>{getPlayerNameResolved(stat.playerId, stat.name)}</Td>
-                          <Td style={{ textAlign: 'center', color: '#FAB005', fontWeight: 700 }}>{stat.runs}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.balls}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.fours || 0}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.sixes || 0}</Td>
-                          <Td style={{ textAlign: 'right', opacity: 0.8 }}>
-                            {stat.balls > 0 ? ((stat.runs / stat.balls) * 100).toFixed(1) : '0.0'}
-                          </Td>
                           <Td style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 600 }}>
                             {stat.status === 'batting' ? <span style={{ color: '#38BDF8' }}>not out</span> : (stat.outHow || 'out')}
                           </Td>
@@ -809,10 +858,19 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           <Td style={{ fontSize: '0.65rem', opacity: 0.5 }}>
                             {stat.bowlerId ? getPlayerNameResolved(stat.bowlerId) : '—'}
                           </Td>
+                          <Td style={{ textAlign: 'center', color: '#FAB005', fontWeight: 700 }}>{stat.runs}</Td>
+                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.balls}</Td>
+                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.fours || 0}</Td>
+                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.sixes || 0}</Td>
+                          <Td style={{ textAlign: 'right', opacity: 0.8 }}>
+                            {stat.balls > 0 ? ((stat.runs / stat.balls) * 100).toFixed(1) : '0.0'}
+                          </Td>
                         </tr>
                       ))}
                     </tbody>
                   </ScoreCardTable>
+
+
 
                   {(() => {
                     const batters = currentInningsData?.batting || [];
@@ -906,6 +964,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                       return <div key="no-comm" style={{ padding: '40px', textAlign: 'center', opacity: 0.4 }}>NO COMMENTARY AVAILABLE FOR THIS MATCH SUMMARY</div>;
                     }
 
+                    const showSignOff = match.status === 'completed' && selectedInnings === 2;
+
                     const overGroups: Record<number, any[]> = {};
                     historyFiltered.forEach(ball => {
                       const ov = ball.overNumber ?? ball.over_number ?? 0;
@@ -914,106 +974,145 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     });
                     const sortedOvers = Object.keys(overGroups).map(Number).sort((a, b) => b - a);
 
-                    return sortedOvers.map(overNum => {
-                      const balls = overGroups[overNum];
-                      if (!balls || balls.length === 0) return null;
-
-                      const historyAtThisPoint = historyFiltered.filter(b => (b.overNumber ?? b.over_number ?? 0) <= overNum);
-
-                      const runsAtEnd = historyAtThisPoint.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
-                      const wktsAtEnd = historyAtThisPoint.filter(b => b.isWicket).length;
-
-                      const overRuns = balls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
-                      const overWkts = balls.filter(b => b.isWicket).length;
-
-                      const lastBall = balls[0];
-                      const bName = getPlayerNameResolved(lastBall?.bowlerId || lastBall?.bowler_id);
-                      const bBalls = historyAtThisPoint.filter(b => lastBall && (b.bowlerId === (lastBall.bowlerId || lastBall.bowler_id) || b.bowler_id === (lastBall.bowlerId || lastBall.bowler_id)));
-                      const bRuns = bBalls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
-                      const bWkts = bBalls.filter(b => b.isWicket).length;
-                      const bOvers = getOvers(bBalls.filter(b => b.isLegal || b.is_legal).length);
-
-                      return (
-                        <div key={overNum}>
-                          <div style={{
-                            background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-                            borderRadius: 12,
-                            overflow: 'hidden',
-                            display: 'flex',
-                            flexDirection: 'row',
-                            color: '#FFF',
-                            boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-                            marginBottom: 16,
-                            minHeight: 60,
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            border: '1px solid rgba(56, 189, 248, 0.3)',
-                            position: 'sticky', top: 0, zIndex: 10
+                    return (
+                      <>
+                        {showSignOff && (
+                          <div style={{ 
+                            padding: '24px', 
+                            background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 
+                            borderRadius: 16, 
+                            border: '1px solid rgba(56, 189, 248, 0.3)', 
+                            textAlign: 'center',
+                            marginBottom: 24,
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
                           }}>
-                            <div style={{ padding: '10px 16px', background: 'rgba(56, 189, 248, 0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(56, 189, 248, 0.2)', minWidth: 90 }}>
-                              <div style={{ color: '#38BDF8', fontSize: '0.65rem', letterSpacing: 2 }}>OVER {overNum + 1}</div>
-                              <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>{overRuns} RUNS</div>
-                            </div>
-
-                            <div style={{ flex: 1, padding: '10px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2 }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ opacity: 0.8, fontSize: '0.65rem' }}>BOWLER: {bName.toUpperCase()}</span>
-                                <span style={{ fontWeight: 900, color: '#FAB005' }}>{bOvers}-{bWkts}-{bRuns}</span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ opacity: 0.6, fontSize: '0.65rem' }}>TOTAL:</span>
-                                <span style={{ fontWeight: 900 }}>{runsAtEnd}/{wktsAtEnd}</span>
-                              </div>
+                            <div style={{ color: '#38BDF8', fontSize: '0.7rem', fontWeight: 900, letterSpacing: 3, marginBottom: 8 }}>MATCH COMPLETE</div>
+                            <div style={{ color: '#FFF', fontSize: '1.2rem', fontWeight: 900, marginBottom: 12 }}>{match.resultSummary || match.resultNote}</div>
+                            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                              "Thank you for following the live coverage on Indian Strikers. We hope you enjoyed the broadcast. Signing off!"
                             </div>
                           </div>
+                        )}
+                        {sortedOvers.map(overNum => {
+                          const balls = overGroups[overNum];
+                          if (!balls || balls.length === 0) return null;
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
-                            {balls.map((ball, i) => (
-                              <div key={i} style={{
-                                display: 'flex', gap: 14, padding: '12px', background: '#111827',
-                                borderRadius: 10, borderLeft: `3px solid ${ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.1)'}`,
-                                transition: 'all 0.2s',
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          const historyAtThisPoint = historyFiltered.filter(b => (b.overNumber ?? b.over_number ?? 0) <= overNum);
+                          const runsAtEnd = historyAtThisPoint.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                          const wktsAtEnd = historyAtThisPoint.filter(b => b.isWicket).length;
+                          const overRuns = balls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                          const overWkts = balls.filter(b => b.isWicket).length;
+                          const lastBall = balls[0];
+                          const bName = getPlayerNameResolved(lastBall?.bowlerId || lastBall?.bowler_id);
+                          const bBalls = historyAtThisPoint.filter(b => lastBall && (b.bowlerId === (lastBall.bowlerId || lastBall.bowler_id) || b.bowler_id === (lastBall.bowlerId || lastBall.bowler_id)));
+                          const bRuns = bBalls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                          const bWkts = bBalls.filter(b => b.isWicket).length;
+                          const bOvers = getOvers(bBalls.filter(b => b.isLegal || b.is_legal).length);
+
+                          return (
+                            <div key={overNum}>
+                              <div style={{
+                                background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                                borderRadius: 12,
+                                overflow: 'hidden',
+                                display: 'flex',
+                                flexDirection: 'row',
+                                color: '#FFF',
+                                boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
+                                marginBottom: 16,
+                                minHeight: 60,
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                border: '1px solid rgba(56, 189, 248, 0.3)',
+                                position: 'sticky', top: 0, zIndex: 10
                               }}>
-                                <span style={{ opacity: 0.4, fontWeight: 900, fontSize: '0.7rem', minWidth: 28, paddingTop: 2 }}>{overNum}.{ball.ballNumber ?? ball.ball_number ?? i}</span>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: ball.isWicket ? '#FF4D4D' : '#FFF' }}>
-                                    {ball.commentary || `${ball.runs} run(s)`}
+                                <div style={{ padding: '10px 16px', background: 'rgba(56, 189, 248, 0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(56, 189, 248, 0.2)', minWidth: 90 }}>
+                                  <div style={{ color: '#38BDF8', fontSize: '0.65rem', letterSpacing: 2 }}>OVER {overNum + 1}</div>
+                                  <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>{overRuns} RUNS</div>
+                                </div>
+                                <div style={{ flex: 1, padding: '10px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                      <span style={{ opacity: 0.8, fontSize: '0.65rem' }}>BOWLER: {bName.toUpperCase()}</span>
+                                      {(() => {
+                                        const strikerId = lastBall?.strikerId || lastBall?.striker_id;
+                                        const nonStrikerId = lastBall?.nonStrikerId || lastBall?.non_striker_id;
+                                        const sName = getPlayerNameResolved(strikerId).split(' ')[0];
+                                        const nsName = getPlayerNameResolved(nonStrikerId).split(' ')[0];
+                                        const getScoreAt = (pId: string) => {
+                                          const pBalls = historyAtThisPoint.filter(b => b.strikerId === pId || b.striker_id === pId);
+                                          const pRuns = pBalls.reduce((s, b) => s + (Number(b.runs) || 0), 0);
+                                          return `${pRuns}(${pBalls.length})`;
+                                        };
+                                        return (
+                                          <div style={{ display: 'flex', gap: 8, fontSize: '0.6rem', color: '#FAB005' }}>
+                                            <span>• {sName}* {getScoreAt(strikerId)}</span>
+                                            <span>• {nsName} {getScoreAt(nonStrikerId)}</span>
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+                                    <span style={{ fontWeight: 900, color: '#FAB005' }}>{bOvers}-{bWkts}-{bRuns}</span>
                                   </div>
-                                  <div style={{ fontSize: '0.65rem', opacity: 0.4, marginTop: 4 }}>
-                                    {getPlayerNameResolved(ball.bowlerId)} to {getPlayerNameResolved(ball.strikerId)}
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ opacity: 0.6, fontSize: '0.65rem' }}>TOTAL:</span>
+                                    <span style={{ fontWeight: 900 }}>{runsAtEnd}/{wktsAtEnd}</span>
                                   </div>
                                 </div>
-                                <span style={{
-                                  fontWeight: 950, fontSize: '1rem',
-                                  color: ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.7)',
-                                  minWidth: 20, textAlign: 'center'
-                                }}>
-                                  {(() => {
-                                    const isWide = ball.type === 'wide';
-                                    const isNoBall = ball.type === 'no-ball';
-                                    const isLB = ball.type === 'leg-bye';
-                                    const isB = ball.type === 'bye';
-
-                                    if (ball.isWicket) {
-                                      const prefix = isNoBall ? 'NB' : isWide ? 'WD' : '';
-                                      const amount = ball.runs > 0 ? `+${ball.runs}` : '';
-                                      return prefix ? `${prefix}${amount}+W` : 'W';
-                                    }
-                                    if (isWide) return `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                                    if (isNoBall) return `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                                    if (isLB) return `LB${ball.runs}`;
-                                    if (isB) return `B${ball.runs}`;
-                                    return ball.runs;
-                                  })()}
-                                </span>
                               </div>
-                            ))}
-                          </div>
-                          <div style={{ height: 30 }} />
-                        </div>
-                      );
-                    });
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
+                                {balls.map((ball, i) => (
+                                  <div key={i} style={{
+                                    display: 'flex', gap: 14, padding: '12px', background: '#111827',
+                                    borderRadius: 10, borderLeft: `3px solid ${ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.1)'}`,
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                  }}>
+                                    <span style={{ opacity: 0.4, fontWeight: 900, fontSize: '0.7rem', minWidth: 28, paddingTop: 2 }}>{overNum}.{ball.ballNumber ?? ball.ball_number ?? i}</span>
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: ball.isWicket ? '#FF4D4D' : '#FFF' }}>
+                                        {ball.commentary || `${ball.runs} run(s)`}
+                                      </div>
+                                      <div style={{ fontSize: '0.65rem', opacity: 0.4, marginTop: 4 }}>
+                                        {getPlayerNameResolved(ball.bowlerId)} to {getPlayerNameResolved(ball.strikerId)}
+                                      </div>
+                                      {ball.isWicket && (
+                                        <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6, fontSize: '0.7rem', fontWeight: 900, color: '#FF4D4D', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                          <Zap size={10} /> {ball.out_how || 'OUT!'} — {getPlayerNameResolved(ball.strikerId || ball.striker_id)} has to depart.
+                                        </div>
+                                      )}
+                                    </div>
+                                    <span style={{
+                                      fontWeight: 950, fontSize: '1rem',
+                                      color: ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.7)',
+                                      minWidth: 20, textAlign: 'center'
+                                    }}>
+                                      {(() => {
+                                        const isWide = ball.type === 'wide';
+                                        const isNoBall = ball.type === 'no-ball';
+                                        const isLB = ball.type === 'leg-bye';
+                                        const isB = ball.type === 'bye';
+                                        if (ball.isWicket) {
+                                          const prefix = isNoBall ? 'NB' : isWide ? 'WD' : '';
+                                          const amount = ball.runs > 0 ? `+${ball.runs}` : '';
+                                          return prefix ? `${prefix}${amount}+W` : 'W';
+                                        }
+                                        if (isWide) return `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                                        if (isNoBall) return `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
+                                        if (isLB) return `LB${ball.runs}`;
+                                        if (isB) return `B${ball.runs}`;
+                                        return ball.runs;
+                                      })()}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div style={{ height: 30 }} />
+                            </div>
+                          );
+                        })}
+                      </>
+                    );
                   })()}
                 </div>
               )}
@@ -1067,6 +1166,11 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     const team1Name = getTeamName(normalizedData.innings1, 1);
                     const team2Name = getTeamName(normalizedData.innings2, 2);
 
+                    // Task #1: Blue (#38BDF8) is always Indian Strikers color
+                    const isInsInn1 = match.is_home_batting_first;
+                    const ins1Color = isInsInn1 ? '#38BDF8' : '#FAB005';
+                    const ins2Color = isInsInn1 ? '#FAB005' : '#38BDF8';
+
                     return (
                       <>
                         <div style={{ background: '#1E293B', padding: '20px 10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
@@ -1081,7 +1185,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                                   cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
                                 <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
-                                <Bar dataKey="runs1" name={team1Name} fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={8}>
+                                <Bar dataKey="runs1" name={team1Name} fill={ins1Color} radius={[4, 4, 0, 0]} barSize={8}>
                                   <LabelList 
                                     dataKey="wickets1" 
                                     content={(props: any) => {
@@ -1100,7 +1204,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                                     }}
                                   />
                                 </Bar>
-                                <Bar dataKey="runs2" name={team2Name} fill="#FAB005" radius={[4, 4, 0, 0]} barSize={8}>
+                                <Bar dataKey="runs2" name={team2Name} fill={ins2Color} radius={[4, 4, 0, 0]} barSize={8}>
                                   <LabelList 
                                     dataKey="wickets2" 
                                     content={(props: any) => {
@@ -1135,8 +1239,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                                   contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
                                 />
                                 <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
-                                <Line type="monotone" name={team1Name} dataKey="cumulative1" stroke="#38BDF8" strokeWidth={3} dot={{ r: 3, fill: '#38BDF8' }} />
-                                <Line type="monotone" name={team2Name} dataKey="cumulative2" stroke="#FAB005" strokeWidth={3} dot={{ r: 3, fill: '#FAB005' }} />
+                                <Line type="monotone" name={team1Name} dataKey="cumulative1" stroke={ins1Color} strokeWidth={3} dot={{ r: 3, fill: ins1Color }} />
+                                <Line type="monotone" name={team2Name} dataKey="cumulative2" stroke={ins2Color} strokeWidth={3} dot={{ r: 3, fill: ins2Color }} />
                               </LineChart>
                             </ResponsiveContainer>
                           </div>

@@ -352,11 +352,11 @@ const OpponentsTab: React.FC<OpponentsTabProps> = ({ userRole, currentUser }) =>
               </div>
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <div className="flex items-center justify-center mb-4">
+                <div className="flex gap-4 items-start">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-24 h-24 rounded-2xl bg-black/40 border border-white/10 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 hover:border-blue-500/50 transition-all group overflow-hidden shadow-inner"
+                    className="w-24 h-24 rounded-2xl bg-black/40 border border-white/10 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 hover:border-blue-500/50 transition-all group overflow-hidden shadow-inner shrink-0"
                     title="Upload Logo"
                   >
                     {formData.logoUrl ? (
@@ -369,6 +369,18 @@ const OpponentsTab: React.FC<OpponentsTabProps> = ({ userRole, currentUser }) =>
                     )}
                   </button>
                   <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleFileChange} aria-label="Upload team logo" />
+                  
+                  <div className="flex-1 space-y-2">
+                    <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Logo URL (Optional)</label>
+                    <input
+                      value={formData.logoUrl}
+                      onChange={e => setFormData({ ...formData, logoUrl: e.target.value })}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white text-[12px] outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-white/20 font-medium"
+                      placeholder="https://..."
+                      title="Logo URL"
+                    />
+                    <p className="text-[9px] text-white/20 italic px-1 font-medium">Provide a direct link to an image or upload one.</p>
+                  </div>
                 </div>
 
                 <div className="space-y-4">

@@ -7,6 +7,7 @@ interface MatchCenterTileProps {
     match: ScheduledMatch;
     homeTeamName: string;
     homeTeamLogo?: string;
+    allOpponents?: OpponentTeam[];
     opponent: OpponentTeam | undefined;
     onSelectPlayingXI: (matchId: string, mode: 'home' | 'opponent' | 'lock' | 'view') => void;
     onEditMatch: (match: ScheduledMatch) => void;
@@ -27,8 +28,9 @@ interface MatchCenterTileProps {
 
 const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     match,
-    homeTeamName,
-    homeTeamLogo,
+    homeTeamName: defaultHomeTeamName,
+    homeTeamLogo: defaultHomeTeamLogo,
+    allOpponents = [],
     opponent,
     onSelectPlayingXI,
     onEditMatch,
@@ -72,8 +74,15 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     const isToday = timeContext === 'TODAY';
     const isPast = timeContext === 'PAST';
 
+    const homeTeamName = match.isNeutral 
+        ? (allOpponents.find(o => o.id === match.homeTeamId)?.name || 'Home Team')
+        : defaultHomeTeamName;
+    const homeTeamLogo = match.isNeutral
+        ? (allOpponents.find(o => o.id === match.homeTeamId)?.logoUrl || '')
+        : defaultHomeTeamLogo;
+
     const opponentName = opponent?.name || match.opponentName || (match.opponentId && !match.opponentId.includes('-') ? match.opponentId : 'Opponent');
-    const opponentLogo = opponent?.logoUrl || match.opponentLogo;
+    const opponentLogo = match.opponentLogo || opponent?.logoUrl;
 
     return (
         <div 
@@ -101,7 +110,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     {/* Status Badge - Hidden in Graphic Mode */}
                     {!isGraphic && (
                         <div className="flex items-center gap-4">
-                            {isLive ? (
+                            {isLive && (
                                 <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl text-[15px] font-black" style={{ background: '#FF0000', color: '#ffffff', boxShadow: '0 10px 15px -3px rgba(239, 68, 68, 0.4)', border: '1px solid rgba(255,255,255,0.2)' }}>
                                     <span className="relative flex h-3.5 w-3.5">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -109,33 +118,17 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                     </span>
                                     LIVE
                                 </div>
-                            ) : isUpcoming ? (
-                                <div className="px-3 py-1.5 rounded-xl text-[14px] font-black uppercase tracking-wider" style={{ background: '#2563eb', color: '#ffffff', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.1)' }}>Upcoming</div>
-                            ) : (
-                                <div className="flex items-center gap-2.5">
-                                    <div 
-                                        className={`px-3 py-1.5 rounded-xl text-[14px] font-black uppercase tracking-wider flex items-center gap-2 shadow-sm`}
-                                        style={{ 
-                                            backgroundColor: '#1e3a8a',
-                                            color: '#ffffff'
-                                        }}
-                                    >
-                                        Completed
-                                    </div>
-                                    {(match as any).is_local_only_override && (
-                                        <div className="bg-amber-500 text-black px-3 py-1.5 rounded-xl text-[14px] font-black shadow-lg shadow-amber-500/10 uppercase tracking-wider flex items-center gap-1.5">
-                                            <RefreshCcw size={14} className="animate-spin" />
-                                            <span>Local Only</span>
-                                        </div>
-                                    )}
-                                </div>
                             )}
+                            {isUpcoming && (
+                                <div className="px-3 py-1.5 rounded-xl text-[14px] font-black uppercase tracking-wider" style={{ background: '#2563eb', color: '#ffffff', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.1)' }}>Upcoming</div>
+                            )}
+                            {/* Task #12: Removed Completed badge from here */}
                         </div>
                     )}
 
                     {/* Tournament Info - Centered Fixed Position for Graphics */}
                     <div className={`${isGraphic ? 'absolute inset-0 flex flex-col items-center justify-center pointer-events-none' : 'text-right flex items-center justify-end gap-3'}`}>
-                        {!isGraphic && (
+                        {!isGraphic && !match.isNeutral && (
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onShareSummary?.(match.id); }}
                                 className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-sky-400 transition-all flex items-center gap-2 border border-white/5"
@@ -179,8 +172,11 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 <div className="team-vertical">
                     <div className="logo-wrapper">
                         {homeTeamLogo
-                            ? <img src={homeTeamLogo} className="team-logo-md" alt={homeTeamName} />
-                            : <img src="/INS%20LOGO.PNG" className="team-logo-md object-contain" alt="INS" />
+                            ? <img src={homeTeamLogo} className="team-logo-md object-contain" alt={homeTeamName} />
+                            : (match.isNeutral 
+                                ? <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(homeTeamName).slice(0, 3).toUpperCase()}</div>
+                                : <img src="/INS%20LOGO.PNG" className="team-logo-md object-contain" alt="INS" />
+                              )
                         }
                         {!isGraphic && (
                             <button
@@ -193,11 +189,14 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             </button>
                         )}
                     </div>
-                    <h4 className="team-name-display" style={{ color: '#ffffff' }}>{(homeTeamName || 'Home Team').toUpperCase()}</h4>
+                    <h4 className="team-name-display" style={{ color: '#ffffff' }}>{(homeTeamName === 'Home Team' ? 'Indian Strikers' : (homeTeamName || 'Indian Strikers')).toUpperCase()}</h4>
                     {(isLive || isCompleted) && match.finalScoreHome && (
                         <div className="team-score-display font-black text-2xl mt-1.5" style={{ color: '#ffffff' }}>
                             {match.finalScoreHome.runs ?? 0}/{match.finalScoreHome.wickets ?? 0}
-                            <small className="text-[14px] font-bold ml-1.5 uppercase tracking-tighter" style={{ color: '#94a3b8' }}>({match.finalScoreHome.overs ?? 0} ov)</small>
+                            {/* Task #2: Format Overs */}
+                            <small className="text-[14px] font-bold ml-1.5 uppercase tracking-tighter" style={{ color: '#94a3b8' }}>
+                                ({Number.isInteger(match.finalScoreHome.overs || 0) ? (match.finalScoreHome.overs || 0) : (match.finalScoreHome.overs || 0).toFixed(1)} ov)
+                            </small>
                         </div>
                     )}
                 </div>
@@ -214,7 +213,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     <div className="logo-wrapper">
                         {opponentLogo
                             ? <img src={opponentLogo} className="team-logo-md object-contain" alt={opponentName} />
-                            : <div className="team-logo-md flex items-center justify-center bg-transparent border border-white/10 text-white/20 font-black text-xs rounded-xl">{String(opponentName).slice(0, 3).toUpperCase()}</div>
+                            : <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(opponentName).slice(0, 3).toUpperCase()}</div>
                         }
                         {!isGraphic && (
                             <button
@@ -231,7 +230,10 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     {(isLive || isCompleted) && match.finalScoreAway && (
                         <div className="team-score-display font-black text-2xl mt-1.5" style={{ color: '#ffffff' }}>
                             {match.finalScoreAway.runs ?? 0}/{match.finalScoreAway.wickets ?? 0}
-                            <small className="text-[14px] font-bold ml-1.5 uppercase tracking-tighter" style={{ color: '#94a3b8' }}>({match.finalScoreAway.overs ?? 0} ov)</small>
+                            {/* Task #2: Format Overs */}
+                            <small className="text-[14px] font-bold ml-1.5 uppercase tracking-tighter" style={{ color: '#94a3b8' }}>
+                                ({Number.isInteger(match.finalScoreAway.overs || 0) ? (match.finalScoreAway.overs || 0) : (match.finalScoreAway.overs || 0).toFixed(1)} ov)
+                            </small>
                         </div>
                     )}
                 </div>
@@ -273,7 +275,11 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
             <div className="px-6 pb-6 mt-auto">
                 {/* Info + Admin Controls */}
                 <div className="flex items-center justify-between mb-4 text-[20px] match-meta-info uppercase tracking-tight px-1.5">
-                    <div className="flex gap-6">
+                    <div className="flex gap-6 items-center">
+                        {/* Task #12: Moved Completed badge to Meta Footer */}
+                        {isCompleted && (
+                            <div className="px-2 py-0.5 rounded bg-blue-900/50 text-blue-400 text-[10px] font-black border border-blue-500/30">COMPLETED</div>
+                        )}
                         <span className="flex items-center gap-2.5" style={{ color: '#cbd5e1' }}><Calendar size={20} style={{ color: '#38bdf8' }} /> {dateFormatted}</span>
                         <span className="flex items-center gap-2.5" style={{ color: '#cbd5e1' }}>
                             <MapPin size={20} style={{ color: '#10b981' }} /> 
@@ -285,13 +291,6 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     </div>
                     {!isGraphic && isAdmin && (
                         <div className="flex gap-3">
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onSelectPlayingXI(match.id, 'view'); }} 
-                                className="hover:text-blue-500 transition-colors text-slate-400" 
-                                title="Share Squad Graphic"
-                            >
-                                <Share2 size={16} />
-                            </button>
                              <button 
                                 onClick={(match.isLocked || (match as any).is_locked) ? undefined : (e) => { e.stopPropagation(); onEditMatch(match); }} 
                                 className={`transition-colors ${(match.isLocked || (match as any).is_locked) ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-blue-600'}`} 
@@ -312,55 +311,36 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     )}
                 </div>
 
-                {/* Footer Buttons */}
+                {/* Footer Buttons - Task #13: Match Center Dropdown */}
                 {!isGraphic && (
-                    <div className="card-footer-grid">
-                        {isLive ? (
-                            <button onClick={() => onStartScoring(match.id)} className="btn-primary-full bg-red-600 text-white border-red-500 hover:bg-red-700 flex items-center justify-center gap-3">
-                                <Radio size={18} /> {isScorerOrAdmin ? 'CONTINUE LIVE SCORING' : 'VIEW LIVE SCORING'}
-                            </button>
-                        ) : isToday && !isCompleted ? (
-                            <>
-                                {isScorerOrAdmin ? (
-                                    <>
-                                        <button onClick={() => onStartScoring(match.id)} className="btn-action-dark bg-blue-600 text-white border-blue-500 hover:bg-blue-700">START LIVE</button>
-                                        <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">SUMMARY</button>
-                                    </>
-                                ) : (
-                                    <button onClick={() => onViewScorecard(match)} className="btn-primary-bold">
-                                        VIEW MATCH INFO
-                                        {(match.isLocked) && (
-                                            <span title="This scorecard is locked">
-                                                <LockIcon size={12} className="text-emerald-500" />
-                                            </span>
-                                        )}
+                    <div className="flex flex-col gap-3">
+                        <button 
+                            onClick={() => onViewScorecard(match)} 
+                            className="btn-primary-full bg-blue-600 text-white border-blue-500 hover:bg-blue-700 flex items-center justify-center gap-3 py-4 font-black text-lg shadow-lg shadow-blue-500/20"
+                        >
+                            <Users size={20} /> MATCH CENTER
+                        </button>
+                        
+                        {isScorerOrAdmin && (
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                {isLive ? (
+                                    <button onClick={() => onStartScoring(match.id)} className="col-span-2 btn-action-dark bg-red-600 text-white border-red-500 hover:bg-red-700 flex items-center justify-center gap-2">
+                                        <Radio size={16} /> SCORING
                                     </button>
-                                )}
-                            </>
-                        ) : (isPast || isCompleted) ? (
-                            <>
-                                {isScorerOrAdmin ? (
+                                ) : (
                                     <>
-                                        {match.isLocked ? (
-                                            <button onClick={() => onViewScorecard(match)} className="btn-primary-full col-span-2 flex items-center justify-center gap-3 py-6">
-                                                <LockIcon size={14} /> VIEW LOCKED SCORECARD
-                                            </button>
-                                        ) : (
+                                        {!match.isLocked && (
                                             <>
-                                                <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark">MATCH SUMMARY</button>
-                                                <button onClick={() => onUpdateManualScore(match.id, 'full')} className="btn-action-dark">UPDATE SCORECARD</button>
-                                                <button onClick={() => onViewScorecard(match)} className="btn-primary-bold">VIEW FULL SCORECARD</button>
+                                                <button onClick={() => onUpdateManualScore(match.id, 'summary')} className="btn-action-dark text-[10px]">SUMMARY</button>
+                                                <button onClick={() => onUpdateManualScore(match.id, 'full')} className="btn-action-dark text-[10px]">SCORECARD</button>
                                             </>
                                         )}
+                                        {isToday && !isCompleted && (
+                                            <button onClick={() => onStartScoring(match.id)} className="col-span-2 btn-action-dark bg-emerald-600 text-white border-emerald-500">START MATCH</button>
+                                        )}
                                     </>
-                                ) : (
-                                    <button onClick={() => onViewScorecard(match)} className="btn-primary-full">VIEW FULL SCORECARD</button>
                                 )}
-                            </>
-                        ) : (
-                            <p className="col-span-2 text-center text-white/40 text-[9px] font-black uppercase tracking-widest py-2 bg-slate-900 rounded-lg">
-                                Scoring opens {new Date(match.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
-                            </p>
+                            </div>
                         )}
                     </div>
                 )}

@@ -462,9 +462,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
   // REACTIVE DERIVATION: Automatically updates when store.matches changes
   const carouselMatches = useMemo(() => {
-    const live = (matches || []).filter(m => m.status === 'live');
+    const live = (matches || []).filter(m => m.status === 'live' && !m.isNeutral);
     const completed = (matches || [])
-      .filter(m => m.status === 'completed' && !m.is_test)
+      .filter(m => m.status === 'completed' && !m.is_test && !m.isNeutral)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
     return [...live, ...completed];
@@ -472,7 +472,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
   const nextMatch = useMemo(() => {
     const priorityMatch = (matches || [])
-      .filter(m => (m.status === 'live' || (m.status === 'upcoming' && !m.is_test)))
+      .filter(m => (m.status === 'live' || (m.status === 'upcoming' && !m.is_test)) && !m.isNeutral)
       .sort((a, b) => {
         if (a.status === 'live' && b.status !== 'live') return -1;
         if (b.status === 'live' && a.status !== 'live') return 1;

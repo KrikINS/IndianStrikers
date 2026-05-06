@@ -2772,6 +2772,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
       const updatePayload: any = {
         tournament_id: matchMeta?.tournamentId,
+        is_neutral: matchMeta?.isNeutral,
         live_data: exportableStore
       };
 
@@ -2826,7 +2827,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           }
         });
 
-        if (playedInnings || bowledInnings) {
+        if ((playedInnings || bowledInnings) && !matchMeta?.isNeutral) {
           playerStatsUpdate.push({
             playerId: pid,
             matchId: activeMatchId,

@@ -31,6 +31,8 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         stage: 'League' as MatchStage,
         status: 'upcoming' as MatchStatus,
         matchFormat: 'T20' as 'T20' | 'One Day',
+        isNeutral: false,
+        homeTeamId: '',
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -46,6 +48,8 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
             const selectedVenue = grounds.find(g => g.id === formData.groundId)?.name || 'Local Ground';
 
             const newMatch: Omit<ScheduledMatch, 'id'> = {
+                isNeutral: formData.isNeutral,
+                homeTeamId: formData.isNeutral ? formData.homeTeamId : 'IND_STRIKERS',
                 opponentId: formData.opponentId,
                 opponentName,
                 opponentLogo,
@@ -74,6 +78,8 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         }
     };
 
+    const isNeutralActive = formData.isNeutral ? "true" : "false";
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
             <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -93,23 +99,72 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                    {/* Opponent Selection */}
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Opponent Team</label>
-                        <div className="relative">
-                            <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                            <select 
-                                required
-                                value={formData.opponentId}
-                                onChange={(e) => setFormData({...formData, opponentId: e.target.value})}
-                                className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
-                                title="Select Opponent"
-                            >
-                                <option value="">Select Opponent...</option>
-                                {opponents.map(opp => (
-                                    <option key={opp.id} value={opp.id}>{opp.name}</option>
-                                ))}
-                            </select>
+                    {/* Neutral Match Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                        <div className="flex flex-col">
+                            <span className="text-sm font-black text-white uppercase italic">Neutral Match</span>
+                            <span className="text-[10px] text-slate-500 font-bold">Schedule a match between two other teams</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, isNeutral: !prev.isNeutral }))}
+                            className={`w-12 h-6 rounded-full transition-all relative ${formData.isNeutral ? 'bg-blue-600' : 'bg-slate-700'}`}
+                            title="Toggle Neutral Match"
+                            aria-pressed={isNeutralActive}
+                        >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isNeutral ? 'left-7' : 'left-1'}`} />
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Home Team Selection (If Neutral) */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">
+                                {formData.isNeutral ? 'Team A (Home)' : 'Home Team'}
+                            </label>
+                            <div className="relative">
+                                <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                                {formData.isNeutral ? (
+                                    <select 
+                                        required
+                                        value={formData.homeTeamId}
+                                        onChange={(e) => setFormData({...formData, homeTeamId: e.target.value})}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
+                                        title="Select Home Team"
+                                    >
+                                        <option value="">Select Team A...</option>
+                                        {opponents.map(opp => (
+                                            <option key={opp.id} value={opp.id}>{opp.name}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <div className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl pl-12 pr-4 py-3 text-slate-400 text-sm font-black uppercase">
+                                        Indian Strikers
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Opponent Selection */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">
+                                {formData.isNeutral ? 'Team B (Away)' : 'Away Team'}
+                            </label>
+                            <div className="relative">
+                                <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                                <select 
+                                    required
+                                    value={formData.opponentId}
+                                    onChange={(e) => setFormData({...formData, opponentId: e.target.value})}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
+                                    title="Select Away Team"
+                                >
+                                    <option value="">Select {formData.isNeutral ? 'Team B' : 'Away Team'}...</option>
+                                    {opponents.filter(o => o.id !== formData.homeTeamId).map(opp => (
+                                        <option key={opp.id} value={opp.id}>{opp.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     </div>
 
