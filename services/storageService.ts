@@ -14,8 +14,11 @@ const getHeaders = () => {
 const handleResponse = async (res: Response) => {
   if (!res.ok) {
     if (res.status === 401) {
-      sessionStorage.removeItem('authToken');
-      window.location.reload(); 
+      const token = sessionStorage.getItem('authToken');
+      if (token) {
+        sessionStorage.removeItem('authToken');
+        window.location.reload(); 
+      }
       throw new Error("Session expired. Please login again.");
     }
     
