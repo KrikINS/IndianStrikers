@@ -315,7 +315,7 @@ const App: React.FC = () => {
 
 const AppInternal: React.FC = () => {
     const location = useLocation();
-    const isBroadcastOverlay = location.pathname.includes('broadcast-overlay');
+    const isBroadcastOverlay = window.location.hash.includes('broadcast-overlay');
 
     // Player Management from matchStore
     const fetchPlayers = useMatchCenter(state => state.fetchPlayers);
