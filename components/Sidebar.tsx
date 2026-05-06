@@ -162,6 +162,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="flex p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all absolute -right-5 top-18 z-50 border border-slate-700 shadow-xl"
             title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            aria-pressed={!isCollapsed ? "true" : "false"}
           >
             {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
@@ -241,6 +242,7 @@ const Sidebar: React.FC<SidebarProps> = ({ userRole = 'guest', effectiveRole = '
                 hover:scale-[1.02] active:scale-95
               `}
               title={isCollapsed ? (isAdminView ? "Switch to Member" : "Switch to Admin") : ""}
+              aria-pressed={isAdminView ? "true" : "false"}
             >
               <div className="shrink-0">
                 {isAdminView ? <Shield size={20} /> : <User size={20} />}

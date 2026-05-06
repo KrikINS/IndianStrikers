@@ -2223,6 +2223,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     key={role}
                     $active={roleFilter === role}
                     onClick={() => setRoleFilter(role)}
+                    aria-pressed={roleFilter === role ? "true" : "false"}
                   >
                     {role}
                   </FilterChip>
@@ -5026,12 +5027,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     <FilterChip
                       $active={activeChart === 'manhattan'}
                       onClick={() => setActiveChart('manhattan')}
+                      aria-pressed={activeChart === 'manhattan' ? "true" : "false"}
                     >
                       MANHATTAN
                     </FilterChip>
                     <FilterChip
                       $active={activeChart === 'worm'}
                       onClick={() => setActiveChart('worm')}
+                      aria-pressed={activeChart === 'worm' ? "true" : "false"}
                     >
                       WORM CHART
                     </FilterChip>

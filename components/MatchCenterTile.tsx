@@ -166,11 +166,10 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     <h4 className="team-name-display" style={{ color: '#ffffff' }}>{(homeTeamName === 'Home Team' ? 'Indian Strikers' : (homeTeamName || 'Indian Strikers')).toUpperCase()}</h4>
                     {(isLive || isCompleted) && match.finalScoreHome && (
                         <div className="team-score-display font-black text-2xl mt-1.5" style={{ color: '#ffffff' }}>
-                            {match.finalScoreHome.runs ?? 0}/{match.finalScoreHome.wickets ?? 0}
-                            {/* Task #2: Format Overs */}
-                            <small className="text-[14px] font-bold ml-1.5 uppercase tracking-tighter" style={{ color: '#94a3b8' }}>
+                            <span>{match.finalScoreHome.runs ?? 0}/{match.finalScoreHome.wickets ?? 0}</span>
+                            <span className="text-[14px] font-bold uppercase tracking-tighter" style={{ color: '#94a3b8' }}>
                                 ({Number.isInteger(match.finalScoreHome.overs || 0) ? (match.finalScoreHome.overs || 0) : (match.finalScoreHome.overs || 0).toFixed(1)} ov)
-                            </small>
+                            </span>
                         </div>
                     )}
                 </div>
@@ -203,11 +202,10 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     <h4 className="team-name-display" style={{ color: '#ffffff' }}>{(opponentName || 'Opponent').toUpperCase()}</h4>
                     {(isLive || isCompleted) && match.finalScoreAway && (
                         <div className="team-score-display font-black text-2xl mt-1.5" style={{ color: '#ffffff' }}>
-                            {match.finalScoreAway.runs ?? 0}/{match.finalScoreAway.wickets ?? 0}
-                            {/* Task #2: Format Overs */}
-                            <small className="text-[14px] font-bold ml-1.5 uppercase tracking-tighter" style={{ color: '#94a3b8' }}>
+                            <span>{match.finalScoreAway.runs ?? 0}/{match.finalScoreAway.wickets ?? 0}</span>
+                            <span className="text-[14px] font-bold uppercase tracking-tighter" style={{ color: '#94a3b8' }}>
                                 ({Number.isInteger(match.finalScoreAway.overs || 0) ? (match.finalScoreAway.overs || 0) : (match.finalScoreAway.overs || 0).toFixed(1)} ov)
-                            </small>
+                            </span>
                         </div>
                     )}
                 </div>
@@ -248,9 +246,9 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
             {/* ACTION FOOTER */}
             <div className="px-6 pb-6 mt-auto" data-html2canvas-ignore="true">
                 {/* Info + Admin Controls */}
-                <div className="flex flex-col gap-3 mb-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center flex-wrap gap-3">
+                <div className="flex flex-col gap-3 mb-6 mt-4">
+                    <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2 w-full">
                             {/* Consolidated Status, Date, and Ground into one horizontal line */}
                             {isLive && (
                                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-900/40 text-red-500 text-[9px] font-black border border-red-500/30">
@@ -298,6 +296,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
                                     className={`px-6 h-full font-black rounded-xl border flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest transition-all ${showActions ? 'bg-white border-white text-slate-900' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+                                    aria-pressed={showActions ? "true" : "false"}
                                 >
                                     {showActions ? <X size={16} /> : <Zap size={16} className="text-yellow-400" />} 
                                     {showActions ? 'CLOSE' : 'ACTIONS'}

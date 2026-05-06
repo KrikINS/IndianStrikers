@@ -164,6 +164,7 @@ const CommentaryManager: React.FC = () => {
                         ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-900/40' 
                         : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
                       } uppercase tracking-widest`}
+                      aria-pressed={form.event_type === cat ? "true" : "false"}
                     >
                       {cat}
                     </button>

@@ -72,6 +72,7 @@ const MatchAction: React.FC<{
             disabled={isProcessing}
             className={`p-1.5 transition-all duration-200 ${localLocked ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-400 hover:text-amber-500'}`} 
             title={localLocked ? "Unlock Match (Now Internal)" : "Lock Match (Finalize Stats)"}
+            aria-pressed={localLocked ? "true" : "false"}
         >
             {isProcessing ? (
                 <Loader2 size={14} className="animate-spin text-blue-500" />
@@ -634,8 +635,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 40px 20px;
-            gap: 60px;
+            padding: 15px 20px;
+            gap: 32px;
             background: radial-gradient(circle at center, rgba(30,58,138,0.15) 0%, transparent 75%);
           }
           .team-vertical {
@@ -687,6 +688,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
           }
 
           .team-score-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             color: #3b82f6;
             font-weight: 950;
             font-size: 36px;

@@ -32,6 +32,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         status: 'upcoming' as MatchStatus,
         matchFormat: 'T20' as 'T20' | 'One Day',
         isNeutral: false,
+        isFriendly: false,
         homeTeamId: '',
     });
     const [isSaving, setIsSaving] = useState(false);
@@ -44,7 +45,9 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
             const selectedOpponent = opponents.find(o => o.id === formData.opponentId);
             const opponentName = selectedOpponent?.name || 'Opponent';
             const opponentLogo = selectedOpponent?.logoUrl || '';
-            const selectedTournament = tournaments.find((t: { id: string, name: string }) => t.id === formData.tournamentId)?.name || 'Friendly';
+            const selectedTournament = formData.isFriendly 
+                ? 'Friendly Match' 
+                : tournaments.find((t: { id: string, name: string }) => t.id === formData.tournamentId)?.name || 'Friendly Match';
             const selectedVenue = grounds.find(g => g.id === formData.groundId)?.name || 'Local Ground';
 
             const newMatch: Omit<ScheduledMatch, 'id'> = {
@@ -59,7 +62,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                 groundId: formData.groundId,
                 venue: selectedVenue,
                 tournament: selectedTournament,
-                tournamentId: formData.tournamentId,
+                tournamentId: formData.isFriendly ? '' : formData.tournamentId,
                 stage: formData.stage,
                 status: formData.status,
                 matchFormat: formData.matchFormat,
@@ -98,21 +101,40 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                    {/* Neutral Match Toggle */}
-                    <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-                        <div className="flex flex-col">
-                            <span className="text-sm font-black text-white uppercase italic">Neutral Match</span>
-                            <span className="text-[10px] text-slate-500 font-bold">Schedule a match between two other teams</span>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Neutral Match Toggle */}
+                        <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                            <div className="flex flex-col">
+                                <span className="text-sm font-black text-white uppercase italic">Neutral Match</span>
+                                <span className="text-[10px] text-slate-500 font-bold leading-tight">Between two other teams</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, isNeutral: !prev.isNeutral }))}
+                                className={`w-12 h-6 rounded-full transition-all relative shrink-0 ${formData.isNeutral ? 'bg-blue-600' : 'bg-slate-700'}`}
+                                title="Toggle Neutral Match"
+                                aria-pressed={formData.isNeutral ? "true" : "false"}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isNeutral ? 'left-7' : 'left-1'}`} />
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, isNeutral: !prev.isNeutral }))}
-                            className={`w-12 h-6 rounded-full transition-all relative ${formData.isNeutral ? 'bg-blue-600' : 'bg-slate-700'}`}
-                            title="Toggle Neutral Match"
-                            aria-pressed={formData.isNeutral}
-                        >
-                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isNeutral ? 'left-7' : 'left-1'}`} />
-                        </button>
+
+                        {/* Friendly Match Toggle */}
+                        <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                            <div className="flex flex-col">
+                                <span className="text-sm font-black text-white uppercase italic">Friendly</span>
+                                <span className="text-[10px] text-slate-500 font-bold leading-tight">No tournament points</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, isFriendly: !prev.isFriendly, tournamentId: prev.isFriendly ? prev.tournamentId : '' }))}
+                                className={`w-12 h-6 rounded-full transition-all relative shrink-0 ${formData.isFriendly ? 'bg-amber-600' : 'bg-slate-700'}`}
+                                title="Toggle Friendly Match"
+                                aria-pressed={formData.isFriendly ? "true" : "false"}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isFriendly ? 'left-7' : 'left-1'}`} />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -247,14 +269,17 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                             <div className="relative">
                                 <Trophy className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                                 <select 
-                                    required 
+                                    required={!formData.isFriendly}
+                                    disabled={formData.isFriendly}
                                     value={formData.tournamentId}
                                     onChange={(e) => setFormData({...formData, tournamentId: e.target.value})}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
+                                    className={`w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none ${formData.isFriendly ? 'opacity-30 cursor-not-allowed' : ''}`}
                                     title="Select Tournament"
                                 >
-                                    <option value="">Select Tournament...</option>
-                                    {tournaments.map((t: { id: string, name: string }) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    <option value="">{formData.isFriendly ? 'Friendly Match' : 'Select Tournament...'}</option>
+                                    {!formData.isFriendly && tournaments.map((t: { id: string, name: string }) => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
