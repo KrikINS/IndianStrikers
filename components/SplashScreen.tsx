@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Ticket, Lock, Loader2, ChevronRight, X, User, Eye, EyeOff } from 'lucide-react';
+import { Shield, Users, Ticket, Lock, Loader2, ChevronRight, X, User, Eye, EyeOff, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserRole } from '../types';
 import KirikINSLogo from './KirikINSLogo';
@@ -417,6 +417,12 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
                    className="w-full py-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 border border-slate-700 rounded-lg transition-colors group"
                  >
                    <span className="font-medium text-slate-300 group-hover:text-white transition-colors">Not a Member?</span> Apply Here
+                 </button>
+                 <button
+                   onClick={() => window.location.hash = '#/league-center'}
+                   className="w-full py-1.5 text-xs text-blue-400 hover:text-blue-300 group transition-colors flex items-center justify-center gap-2"
+                 >
+                   <Trophy size={14} /> View League Standings <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
                  </button>
                  <button
                    onClick={handleGuestEntry}

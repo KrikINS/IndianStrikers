@@ -212,7 +212,7 @@ const AppContent: React.FC<{
                   path="/league-center" 
                   element={
                     <Suspense fallback={<StrikersLoader />}>
-                      <LeagueCenter />
+                      <LeagueCenter userRole={effectiveRole} />
                     </Suspense>
                   } 
                 />
@@ -315,7 +315,9 @@ const App: React.FC = () => {
 
 const AppInternal: React.FC = () => {
     const location = useLocation();
-    const isBroadcastOverlay = window.location.hash.includes('broadcast-overlay');
+    const hash = window.location.hash;
+    const isBroadcastOverlay = hash.includes('broadcast-overlay');
+    const isLeagueCenterPublic = hash.includes('league-center') && !sessionStorage.getItem('authToken');
 
     // Player Management from matchStore
     const fetchPlayers = useMatchCenter(state => state.fetchPlayers);
@@ -499,8 +501,30 @@ const AppInternal: React.FC = () => {
     await saveTeamLogo(url);
   };
 
-  if (isBroadcastOverlay) {
-    return <BroadcastOverlay />;
+  if (isBroadcastOverlay || isLeagueCenterPublic) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Suspense fallback={<StrikersLoader />}>
+          {isBroadcastOverlay ? (
+            <BroadcastOverlay />
+          ) : (
+            <div className="relative">
+               {/* Minimal Public Header for League Center if accessed via direct public link */}
+               <div className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <KirikINSLogo className="w-8 h-8" />
+                    <span className="font-black text-slate-900 italic uppercase text-xs tracking-widest">Indian Strikers</span>
+                  </div>
+                  <Link to="/home" className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">
+                    Enter App
+                  </Link>
+               </div>
+               <LeagueCenter userRole="guest" />
+            </div>
+          )}
+        </Suspense>
+      </div>
+    );
   }
 
   return (

@@ -55,7 +55,8 @@ import LeagueTeamManager from './LeagueTeamManager';
 import LeagueStandingTable from './LeagueStandingTable';
 import { toast } from 'react-hot-toast';
 
-const LeagueCenter: React.FC = () => {
+const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) => {
+  const isAdmin = userRole === 'admin';
   const [tournaments, setTournaments] = useState<LeagueTournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<LeagueTournament | null>(null);
   const [groups, setGroups] = useState<LeagueGroup[]>([]);
@@ -528,13 +529,15 @@ const LeagueCenter: React.FC = () => {
                  {tournaments.length === 0 && <option>No Tournaments</option>}
                </select>
              </div>
-             <button 
-               title="Create Tournament"
-               onClick={() => setShowAddModal(true)}
-               className="bg-slate-900 text-white p-3 rounded-2xl flex items-center justify-center hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95"
-             >
-               <Plus size={20} />
-             </button>
+             {isAdmin && (
+               <button 
+                 title="Create Tournament"
+                 onClick={() => setShowAddModal(true)}
+                 className="bg-slate-900 text-white p-3 rounded-2xl flex items-center justify-center hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95"
+               >
+                 <Plus size={20} />
+               </button>
+             )}
           </div>
         </div>
       </div>
@@ -547,12 +550,14 @@ const LeagueCenter: React.FC = () => {
                <Trophy className="text-slate-200" size={40} />
              </div>
              <h2 className="text-2xl font-black text-slate-400 uppercase italic mb-4">No League Tournaments Found</h2>
-             <button 
-               onClick={() => setShowAddModal(true)}
-               className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-200"
-             >
-               Create Your First League
-             </button>
+              {isAdmin && (
+                <button 
+                  onClick={() => setShowAddModal(true)}
+                  className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-200"
+                >
+                  Create Your First League
+                </button>
+              )}
           </div>
         ) : (
           <div className="space-y-8">
@@ -578,13 +583,15 @@ const LeagueCenter: React.FC = () => {
                   <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               ))}
-              <button
-                onClick={() => setShowSetupDrawer(true)}
-                title="Setup Hub"
-                className="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-300 hover:bg-slate-50 hover:text-slate-700 transition-all"
-              >
-                <Settings size={18} />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowSetupDrawer(true)}
+                  title="Setup Hub"
+                  className="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-300 hover:bg-slate-50 hover:text-slate-700 transition-all"
+                >
+                  <Settings size={18} />
+                </button>
+              )}
             </div>
 
             {/* Tab Panels */}
@@ -762,8 +769,8 @@ const LeagueCenter: React.FC = () => {
                          { label: 'Manage Teams', sub: `${teams.length} registered`, icon: <Users size={18} />, color: 'bg-blue-600', action: () => setActiveTab('teams') },
                          { label: 'View Schedule', sub: `${fixtures.length} fixtures`, icon: <Calendar size={18} />, color: 'bg-indigo-600', action: () => setActiveTab('schedule') },
                          { label: 'Points Table', sub: `${enrichedStandings.length} teams ranked`, icon: <BarChart2 size={18} />, color: 'bg-amber-500', action: () => setActiveTab('standings') },
-                         { label: 'Setup Hub', sub: 'Configure tournament', icon: <Settings size={18} />, color: 'bg-slate-700', action: () => setShowSetupDrawer(true) },
-                         ...(fixtures.length === 0 && teams.length >= 2 ? [{ label: 'Generate Fixtures', sub: `${teams.length} teams ready`, icon: <Zap size={18} />, color: 'bg-emerald-600', action: generateFixtures }] : [])
+                         ...(isAdmin ? [{ label: 'Setup Hub', sub: 'Configure tournament', icon: <Settings size={18} />, color: 'bg-slate-700', action: () => setShowSetupDrawer(true) }] : []),
+                         ...(isAdmin && fixtures.length === 0 && teams.length >= 2 ? [{ label: 'Generate Fixtures', sub: `${teams.length} teams ready`, icon: <Zap size={18} />, color: 'bg-emerald-600', action: generateFixtures }] : [])
                        ].map((qa, i) => (
                          <motion.button
                            key={qa.label}
@@ -794,7 +801,7 @@ const LeagueCenter: React.FC = () => {
                     <LeagueTeamManager 
                       tournamentId={selectedTournament.id} 
                       groups={groups} 
-                      isAdmin={true} 
+                      isAdmin={isAdmin} 
                     />
                  </div>
                )}
@@ -825,12 +832,14 @@ const LeagueCenter: React.FC = () => {
                            </button>
                          ))}
                        </div>
-                       <button 
-                         onClick={() => setShowAddFixtureModal(true)}
-                         className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
-                       >
-                         <Plus size={14} /> Add Match
-                       </button>
+                       {isAdmin && (
+                         <button 
+                           onClick={() => setShowAddFixtureModal(true)}
+                           className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                         >
+                           <Plus size={14} /> Add Match
+                         </button>
+                       )}
                      </div>
 
                      <div className="relative">
@@ -853,7 +862,7 @@ const LeagueCenter: React.FC = () => {
                            <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Matchup / Result</th>
                            <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Venue</th>
                            <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                           <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                           {isAdmin && <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>}
                          </tr>
                        </thead>
                        <tbody className="divide-y divide-slate-100">
@@ -918,32 +927,34 @@ const LeagueCenter: React.FC = () => {
                                      'bg-slate-50 text-slate-400'
                                    }`}>{f.status}</span>
                                  </td>
-                                 <td className="px-8 py-5 text-right">
-                                   <div className="flex justify-end gap-1.5">
-                                     <button
-                                       onClick={() => { setScoringFixture(f); 
-                                          setScoreForm({ 
-                                            home_runs: String((f as any).home_team_runs ?? ''), 
-                                            home_wickets: String((f as any).home_team_wickets ?? ''), 
-                                            home_overs: String((f as any).home_team_overs ?? ''), 
-                                            away_runs: String((f as any).away_team_runs ?? ''), 
-                                            away_wickets: String((f as any).away_team_wickets ?? ''), 
-                                            away_overs: String((f as any).away_team_overs ?? ''), 
-                                            result_type: 'normal' 
-                                          }); }}
-                                       title="Enter Score"
-                                       className="p-2 text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all active:scale-95"
-                                     >
-                                       <TrendingUp size={15} />
-                                     </button>
-                                     <button onClick={() => setEditingFixture(f)} title="Edit" className="p-2 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all active:scale-95">
-                                       <Edit2 size={15} />
-                                     </button>
-                                     <button onClick={() => handleDeleteFixture(f.id)} title="Delete" className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all active:scale-95">
-                                       <Trash2 size={15} />
-                                     </button>
-                                   </div>
-                                 </td>
+                                 {isAdmin && (
+                                   <td className="px-8 py-5 text-right">
+                                     <div className="flex justify-end gap-1.5">
+                                       <button
+                                         onClick={() => { setScoringFixture(f); 
+                                            setScoreForm({ 
+                                              home_runs: String((f as any).home_team_runs ?? ''), 
+                                              home_wickets: String((f as any).home_team_wickets ?? ''), 
+                                              home_overs: String((f as any).home_team_overs ?? ''), 
+                                              away_runs: String((f as any).away_team_runs ?? ''), 
+                                              away_wickets: String((f as any).away_team_wickets ?? ''), 
+                                              away_overs: String((f as any).away_team_overs ?? ''), 
+                                              result_type: 'normal' 
+                                            }); }}
+                                         title="Enter Score"
+                                         className="p-2 text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all active:scale-95"
+                                       >
+                                         <TrendingUp size={15} />
+                                       </button>
+                                       <button onClick={() => setEditingFixture(f)} title="Edit" className="p-2 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all active:scale-95">
+                                         <Edit2 size={15} />
+                                       </button>
+                                       <button onClick={() => handleDeleteFixture(f.id)} title="Delete" className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all active:scale-95">
+                                         <Trash2 size={15} />
+                                       </button>
+                                     </div>
+                                   </td>
+                                 )}
                                </tr>
                              );
                            })}
@@ -1004,6 +1015,7 @@ const LeagueCenter: React.FC = () => {
                    matches={knockoutMatches}
                    teams={teams}
                    tournament={selectedTournament}
+                   isAdmin={isAdmin}
                    onReset={() => handleSetupKnockout(['QF','SF','Final'])}
                    onSetup={handleSetupKnockout}
                    onScore={(m) => { 
@@ -1719,6 +1731,7 @@ interface KOProps {
   matches: any[];
   teams: any[];
   tournament: any;
+  isAdmin?: boolean;
   onReset: () => void;
   onSetup: (rounds: string[], crossovers?: any[]) => void;
   onScore: (m: any) => void;
@@ -1726,7 +1739,7 @@ interface KOProps {
   resolveSeed?: (s: string) => any;
 }
 
-const KOMatchCard: React.FC<{ m: any; barClass: string; onScore: (m: any) => void; onEdit: (m: any) => void; resolveSeed?: (s: string) => any }> = ({ m, barClass, onScore, onEdit, resolveSeed }) => {
+const KOMatchCard: React.FC<{ m: any; barClass: string; isAdmin?: boolean; onScore: (m: any) => void; onEdit: (m: any) => void; resolveSeed?: (s: string) => any }> = ({ m, barClass, isAdmin, onScore, onEdit, resolveSeed }) => {
   const done = m.status === 'completed';
 
   let hName = m.home_team_name, hLogo = m.home_team_logo, hId = m.home_team_id;
@@ -1784,16 +1797,18 @@ const KOMatchCard: React.FC<{ m: any; barClass: string; onScore: (m: any) => voi
         {m.date && <p className="text-[8px] text-white/40 font-bold text-center">{new Date(m.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</p>}
       </div>
       <div className="px-4 pb-3 flex gap-1 justify-end border-t border-white/5 pt-2">
-        {ready && !done && (
+        {isAdmin && ready && !done && (
           <button title="Enter Score" onClick={handleScoreClick} className="p-1.5 rounded-lg text-white/30 hover:text-amber-400 hover:bg-amber-400/10 transition-all"><TrendingUp size={12} /></button>
         )}
-        <button title="Edit Match" onClick={() => onEdit(m)} className="p-1.5 rounded-lg text-white/30 hover:text-blue-400 hover:bg-blue-400/10 transition-all"><Edit2 size={12} /></button>
+        {isAdmin && (
+          <button title="Edit Match" onClick={() => onEdit(m)} className="p-1.5 rounded-lg text-white/30 hover:text-blue-400 hover:bg-blue-400/10 transition-all"><Edit2 size={12} /></button>
+        )}
       </div>
     </motion.div>
   );
 };
 
-const KnockoutBracket: React.FC<KOProps> = ({ matches, teams: _teams, tournament, onReset, onSetup, onScore, onEdit, resolveSeed }) => {
+const KnockoutBracket: React.FC<KOProps> = ({ matches, teams: _teams, tournament, isAdmin, onReset, onSetup, onScore, onEdit, resolveSeed }) => {
   const qfMatches = matches.filter(m => m.round === 'QF');
   const sfMatches = matches.filter(m => m.round === 'SF');
   const finalMatch = matches.find(m => m.round === 'Final');
@@ -1842,7 +1857,7 @@ const KnockoutBracket: React.FC<KOProps> = ({ matches, teams: _teams, tournament
             <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter drop-shadow-md">Road to the Trophy</h3>
             <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest mt-1 glow-amber">{tournament?.name} · Knockout Stage</p>
           </div>
-          <button onClick={onReset} className="text-[9px] font-black text-white/50 hover:text-white uppercase tracking-widest border border-white/10 hover:border-white/30 hover:bg-white/5 px-4 py-2 rounded-xl transition-all">Reset Bracket</button>
+          {isAdmin && <button onClick={onReset} className="text-[9px] font-black text-white/50 hover:text-white uppercase tracking-widest border border-white/10 hover:border-white/30 hover:bg-white/5 px-4 py-2 rounded-xl transition-all">Reset Bracket</button>}
         </div>
         <div className="overflow-x-auto pb-6">
         <div className="flex items-center gap-6 min-w-max">
@@ -1850,7 +1865,7 @@ const KnockoutBracket: React.FC<KOProps> = ({ matches, teams: _teams, tournament
             <div>
               <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest text-center mb-3">Quarter Finals</p>
               <div className="flex flex-col gap-3">
-                {qfMatches.map(m => <KOMatchCard key={m.id} m={m} barClass="bg-gradient-to-r from-blue-500 to-indigo-500" onScore={onScore} onEdit={onEdit} resolveSeed={resolveSeed} />)}
+                {qfMatches.map(m => <KOMatchCard key={m.id} m={m} isAdmin={isAdmin} barClass="bg-gradient-to-r from-blue-500 to-indigo-500" onScore={onScore} onEdit={onEdit} resolveSeed={resolveSeed} />)}
               </div>
             </div>
           )}
@@ -1858,14 +1873,14 @@ const KnockoutBracket: React.FC<KOProps> = ({ matches, teams: _teams, tournament
             <div>
               <p className="text-[9px] font-black text-violet-500 uppercase tracking-widest text-center mb-3">Semi Finals</p>
               <div className="flex flex-col gap-12">
-                {sfMatches.map(m => <KOMatchCard key={m.id} m={m} barClass="bg-gradient-to-r from-violet-500 to-purple-500" onScore={onScore} onEdit={onEdit} resolveSeed={resolveSeed} />)}
+                {sfMatches.map(m => <KOMatchCard key={m.id} m={m} isAdmin={isAdmin} barClass="bg-gradient-to-r from-violet-500 to-purple-500" onScore={onScore} onEdit={onEdit} resolveSeed={resolveSeed} />)}
               </div>
             </div>
           )}
           {finalMatch && (
             <div>
               <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest text-center mb-3">Final</p>
-              <KOMatchCard m={finalMatch} barClass="bg-gradient-to-r from-amber-500 to-orange-500" onScore={onScore} onEdit={onEdit} resolveSeed={resolveSeed} />
+              <KOMatchCard m={finalMatch} isAdmin={isAdmin} barClass="bg-gradient-to-r from-amber-500 to-orange-500" onScore={onScore} onEdit={onEdit} resolveSeed={resolveSeed} />
             </div>
           )}
           <div className="flex flex-col items-center gap-3 pl-8">
