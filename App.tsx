@@ -503,7 +503,7 @@ const AppInternal: React.FC = () => {
 
   if (isBroadcastOverlay || isLeagueCenterPublic) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className={`min-h-screen ${isBroadcastOverlay ? 'bg-transparent' : 'bg-slate-50'}`}>
         <Suspense fallback={<StrikersLoader />}>
           {isBroadcastOverlay ? (
             <BroadcastOverlay />
