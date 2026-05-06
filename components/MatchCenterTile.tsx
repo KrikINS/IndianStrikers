@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw, Camera, Download, Zap } from 'lucide-react';
+import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw, Camera, Download, Zap, X } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {

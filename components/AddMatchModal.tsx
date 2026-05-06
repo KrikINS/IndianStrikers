@@ -110,7 +110,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                             onClick={() => setFormData(prev => ({ ...prev, isNeutral: !prev.isNeutral }))}
                             className={`w-12 h-6 rounded-full transition-all relative ${formData.isNeutral ? 'bg-blue-600' : 'bg-slate-700'}`}
                             title="Toggle Neutral Match"
-                            aria-pressed={formData.isNeutral}
+                            aria-pressed={formData.isNeutral ? "true" : "false"}
                         >
                             <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isNeutral ? 'left-7' : 'left-1'}`} />
                         </button>
