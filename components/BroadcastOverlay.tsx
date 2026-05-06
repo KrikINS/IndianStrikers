@@ -100,7 +100,7 @@ const BroadcastOverlay = () => {
   const currentInningsNum = liveData.currentInnings || 1;
   const currentInnings = currentInningsNum === 1 ? liveData.innings1 : liveData.innings2;
   const isHomeBatting = currentInnings?.battingTeamId === 'HOME';
-  const battingTeamName = isHomeBatting ? (liveMatch.homeTeamName || 'Indian Strikers') : (liveMatch.opponentName || 'Opponent');
+  const battingTeamName = isHomeBatting ? 'Indian Strikers' : (liveMatch.opponentName || 'Opponent');
   
   const striker = liveData.strikerId ? getPlayerName(liveData.strikerId) : 'Waiting...';
   const nonStriker = liveData.nonStrikerId ? getPlayerName(liveData.nonStrikerId) : '';
