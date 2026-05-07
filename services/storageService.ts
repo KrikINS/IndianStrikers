@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { Player, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingStrategy, TournamentTableEntry, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats, TMTournament, TMGroup, TMTeam, TMFixture, TMStanding, LeagueTournament, LeagueGroup, LeagueTeam, LeagueFixture, LeagueStanding } from '../types';
+import { Player, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingStrategy, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats, TMTournament, TMGroup, TMTeam, TMFixture, TMStanding, LeagueTournament, LeagueGroup, LeagueTeam, LeagueFixture, LeagueStanding } from '../types';
 
 // const API_URL = 'https://strikers-app-227875153596.us-central1.run.app/api';
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
@@ -156,7 +156,7 @@ export const saveAppUsers = (users: AppUser[]) => console.warn("saveAppUsers is 
 
 // PLAYERS
 const INITIAL_BATTING_STATS: BattingStats = { matches: 142, innings: 140, notOuts: 15, runs: 24500, balls: 18000, average: 196, strikeRate: 136, highestScore: '185*', hundreds: 7, fifties: 12, ducks: 2, fours: 450, sixes: 120 };
-const INITIAL_BOWLING_STATS: BowlingStats = { matches: 142, innings: 120, overs: 480, maidens: 45, runs: 3200, wickets: 180, average: 17.7, economy: 6.6, strikeRate: 16, bestBowling: '5/12', fourWickets: 8, fiveWickets: 3, wides: 120, no_balls: 45 };
+const INITIAL_BOWLING_STATS: BowlingStats = { matches: 142, innings: 120, overs: 480, maidens: 45, runs: 3200, wickets: 180, average: 17.7, economy: 6.6, strikeRate: 16, bestBowling: '5/12', fourWickets: 8, fiveWickets: 3, wides: 120, noBalls: 45 };
 
 
 export const getPlayers = async (): Promise<Player[]> => {
@@ -207,7 +207,9 @@ export const getPlayers = async (): Promise<Player[]> => {
         isClubPlayer: p.is_club_player === true || p.is_club_player === 'true' || p.is_club_player === 't',
         primaryTeamId: p.primary_team_id,
         avatarHistory: Array.isArray(p.avatar_history) ? p.avatar_history : [],
-        teamId: p.team_id || ((p.is_club_player === true || p.is_club_player === 'true' || p.is_club_player === 't') ? 'IND_STRIKERS' : (p.primary_team_id || 'OTHER'))
+        teamId: p.team_id || ((p.is_club_player === true || p.is_club_player === 'true' || p.is_club_player === 't') ? 'IND_STRIKERS' : (p.primary_team_id || 'OTHER')),
+        wides: p.wides || 0,
+        noBalls: p.no_balls || 0
       }));
 
     if (players.length > 0) {
@@ -245,7 +247,9 @@ export const addPlayer = async (player: Partial<Player>) => {
     is_active: player.isActive,
     status: player.status,
     is_club_player: player.isClubPlayer !== false,
-    primary_team_id: player.primaryTeamId || null, team_id: player.teamId || (player.isClubPlayer !== false ? "IND_STRIKERS" : (player.primaryTeamId || "OTHER"))
+    primary_team_id: player.primaryTeamId || null, team_id: player.teamId || (player.isClubPlayer !== false ? "IND_STRIKERS" : (player.primaryTeamId || "OTHER")),
+    wides: player.wides || 0,
+    no_balls: player.noBalls || 0
   };
   const res = await fetch(`${API_URL}/players`, {
     method: 'POST',
@@ -302,7 +306,9 @@ export const updatePlayer = async (player: Player) => {
     status: player.status,
     is_club_player: player.isClubPlayer !== false,
     primary_team_id: player.primaryTeamId || null, team_id: player.teamId || (player.isClubPlayer !== false ? "IND_STRIKERS" : (player.primaryTeamId || "OTHER")),
-    avatar_history: player.avatarHistory || []
+    avatar_history: player.avatarHistory || [],
+    wides: player.wides || 0,
+    no_balls: player.noBalls || 0
   };
   const res = await fetch(`${API_URL}/players/${player.id}`, {
     method: 'PUT',
@@ -358,6 +364,7 @@ const mapMatch = (m: any): ScheduledMatch => {
         opponentId: m.opponent_id,
         groundId: m.ground_id,
         tournament: m.tournament,
+        tournamentId: m.tournament_id,
         matchFormat: m.match_format,
         status: m.status,
         maxOvers: m.max_overs,
@@ -367,18 +374,27 @@ const mapMatch = (m: any): ScheduledMatch => {
         finalScoreAway: normalizeScore(m.final_score_away, m.is_home_batting_first ? rawScorecard?.innings2 : rawScorecard?.innings1),
         scorecard: rawScorecard,
         resultNote: m.result_note,
+        resultSummary: m.result_summary,
+        resultType: m.result_type,
         isLocked: !!m.is_locked,
-        isCareerSynced: !!m.is_career_stats_synced,
+        isCareerSynced: !!m.is_career_synced,
+        isLiveScored: !!m.is_live_scored,
         stage: m.stage || (m.tournament ? 'League' : 'League'),
-        venue: m.venue || '',
+        venue: m.venue || m.ground_name || '',
         opponentName: m.opponent_name || '',
         opponentLogo: m.opponent_logo || '',
-        live_data: m.live_data,
-        live_state: m.live_state,
-        toss_winner_id: m.toss_winner_id,
-        toss_choice: m.toss_choice,
-        isHomeBattingFirst: m.is_home_batting_first,
-        is_test: m.is_test
+        homeTeamName: m.home_team_name || '',
+        homeLogo: m.home_logo || '',
+        liveData: m.live_data,
+        liveState: m.live_state,
+        tossWinnerId: m.toss_winner_id,
+        tossChoice: m.toss_choice,
+        tossDetails: m.toss_details,
+        homeTeamId: m.home_team_id,
+        isNeutral: !!m.is_neutral,
+        isHomeBattingFirst: !!m.is_home_batting_first,
+        isTest: !!m.is_test,
+        lastUpdated: m.updated_at
     };
 };
 
@@ -395,11 +411,52 @@ export const getMatch = async (id: string): Promise<ScheduledMatch | null> => {
   return mapMatch(m);
 };
 
+const translateToDB = (match: Partial<ScheduledMatch>) => {
+  const dbMatch: any = {};
+  if (match.id !== undefined) dbMatch.id = match.id;
+  if (match.date !== undefined) dbMatch.date = match.date;
+  if (match.opponentId !== undefined) dbMatch.opponent_id = match.opponentId;
+  if (match.groundId !== undefined) dbMatch.ground_id = match.groundId;
+  if (match.tournament !== undefined) dbMatch.tournament = match.tournament;
+  if (match.tournamentId !== undefined) dbMatch.tournament_id = match.tournamentId;
+  if (match.matchFormat !== undefined) dbMatch.match_format = match.matchFormat;
+  if (match.status !== undefined) dbMatch.status = match.status;
+  if (match.maxOvers !== undefined) dbMatch.max_overs = match.maxOvers;
+  if (match.homeTeamXI !== undefined) dbMatch.home_team_xi = match.homeTeamXI;
+  if (match.opponentTeamXI !== undefined) dbMatch.opponent_team_xi = match.opponentTeamXI;
+  if (match.isLocked !== undefined) dbMatch.is_locked = match.isLocked;
+  if (match.isCareerSynced !== undefined) dbMatch.is_career_synced = match.isCareerSynced;
+  if (match.isLiveScored !== undefined) dbMatch.is_live_scored = match.isLiveScored;
+  if (match.isHomeBattingFirst !== undefined) dbMatch.is_home_batting_first = match.isHomeBattingFirst;
+  if (match.homeTeamId !== undefined) {
+    dbMatch.home_team_id = match.homeTeamId;
+  } else if (match.isNeutral === false) {
+    // Safety: ensure Indian Strikers ID is always present for non-neutral matches
+    dbMatch.home_team_id = '00000000-0000-0000-0000-000000000000';
+  }
+  if (match.isNeutral !== undefined) dbMatch.is_neutral = match.isNeutral;
+  if (match.isTest !== undefined) dbMatch.is_test = match.isTest;
+  if (match.tossWinnerId !== undefined) dbMatch.toss_winner_id = match.tossWinnerId;
+  if (match.tossChoice !== undefined) dbMatch.toss_choice = match.tossChoice;
+  if (match.tossDetails !== undefined) dbMatch.toss_details = match.tossDetails;
+  if (match.resultNote !== undefined) dbMatch.result_note = match.resultNote;
+  if (match.resultSummary !== undefined) dbMatch.result_summary = match.resultSummary;
+  if (match.resultType !== undefined) dbMatch.result_type = match.resultType;
+  if (match.liveData !== undefined) dbMatch.live_data = match.liveData;
+  if (match.liveState !== undefined) dbMatch.live_state = match.liveState;
+  if (match.lastUpdated !== undefined) dbMatch.updated_at = match.lastUpdated;
+  if (match.forceUpsert !== undefined) dbMatch.force_upsert = match.forceUpsert;
+  if (match.venue !== undefined) dbMatch.venue = match.venue;
+  if (match.stage !== undefined) dbMatch.stage = match.stage;
+  
+  return dbMatch;
+};
+
 export const addMatch = async (match: Partial<ScheduledMatch>) => {
   const res = await fetch(`${API_URL}/matches`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify(match)
+    body: JSON.stringify(translateToDB(match))
   });
   return handleResponse(res);
 };
@@ -408,7 +465,7 @@ export const updateMatch = async (id: string, match: Partial<ScheduledMatch>) =>
   const res = await fetch(`${API_URL}/matches/${id}`, {
     method: 'PUT',
     headers: getHeaders(),
-    body: JSON.stringify(match)
+    body: JSON.stringify(translateToDB(match))
   });
   return handleResponse(res);
 };
@@ -422,13 +479,7 @@ export const finalizeMatch = async (id: string, matchData: any, updatedPlayers: 
   return handleResponse(res);
 };
 
-export const deleteMatchStats = async (matchId: string) => {
-  const res = await fetch(`${API_URL}/matches/${matchId}/stats`, {
-    method: 'DELETE',
-    headers: getHeaders()
-  });
-  return handleResponse(res);
-};
+
 
 export const deleteMatch = async (id: string) => {
   const res = await fetch(`${API_URL}/matches/${id}`, {
@@ -547,55 +598,7 @@ export const saveTeamLogo = async (url: string) => {
   });
 };
 
-// TOURNAMENT TABLE
-export const getTournamentTable = async (tournament?: string): Promise<TournamentTableEntry[]> => {
-  const url = tournament ? `${API_URL}/table?tournament=${encodeURIComponent(tournament)}` : `${API_URL}/table`;
-  const res = await fetch(url);
-  const data = await handleResponse(res);
-  return (data || []).map((t: any) => ({
-    id: t.id,
-    teamId: t.team_id,
-    teamName: t.team_name,
-    tournamentName: t.tournament_name,
-    matches: t.matches,
-    won: t.won,
-    lost: t.lost,
-    nr: t.nr,
-    points: t.points,
-    nrr: t.nrr
-  }));
-};
 
-export const saveTournamentTableEntry = async (entry: TournamentTableEntry) => {
-  const dbEntry = {
-    id: entry.id,
-    team_id: entry.teamId,
-    team_name: entry.teamName,
-    tournament_name: entry.tournamentName,
-    matches: entry.matches,
-    won: entry.won,
-    lost: entry.lost,
-    nr: entry.nr,
-    points: entry.points,
-    nrr: entry.nrr
-  };
-  const res = await fetch(`${API_URL}/table`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify(dbEntry)
-  });
-  return handleResponse(res);
-};
-
-export const deleteTournamentTableEntry = async (id: string) => {
-  const res = await fetch(`${API_URL}/table/${id}`, {
-    method: 'DELETE',
-    headers: getHeaders()
-  });
-  return handleResponse(res);
-};
-
-export const saveTournamentTable = (table: TournamentTableEntry[]) => console.warn("saveTournamentTable deprecated. Use individual entry save.");
 
 // MEMBERSHIP REQUESTS
 export const getMembershipRequests = async (): Promise<MembershipRequest[]> => {
@@ -647,9 +650,7 @@ export const deleteMembershipRequest = async (id: string) => {
   return handleResponse(res);
 };
 
-/* DEPRECATED / STUBS */
-export const savePlayers = (p: Player[]) => console.warn("savePlayers deprecated");
-export const saveOpponents = (o: OpponentTeam[]) => console.warn("saveOpponents deprecated");
+
 
 // MEMORIES
 export interface Memory {
@@ -824,10 +825,16 @@ export const getTournamentPerformers = async (): Promise<any> => {
       balls: Number(p.balls_faced || p.balls || 0),
       outHow: p.out_how || p.outHow || '',
       isNotOut: !!(p.is_not_out || p.isNotOut),
+      isHero: !!(p.is_hero || p.isHero),
       wickets: Number(p.wickets !== undefined ? p.wickets : (p.wickets_taken !== undefined ? p.wickets_taken : 0)),
       matches: Number(p.matches !== undefined ? p.matches : (p.matches_played !== undefined ? p.matches_played : 0)),
       bowlingRuns: p.bowling_runs || p.bowlingRuns,
-      bowlingOvers: p.bowling_overs || p.bowlingOvers
+      bowlingOvers: p.bowling_overs || p.bowlingOvers,
+      noBalls: p.no_balls || p.noBalls || 0,
+      fours: p.fours || 0,
+      sixes: p.sixes || 0,
+      maidens: p.maidens || 0,
+      wides: p.wides || 0
     }))
   };
 };

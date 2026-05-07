@@ -31,9 +31,8 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         stage: 'League' as MatchStage,
         status: 'upcoming' as MatchStatus,
         matchFormat: 'T20' as 'T20' | 'One Day',
-        isNeutral: false,
         isFriendly: false,
-        homeTeamId: '',
+        homeTeamId: '00000000-0000-0000-0000-000000000000',
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -42,17 +41,22 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         setIsSaving(true);
         
         try {
+            const selectedHome = opponents.find(o => o.id === formData.homeTeamId);
             const selectedOpponent = opponents.find(o => o.id === formData.opponentId);
+            
+            const homeTeamName = formData.homeTeamId === '00000000-0000-0000-0000-000000000000' ? 'Indian Strikers' : (selectedHome?.name || 'Team A');
             const opponentName = selectedOpponent?.name || 'Opponent';
             const opponentLogo = selectedOpponent?.logoUrl || '';
+            
             const selectedTournament = formData.isFriendly 
                 ? 'Friendly Match' 
                 : tournaments.find((t: { id: string, name: string }) => t.id === formData.tournamentId)?.name || 'Friendly Match';
             const selectedVenue = grounds.find(g => g.id === formData.groundId)?.name || 'Local Ground';
 
             const newMatch: Omit<ScheduledMatch, 'id'> = {
-                isNeutral: formData.isNeutral,
-                homeTeamId: formData.isNeutral ? (formData.homeTeamId || null) : 'IND_STRIKERS',
+                isNeutral: formData.homeTeamId !== '00000000-0000-0000-0000-000000000000' && formData.opponentId !== '00000000-0000-0000-0000-000000000000',
+                homeTeamId: formData.homeTeamId,
+                homeTeamName: homeTeamName,
                 opponentId: formData.opponentId || null,
                 opponentName,
                 opponentLogo,
@@ -82,7 +86,6 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
     };
 
 
-    const neutralPressed = formData.isNeutral ? "true" : "false";
     const friendlyPressed = formData.isFriendly ? "true" : "false";
 
     return (
@@ -104,29 +107,12 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Neutral Match Toggle */}
-                        <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-                            <div className="flex flex-col">
-                                <span className="text-sm font-black text-white uppercase italic">Neutral Match</span>
-                                <span className="text-[10px] text-slate-500 font-bold leading-tight">Between two other teams</span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setFormData(prev => ({ ...prev, isNeutral: !prev.isNeutral }))}
-                                className={`w-12 h-6 rounded-full transition-all relative shrink-0 ${formData.isNeutral ? 'bg-blue-600' : 'bg-slate-700'}`}
-                                title="Toggle Neutral Match"
-                                aria-pressed={neutralPressed}
-                            >
-                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isNeutral ? 'left-7' : 'left-1'}`} />
-                            </button>
-                        </div>
-
+                    <div className="grid grid-cols-1 gap-4">
                         {/* Friendly Match Toggle */}
                         <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
                             <div className="flex flex-col">
-                                <span className="text-sm font-black text-white uppercase italic">Friendly</span>
-                                <span className="text-[10px] text-slate-500 font-bold leading-tight">No tournament points</span>
+                                <span className="text-sm font-black text-white uppercase italic">Friendly Match</span>
+                                <span className="text-[10px] text-slate-500 font-bold leading-tight">No tournament points tracking</span>
                             </div>
                             <button
                                 type="button"
@@ -141,38 +127,32 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Home Team Selection (If Neutral) */}
+                        {/* Team A Selection */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">
-                                {formData.isNeutral ? 'Team A (Home)' : 'Home Team'}
+                                Team A (Slot 1)
                             </label>
                             <div className="relative">
                                 <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                                {formData.isNeutral ? (
-                                    <select 
-                                        required
-                                        value={formData.homeTeamId}
-                                        onChange={(e) => setFormData({...formData, homeTeamId: e.target.value})}
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
-                                        title="Select Home Team"
-                                    >
-                                        <option value="">Select Team A...</option>
-                                        {opponents.map(opp => (
-                                            <option key={opp.id} value={opp.id}>{opp.name}</option>
-                                        ))}
-                                    </select>
-                                ) : (
-                                    <div className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl pl-12 pr-4 py-3 text-slate-400 text-sm font-black uppercase">
-                                        Indian Strikers
-                                    </div>
-                                )}
+                                <select 
+                                    required
+                                    value={formData.homeTeamId}
+                                    onChange={(e) => setFormData({...formData, homeTeamId: e.target.value})}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
+                                    title="Select Team A"
+                                >
+                                    <option value="00000000-0000-0000-0000-000000000000">Indian Strikers</option>
+                                    {opponents.map(opp => (
+                                        <option key={opp.id} value={opp.id}>{opp.name}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 
-                        {/* Opponent Selection */}
+                        {/* Team B Selection */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">
-                                {formData.isNeutral ? 'Team B (Away)' : 'Away Team'}
+                                Team B (Slot 2)
                             </label>
                             <div className="relative">
                                 <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
@@ -181,9 +161,10 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                                     value={formData.opponentId}
                                     onChange={(e) => setFormData({...formData, opponentId: e.target.value})}
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
-                                    title="Select Away Team"
+                                    title="Select Team B"
                                 >
-                                    <option value="">Select {formData.isNeutral ? 'Team B' : 'Away Team'}...</option>
+                                    <option value="">Select Team B...</option>
+                                    <option value="00000000-0000-0000-0000-000000000000">Indian Strikers</option>
                                     {opponents.filter(o => o.id !== formData.homeTeamId).map(opp => (
                                         <option key={opp.id} value={opp.id}>{opp.name}</option>
                                     ))}

@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   Star,
   Clock,
-  RotateCw,
   Zap,
   Target,
   Trophy,
@@ -16,7 +15,7 @@ import {
   Info,
   BarChart2
 } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { useMatchCenter } from '../store/matchStore';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell, LabelList } from 'recharts';
 
@@ -352,7 +351,7 @@ interface BowlingStat {
   runs: number;
   wickets: number;
   wides: number;
-  no_balls: number;
+  noBalls: number;
   index?: number;
 }
 
@@ -453,7 +452,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           const runs = bBalls.reduce((s: number, b: any) => s + (Number(b.runs) || 0) + (b.isWide || b.isNoBall || b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
           const wickets = bBalls.filter((b: any) => b.isWicket).length;
           const wides = bBalls.filter((b: any) => b.isWide || b.type === 'wide').length;
-          const no_balls = bBalls.filter((b: any) => b.isNoBall || b.type === 'no-ball').length;
+          const noBalls = bBalls.filter((b: any) => b.isNoBall || b.type === 'no-ball').length;
 
           return {
             playerId: bowlerId,
@@ -463,7 +462,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
             runs,
             wickets,
             wides,
-            no_balls,
+            noBalls,
             index: 0
           };
         });
@@ -476,7 +475,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           runs: stat.runs || 0,
           wickets: stat.wickets || 0,
           wides: stat.wides || 0,
-          no_balls: stat.no_balls || 0,
+          noBalls: stat.noBalls || 0,
           index: stat.index
         }));
       } else if (Array.isArray(inn.bowling)) {
@@ -488,7 +487,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           runs: b.runsConceded || b.runs,
           wickets: b.wickets,
           wides: b.wides || 0,
-          no_balls: b.no_balls || 0,
+          noBalls: b.noBalls || 0,
           index: b.index
         }));
       }
@@ -513,7 +512,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
       };
     };
 
-    const ld = isLive && match.live_data ? (typeof match.live_data === 'string' ? JSON.parse(match.live_data) : match.live_data) : null;
+    const ld = isLive && match.liveData ? (typeof match.liveData === 'string' ? JSON.parse(match.liveData) : match.liveData) : null;
     const source = ld || match.scorecard || {};
 
     return {
@@ -560,8 +559,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
   // Resolve toss string
   const tossString = (() => {
-    const winnerId = match.toss?.winnerId || match.toss_winner_id;
-    const choice = match.toss?.choice || match.toss_choice || '';
+    const winnerId = match.toss?.winnerId || match.tossWinnerId;
+    const choice = match.toss?.choice || match.tossChoice || '';
     
     let winnerName = match.toss?.winner || match.toss_winner_name || '';
     
@@ -576,13 +575,21 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   })();
 
   // Resolve team logos and names
-  const homeTeamName = match.isNeutral 
-    ? (opponents.find((o: any) => o.id === match.homeTeamId)?.name || 'Team A')
-    : 'INDIAN STRIKERS';
+  const teamAName = (() => {
+    if (match.homeTeamId === '00000000-0000-0000-0000-000000000000') return 'INDIAN STRIKERS';
+    if (!match.homeTeamId) return match.isNeutral ? 'Team A' : 'INDIAN STRIKERS';
+    const opp = opponents.find((o: any) => o.id === match.homeTeamId);
+    return opp?.name || match.homeTeamName || 'Team A';
+  })();
 
-  const homeTeamLogoUrl = match.isNeutral
-    ? (opponents.find((o: any) => o.id === match.homeTeamId)?.logoUrl || null)
-    : '/INS%20LOGO.PNG';
+  const teamBName = (match.opponentName || 'OPPONENT');
+
+  const teamALogoUrl = (() => {
+    if (match.homeTeamId === '00000000-0000-0000-0000-000000000000') return '/INS%20LOGO.PNG';
+    if (!match.homeTeamId) return match.isNeutral ? null : '/INS%20LOGO.PNG';
+    const opp = opponents.find((o: any) => o.id === match.homeTeamId);
+    return opp?.logoUrl || null;
+  })();
 
   const opponentLogoUrl = (() => {
     if (match.opponentLogo) return match.opponentLogo;
@@ -593,14 +600,14 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   const handleDownloadImage = async () => {
     if (!containerRef.current) return;
     try {
-      const canvas = await html2canvas(containerRef.current, {
+      const dataUrl = await toPng(containerRef.current, {
         backgroundColor: '#111',
-        scale: 2,
-        useCORS: true
+        pixelRatio: 2,
+        cacheBust: true
       });
       const link = document.createElement('a');
       link.download = `Scorecard_${match.opponentName || 'Match'}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = dataUrl;
       link.click();
     } catch (err) {
       console.error('Failed to download image:', err);
@@ -609,8 +616,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
   const handleShare = async () => {
     const shareData = {
-      title: 'Indian Strikers Match Scorecard',
-      text: `Checkout the scorecard for ${match.opponentName || 'Match'}: ${match.finalScoreHome?.runs}/${match.finalScoreHome?.wickets} vs ${match.finalScoreAway?.runs}/${match.finalScoreAway?.wickets}`,
+      title: `${teamAName} Match Scorecard`,
+      text: `Checkout the scorecard for ${teamAName} vs ${teamBName}: ${match.finalScoreHome?.runs}/${match.finalScoreHome?.wickets} vs ${match.finalScoreAway?.runs}/${match.finalScoreAway?.wickets}`,
       url: window.location.href
     };
 
@@ -665,19 +672,19 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           </TournamentLabel>
 
           <TeamsHorizontalRow>
-            {/* HOME TEAM */}
+            {/* TEAM A */}
             <TeamBlock>
               <TeamLogoFrame>
-                {homeTeamLogoUrl 
-                  ? <img src={homeTeamLogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={homeTeamName} crossOrigin="anonymous" />
+                {teamALogoUrl 
+                  ? <img src={teamALogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={teamAName} crossOrigin="anonymous" />
                   : <span style={{ fontSize: '3rem' }}>🏏</span>
                 }
               </TeamLogoFrame>
               <TeamInfo>
-                <TeamNameLabel style={{ color: match.isNeutral ? '#FFF' : '#38BDF8' }}>{homeTeamName}</TeamNameLabel>
+                <TeamNameLabel style={{ color: (match.homeTeamId === '00000000-0000-0000-0000-000000000000' || match.homeTeamId === 'IND_STRIKERS') ? '#38BDF8' : '#FFF' }}>{teamAName}</TeamNameLabel>
                 <ScoreValue>
                   {(() => {
-                    const inn = match.is_home_batting_first ? normalizedData.innings1 : normalizedData.innings2;
+                    const inn = match.isHomeBattingFirst ? normalizedData.innings1 : normalizedData.innings2;
                     return (
                       <>
                         {inn?.totalRuns || 0}/{inn?.wickets || 0}
@@ -691,17 +698,17 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
             <VSBadgeHeader>VS</VSBadgeHeader>
 
-            {/* AWAY TEAM */}
+            {/* TEAM B */}
             <TeamBlock $reverse>
               {opponentLogoUrl
-                ? <TeamLogoFrame><img src={opponentLogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={match.opponentName} crossOrigin="anonymous" /></TeamLogoFrame>
+                ? <TeamLogoFrame><img src={opponentLogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={teamBName} crossOrigin="anonymous" /></TeamLogoFrame>
                 : <TeamLogoFrame><span style={{ fontSize: '3rem' }}>🏏</span></TeamLogoFrame>
               }
               <TeamInfo $align="right">
-                <TeamNameLabel>{(match.opponentName || 'OPPONENT').toUpperCase()}</TeamNameLabel>
+                <TeamNameLabel style={{ color: (match.opponentId === '00000000-0000-0000-0000-000000000000' || match.opponentId === 'IND_STRIKERS') ? '#38BDF8' : '#FFF' }}>{teamBName.toUpperCase()}</TeamNameLabel>
                 <ScoreValue>
                   {(() => {
-                    const inn = match.is_home_batting_first ? normalizedData.innings2 : normalizedData.innings1;
+                    const inn = match.isHomeBattingFirst ? normalizedData.innings2 : normalizedData.innings1;
                     return (
                       <>
                         {inn?.totalRuns || 0}/{inn?.wickets || 0}
@@ -742,7 +749,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer'
               }}
             >
-              {match.is_home_batting_first ? homeTeamName : (match.opponentName || 'OPPONENT')}
+              {match.isHomeBattingFirst ? teamAName : teamBName}
             </button>
             <button
               onClick={() => setSelectedInnings(2)}
@@ -753,7 +760,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer'
               }}
             >
-              {match.is_home_batting_first ? (match.opponentName || 'OPPONENT') : homeTeamName}
+              {match.isHomeBattingFirst ? teamBName : teamAName}
             </button>
           </div>
         )}
@@ -795,7 +802,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
                   <div style={{ display: 'flex', gap: 20 }}>
                     <div style={{ flex: 1 }}>
-                      <TableTitle style={{ color: '#38BDF8' }}>{homeTeamName} XI</TableTitle>
+                      <TableTitle style={{ color: (match.homeTeamId === '00000000-0000-0000-0000-000000000000' || match.homeTeamId === 'IND_STRIKERS') ? '#38BDF8' : '#FFF' }}>{teamAName} XI</TableTitle>
                       <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                         {(match.homeTeamXI || []).map((id: string) => (
                           <div key={id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', fontWeight: 600 }}>
@@ -806,7 +813,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                       </div>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <TableTitle>{match.opponentName || 'Away Team'} XI</TableTitle>
+                      <TableTitle style={{ color: (match.opponentId === '00000000-0000-0000-0000-000000000000' || match.opponentId === 'IND_STRIKERS') ? '#38BDF8' : '#FFF' }}>{teamBName} XI</TableTitle>
                       <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                         {(match.opponentTeamXI || []).map((id: string) => (
                           <div key={id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', fontWeight: 600 }}>
@@ -938,7 +945,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
                           <Td style={{ textAlign: 'center', color: '#38BDF8' }}>{stat.wickets}</Td>
                           <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.wides}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.no_balls}</Td>
+                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.noBalls}</Td>
                           <Td style={{ textAlign: 'right', opacity: 0.8 }}>
                             {stat.overs > 0 ? (stat.runs / stat.overs).toFixed(2) : '0.00'}
                           </Td>
@@ -1162,19 +1169,24 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     const analyticsData = Object.values(overStats);
                     const getTeamName = (inn: any, num: number) => {
                       const bId = inn?.battingTeamId;
-                      if (bId === 'HOME') return homeTeamName;
-                      if (bId === 'AWAY') return match.opponentName || 'OPPONENT';
+                      if (bId === 'HOME') return teamAName;
+                      if (bId === 'AWAY') return teamBName;
                       
                       // Fallback: If battingTeamId is missing, guess based on innings number and isHomeBattingFirst
                       const isHome = num === 1 ? match.isHomeBattingFirst : !match.isHomeBattingFirst;
-                      return isHome ? homeTeamName : (match.opponentName || 'OPPONENT');
+                      return isHome ? teamAName : teamBName;
                     };
 
                     const team1Name = getTeamName(normalizedData.innings1, 1);
                     const team2Name = getTeamName(normalizedData.innings2, 2);
 
-                    // Task #1: Blue (#38BDF8) is always Indian Strikers color
-                    const isInsInn1 = match.is_home_batting_first;
+                    // Highlight logic: Blue (#38BDF8) if it is Indian Strikers' innings
+                    const isInsInn1 = (match.homeTeamId === '00000000-0000-0000-0000-000000000000' || match.homeTeamId === 'IND_STRIKERS') 
+                        ? match.isHomeBattingFirst 
+                        : (match.opponentId === '00000000-0000-0000-0000-000000000000' || match.opponentId === 'IND_STRIKERS')
+                        ? !match.isHomeBattingFirst
+                        : true; // Default to first innings if INS not playing (neutral highlight)
+
                     const ins1Color = isInsInn1 ? '#38BDF8' : '#FAB005';
                     const ins2Color = isInsInn1 ? '#FAB005' : '#38BDF8';
 

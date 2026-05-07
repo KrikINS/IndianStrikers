@@ -8,16 +8,21 @@ const CommentaryManager: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<Partial<CommentaryTemplate>>({
-    event_type: 'FOUR',
+    eventType: 'FOUR',
     text: '',
-    is_active: true
+    isActive: true
   });
 
   const fetchTemplates = async () => {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/commentary/templates`);
       const data = await res.json();
-      setTemplates(data);
+      const mapped = (data || []).map((t: any) => ({
+        ...t,
+        eventType: t.event_type || t.eventType,
+        isActive: t.is_active !== undefined ? t.is_active : t.isActive
+      }));
+      setTemplates(mapped);
     } catch (err) {
       console.error("Failed to fetch templates:", err);
       toast.error("Failed to load templates");
@@ -58,12 +63,16 @@ const CommentaryManager: React.FC = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
         },
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          ...form,
+          event_type: form.eventType,
+          is_active: form.isActive
+        })
       });
       if (res.ok) {
         toast.success("Commentary template added!");
         setIsModalOpen(false);
-        setForm({ event_type: 'FOUR', text: '', is_active: true });
+        setForm({ eventType: 'FOUR', text: '', isActive: true });
         fetchTemplates();
       } else {
         const err = await res.json();
@@ -102,11 +111,11 @@ const CommentaryManager: React.FC = () => {
             <div className="px-6 py-4 bg-white/[0.03] border-b border-white/5 flex justify-between items-center">
               <h3 className="text-[12px] font-black text-amber-500 uppercase tracking-[0.2em]">{cat}S</h3>
               <span className="px-3 py-1 bg-white/5 rounded-full text-[10px] font-bold text-white/40 border border-white/5">
-                {templates.filter(t => t.event_type === cat).length} VARIATIONS
+                {templates.filter(t => (t as any).eventType === cat).length} VARIATIONS
               </span>
             </div>
             <div className="p-4 flex flex-col gap-3 max-h-[400px] overflow-y-auto custom-scrollbar">
-              {templates.filter(t => t.event_type === cat).map(t => (
+              {templates.filter(t => (t as any).eventType === cat).map(t => (
                 <div key={t.id} className="group flex items-center gap-4 p-4 bg-white/[0.03] hover:bg-white/[0.05] rounded-2xl border border-white/5 transition-all">
                   <div className="flex-1">
                     <p className="text-[13px] text-white/80 font-medium leading-relaxed italic">"{t.text}"</p>
@@ -121,7 +130,7 @@ const CommentaryManager: React.FC = () => {
                   </button>
                 </div>
               ))}
-              {templates.filter(t => t.event_type === cat).length === 0 && (
+              {templates.filter(t => t.eventType === cat).length === 0 && (
                 <div className="py-12 text-center">
                   <p className="text-[12px] text-white/20 font-bold uppercase tracking-widest italic">No {cat} templates found</p>
                 </div>
@@ -155,14 +164,14 @@ const CommentaryManager: React.FC = () => {
                 <label className="block text-[11px] font-black text-white/40 uppercase tracking-widest mb-2 px-1">Trigger Event</label>
                 <div className="grid grid-cols-3 gap-2">
                   {categories.map(cat => {
-                    const isPressed = form.event_type === cat ? "true" : "false";
+                    const isPressed = form.eventType === cat ? "true" : "false";
                     return (
                       <button
                         key={cat}
                         type="button"
-                        onClick={() => setForm({...form, event_type: cat})}
+                        onClick={() => setForm({...form, eventType: cat})}
                         className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
-                          form.event_type === cat 
+                          form.eventType === cat 
                           ? 'bg-amber-500 border-amber-400 text-black shadow-lg shadow-amber-900/40' 
                           : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
                         } uppercase tracking-widest`}

@@ -75,15 +75,21 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     const isToday = timeContext === 'TODAY';
     const isPast = timeContext === 'PAST';
 
-    const homeTeamName = match.isNeutral 
-        ? (allOpponents.find(o => o.id === match.homeTeamId)?.name || 'Home Team')
-        : defaultHomeTeamName;
-    const homeTeamLogo = match.isNeutral
-        ? (allOpponents.find(o => o.id === match.homeTeamId)?.logoUrl || '')
-        : (defaultHomeTeamLogo || '/INS LOGO.PNG');
+    const homeTeamName = (() => {
+        if (match.homeTeamId === '00000000-0000-0000-0000-000000000000') return 'Indian Strikers';
+        if (!match.homeTeamId) return match.isNeutral ? 'Team A' : 'Indian Strikers';
+        const opp = allOpponents.find(o => o.id === match.homeTeamId);
+        return opp?.name || match.homeTeamName || 'Team A';
+    })();
+    
+    const homeTeamLogo = (() => {
+        if (match.homeTeamId === '00000000-0000-0000-0000-000000000000') return '/INS LOGO.PNG';
+        if (!match.homeTeamId) return match.isNeutral ? '' : '/INS LOGO.PNG';
+        const opp = allOpponents.find(o => o.id === match.homeTeamId);
+        return opp?.logoUrl || '';
+    })();
 
-    const opponentName = opponent?.name || match.opponentName || (match.opponentId && !match.opponentId.includes('-') ? match.opponentId : 'Opponent');
-    // Task #1: Use fresh logo from store/database if available
+    const opponentName = opponent?.name || match.opponentName || 'Opponent';
     const opponentLogo = (opponent?.logoUrl && opponent.logoUrl !== '') ? opponent.logoUrl : (match.opponentLogo || '');
 
     return (
@@ -164,15 +170,12 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
 
             {/* MAIN SCORE SECTION — Vertical team layout */}
             <div className="vs-container-revised">
-                {/* Home Team */}
+                {/* Slot 1 (Home) */}
                 <div className="team-vertical">
                     <div className="logo-wrapper">
                         {homeTeamLogo
                             ? <img src={homeTeamLogo} crossOrigin="anonymous" className="team-logo-md object-contain" alt={homeTeamName} />
-                            : (match.isNeutral 
-                                ? <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(homeTeamName).slice(0, 3).toUpperCase()}</div>
-                                : <img src="/INS LOGO.PNG" crossOrigin="anonymous" className="team-logo-md object-contain" alt="INS" />
-                              )
+                            : <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(homeTeamName).slice(0, 3).toUpperCase()}</div>
                         }
                         {!isGraphic && (
                             <button
@@ -185,7 +188,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             </button>
                         )}
                     </div>
-                    <h4 className="team-name-display" style={{ color: '#ffffff' }}>{(homeTeamName || (match.isNeutral ? 'Team A' : 'Indian Strikers')).toUpperCase()}</h4>
+                    <h4 className="team-name-display" style={{ color: '#ffffff' }}>{homeTeamName.toUpperCase()}</h4>
                     {(isLive || isCompleted) && match.finalScoreHome && (
                         <div className="team-score-display font-black text-2xl mt-1.5" style={{ color: '#ffffff' }}>
                             <span>{match.finalScoreHome.runs ?? 0}/{match.finalScoreHome.wickets ?? 0}</span>
@@ -203,7 +206,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     <div className="vs-line"></div>
                 </div>
 
-                {/* Away Team */}
+                {/* Slot 2 (Away) */}
                 <div className="team-vertical">
                     <div className="logo-wrapper">
                         {opponentLogo
@@ -240,16 +243,30 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         isLive ? 'result-live' :
                         (match.resultNote?.toLowerCase().includes('won') || match.resultSummary?.toLowerCase().includes('won') || 
                          (match.finalScoreHome && match.finalScoreAway && (match.finalScoreHome.runs ?? 0) !== (match.finalScoreAway.runs ?? 0)))
-                            ? ((match.resultNote?.includes('Indian Strikers') || match.resultSummary?.includes('Indian Strikers') || (match.finalScoreHome && (match.finalScoreHome.runs ?? 0) > (match.finalScoreAway?.runs ?? 0))) ? 'result-won' : 'result-lost')
+                            ? (() => {
+                                const homeWin = (match.finalScoreHome?.runs ?? 0) > (match.finalScoreAway?.runs ?? 0);
+                                const awayWin = (match.finalScoreHome?.runs ?? 0) < (match.finalScoreAway?.runs ?? 0);
+                                const isInsHome = match.homeTeamId === '00000000-0000-0000-0000-000000000000' || match.homeTeamId === 'IND_STRIKERS';
+                                const isInsAway = match.opponentId === '00000000-0000-0000-0000-000000000000' || match.opponentId === 'IND_STRIKERS';
+                                
+                                if ((isInsHome && homeWin) || (isInsAway && awayWin)) return 'result-won';
+                                if ((isInsHome && awayWin) || (isInsAway && homeWin)) return 'result-lost';
+                                return 'result-neutral'; // Neutral match win
+                            })()
                             : ''
                     }`}
                     style={{ 
                         backgroundColor: isLive ? 'rgba(8, 51, 68, 0.6)' : 
-                                       ((match.resultNote?.includes('Indian Strikers') || match.resultSummary?.includes('Indian Strikers') || (match.finalScoreHome && match.finalScoreAway && (match.finalScoreHome.runs ?? 0) > (match.finalScoreAway.runs ?? 0))) 
-                                            ? 'rgba(16, 185, 129, 0.9)' 
-                                            : ((match.resultNote?.toLowerCase().includes('won') || match.resultSummary?.toLowerCase().includes('won') || (match.finalScoreHome && match.finalScoreAway && (match.finalScoreHome.runs ?? 0) < (match.finalScoreAway.runs ?? 0))))
-                                                ? 'rgba(244, 63, 94, 0.9)'
-                                                : 'rgba(30, 41, 59, 1)')
+                                       (() => {
+                                            const homeWin = (match.finalScoreHome?.runs ?? 0) > (match.finalScoreAway?.runs ?? 0);
+                                            const awayWin = (match.finalScoreHome?.runs ?? 0) < (match.finalScoreAway?.runs ?? 0);
+                                            const isInsHome = match.homeTeamId === '00000000-0000-0000-0000-000000000000' || match.homeTeamId === 'IND_STRIKERS';
+                                            const isInsAway = match.opponentId === '00000000-0000-0000-0000-000000000000' || match.opponentId === 'IND_STRIKERS';
+                                            
+                                            if ((isInsHome && homeWin) || (isInsAway && awayWin)) return 'rgba(16, 185, 129, 0.9)'; // Green
+                                            if ((isInsHome && awayWin) || (isInsAway && homeWin)) return 'rgba(244, 63, 94, 0.9)'; // Red
+                                            return 'rgba(56, 189, 248, 0.8)'; // Blue for neutral results
+                                       })()
                     }}
                 >
                     {isLive 
@@ -257,7 +274,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         : (match.resultSummary || match.resultNote || (() => {
                             if (!match.finalScoreHome || !match.finalScoreAway) return match.resultType || 'MATCH COMPLETED';
                             const diff = Math.abs((match.finalScoreHome.runs ?? 0) - (match.finalScoreAway.runs ?? 0));
-                            const winner = (match.finalScoreHome.runs ?? 0) > (match.finalScoreAway.runs ?? 0) ? 'Indian Strikers' : opponentName;
+                            const winner = (match.finalScoreHome.runs ?? 0) > (match.finalScoreAway.runs ?? 0) ? homeTeamName : opponentName;
                             if (diff === 0) return 'MATCH TIED';
                             return `${winner.toUpperCase()} WON BY ${diff} RUNS`;
                           })())

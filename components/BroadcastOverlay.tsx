@@ -60,13 +60,13 @@ const BroadcastOverlay = () => {
   }, [store.matches]);
 
   const liveData = useMemo(() => {
-    if (!liveMatch?.live_data) return null;
+    if (!liveMatch?.liveData) return null;
     try {
-      return typeof liveMatch.live_data === 'string' 
-        ? JSON.parse(liveMatch.live_data) 
-        : liveMatch.live_data;
+      return typeof liveMatch.liveData === 'string' 
+        ? JSON.parse(liveMatch.liveData) 
+        : liveMatch.liveData;
     } catch (e) {
-      console.error('Failed to parse live_data', e);
+      console.error('Failed to parse liveData', e);
       return null;
     }
   }, [liveMatch]);

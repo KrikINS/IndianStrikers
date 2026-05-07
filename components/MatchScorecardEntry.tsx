@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useState, useMemo } from 'react';
-import { X, Save, Award, Zap, Target, ChevronDown, Star, Loader2 } from 'lucide-react';
+import { X, Save, Award, Zap, ChevronDown, Star, Loader2 } from 'lucide-react';
 import { Player, FullScorecardData, InningsData, ScheduledMatch } from '../types';
 
 import { useStore } from '../store/StoreProvider';
@@ -70,7 +70,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   };
 
   const [scorecard, setScorecard] = useState<FullScorecardData>(() => {
-    const raw: any = match.scorecard || (match.live_data as any) || {};
+    const raw: any = match.scorecard || (match.liveData as any) || {};
     const base = ensureScorecardStructure(raw);
     
     // Fallback to summary scores if innings data is completely missing
@@ -102,7 +102,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   });
 
   const [battingRowIds, setBattingRowIds] = useState<Record<1 | 2, string[]>>(() => {
-    const s = match.scorecard || (match.live_data as any);
+    const s = match.scorecard || (match.liveData as any);
     return {
       1: s?.innings1?.batting?.map((b: any) => String(b.playerId || b.player_id || '')) || [],
       2: s?.innings2?.batting?.map((b: any) => String(b.playerId || b.player_id || '')) || []
@@ -110,7 +110,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   });
 
   const [bowlingRows, setBowlingRows] = useState<Record<1 | 2, any[]>>(() => {
-    const s = match.scorecard || (match.live_data as any);
+    const s = match.scorecard || (match.liveData as any);
     const mapRow = (r: any) => ({
       playerId: r.playerId || '',
       overs: r.overs || 0,
@@ -118,12 +118,12 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
       runs: r.runsConceded || r.runs || 0,
       wickets: r.wickets || 0,
       wd: r.wides || r.wd || 0,
-      nb: r.no_balls || r.nb || 0,
-      is_hero: !!r.is_hero
+      nb: r.noBalls || r.nb || 0,
+      isHero: !!r.isHero
     });
     return {
-      1: s?.innings1?.bowling?.map(mapRow) || Array(2).fill(null).map(() => ({ playerId: '', overs: 0, maidens: 0, runs: 0, wickets: 0, wd: 0, nb: 0, is_hero: false })),
-      2: s?.innings2?.bowling?.map(mapRow) || Array(2).fill(null).map(() => ({ playerId: '', overs: 0, maidens: 0, runs: 0, wickets: 0, wd: 0, nb: 0, is_hero: false }))
+      1: s?.innings1?.bowling?.map(mapRow) || Array(2).fill(null).map(() => ({ playerId: '', overs: 0, maidens: 0, runs: 0, wickets: 0, wd: 0, nb: 0, isHero: false })),
+      2: s?.innings2?.bowling?.map(mapRow) || Array(2).fill(null).map(() => ({ playerId: '', overs: 0, maidens: 0, runs: 0, wickets: 0, wd: 0, nb: 0, isHero: false }))
     };
   });
 
@@ -137,7 +137,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   const addBowlingRow = (inn: 1 | 2) => {
     setBowlingRows(prev => ({
         ...prev,
-        [inn]: [...prev[inn], { playerId: '', overs: 0, maidens: 0, runs: 0, wickets: 0, wd: 0, nb: 0, is_hero: false }]
+        [inn]: [...prev[inn], { playerId: '', overs: 0, maidens: 0, runs: 0, wickets: 0, wd: 0, nb: 0, isHero: false }]
     }));
   };
 
@@ -192,8 +192,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
 
   React.useEffect(() => {
     const rehydrate = async () => {
-      // Prioritize immediately available live_data/scorecard from props
-      const initialData = match.scorecard || (match.live_data as any);
+      // Prioritize immediately available liveData/scorecard from props
+      const initialData = match.scorecard || (match.liveData as any);
       if (initialData) {
         const s = ensureScorecardStructure(initialData);
         setScorecard(s);
@@ -207,8 +207,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
           runs: r.runsConceded || r.runs || 0,
           wickets: r.wickets || 0,
           wd: r.wides || r.wd || 0,
-          nb: r.no_balls || r.nb || 0,
-          is_hero: !!r.is_hero
+          nb: r.noBalls || r.nb || 0,
+          isHero: !!r.isHero
         });
 
         if (s.innings1?.bowling) setBowlingRows(prev => ({ ...prev, 1: s.innings1.bowling.map(mapRow) }));
@@ -220,7 +220,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         try {
           const fresh = await api.getMatch(match.id);
           if (fresh) {
-            const raw = fresh.scorecard || (fresh.live_data as any);
+            const raw = fresh.scorecard || (fresh.liveData as any);
             if (raw) {
               const s = ensureScorecardStructure(raw);
               setScorecard(s);
@@ -234,8 +234,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                 runs: r.runsConceded || r.runs || 0,
                 wickets: r.wickets || 0,
                 wd: r.wides || r.wd || 0,
-                nb: r.no_balls || r.nb || 0,
-                is_hero: !!r.is_hero
+                nb: r.noBalls || r.nb || 0,
+                isHero: !!r.isHero
               });
 
               if (s.innings1?.bowling) setBowlingRows(prev => ({ ...prev, 1: s.innings1.bowling.map(mapRow) }));
@@ -285,7 +285,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
       if (existing) {
         newBatting = newBatting.map(b => b.playerId === pId ? { ...b, [field]: value } : b);
       } else {
-        newBatting.push({ playerId: pId, name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false, [field]: value });
+        newBatting.push({ playerId: pId, name, runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', isHero: false, [field]: value });
       }
       return { ...prev, [key]: { ...innData, batting: newBatting } };
     });
@@ -301,8 +301,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   const getBattingEntry = (inn: 1 | 2, pId: string) => {
     const innKey = inn === 1 ? 'innings1' : 'innings2';
     const innData = scorecard[innKey];
-    if (!innData || !innData.batting) return { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false, fielderId: '', bowlerId: '' };
-    return innData.batting.find(b => b.playerId === pId) || { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', is_hero: false, fielderId: '', bowlerId: '' };
+    if (!innData || !innData.batting) return { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', isHero: false, fielderId: '', bowlerId: '' };
+    return innData.batting.find(b => b.playerId === pId) || { runs: 0, balls: 0, fours: 0, sixes: 0, outHow: 'Not Out', isHero: false, fielderId: '', bowlerId: '' };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -337,8 +337,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
           runs: parseInt(String(r.runs)) || 0,
           wickets: parseInt(String(r.wickets)) || 0,
           wides: parseInt(String(r.wd)) || 0,
-          no_balls: parseInt(String(r.nb)) || 0,
-          is_hero: !!r.is_hero,
+          noBalls: parseInt(String(r.nb)) || 0,
+          isHero: !!r.isHero,
         };
       });
 
@@ -391,20 +391,20 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         sixes: b.sixes, 
         isNotOut: b.outHow === 'Not Out', 
         outHow: b.outHow, // Include outHow for better stat tracking
-        is_hero: !!b.is_hero, 
+        isHero: !!b.isHero, 
         wickets: 0, 
         bowlingRuns: 0, 
         bowlingOvers: 0, 
         maidens: 0, 
         wides: 0, 
-        no_balls: 0 
+        noBalls: 0 
       });
     });
     finalScorecard[homeBowlingKey].bowling.forEach(b => {
       // Skip if they didn't actually bowl any balls
       if ((b.overs || 0) === 0) return;
       
-      const ex = performerMap.get(b.playerId) || { playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, is_hero: false, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, no_balls: 0 };
+      const ex = performerMap.get(b.playerId) || { playerId: b.playerId, playerName: b.name, runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false, isHero: false, wickets: 0, bowlingRuns: 0, bowlingOvers: 0, maidens: 0, wides: 0, noBalls: 0 };
       performerMap.set(b.playerId, { 
         ...ex, 
         wickets: b.wickets, 
@@ -412,8 +412,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         bowlingOvers: b.overs, 
         maidens: b.maidens,
         wides: b.wides || 0,
-        no_balls: b.no_balls || 0,
-        is_hero: ex.is_hero || !!b.is_hero 
+        noBalls: b.noBalls || 0,
+        isHero: ex.isHero || !!b.isHero 
       });
     });
 
@@ -548,8 +548,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
                       <tr key={idx}>
                         <td className="pl-4">
                           <div className="flex items-center gap-2">
-                            <button title="Toggle Hero Performance" type="button" onClick={() => !isLocked && updateBatting(activeInnings, pId, p?.name || '', 'is_hero', !entry.is_hero)}
-                              className={`hero-star ${entry.is_hero ? 'active' : 'text-slate-600'} ${isLocked ? 'cursor-default' : ''}`} disabled={!pId || isLocked}><Star size={14} fill={entry.is_hero ? "currentColor" : "none"} /></button>
+                            <button title="Toggle Hero Performance" type="button" onClick={() => !isLocked && updateBatting(activeInnings, pId, p?.name || '', 'isHero', !entry.isHero)}
+                              className={`hero-star ${entry.isHero ? 'active' : 'text-slate-600'} ${isLocked ? 'cursor-default' : ''}`} disabled={!pId || isLocked}><Star size={14} fill={entry.isHero ? "currentColor" : "none"} /></button>
                             <select disabled={isLocked} title="Select Batter" className="player-select-dropdown disabled:opacity-50" value={pId} onChange={e => { updateBattingRowId(activeInnings, idx, e.target.value); if (e.target.value) { const s = battingSquad.find(pl => pl.id === e.target.value); if (s) updateBatting(activeInnings, s.id, s.name, 'runs', entry.runs); } }}>
                               <option value="">- Select Batter -</option>
                               {battingSquad.map(pl => <option key={pl.id} value={pl.id} disabled={battingRowIds[activeInnings].includes(pl.id) && pl.id !== pId}>{pl.name}</option>)}

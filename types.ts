@@ -40,10 +40,11 @@ export type CommentaryEventType = 'FOUR' | 'SIX' | 'WICKET' | 'DOT' | 'SINGLE' |
 
 export interface CommentaryTemplate {
   id: string;
-  event_type: CommentaryEventType;
+  eventType: CommentaryEventType;
   text: string;
-  is_active: boolean;
-  created_at?: string;
+  wagonWheelZone?: string;
+  isActive: boolean;
+  createdAt?: string;
 }
 
 export interface SystemCommentary {
@@ -68,16 +69,12 @@ export interface Performer {
   sixes?: number;
   maidens?: number;
   wides?: number;
-  no_balls?: number;
+  noBalls?: number;
   outHow?: string;
-  is_hero?: boolean;
+  isHero?: boolean;
 }
 
-export const getInningsBattingTeam = (tossWinner: string, tossChoice: string) => {
-  const firstInningsBatTeam = ((String(tossWinner).toLowerCase() === 'home' || String(tossWinner).toLowerCase() === 'indian strikers') && String(tossChoice).toLowerCase() === 'bat') ||
-    ((String(tossWinner).toLowerCase() === 'away' || String(tossWinner).toLowerCase() === 'opponent') && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
-  return firstInningsBatTeam;
-};
+
 
 export interface InningsBattingEntry {
   playerId: string;
@@ -89,7 +86,7 @@ export interface InningsBattingEntry {
   outHow: string;
   bowlerId?: string;
   fielderId?: string;
-  is_hero?: boolean;
+  isHero?: boolean;
   index?: number;
 }
 
@@ -102,7 +99,7 @@ export interface InningsBowlingEntry {
   wickets: number;
   wides?: number;
   noBalls?: number;
-  is_hero?: boolean;
+  isHero?: boolean;
   index?: number;
 }
 
@@ -120,7 +117,7 @@ export interface BallRecord {
   ballIndex: number;  // 1-indexed cumulative balls in innings
   isLegal: boolean;
   timestamp: string;
-  wagon_wheel_zone?: string;
+  wagonWheelZone?: string;
   commentary?: string;
 }
 
@@ -179,7 +176,7 @@ export interface BowlingStats {
   fourWickets: number;
   fiveWickets: number;
   wides: number;
-  no_balls: number;
+  noBalls: number;
 }
 
 export interface Player {
@@ -209,7 +206,7 @@ export interface Player {
   primaryTeamId?: string; // Link to the opponent team if isClubPlayer is false
   avatarHistory?: string[];
   wides?: number;
-  no_balls?: number;
+  noBalls?: number;
 }
 
 export interface OpponentPlayer {
@@ -232,20 +229,22 @@ export interface OpponentTeam {
 export interface ScheduledMatch {
   id: string;
   isNeutral?: boolean;
-  homeTeamId?: string | null; // If neutral, references OpponentTeam.id. If not neutral, this is IND_STRIKERS
-  opponentId: string | null; // References the ID in OpponentTeam
+  homeTeamId?: string | null; 
+  opponentId: string | null; 
   date: string;
   groundId: string | null;
   tournament: string;
   tournamentId?: string | null;
   stage: MatchStage;
   status: MatchStatus;
-  homeTeamXI: string[]; // Array of Player IDs from Squad Roster
-  opponentTeamXI: string[]; // Array of Names/IDs from OpponentTeam players
+  homeTeamXI: string[]; 
+  opponentTeamXI: string[]; 
   toss?: {
     winner: string;
     choice: 'Bat' | 'Field';
   };
+  tossWinnerId?: string | null;
+  tossChoice?: 'Bat' | 'Bowl' | null;
   tossDetails?: string;
   maxOvers?: number;
   resultSummary?: string; 
@@ -257,22 +256,21 @@ export interface ScheduledMatch {
   isLiveScored?: boolean;
   isLocked?: boolean;
   isHomeBattingFirst?: boolean;
+  isCareerSynced?: boolean;
+  isTest?: boolean;
   matchFormat?: 'T20' | 'One Day';
   opponentName?: string;
+  homeTeamName?: string;
   homeLogo?: string;
   opponentLogo?: string;
   performers?: Performer[];
-  toss_winner_id?: string;
-  toss_choice?: 'Bat' | 'Field';
-  is_test?: boolean;
   title?: string;
   time?: string;
   venue?: string;
-  isCareerSynced?: boolean;
-  live_data?: any;
-  live_state?: any;
-  last_updated?: string;
-  force_upsert?: boolean;
+  lastUpdated?: string;
+  liveData?: any;
+  liveState?: any;
+  forceUpsert?: boolean;
   systemCommentary?: SystemCommentary[];
 }
 
@@ -292,18 +290,7 @@ export interface FieldingStrategy {
   positions: FieldPosition[];
 }
 
-export interface TournamentTableEntry {
-  id: string;
-  teamId: string;
-  teamName: string;
-  tournamentName?: string;
-  matches: number;
-  won: number;
-  lost: number;
-  nr: number;
-  points: number;
-  nrr: string;
-}
+
 
 export interface MembershipRequest {
   id: string;
@@ -355,7 +342,7 @@ export interface PlayerLegacyStats {
   five_wickets: number;
   best_bowling: string;
   wides?: number;
-  no_balls?: number;
+  noBalls?: number;
 }
 
 export interface TMTournament {

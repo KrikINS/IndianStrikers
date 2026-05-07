@@ -81,7 +81,7 @@ const LegacyEditor: React.FC<LegacyEditorProps> = () => {
           four_wickets: 0,
           five_wickets: 0,
           wides: 0,
-          no_balls: 0,
+          noBalls: 0,
           best_bowling: '0/0'
         }),
         [field]: value
@@ -197,7 +197,7 @@ const LegacyEditor: React.FC<LegacyEditorProps> = () => {
                    player_id: player.id, runs: 0, balls: 0, fours: 0, sixes: 0, hundreds: 0, fifties: 0, ducks: 0,
                    matches: 0, innings: 0, not_outs: 0, highest_score: 0, bowling_innings: 0, overs_bowled: 0, runs_conceded: 0,
                    wickets: 0, maidens: 0, four_wickets: 0, five_wickets: 0, best_bowling: '0/0',
-                   wides: 0, no_balls: 0
+                   wides: 0, noBalls: 0
                 };
 
                 return (
@@ -404,9 +404,9 @@ const LegacyEditor: React.FC<LegacyEditorProps> = () => {
                     <td className="px-1 py-1 bg-amber-50/30 text-center">
                       <input 
                         type="number" 
-                        value={row.no_balls || 0} 
+                        value={row.noBalls || 0} 
                         aria-label="No Balls"
-                        onChange={e => handleInputChange(player.id, 'no_balls', parseInt(e.target.value) || 0)} 
+                        onChange={e => handleInputChange(player.id, 'noBalls', parseInt(e.target.value) || 0)} 
                         className="w-10 bg-white border border-amber-200 rounded px-1 py-1 text-slate-900 text-[12px] focus:ring-1 focus:ring-amber-500 outline-none shadow-sm text-center" 
                       />
                     </td>

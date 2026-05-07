@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Player, OpponentTeam, UserRole, ScheduledMatch, Ground, AppUser } from '../types';
 import { getOpponents, getTournamentPerformers, getMatches, getLegacyStats } from '../services/storageService';
-import { Trophy, Medal, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, Bell, MapPin, Clock, Loader2, RefreshCw, Shield, Share2 } from 'lucide-react';
+import { Trophy, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, MapPin, Loader2, RefreshCw, Share2, Medal, Bell, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { toPng, toBlob } from 'html-to-image';
 import { toast } from 'react-hot-toast';
 import { useMasterData } from '../store/tournamentStore';
-import { StoreProvider, useStore } from '../store/StoreProvider';
+import { useStore } from '../store/StoreProvider';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -464,7 +464,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const carouselMatches = useMemo(() => {
     const live = (matches || []).filter(m => m.status === 'live' && !m.isNeutral);
     const completed = (matches || [])
-      .filter(m => m.status === 'completed' && !m.is_test && !m.isNeutral)
+      .filter(m => m.status === 'completed' && !m.isTest && !m.isNeutral)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
     return [...live, ...completed];
@@ -472,7 +472,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
   const nextMatch = useMemo(() => {
     const priorityMatch = (matches || [])
-      .filter(m => (m.status === 'live' || (m.status === 'upcoming' && !m.is_test)) && !m.isNeutral)
+      .filter(m => (m.status === 'live' || (m.status === 'upcoming' && !m.isTest)) && !m.isNeutral)
       .sort((a, b) => {
         if (a.status === 'live' && b.status !== 'live') return -1;
         if (b.status === 'live' && a.status !== 'live') return 1;
@@ -905,10 +905,10 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                         <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic leading-none">
                           {liveMatch ? `${(liveMatch as any).teamA_short || 'IND'} ${(liveMatch as any).score || '0'}/${(liveMatch as any).wickets || '0'}` : `vs ${displayMatch.opponentName}`}
                         </p>
-                        {displayMatch.status === 'live' && displayMatch.live_data && (
+                        {displayMatch.status === 'live' && displayMatch.liveData && (
                           <div className="text-[13px] font-bold text-slate-400 mt-1 uppercase tracking-widest italic">
                             ({(() => {
-                              const ld = displayMatch.live_data;
+                              const ld = displayMatch.liveData;
                               const inn = ld.currentInnings === 1 ? ld.innings1 : ld.innings2;
                               if (!inn) return '0.0';
                               const balls = inn.totalBalls || 0;
@@ -918,10 +918,10 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                         )}
                       </div>
                     </div>
-                    {displayMatch.status === 'live' && displayMatch.live_data && displayMatch.live_data.currentInnings === 2 && (
+                    {displayMatch.status === 'live' && displayMatch.liveData && displayMatch.liveData.currentInnings === 2 && (
                       <div className="flex flex-col items-end">
                         <div className="text-xl font-black text-red-600 italic uppercase tracking-tighter">
-                          TARGET: {displayMatch.live_data.innings1?.totalRuns + 1}
+                          TARGET: {displayMatch.liveData.innings1?.totalRuns + 1}
                         </div>
                       </div>
                     )}

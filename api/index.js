@@ -315,16 +315,16 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
   };
   console.log('[POST /api/players] Sanitized Payload:', JSON.stringify(payload));
 
-  const { data, error } = await db.getOne(
-    `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, wides, no_balls, linked_user_id, jersey_number, dob, external_id, is_active, status, is_club_player, avatar_history) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24::jsonb) RETURNING *`,
+  const { error } = await db.query(
+    `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, wides, no_balls, linked_user_id, jersey_number, dob, external_id, is_active, status, is_club_player, primary_team_id, avatar_history) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25::jsonb) RETURNING *`,
     [
       payload.name, payload.role, payload.batting_style, payload.bowling_style, payload.avatar_url, 
       payload.matches_played, payload.runs_scored, payload.wickets_taken, payload.average, 
       payload.is_captain, payload.is_vice_captain, payload.is_available, 
       payload.batting_stats, payload.bowling_stats, Number(req.body.wides || 0), Number(req.body.no_balls || 0), payload.linked_user_id, 
       payload.jersey_number, payload.dob, payload.external_id,
-      payload.is_active, payload.status, req.body.is_club_player !== false,
+      payload.is_active, payload.status, req.body.is_club_player !== false, req.body.primary_team_id || null,
       JSON.stringify(payload.avatar_history)
     ]
   );
@@ -425,9 +425,16 @@ const mapMatchToDB = (m) => {
     'isHomeBattingFirst': 'is_home_batting_first',
     'matchFormat': 'match_format',
     'is_test': 'is_test',
+    'isTest': 'is_test',
     'tournamentId': 'tournament_id',
     'isNeutral': 'is_neutral',
     'homeTeamId': 'home_team_id',
+    'homeTeamName': 'home_team_name',
+    'homeLogo': 'home_logo',
+    'liveData': 'live_data',
+    'liveState': 'live_state',
+    'lastUpdated': 'updated_at',
+    'forceUpsert': 'force_upsert',
     'tossWinnerId': 'toss_winner_id',
     'tossChoice': 'toss_choice',
     'tossDetails': 'toss_details',
@@ -450,7 +457,8 @@ const mapMatchToDB = (m) => {
     'is_locked', 'toss_winner_id', 'toss_choice', 'toss_details', 
     'max_overs', 'result_summary', 'result_note', 'result_type', 
     'final_score_home', 'final_score_away', 'is_live_scored', 
-    'is_home_batting_first', 'tournament_id', 'is_neutral', 'home_team_id', 'performers', 'scorecard', 'is_career_synced', 'is_test',
+    'is_home_batting_first', 'tournament_id', 'is_neutral', 'home_team_id', 
+    'home_team_name', 'home_logo', 'performers', 'scorecard', 'is_career_synced', 'is_test',
     'live_data', 'target_score', 'live_state', 'total_runs', 'total_wickets', 'total_balls'
   ];
 
@@ -984,11 +992,12 @@ app.get('/api/commentary/templates', async (_req, res) => {
 });
 
 app.post('/api/commentary/templates', authGuard(['admin']), async (req, res) => {
-  const { event_type, text, is_active, wagon_wheel_zone } = req.body;
-  if (!event_type || !text) return res.status(400).json({ error: 'Missing event_type or text' });
+  const { event_type, eventType, text, is_active, isActive, wagon_wheel_zone, wagonWheelZone } = req.body;
+  const final_event_type = eventType || event_type;
+  if (!final_event_type || !text) return res.status(400).json({ error: 'Missing eventType or text' });
   const { data, error } = await db.getOne(
     'INSERT INTO commentary_templates (event_type, text, is_active, wagon_wheel_zone) VALUES ($1, $2, $3, $4) RETURNING *',
-    [event_type, text, is_active ?? true, wagon_wheel_zone || null]
+    [final_event_type, text, isActive ?? is_active ?? true, wagonWheelZone || wagon_wheel_zone || null]
   );
   if (error) {
     console.error('[POST /api/commentary/templates] Error:', error);
@@ -1115,41 +1124,6 @@ app.get('/api/settings/:key', async (req, res) => {
 app.post('/api/settings', authGuard(['admin']), async (req, res) => {
   const { key, value } = req.body;
   const { error } = await db.query('INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [key, value]);
-  if (error) return res.status(400).json({ error: error.message });
-  res.json({ ok: true });
-});
-
-// TOURNAMENT TABLE
-app.get('/api/table', async (req, res) => {
-  const { tournament } = req.query;
-  let q = 'SELECT * FROM tournament_table';
-  let params = [];
-  
-  if (tournament) {
-    q += ' WHERE tournament_name = $1';
-    params.push(tournament);
-  }
-  
-  const { data, error } = await db.query(q + ' ORDER BY points DESC, nrr DESC', params);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
-});
-app.post('/api/table', authGuard(['admin']), async (req, res) => {
-  const { id, team_id, team_name, tournament_name, matches, won, lost, nr, points, nrr } = req.body;
-  const { data, error } = await db.getOne(
-    `INSERT INTO tournament_table (id, team_id, team_name, tournament_name, matches, won, lost, nr, points, nrr) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-     ON CONFLICT (id) DO UPDATE SET 
-        team_id=EXCLUDED.team_id, team_name=EXCLUDED.team_name, tournament_name=EXCLUDED.tournament_name, 
-        matches=EXCLUDED.matches, won=EXCLUDED.won, lost=EXCLUDED.lost, nr=EXCLUDED.nr, points=EXCLUDED.points, nrr=EXCLUDED.nrr 
-     RETURNING *`,
-    [id, team_id, team_name, tournament_name, matches, won, lost, nr, points, nrr]
-  );
-  if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
-});
-app.delete('/api/table/:id', authGuard(['admin']), async (req, res) => {
-  const { error } = await db.query('DELETE FROM tournament_table WHERE id = $1', [req.params.id]);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ ok: true });
 });

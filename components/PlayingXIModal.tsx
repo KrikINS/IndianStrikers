@@ -92,37 +92,46 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
         onClose();
     };
 
-    // PERMANENT ENFORCEMENT: Filter selection lists to ONLY show Active players for the relevant team.
+    // PERMANENT ENFORCEMENT: Filter selection lists based on the team being selected.
     const displayPlayers = useMemo(() => {
-        if (teamType === 'home' || teamType === 'view') {
+        const isInsId = (id: string | null) => id === '00000000-0000-0000-0000-000000000000' || id === 'IND_STRIKERS';
+        
+        // Target team is either the specific opponentId passed or Indian Strikers (if teamType is home)
+        const targetTeamId = teamType === 'home' ? '00000000-0000-0000-0000-000000000000' : opponentId;
+        const isINS = isInsId(targetTeamId);
+
+        if (isINS) {
             // Only Active Indian Strikers members (Case-insensitive teamId check)
             return homePlayers.filter(p => 
                 p.isActive && 
-                p.teamId?.toUpperCase() === 'IND_STRIKERS'
+                (p.teamId?.toUpperCase() === 'IND_STRIKERS' || p.isClubPlayer)
             );
         }
         
-        if (teamType === 'opponent') {
-            // 1. Get players from master list assigned to this specific opponent and marked Active
-            const opponentPlayersFromMaster = homePlayers.filter(p => 
-                !p.isClubPlayer && 
-                String(p.primaryTeamId) === String(opponentId) && 
-                p.isActive
-            );
+        // For any other team (or if specifically selecting opponent players)
+        // 1. Get players from master list assigned to this specific opponent and marked Active
+        const opponentPlayersFromMaster = homePlayers.filter(p => 
+            !p.isClubPlayer && 
+            String(p.primaryTeamId) === String(targetTeamId) && 
+            p.isActive
+        );
 
-            // 2. Identify Quick-Add players from the opponent object (historical/temporary entries)
-            const masterIds = new Set(opponentPlayersFromMaster.map(p => String(p.id)));
-            const quickAdded = (opponent?.players || []).filter(p => !masterIds.has(String(p.id)));
+        // 2. Identify Quick-Add players from the opponent object (historical/temporary entries)
+        const targetOpponent = opponentTeams.find(t => t.id === targetTeamId);
+        const masterIds = new Set(opponentPlayersFromMaster.map(p => String(p.id)));
+        const quickAdded = (targetOpponent?.players || []).filter(p => !masterIds.has(String(p.id)));
 
-            return [...opponentPlayersFromMaster, ...quickAdded];
-        }
+        return [...opponentPlayersFromMaster, ...quickAdded];
+    }, [homePlayers, opponentTeams, teamType, opponentId]);
 
-        return [];
-    }, [homePlayers, opponent?.players, teamType, opponentId]);
-
-    const title = teamType === 'home' ? 'Select Indian Strikers XI' : 
-                  teamType === 'opponent' ? `Select ${opponent?.name || 'Opponent'} XI` : 
-                  'Match Day Team Sheet';
+    const title = (() => {
+        if (teamType === 'view') return 'Match Day Team Sheet';
+        const targetTeamId = teamType === 'home' ? '00000000-0000-0000-0000-000000000000' : opponentId;
+        const name = (targetTeamId === '00000000-0000-0000-0000-000000000000' || targetTeamId === 'IND_STRIKERS') 
+            ? 'Indian Strikers' 
+            : (opponentTeams.find(t => t.id === targetTeamId)?.name || 'Opponent');
+        return `Select ${name} XI`;
+    })();
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-black/90 backdrop-blur-sm animate-in fade-in">

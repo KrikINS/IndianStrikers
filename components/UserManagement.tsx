@@ -6,7 +6,7 @@ import {
   getMembershipRequests, updateMembershipRequestStatus, deleteMembershipRequest,
   getPlayers 
 } from '../services/storageService';
-import { Plus, Trash2, Edit2, Shield, X, Users, UserPlus, Mail, Phone, Info, Layout, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Shield, X, Users, UserPlus, Mail, Phone, Layout, Loader2 } from 'lucide-react';
 
 const UserManagement: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'users' | 'requests'>('users');

@@ -22,7 +22,6 @@
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^12.38.0",
     "html-to-image": "^1.11.13",
-    "html2canvas": "1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.555.0",
     "pg": "^8.20.0",

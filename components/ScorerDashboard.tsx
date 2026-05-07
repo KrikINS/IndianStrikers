@@ -23,7 +23,6 @@ import {
   Edit3,
   Share2,
   MessageSquare,
-  Mic,
   RotateCcw,
   Cloud,
   CloudLightning,
@@ -31,9 +30,6 @@ import {
   CloudOff,
   LineChart as ChartIcon,
   Lock as LockIcon,
-  Award,
-  Target,
-  ExternalLink,
   AlertTriangle
 } from 'lucide-react';
 import MatchSummaryModal from './MatchSummaryModal';
@@ -1215,7 +1211,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           FOUR: [], SIX: [], WICKET: [], DOT: [], SINGLE: [], DOUBLE: [], TRIPLE: [], MILESTONE: []
         };
         data.forEach(t => {
-          if (grouped[t.event_type]) grouped[t.event_type].push(t.text);
+          if (grouped[t.eventType]) grouped[t.eventType].push(t.text);
         });
         setNextCommentarySuggestions(grouped);
 
@@ -1267,7 +1263,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     return () => clearTimeout(t);
   }, [_hasInnings]);
 
-  // Ref to hold the latest cloud live_data WITHOUT adding it as a useCallback dependency.
+  // Ref to hold the latest cloud liveData WITHOUT adding it as a useCallback dependency.
   // This breaks the: sync → cloud update → matchMeta change → syncToDatabase recreated → sync cycle.
   const cloudLiveDataRef = useRef<any>(null);
 
@@ -1499,7 +1495,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       if (!meta) return;
 
       const isActuallyLive = meta.status === 'live';
-      console.log(`[Scorer] Sync Check: Cloud Total Balls: ${(meta.live_data?.innings1?.totalBalls || 0) + (meta.live_data?.innings2?.totalBalls || 0)} | Local Total Balls: ${(store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)}`);
+      console.log(`[Scorer] Sync Check: Cloud Total Balls: ${(meta.liveData?.innings1?.totalBalls || 0) + (meta.liveData?.innings2?.totalBalls || 0)} | Local Total Balls: ${(store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)}`);
 
       // PERMANENT V5 ABSOLUTE RESOLUTION: Use the Failsafe Helpers
       const resolvedTournament = resolveTournament(meta.tournamentId, meta.tournament);
@@ -1520,12 +1516,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         awayXI: meta.opponentTeamXI || [],
         homeLogo: teamLogo || '/INS%20LOGO.PNG',
         awayLogo: resolvedAwayLogo,
-        liveData: meta.live_data
+        liveData: meta.liveData
       });
     };
 
-    // ALWAYS Deep Fetch on mount/activeMatchId change to ensure we have the live_data blob
-    // list endpoints (/matches) often omit the heavy live_data field.
+    // ALWAYS Deep Fetch on mount/activeMatchId change to ensure we have the liveData blob
+    // list endpoints (/matches) often omit the heavy liveData field.
     console.log(`[Scorer] Deep Fetching match ${activeMatchId} for Cloud Truth...`);
     import('../services/storageService').then(({ getMatch }) => {
       getMatch(activeMatchId).then(freshMeta => {
@@ -1568,10 +1564,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     }
 
     // --- RESUME LOGIC (Device B): Match is live in DB but local store is empty or behind ---
-    if (activeMatchId === store.matchId && matchMeta?.status === 'live' && matchMeta?.live_data) {
+    if (activeMatchId === store.matchId && matchMeta?.status === 'live' && matchMeta?.liveData) {
       if (hasInitialRehydrated.current) return;
 
-      const ld = matchMeta.live_data as any;
+      const ld = matchMeta.liveData as any;
       const localIsEmpty = !store.innings1;
 
       if (!localIsEmpty) return; // If local state exists, we assume master role immediately
@@ -1621,12 +1617,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     return () => clearInterval(interval);
   }, [activeMatchId, syncWithCloud]);
 
-  // Keep the cloud live_data in a ref so syncToDatabase doesn't need it as a dep.
-  // Without this, every cloud write updated matchMeta.live_data → recreated the
+  // Keep the cloud liveData in a ref so syncToDatabase doesn't need it as a dep.
+  // Without this, every cloud write updated matchMeta.liveData → recreated the
   // syncToDatabase callback → triggered the sync effect → called syncToDatabase again.
   useEffect(() => {
-    cloudLiveDataRef.current = matchMeta?.live_data ?? null;
-  }, [matchMeta?.live_data]);
+    cloudLiveDataRef.current = matchMeta?.liveData ?? null;
+  }, [matchMeta?.liveData]);
 
   const syncToDatabase = useCallback(
     async (state: any) => {
@@ -1639,14 +1635,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         setIsSyncing(true);
         // CRITICAL: Only sync the slimmed payload, not the full store object which contains lists of all players
         const payload = state.prepareSyncPayload ? state.prepareSyncPayload() : state;
-        await updateMatch(activeMatchId, { live_data: payload, last_updated: new Date().toISOString() });
+        await updateMatch(activeMatchId, { liveData: payload, last_updated: new Date().toISOString() });
         setIsSyncing(false);
       } catch (err) {
         console.error("[Sync] Failed to update match:", err);
         setIsSyncing(false);
       }
     },
-    [activeMatchId] // matchMeta?.live_data intentionally removed; read via ref instead
+    [activeMatchId] // matchMeta?.liveData intentionally removed; read via ref instead
   );
 
   // Fetch opponent players when we know the opponent ID
@@ -1678,16 +1674,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     setSyncStatus('loading');
     try {
       // 1. Force a final atomic sync and AWAIT the result
-      // We send full live_data (store) and summarized live_state
+      // We send full liveData (store) and summarized liveState
       await updateMatch(activeMatchId, {
-        live_data: {
+        liveData: {
           ...store,
           strikerId: store.strikerId,
           nonStrikerId: store.nonStrikerId,
           currentBowlerId: store.currentBowlerId,
           currentInnings: store.currentInnings,
         },
-        live_state: {
+        liveState: {
           striker_id: store.strikerId,
           non_striker_id: store.nonStrikerId,
           bowler_id: store.currentBowlerId,
@@ -1884,7 +1880,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           {/* SYNC STATUS BANNER */}
           {(() => {
             const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
-            const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
+            const cloudBalls = (matchMeta?.liveData?.innings1?.totalBalls || 0) + (matchMeta?.liveData?.innings2?.totalBalls || 0);
             if (cloudBalls > localBalls) {
               return (
                 <motion.div
@@ -1900,7 +1896,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   </p>
                   <button
                     onClick={() => {
-                      if (matchMeta?.live_data) {
+                      if (matchMeta?.liveData) {
                         store.initializeMatch({
                           matchId: matchMeta.id,
                           matchType: matchMeta.matchFormat || 'T20',
@@ -1912,7 +1908,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           awayXI: matchMeta.opponentTeamXI || [],
                           homeLogo: teamLogo,
                           awayLogo: matchMeta.opponentLogo || '',
-                          liveData: matchMeta.live_data
+                          liveData: matchMeta.liveData
                         });
                         toast.success("Synchronized with Cloud!");
                       }
@@ -1978,13 +1974,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           </div>
         </div>
 
-        <SyncStatusPill $outOfSync={((store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)) !== ((matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0))}>
-          {((store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)) === ((matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0)) ? (
+        <SyncStatusPill $outOfSync={((store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)) !== ((matchMeta?.liveData?.innings1?.totalBalls || 0) + (matchMeta?.liveData?.innings2?.totalBalls || 0))}>
+          {((store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)) === ((matchMeta?.liveData?.innings1?.totalBalls || 0) + (matchMeta?.liveData?.innings2?.totalBalls || 0)) ? (
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ADE80' }} />
           ) : (
             <CloudLightning size={10} />
           )}
-          L:{(store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)} | C:{(matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0)}
+          L:{(store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)} | C:{(matchMeta?.liveData?.innings1?.totalBalls || 0) + (matchMeta?.liveData?.innings2?.totalBalls || 0)}
         </SyncStatusPill>
       </DashboardContainer>
     );
@@ -2053,7 +2049,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           status: 'live',
           homeTeamXI: homeXI || [],
           opponentTeamXI: awayXI || [],
-          live_data: {
+          liveData: {
             ...cleanedStore,
             strikerId: selStriker!,
             nonStrikerId: selNonStriker!,
@@ -2091,7 +2087,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             <>
               {(() => {
                 // V5 ABSOLUTE RESOLUTION: Forced overrides for RCA match
-                const resolvedTournament = resolveTournament(matchMeta?.tournamentId, matchMeta?.tournament || store.tournament);
+                const resolvedTournament = resolveTournament(matchMeta?.tournamentId || undefined, matchMeta?.tournament || store.tournament || undefined);
                 const displayTournament = resolvedTournament || 'PRINCE ABDULAZIZ BIN NASSER T20 TOURNAMENT';
 
                 const groundId = matchMeta?.groundId || store.ground;
@@ -2504,11 +2500,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         ball_number: ((innings.totalBalls - (isLegal ? 1 : 0)) % 6) + 1,
         is_legal_ball: isLegal,
         shot_zone: zone,
-        wagon_wheel_zone: zone,
+        wagonWheelZone: zone,
         runs_scored: score,
         extras_runs: type === 'wide' || type === 'no-ball' ? 1 : 0,
         extras_type: type === 'legal' ? null : type,
-        event_type: isWicket ? 'wicket' : (type === 'legal' ? 'ball' : 'extra'),
+        eventType: isWicket ? 'wicket' : (type === 'legal' ? 'ball' : 'extra'),
         innings_number: store.currentInnings,
         wicket_type: wicketType,
         is_penalty: false,
@@ -2774,7 +2770,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const updatePayload: any = {
         tournament_id: matchMeta?.tournamentId,
         is_neutral: matchMeta?.isNeutral,
-        live_data: exportableStore
+        liveData: exportableStore
       };
 
       const playerStatsUpdate: any[] = [];
@@ -2793,7 +2789,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         let bowlingOvers = 0;
         let maidens = 0;
         let wides = 0;
-        let no_balls = 0;
+        let noBalls = 0;
         let bowledInnings = false;
         let lastBStat: any = null;
 
@@ -2822,7 +2818,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             // Calculate extras from history
             const bowlerEvents = (inn.history || []).filter(b => String(b.bowlerId) === String(pid));
             wides += bowlerEvents.filter(b => b.type === 'wide').length;
-            no_balls += bowlerEvents.filter(b => b.type === 'no-ball').length;
+            noBalls += bowlerEvents.filter(b => b.type === 'no-ball').length;
 
             if (bwStat.overs > 0) bowledInnings = true;
           }
@@ -2842,7 +2838,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             bowlingOvers,
             maidens,
             wides,
-            no_balls,
+            noBalls,
             isNotOut,
             outHow: lastBStat?.outHow || (lastBStat?.status === 'dnb' ? 'Did Not Bat' : isNotOut ? 'Not Out' : 'Out')
           });
@@ -3939,7 +3935,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                   runs_scored: 0,
                                   penalty_runs: 5,
                                   is_penalty: true,
-                                  event_type: 'extra',
+                                  eventType: 'extra',
                                   innings_number: store.currentInnings,
                                   is_legal_ball: false
                                 })
@@ -3976,7 +3972,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                 runs_scored: 0,
                                 penalty_runs: runs,
                                 is_penalty: true,
-                                event_type: 'extra',
+                                eventType: 'extra',
                                 innings_number: store.currentInnings,
                                 is_legal_ball: false
                               })
@@ -4009,7 +4005,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                 runs_scored: 0,
                                 penalty_runs: runs,
                                 is_penalty: true,
-                                event_type: 'extra',
+                                eventType: 'extra',
                                 innings_number: store.currentInnings,
                                 is_legal_ball: false
                               })
@@ -4594,7 +4590,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                         try {
                           toast.loading("Force syncing to cloud...");
                           await updateMatch(activeMatchId, {
-                            live_data: store,
+                            liveData: store,
                             last_updated: new Date().toISOString()
                           });
                           toast.dismiss();
@@ -4777,12 +4773,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
                       {(() => {
                         const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
-                        const cloudBalls = (matchMeta?.live_data?.innings1?.totalBalls || 0) + (matchMeta?.live_data?.innings2?.totalBalls || 0);
+                        const cloudBalls = (matchMeta?.liveData?.innings1?.totalBalls || 0) + (matchMeta?.liveData?.innings2?.totalBalls || 0);
                         if (cloudBalls > localBalls) {
                           return (
                             <button
                               onClick={() => {
-                                if (matchMeta?.live_data) {
+                                if (matchMeta?.liveData) {
                                   store.initializeMatch({
                                     matchId: matchMeta.id,
                                     matchType: matchMeta.matchFormat || 'T20',
@@ -4794,7 +4790,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                     awayXI: matchMeta.opponentTeamXI || [],
                                     homeLogo: teamLogo,
                                     awayLogo: matchMeta.opponentLogo || '',
-                                    liveData: matchMeta.live_data
+                                    liveData: matchMeta.liveData
                                   });
                                   toast.success("Corrected from Mobile!");
                                   setShowSettingsDrawer(false);
@@ -5071,7 +5067,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             />
                             <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
                             
-                            <Bar dataKey="runs1" name={store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT')} fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={10}>
+                            <Bar dataKey="runs1" name={(store.innings1?.battingTeamId === 'HOME' ? (store.homeTeamName || 'INDIAN STRIKERS') : (store.opponentName || 'OPPONENT')).toUpperCase()} fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={10}>
                               {manhattanData.map((entry, index) => (
                                 <Cell key={`cell1-${index}`} fill={entry.wickets1 > 0 ? '#ef4444' : '#38BDF8'} />
                               ))}
@@ -5082,7 +5078,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                               }} />
                             </Bar>
 
-                            <Bar dataKey="runs2" name={store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT')} fill="#FAB005" radius={[4, 4, 0, 0]} barSize={10}>
+                            <Bar dataKey="runs2" name={(store.innings2?.battingTeamId === 'HOME' ? (store.homeTeamName || 'INDIAN STRIKERS') : (store.opponentName || 'OPPONENT')).toUpperCase()} fill="#FAB005" radius={[4, 4, 0, 0]} barSize={10}>
                               {manhattanData.map((entry, index) => (
                                 <Cell key={`cell2-${index}`} fill={entry.wickets2 > 0 ? '#ef4444' : '#FAB005'} />
                               ))}
@@ -5116,7 +5112,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             {analyticsWormData.innings1.length > 0 && (
                               <Line
                                 data={analyticsWormData.innings1}
-                                name={store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT')}
+                                name={(store.innings1?.battingTeamId === 'HOME' ? (store.homeTeamName || 'INDIAN STRIKERS') : (store.opponentName || 'OPPONENT')).toUpperCase()}
                                 type="monotone"
                                 dataKey="runs"
                                 stroke="#38BDF8"
@@ -5131,7 +5127,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             {store.currentInnings === 2 && analyticsWormData.innings2.length > 0 && (
                               <Line
                                 data={analyticsWormData.innings2}
-                                name={store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT')}
+                                name={(store.innings2?.battingTeamId === 'HOME' ? (store.homeTeamName || 'INDIAN STRIKERS') : (store.opponentName || 'OPPONENT')).toUpperCase()}
                                 type="monotone"
                                 dataKey="runs"
                                 stroke="#FAB005"

@@ -59,6 +59,7 @@ export interface MatchScorerState {
     tournament: string;
     ground: string;
     opponentName: string;
+    homeTeamName: string | null;
     maxOvers: number;
     toss: {
         winnerId: string | null;
@@ -83,7 +84,7 @@ export interface MatchScorerState {
     isWaitingForBowler: boolean;
     wagonWheelQuickSave: boolean;
     pendingMilestone: { type: string, player: string, subText?: string } | null;
-    partnership_notified: number[];
+    partnershipNotified: number[];
     pendingIntroduction: string | null;
     offlineQueue: BallRecord[];
     systemCommentary: SystemCommentary[];
@@ -160,6 +161,7 @@ const INITIAL_SCORER_STATE: MatchScorerState = {
     tournament: '',
     ground: '',
     opponentName: '',
+    homeTeamName: null,
     maxOvers: 20,
     toss: { winnerId: null, choice: null },
     innings1: null,
@@ -466,6 +468,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
                     tournament: data.tournament || parsedData.tournament,
                     ground: data.ground || parsedData.ground,
                     opponentName: data.opponentName || parsedData.opponentName,
+                    homeTeamName: data.homeTeamName || parsedData.homeTeamName || null,
                     maxOvers: data.maxOvers || parsedData.maxOvers,
                     homeXI: data.homeXI || (parsedData.homeXI || []),
                     awayXI: data.awayXI || (parsedData.awayXI || []),
@@ -486,6 +489,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             tournament: data.tournament,
             ground: data.ground,
             opponentName: data.opponentName,
+            homeTeamName: data.homeTeamName || null,
             maxOvers: data.maxOvers,
             homeXI: data.homeXI || [],
             awayXI: data.awayXI || [],
@@ -538,7 +542,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
                 fallOfWickets: [],
                 history: []
             },
-            partnership_notified: []
+            partnershipNotified: []
         });
 
         const state = get();
@@ -564,9 +568,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         const updatedState = get();
         if (updatedState.matchId) {
             api.updateMatch(updatedState.matchId, {
-                live_data: updatedState.prepareSyncPayload(),
-                last_updated: new Date().toISOString(),
-                force_upsert: true
+                liveData: updatedState.prepareSyncPayload(),
+                lastUpdated: new Date().toISOString(),
+                forceUpsert: true
             }).catch(console.error);
         }
     },
@@ -807,9 +811,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         const updatedState = get();
         if (updatedState.matchId) {
             api.updateMatch(updatedState.matchId, {
-                live_data: updatedState.prepareSyncPayload(),
-                last_updated: new Date().toISOString(),
-                force_upsert: true
+                liveData: updatedState.prepareSyncPayload(),
+                lastUpdated: new Date().toISOString(),
+                forceUpsert: true
             }).catch(console.error);
         }
     },
@@ -828,9 +832,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         const updatedState = get();
         if (updatedState.matchId) {
             api.updateMatch(updatedState.matchId, {
-                live_data: updatedState.prepareSyncPayload(),
-                last_updated: new Date().toISOString(),
-                force_upsert: true
+                liveData: updatedState.prepareSyncPayload(),
+                lastUpdated: new Date().toISOString(),
+                forceUpsert: true
             }).catch(console.error);
         }
     },
@@ -904,9 +908,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         const updatedState = get();
         if (updatedState.matchId) {
             api.updateMatch(updatedState.matchId, {
-                live_data: updatedState.prepareSyncPayload(),
-                last_updated: new Date().toISOString(),
-                force_upsert: true
+                liveData: updatedState.prepareSyncPayload(),
+                lastUpdated: new Date().toISOString(),
+                forceUpsert: true
             }).catch(console.error);
         }
     },
@@ -1056,7 +1060,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             awayXI: (state.awayXI || []).map(p => (typeof p === 'object' && p !== null) ? (p as any).id : p),
 
             // Milestone tracking (tiny)
-            partnership_notified: state.partnership_notified ?? [],
+            partnershipNotified: state.partnershipNotified ?? [],
 
             // Commentary
             systemCommentary: state.systemCommentary ?? []
