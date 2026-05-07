@@ -9,7 +9,6 @@ import { LineupGraphic } from './LineupGraphic';
 import EditMatchModal from './EditMatchModal';
 import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
-import MatchScorecardEntry from './MatchScorecardEntry';
 import { UniversalScorecard } from './UniversalScorecard';
 import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Unlock, Download, Swords } from 'lucide-react';
 import { toPng } from 'html-to-image';
@@ -1077,13 +1076,47 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                                 const hName = (isHomeIns && !m.isNeutral) ? 'INDIAN STRIKERS' : (hTeam?.name || 'TEAM A');
                                                                                 return (
                                                                                     <>
-                                                                                        {hLogo ? <img src={hLogo} crossOrigin="anonymous" className="team-avatar" alt={hName} /> : <div className="team-avatar-fallback text-slate-500">?</div>}
+                                                                                        <div className="relative flex items-center justify-center">
+                                                                                            {hLogo ? (
+                                                                                                <img 
+                                                                                                    src={hLogo} 
+                                                                                                    crossOrigin="anonymous" 
+                                                                                                    className="team-avatar" 
+                                                                                                    alt={hName} 
+                                                                                                    onError={(e) => {
+                                                                                                        e.currentTarget.style.display = 'none';
+                                                                                                        const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                                                        if (fb) fb.style.display = 'flex';
+                                                                                                    }}
+                                                                                                />
+                                                                                            ) : null}
+                                                                                            <div className="team-avatar-fallback text-slate-500" style={{ display: hLogo ? 'none' : 'flex' }}>
+                                                                                                {hName.charAt(0)}
+                                                                                            </div>
+                                                                                        </div>
                                                                                         <span>{hName}</span>
                                                                                     </>
                                                                                 );
                                                                             })()}
                                                                             <span className="vs-cell">VS</span>
-                                                                            {opp?.logoUrl ? <img src={opp.logoUrl} crossOrigin="anonymous" alt={opp?.name} className="team-avatar" /> : <div className="team-avatar-fallback text-slate-500">?</div>}
+                                                                            <div className="relative flex items-center justify-center">
+                                                                                {opp?.logoUrl ? (
+                                                                                    <img 
+                                                                                        src={opp.logoUrl} 
+                                                                                        crossOrigin="anonymous" 
+                                                                                        alt={opp?.name} 
+                                                                                        className="team-avatar" 
+                                                                                        onError={(e) => {
+                                                                                            e.currentTarget.style.display = 'none';
+                                                                                            const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                                            if (fb) fb.style.display = 'flex';
+                                                                                        }}
+                                                                                    />
+                                                                                ) : null}
+                                                                                <div className="team-avatar-fallback text-slate-500" style={{ display: opp?.logoUrl ? 'none' : 'flex' }}>
+                                                                                    {(opp?.name || '?').charAt(0)}
+                                                                                </div>
+                                                                            </div>
                                                                             <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
                                                                         </div>
                                                                         <div className="match-meta-info pl-1.5 opacity-70">
@@ -1216,7 +1249,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                 onEditMatch={setEditingMatch}
                                 onStartScoring={handleStartScoring}
                                 onViewScorecard={setViewScorecardMatch}
-                                onUpdateManualScore={(id, mode) => setManualScoreConfig({ matchId: id, showPlayers: mode === 'full' })}
+                                onUpdateManualScore={(id, mode) => {
+                                    if (mode === 'full') {
+                                        setViewScorecardMatch({ ...selectedCardMatch, isEditable: true } as any);
+                                    } else {
+                                        setManualScoreConfig({ matchId: id, showPlayers: false });
+                                    }
+                                }}
                                 onDeleteMatch={deleteMatch}
                                 userRole={userRole}
                                 isAdmin={isAdmin}
@@ -1274,14 +1313,6 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 />
             )}
 
-            {manualScoreConfig && manualScoreConfig.showPlayers && (
-                <MatchScorecardEntry
-                    onClose={() => setManualScoreConfig(null)}
-                    match={matches.find(m => m.id === manualScoreConfig.matchId)!}
-                    onSubmit={(data) => handleManualScoreSubmit(data)}
-                    opponent={opponents.find(o => o.id === (matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId))}
-                />
-            )}
 
             {viewScorecardMatch && (
                 <UniversalScorecard
@@ -1289,6 +1320,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     players={players}
                     opponents={opponents}
                     onClose={() => setViewScorecardMatch(null)}
+                    isEditable={(viewScorecardMatch as any).isEditable}
+                    onSave={async (data) => {
+                        // Set manualScoreConfig temporarily so handleManualScoreSubmit works
+                        setManualScoreConfig({ matchId: viewScorecardMatch.id, showPlayers: true });
+                        await handleManualScoreSubmit(data);
+                    }}
                 />
             )}
 

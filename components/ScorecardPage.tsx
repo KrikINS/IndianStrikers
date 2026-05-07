@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { OpponentTeam } from '../types';
 import { useMatchCenter } from '../store/matchStore';
 import { useStore } from '../store/StoreProvider';
-import MatchScorecardEntry from './MatchScorecardEntry';
+import { UniversalScorecard } from './UniversalScorecard';
 import { ArrowLeft } from 'lucide-react';
 
 interface ScorecardPageProps {
@@ -14,10 +14,10 @@ interface ScorecardPageProps {
 export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTeamName }) => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { matches, updateMatch } = useMatchCenter();
+    const { matches, finalizeMatch } = useMatchCenter();
+    const { players } = useStore();
     
     const match = matches.find(m => m.id === id);
-    const resolvedOpponent = opponents.find(o => o.id === match?.opponentId);
 
     if (!match) {
         return (
@@ -34,12 +34,14 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTea
     }
 
     return (
-        <MatchScorecardEntry 
+        <UniversalScorecard 
             match={match}
-            opponent={resolvedOpponent}
+            players={players}
+            opponents={opponents}
+            isEditable={true}
             onClose={() => navigate('/match-center')}
-            onSubmit={async (finalData) => {
-                await updateMatch(match.id, finalData);
+            onSave={async (finalData) => {
+                await finalizeMatch(match.id, { ...finalData, isCareerSynced: true }, finalData.performers || []);
                 navigate('/match-center');
             }}
         />

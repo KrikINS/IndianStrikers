@@ -173,10 +173,22 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 {/* Slot 1 (Home) */}
                 <div className="team-vertical">
                     <div className="logo-wrapper">
-                        {homeTeamLogo
-                            ? <img src={homeTeamLogo} crossOrigin="anonymous" className="team-logo-md object-contain" alt={homeTeamName} />
-                            : <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(homeTeamName).slice(0, 3).toUpperCase()}</div>
-                        }
+                        {homeTeamLogo ? (
+                            <img 
+                                src={homeTeamLogo} 
+                                crossOrigin="anonymous" 
+                                className="team-logo-md object-contain" 
+                                alt={homeTeamName} 
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fb) fb.style.display = 'flex';
+                                }}
+                            />
+                        ) : null}
+                        <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs" style={{ display: homeTeamLogo ? 'none' : 'flex' }}>
+                            {String(homeTeamName).slice(0, 3).toUpperCase()}
+                        </div>
                         {!isGraphic && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onSelectPlayingXI(match.id, 'home'); }}
@@ -209,10 +221,22 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 {/* Slot 2 (Away) */}
                 <div className="team-vertical">
                     <div className="logo-wrapper">
-                        {opponentLogo
-                            ? <img src={opponentLogo} crossOrigin="anonymous" className="team-logo-md object-contain" alt={opponentName} />
-                            : <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs">{String(opponentName).slice(0, 3).toUpperCase()}</div>
-                        }
+                        {opponentLogo ? (
+                            <img 
+                                src={opponentLogo} 
+                                crossOrigin="anonymous" 
+                                className="team-logo-md object-contain" 
+                                alt={opponentName} 
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fb) fb.style.display = 'flex';
+                                }}
+                            />
+                        ) : null}
+                        <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs" style={{ display: opponentLogo ? 'none' : 'flex' }}>
+                            {String(opponentName).slice(0, 3).toUpperCase()}
+                        </div>
                         {!isGraphic && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onSelectPlayingXI(match.id, 'opponent'); }}
@@ -384,7 +408,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                                                     onClick={() => { setShowActions(false); onUpdateManualScore(match.id, 'full'); }} 
                                                                     className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-emerald-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
                                                                 >
-                                                                    <RefreshCcw size={14} className="text-emerald-500" /> FULL SCORECARD
+                                                                    <RefreshCcw size={14} className="text-emerald-500" /> UPDATE SCORECARD
                                                                 </button>
                                                             </>
                                                         )}
@@ -400,7 +424,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                                 )}
 
                                                 {/* Admin Only: Edit/Delete */}
-                                                {isAdmin && !match.isLocked && (
+                                                {isAdmin && !match.isLocked && !isCompleted && (
                                                     <>
                                                         <button 
                                                             onClick={(e) => { e.stopPropagation(); setShowActions(false); onEditMatch(match); }}

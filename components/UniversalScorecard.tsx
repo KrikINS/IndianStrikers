@@ -6,6 +6,10 @@ import {
   Share2,
   Image as ImageIcon,
   ChevronLeft,
+  ChevronDown,
+  ArrowUp,
+  Maximize2,
+  Minimize2,
   Star,
   Clock,
   Zap,
@@ -13,10 +17,19 @@ import {
   Trophy,
   Award,
   Info,
-  BarChart2
+  BarChart2,
+  Save,
+  Plus,
+  Trash2,
+  Edit,
+  AlertTriangle,
+  MapPin,
+  RefreshCw,
+  CheckCircle2
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { useMatchCenter } from '../store/matchStore';
+import { useMasterData } from '../store/tournamentStore';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell, LabelList } from 'recharts';
 
 // --- STYLED COMPONENTS (Ported from ScorerDashboard) ---
@@ -53,34 +66,31 @@ const PremiumModalContent = styled.div`
 `;
 
 const ModalHeader = styled.div`
-  padding: 20px;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #FFFFFF;
-  position: sticky;
-  top: 0;
-  z-index: 50;
+  padding: 8px 12px;
+  background: transparent;
+  z-index: 100;
+  min-height: 40px;
 `;
 
 const IconButton = styled.button`
-  background: none;
-  border: none;
-  color: #64748B;
-  cursor: pointer;
-  padding: 8px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  cursor: pointer;
   transition: all 0.2s;
-  opacity: 0.8;
-
-  &:hover { 
-    background: rgba(0, 0, 0, 0.05); 
-    opacity: 1;
-    transform: scale(1.1);
+  
+  &:hover {
+    background: #F1F5F9;
+    color: #0F172A;
   }
 `;
 
@@ -112,6 +122,49 @@ const TabButton = styled.button<{ $active: boolean }>`
   }
 `;
 
+const InningsAccordionHeader = styled.div<{ $active: boolean }>`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: ${props => props.$active ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255, 255, 255, 0.03)'};
+  border: 1px solid ${props => props.$active ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)'};
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+`;
+
+const FABContainer = styled.div`
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 100;
+`;
+
+const FloatingButton = styled(motion.button)`
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: #38BDF8;
+  color: #FFFFFF;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.9;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+`;
+
+
 const ScrollContent = styled.div`
   flex: 1;
   overflow-y: auto;
@@ -131,17 +184,14 @@ const ScrollContent = styled.div`
 `;
 
 const MatchHeaderCard = styled.div`
-  background: #001f3f; /* Fallback */
-  background-image: linear-gradient(rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.85)), url('/assets/cricket_ground_bg.png');
-  background-size: cover;
-  background-position: center;
-  padding: 36px 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  padding: 12px 16px;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   overflow: hidden;
-  border-bottom: 3px solid rgba(56, 189, 248, 0.4);
+  margin-bottom: 8px;
 `;
 
 const TournamentLabel = styled.div`
@@ -157,10 +207,10 @@ const TournamentLabel = styled.div`
 
 const TeamsHorizontalRow = styled.div`
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  width: 100%;
+  margin: 8px 0;
 `;
 
 const TeamBlock = styled.div<{ $reverse?: boolean }>`
@@ -188,16 +238,13 @@ const TeamInfo = styled.div<{ $align?: 'left' | 'right' }>`
 `;
 
 const TeamNameLabel = styled.div`
-  font-size: 1.8rem;
+  font-size: clamp(0.7rem, 3.5vw, 0.9rem);
   font-weight: 900;
+  color: #FFF;
   text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
-  color: #FFFFFF;
-  letter-spacing: -1px;
-  line-height: 1;
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+  max-width: 100%;
 `;
 
 const ScoreValue = styled.div`
@@ -210,10 +257,10 @@ const ScoreValue = styled.div`
   letter-spacing: -1px;
   
   span {
-    font-size: 0.75rem;
-    opacity: 0.6;
-    font-weight: 800;
-    letter-spacing: 0;
+    font-size: 1.6rem;
+    opacity: 0.8;
+    font-weight: 900;
+    letter-spacing: -1px;
   }
 `;
 
@@ -249,21 +296,20 @@ const ResultHighlightBar = styled.div`
 
 const MetaGrid = styled.div`
   display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  margin-top: 4px;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
 const MetaItemHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: rgba(255,255,255,0.5);
+  gap: 4px;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 `;
 
 const ScoreSummaryCard = styled.div`
@@ -375,27 +421,584 @@ interface Innings {
 interface UniversalScorecardProps {
   match: any;
   players: any[];
-  opponents?: any[];
-  grounds?: any[];
+  opponents: any[];
   onClose: () => void;
+  isEditable?: boolean;
+  onSave?: (data: any) => Promise<void>;
   isLive?: boolean;
   activeInnings?: number;
 }
 
 // --- COMPONENT ---
 
-export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
-  match: initialMatch,
-  players,
-  opponents = [],
-  grounds = [],
-  onClose,
+export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({ 
+  match: initialMatch, 
+  players, 
+  opponents, 
+  onClose, 
+  isEditable = false, 
+  onSave,
   isLive = false,
   activeInnings = 1
 }) => {
   const [tab, setTab] = useState<'info' | 'scorecard' | 'commentary' | 'analytics'>('scorecard');
   const [selectedInnings, setSelectedInnings] = useState<number>(activeInnings || 1);
+  const [openInnings, setOpenInnings] = useState<Set<number>>(new Set([1]));
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [editState, setEditState] = useState<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContentRef = useRef<HTMLDivElement>(null);
+  const grounds = useMasterData(state => (state as any).grounds || []);
+
+  const handleSave = async () => {
+    if (!onSave) return;
+    setIsSaving(true);
+    try {
+      // Normalize editState to remove temporary IDs
+      const finalState = JSON.parse(JSON.stringify(editState));
+      const cleanBatting = (inn: any) => {
+        if (!inn.batting) return;
+        inn.batting = inn.batting.map((b: any) => ({
+          ...b,
+          playerId: (b.playerId && String(b.playerId).startsWith('new-')) ? undefined : b.playerId
+        }));
+      };
+      cleanBatting(finalState.innings1);
+      cleanBatting(finalState.innings2);
+
+      await onSave(finalState);
+      
+      // If we are here, save was successful
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        onClose(); // Only close on success
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to save scorecard:", err);
+      alert("Failed to save changes. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const calculateFOW = (history: any[]) => {
+    const fow: any[] = [];
+    let runs = 0;
+    let wickets = 0;
+    let balls = 0;
+
+    history.forEach(ball => {
+      runs += (ball.runs || 0) + (ball.extras || 0);
+      balls++;
+      if (ball.isWicket) {
+        wickets++;
+        const overs = Math.floor(balls / 6) + (balls % 6) / 10;
+        fow.push({ wicket: wickets, runs, overs, batterName: ball.batterName });
+      }
+    });
+    return fow;
+  };
+
+  const getPlayerNameResolved = (id: any, fallbackName?: string) => {
+    const p = players.find(p => p.id === id || p.player_id === id);
+    if (p) return p.name;
+    const opp = opponents.find(o => o.id === initialMatch.opponentId);
+    const oppP = opp?.players?.find((p: any) => p.id === id);
+    if (oppP) return oppP.name;
+    return fallbackName || 'Unknown Player';
+  };
+
+  const formatOvers = (balls: number, maxOvers?: number): string => {
+    const fullOvers = Math.floor(balls / 6);
+    const rem = balls % 6;
+    if (maxOvers && fullOvers >= maxOvers) return `${fullOvers} Overs`;
+    if (rem === 0 && fullOvers > 0) return `${fullOvers} Overs`;
+    return `${fullOvers}.${rem}`;
+  };
+
+  const renderInningsTable = (data: any, innNo: number) => {
+    if (!data) return <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>No data for this innings</div>;
+    
+    const fowData = calculateFOW(data.history || []);
+    const isCurrentInningsEditable = isEditable && editState;
+    
+    const isHomeInnings = (innNo === 1 && initialMatch.isHomeBattingFirst) || (innNo === 2 && !initialMatch.isHomeBattingFirst);
+    const battingSquadIds = isHomeInnings ? initialMatch.homeTeamXI : initialMatch.opponentTeamXI;
+    const bowlingSquadIds = isHomeInnings ? initialMatch.opponentTeamXI : initialMatch.homeTeamXI;
+
+    const battingSquad = (battingSquadIds || []).map((id: string) => ({ id, name: getPlayerNameResolved(id) }));
+    const bowlingSquad = (bowlingSquadIds || []).map((id: string) => ({ id, name: getPlayerNameResolved(id) }));
+
+    return (
+      <div style={{ paddingBottom: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <TableTitle style={{ marginBottom: 0 }}><Zap size={14} /> BATTING</TableTitle>
+          {isCurrentInningsEditable && (
+            <button
+              onClick={() => {
+                const key = `innings${innNo}` as 'innings1' | 'innings2';
+                const newBatting = [...editState[key].batting, {
+                  playerId: `new-${Date.now()}`,
+                  name: '',
+                  runs: 0,
+                  balls: 0,
+                  fours: 0,
+                  sixes: 0,
+                  status: 'batting',
+                  index: editState[key].batting.length
+                }];
+                setEditState({ ...editState, [key]: { ...editState[key], batting: newBatting } });
+              }}
+              style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38BDF8', border: '1px solid rgba(56, 189, 248, 0.2)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
+            >
+              <Plus size={12} style={{ display: 'inline', marginRight: 4 }} /> ADD BATTER
+            </button>
+          )}
+        </div>
+        
+        <ScoreCardTable>
+          <thead>
+            <tr>
+              <Th>Batter</Th>
+              <Th>Status</Th>
+              <Th>Bowler</Th>
+              <Th>Fielder</Th>
+              <Th style={{ textAlign: 'center' }}>R</Th>
+              <Th style={{ textAlign: 'center' }}>B</Th>
+              <Th style={{ textAlign: 'center' }}>4s</Th>
+              <Th style={{ textAlign: 'center' }}>6s</Th>
+              <Th style={{ textAlign: 'right' }}>{isCurrentInningsEditable ? 'Action' : 'SR'}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data.batting || []).map((stat: any, idx: number) => (
+              <tr key={stat.playerId || idx}>
+                <Td>
+                  {isCurrentInningsEditable ? (
+                    <select 
+                      value={stat.playerId || ''} 
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBatting = [...editState[key].batting];
+                        const selectedId = e.target.value;
+                        const selectedPlayer = battingSquad.find((p: any) => p.id === selectedId);
+                        newBatting[idx] = { 
+                          ...newBatting[idx], 
+                          playerId: selectedId, 
+                          name: selectedPlayer?.name || '' 
+                        };
+                        setEditState({ ...editState, [key]: { ...editState[key], batting: newBatting } });
+                      }}
+                      aria-label="Select Batter"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px 8px', borderRadius: '4px', width: '100%', fontSize: '0.8rem' }}
+                    >
+                      <option value="">Select Batter</option>
+                      {battingSquad.map((p: any) => (
+                        <option key={p.id} value={p.id} style={{ background: '#FFF', color: '#000' }}>{p.name}</option>
+                      ))}
+                      {/* Fallback for players not in initial XI */}
+                      {stat.playerId && !battingSquad.find((p: any) => p.id === stat.playerId) && (
+                        <option value={stat.playerId} style={{ background: '#FFF', color: '#000' }}>{stat.name} (Other)</option>
+                      )}
+                    </select>
+                  ) : (
+                    <div style={{ fontWeight: 700 }}>{getPlayerNameResolved(stat.playerId, stat.name)}</div>
+                  )}
+                </Td>
+                <Td style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 600 }}>
+                  {isCurrentInningsEditable ? (
+                    <select
+                      value={stat.status === 'batting' ? 'not out' : (stat.outHow || 'out')}
+                      onChange={(e) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBatting = [...editState[key].batting];
+                        const val = e.target.value;
+                        newBatting[idx] = { 
+                          ...newBatting[idx], 
+                          status: val === 'not out' ? 'batting' : 'out', 
+                          outHow: val === 'not out' ? undefined : val 
+                        };
+                        setEditState({ ...editState, [key]: { ...editState[key], batting: newBatting } });
+                      }}
+                      aria-label="Dismissal Type"
+                      title="Select dismissal type"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px 4px', borderRadius: '4px', width: '100%', fontSize: '0.7rem' }}
+                    >
+                      <option value="not out" style={{ background: '#FFF', color: '#000' }}>Not Out</option>
+                      <option value="bowled" style={{ background: '#FFF', color: '#000' }}>Bowled</option>
+                      <option value="caught" style={{ background: '#FFF', color: '#000' }}>Caught</option>
+                      <option value="lbw" style={{ background: '#FFF', color: '#000' }}>LBW</option>
+                      <option value="run out" style={{ background: '#FFF', color: '#000' }}>Run Out</option>
+                      <option value="stumped" style={{ background: '#FFF', color: '#000' }}>Stumped</option>
+                      <option value="hit wicket" style={{ background: '#FFF', color: '#000' }}>Hit Wicket</option>
+                      <option value="retired" style={{ background: '#FFF', color: '#000' }}>Retired</option>
+                    </select>
+                  ) : (
+                    <span style={{ color: stat.status === 'batting' ? '#38BDF8' : '#FFF' }}>
+                      {stat.status === 'batting' ? 'not out' : (stat.outHow || 'out')}
+                    </span>
+                  )}
+                </Td>
+                <Td>
+                  {isCurrentInningsEditable ? (
+                    <select 
+                      value={stat.bowlerId || ''} 
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBatting = [...editState[key].batting];
+                        const selectedId = e.target.value;
+                        const selectedPlayer = bowlingSquad.find((p: any) => p.id === selectedId);
+                        newBatting[idx] = { 
+                          ...newBatting[idx], 
+                          bowlerId: selectedId, 
+                          bowlerName: selectedPlayer?.name || '' 
+                        };
+                        setEditState({ ...editState, [key]: { ...editState[key], batting: newBatting } });
+                      }}
+                      aria-label="Select Bowler"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px 8px', borderRadius: '4px', width: '100%', fontSize: '0.8rem' }}
+                    >
+                      <option value="">Select Bowler</option>
+                      {bowlingSquad.map((p: any) => (
+                        <option key={p.id} value={p.id} style={{ background: '#FFF', color: '#000' }}>{p.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div style={{ opacity: 0.8 }}>{getPlayerNameResolved(stat.bowlerId, stat.bowlerName)}</div>
+                  )}
+                </Td>
+                <Td>
+                  {isCurrentInningsEditable ? (
+                    <select 
+                      value={stat.fielderId || ''} 
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBatting = [...editState[key].batting];
+                        const selectedId = e.target.value;
+                        const selectedPlayer = bowlingSquad.find((p: any) => p.id === selectedId);
+                        newBatting[idx] = { 
+                          ...newBatting[idx], 
+                          fielderId: selectedId, 
+                          fielderName: selectedPlayer?.name || '' 
+                        };
+                        setEditState({ ...editState, [key]: { ...editState[key], batting: newBatting } });
+                      }}
+                      aria-label="Select Fielder"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px 8px', borderRadius: '4px', width: '100%', fontSize: '0.8rem' }}
+                    >
+                      <option value="">Select Fielder</option>
+                      {bowlingSquad.map((p: any) => (
+                        <option key={p.id} value={p.id} style={{ background: '#FFF', color: '#000' }}>{p.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div style={{ opacity: 0.8 }}>{getPlayerNameResolved(stat.fielderId, stat.fielderName)}</div>
+                  )}
+                </Td>
+                <Td style={{ textAlign: 'center' }}>
+                  {isCurrentInningsEditable ? (
+                    <input 
+                      type="number"
+                      value={stat.runs} 
+                      onChange={(e) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBatting = [...editState[key].batting];
+                        newBatting[idx] = { ...newBatting[idx], runs: parseInt(e.target.value) || 0 };
+                        setEditState({ ...editState, [key]: { ...editState[key], batting: newBatting } });
+                      }}
+                      aria-label="Runs"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FAB005', padding: '4px', borderRadius: '4px', width: '40px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 700 }}
+                    />
+                  ) : <span style={{ color: '#FAB005', fontWeight: 700 }}>{stat.runs}</span>}
+                </Td>
+                <Td style={{ textAlign: 'center' }}>
+                   {isCurrentInningsEditable ? (
+                    <input 
+                      type="number"
+                      value={stat.balls} 
+                      onChange={(e) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBatting = [...editState[key].batting];
+                        newBatting[idx] = { ...newBatting[idx], balls: parseInt(e.target.value) || 0 };
+                        setEditState({ ...editState, [key]: { ...editState[key], batting: newBatting } });
+                      }}
+                      aria-label="Balls"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px', borderRadius: '4px', width: '40px', textAlign: 'center', fontSize: '0.8rem', opacity: 0.8 }}
+                    />
+                  ) : <span style={{ opacity: 0.6 }}>{stat.balls}</span>}
+                </Td>
+                <Td style={{ textAlign: 'center' }}>
+                  {isCurrentInningsEditable ? (
+                    <input 
+                      type="number"
+                      value={stat.fours || 0} 
+                      onChange={(e) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBatting = [...editState[key].batting];
+                        newBatting[idx] = { ...newBatting[idx], fours: parseInt(e.target.value) || 0 };
+                        setEditState({ ...editState, [key]: { ...editState[key], batting: newBatting } });
+                      }}
+                      aria-label="Fours"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px', borderRadius: '4px', width: '30px', textAlign: 'center', fontSize: '0.7rem', opacity: 0.6 }}
+                    />
+                  ) : <span style={{ opacity: 0.6 }}>{stat.fours || 0}</span>}
+                </Td>
+                <Td style={{ textAlign: 'center' }}>
+                  {isCurrentInningsEditable ? (
+                    <input 
+                      type="number"
+                      value={stat.sixes || 0} 
+                      onChange={(e) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBatting = [...editState[key].batting];
+                        newBatting[idx] = { ...newBatting[idx], sixes: parseInt(e.target.value) || 0 };
+                        setEditState({ ...editState, [key]: { ...editState[key], batting: newBatting } });
+                      }}
+                      aria-label="Sixes"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px', borderRadius: '4px', width: '30px', textAlign: 'center', fontSize: '0.7rem', opacity: 0.6 }}
+                    />
+                  ) : <span style={{ opacity: 0.6 }}>{stat.sixes || 0}</span>}
+                </Td>
+                <Td style={{ textAlign: 'right' }}>
+                  {isCurrentInningsEditable ? (
+                    <IconButton 
+                      onClick={() => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBatting = editState[key].batting.filter((_: any, i: number) => i !== idx);
+                        setEditState({ ...editState, [key]: { ...editState[key], batting: newBatting } });
+                      }}
+                      style={{ color: '#ef4444', padding: 4 }}
+                    >
+                      <Trash2 size={14} />
+                    </IconButton>
+                  ) : (
+                    <span style={{ opacity: 0.8 }}>
+                      {stat.balls > 0 ? ((stat.runs / stat.balls) * 100).toFixed(1) : '0.0'}
+                    </span>
+                  )}
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </ScoreCardTable>
+
+        <ExtrasRow>
+          <span style={{ opacity: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>EXTRAS</span>
+          {isCurrentInningsEditable ? (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {['wide', 'noBall', 'bye', 'legBye'].map(exKey => (
+                <div key={exKey} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '0.6rem', opacity: 0.5 }}>{exKey.substring(0, 2).toUpperCase()}</span>
+                  <input 
+                    type="number"
+                    value={(data.extras as any)[exKey] || 0}
+                    onChange={(e) => {
+                      const key = `innings${innNo}` as 'innings1' | 'innings2';
+                      const newExtras = { ...editState[key].extras, [exKey]: parseInt(e.target.value) || 0 };
+                      setEditState({ ...editState, [key]: { ...editState[key], extras: newExtras } });
+                    }}
+                    aria-label={`Extra ${exKey}`}
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '2px 4px', borderRadius: '4px', width: '30px', fontSize: '0.7rem' }}
+                  />
+                </div>
+              ))}
+              <button 
+                onClick={handleSave}
+                disabled={isSaving}
+                style={{ 
+                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)', 
+                  color: '#FFF', 
+                  padding: '8px 24px', 
+                  borderRadius: '12px', 
+                  fontWeight: 900, 
+                  fontSize: '0.8rem', 
+                  cursor: isSaving ? 'wait' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  opacity: isSaving ? 0.7 : 1,
+                  boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+                }}
+              >
+                {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                {isSaving ? 'SAVING...' : 'SAVE CHANGES'}
+              </button>
+            </div>
+          ) : (
+            <span style={{ fontWeight: 900 }}>
+              {Object.values(data.extras || {}).reduce((a: number, b: any) => a + (Number(b) || 0), 0)}{' '}
+              <span style={{ opacity: 0.4, fontSize: '0.65rem', marginLeft: 4 }}>
+                (wd {data.extras?.wides ?? 0}, nb {data.extras?.noBalls ?? 0}, b {data.extras?.byes ?? 0}, lb {data.extras?.legByes ?? 0})
+              </span>
+            </span>
+          )}
+        </ExtrasRow>
+
+        {!isCurrentInningsEditable && fowData.length > 0 && (
+          <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.5, marginBottom: '8px', textTransform: 'uppercase' }}>Fall of Wickets</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+              {fowData.map((f: any) => (
+                <div key={f.wicket} style={{ fontSize: '0.75rem' }}>
+                  <span style={{ fontWeight: 800, color: '#38BDF8' }}>{f.runs}-{f.wicket}</span>
+                  <span style={{ opacity: 0.5, marginLeft: '4px' }}>({f.batterName}, {f.overs} ov)</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', marginBottom: '12px' }}>
+          <TableTitle style={{ marginBottom: 0 }}><Target size={14} /> BOWLING</TableTitle>
+          {isCurrentInningsEditable && (
+            <button
+              onClick={() => {
+                const key = `innings${innNo}` as 'innings1' | 'innings2';
+                const newBowling = [...editState[key].bowling, {
+                  playerId: `new-bowler-${Date.now()}`,
+                  name: '',
+                  overs: 0,
+                  maidens: 0,
+                  runs: 0,
+                  wickets: 0,
+                  wides: 0,
+                  noBalls: 0,
+                  index: editState[key].bowling.length
+                }];
+                setEditState({ ...editState, [key]: { ...editState[key], bowling: newBowling } });
+              }}
+              style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38BDF8', border: '1px solid rgba(56, 189, 248, 0.2)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
+            >
+              <Plus size={12} style={{ display: 'inline', marginRight: 4 }} /> ADD BOWLER
+            </button>
+          )}
+        </div>
+
+        <ScoreCardTable>
+          <thead>
+            <tr>
+              <Th>Bowler</Th>
+              <Th style={{ textAlign: 'center' }}>O</Th>
+              <Th style={{ textAlign: 'center' }}>M</Th>
+              <Th style={{ textAlign: 'center' }}>R</Th>
+              <Th style={{ textAlign: 'center' }}>W</Th>
+              <Th style={{ textAlign: 'right' }}>{isCurrentInningsEditable ? 'Action' : 'Econ'}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data.bowling || []).map((stat: any, idx: number) => (
+              <tr key={stat.playerId || idx}>
+                <Td>
+                  {isCurrentInningsEditable ? (
+                    <input 
+                      value={stat.name} 
+                      list="player-names-list"
+                      onChange={(e) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBowling = [...editState[key].bowling];
+                        newBowling[idx] = { ...newBowling[idx], name: e.target.value };
+                        setEditState({ ...editState, [key]: { ...editState[key], bowling: newBowling } });
+                      }}
+                      aria-label="Bowler Name"
+                      placeholder="Bowler Name"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px 8px', borderRadius: '4px', width: '100%', fontSize: '0.8rem' }}
+                    />
+                  ) : (
+                    getPlayerNameResolved(stat.playerId, stat.name)
+                  )}
+                </Td>
+                <Td style={{ textAlign: 'center' }}>
+                  {isCurrentInningsEditable ? (
+                    <input 
+                      type="number" step="0.1"
+                      value={stat.overs} 
+                      onChange={(e) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBowling = [...editState[key].bowling];
+                        newBowling[idx] = { ...newBowling[idx], overs: parseFloat(e.target.value) || 0 };
+                        setEditState({ ...editState, [key]: { ...editState[key], bowling: newBowling } });
+                      }}
+                      aria-label="Overs"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px', borderRadius: '4px', width: '40px', textAlign: 'center', fontSize: '0.8rem' }}
+                    />
+                  ) : stat.overs}
+                </Td>
+                <Td style={{ textAlign: 'center' }}>
+                  {isCurrentInningsEditable ? (
+                    <input 
+                      type="number"
+                      value={stat.maidens || 0} 
+                      onChange={(e) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBowling = [...editState[key].bowling];
+                        newBowling[idx] = { ...newBowling[idx], maidens: parseInt(e.target.value) || 0 };
+                        setEditState({ ...editState, [key]: { ...editState[key], bowling: newBowling } });
+                      }}
+                      aria-label="Maidens"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px', borderRadius: '4px', width: '30px', textAlign: 'center', fontSize: '0.8rem', opacity: 0.6 }}
+                    />
+                  ) : <span style={{ opacity: 0.6 }}>{stat.maidens}</span>}
+                </Td>
+                <Td style={{ textAlign: 'center' }}>
+                  {isCurrentInningsEditable ? (
+                    <input 
+                      type="number"
+                      value={stat.runs} 
+                      onChange={(e) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBowling = [...editState[key].bowling];
+                        newBowling[idx] = { ...newBowling[idx], runs: parseInt(e.target.value) || 0 };
+                        setEditState({ ...editState, [key]: { ...editState[key], bowling: newBowling } });
+                      }}
+                      aria-label="Runs Conceded"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px', borderRadius: '4px', width: '40px', textAlign: 'center', fontSize: '0.8rem' }}
+                    />
+                  ) : stat.runs}
+                </Td>
+                <Td style={{ textAlign: 'center' }}>
+                  {isCurrentInningsEditable ? (
+                    <input 
+                      type="number"
+                      value={stat.wickets} 
+                      onChange={(e) => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBowling = [...editState[key].bowling];
+                        newBowling[idx] = { ...newBowling[idx], wickets: parseInt(e.target.value) || 0 };
+                        setEditState({ ...editState, [key]: { ...editState[key], bowling: newBowling } });
+                      }}
+                      aria-label="Wickets"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#38BDF8', padding: '4px', borderRadius: '4px', width: '30px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 700 }}
+                    />
+                  ) : <span style={{ color: '#38BDF8', fontWeight: 700 }}>{stat.wickets}</span>}
+                </Td>
+                <Td style={{ textAlign: 'right' }}>
+                  {isCurrentInningsEditable ? (
+                    <IconButton 
+                      onClick={() => {
+                        const key = `innings${innNo}` as 'innings1' | 'innings2';
+                        const newBowling = editState[key].bowling.filter((_: any, i: number) => i !== idx);
+                        setEditState({ ...editState, [key]: { ...editState[key], bowling: newBowling } });
+                      }}
+                      style={{ color: '#ef4444', padding: 4 }}
+                    >
+                      <Trash2 size={14} />
+                    </IconButton>
+                  ) : (
+                    <span style={{ opacity: 0.8 }}>
+                      {stat.overs > 0 ? (stat.runs / stat.overs).toFixed(2) : '0.00'}
+                    </span>
+                  )}
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </ScoreCardTable>
+      </div>
+    );
+  };
+
 
   // Real-time data subscription
   const storeMatches = useMatchCenter(state => state.matches);
@@ -521,30 +1124,32 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     };
   }, [match, isLive]);
 
-  const currentInningsData = selectedInnings === 1 ? normalizedData.innings1 : normalizedData.innings2;
-
-  const getPlayerNameResolved = (id: string, providedName?: string) => {
-    const p = players.find(p => p.id === id || p.player_id === id);
-    if (p) return p.name;
-    // Check opponent players
-    const opp = opponents.find(o => o.id === match.opponentId);
-    const oppP = opp?.players?.find((p: any) => p.id === id);
-    if (oppP) return oppP.name;
-    return providedName || 'Unknown Player';
-  };
-
-  const getOvers = (balls: number) => {
-    return `${Math.floor(balls / 6)}.${balls % 6}`;
-  };
-
-  // Task #2: Format overs — hide .0 for complete overs, show 'X Overs' when maxOvers reached
-  const formatOvers = (balls: number, maxOvers?: number): string => {
-    const fullOvers = Math.floor(balls / 6);
-    const rem = balls % 6;
-    if (maxOvers && fullOvers >= maxOvers) return `${fullOvers} Overs`;
-    if (rem === 0 && fullOvers > 0) return `${fullOvers} Overs`;
-    return `${fullOvers}.${rem}`;
-  };
+  useEffect(() => {
+    if (isEditable && !editState) {
+      setEditState({
+        venue: initialMatch.venue || match.venue || '',
+        matchFormat: initialMatch.matchFormat || match.matchFormat || 'T20',
+        maxOvers: initialMatch.maxOvers || match.maxOvers || 20,
+        toss: initialMatch.toss || match.toss || { winnerId: '', decision: 'bat' },
+        innings1: normalizedData.innings1 || {
+          batting: [],
+          bowling: [],
+          extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, penalty: 0 },
+          totalRuns: 0,
+          wickets: 0,
+          totalBalls: 0
+        },
+        innings2: normalizedData.innings2 || {
+          batting: [],
+          bowling: [],
+          extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, penalty: 0 },
+          totalRuns: 0,
+          wickets: 0,
+          totalBalls: 0
+        }
+      });
+    }
+  }, [isEditable, normalizedData, initialMatch, editState]);
 
   // Resolve ground name from match
   const resolvedGround = (() => {
@@ -559,14 +1164,19 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
   // Resolve toss string
   const tossString = (() => {
-    const winnerId = match.toss?.winnerId || match.tossWinnerId;
-    const choice = match.toss?.choice || match.tossChoice || '';
+    const winnerId = match.toss?.winnerId || match.tossWinnerId || match.toss_winner_id;
+    const choice = match.toss?.choice || match.tossChoice || match.toss_choice || '';
     
-    let winnerName = match.toss?.winner || match.toss_winner_name || '';
+    let winnerName = match.toss?.winner || match.toss_winner_name || match.tossWinner || match.toss_winner || '';
     
+    // Check if the toss winner string already matches a team name
     if (!winnerName && winnerId) {
-        if (winnerId === '00000000-0000-0000-0000-000000000000') winnerName = 'Indian Strikers';
-        else if (winnerId === match.opponentId) winnerName = match.opponentName || 'Opponent';
+        if (winnerId === '00000000-0000-0000-0000-000000000000' || winnerId === 'IND_STRIKERS') winnerName = 'Indian Strikers';
+        else if (winnerId === (match.opponentId || match.opponent_id)) winnerName = match.opponentName || 'Opponent';
+    }
+
+    if (!winnerName && (match.tossDetails || match.toss_result || match.toss_summary)) {
+        return match.tossDetails || match.toss_result || match.toss_summary;
     }
 
     if (winnerName && choice) return `${winnerName} won the toss and elected to ${choice}`;
@@ -575,27 +1185,34 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   })();
 
   // Resolve team logos and names
-  const teamAName = (() => {
-    if (match.homeTeamId === '00000000-0000-0000-0000-000000000000') return 'INDIAN STRIKERS';
-    if (!match.homeTeamId) return match.isNeutral ? 'Team A' : 'INDIAN STRIKERS';
-    const opp = opponents.find((o: any) => o.id === match.homeTeamId);
-    return opp?.name || match.homeTeamName || 'Team A';
-  })();
+  // Resolve team logos and names - Enhanced for robust identity resolution
+  const isInsHome = 
+    match.homeTeamId === '00000000-0000-0000-0000-000000000000' || 
+    match.homeTeamId === 'IND_STRIKERS' ||
+    match.homeTeamName?.toUpperCase()?.includes('INDIAN STRIKERS') ||
+    (!match.homeTeamId && !match.homeTeamName); // Fallback for legacy data where Indian Strikers is implicit
 
-  const teamBName = (match.opponentName || 'OPPONENT');
+  const isInsAway = 
+    match.opponentId === '00000000-0000-0000-0000-000000000000' || 
+    match.opponentId === 'IND_STRIKERS' ||
+    match.opponentName?.toUpperCase()?.includes('INDIAN STRIKERS');
 
-  const teamALogoUrl = (() => {
-    if (match.homeTeamId === '00000000-0000-0000-0000-000000000000') return '/INS%20LOGO.PNG';
-    if (!match.homeTeamId) return match.isNeutral ? null : '/INS%20LOGO.PNG';
-    const opp = opponents.find((o: any) => o.id === match.homeTeamId);
-    return opp?.logoUrl || null;
-  })();
+  const teamAName = isInsHome ? 'INDIAN STRIKERS' : (match.homeTeamName || match.teamA || 'TEAM A');
+  const teamBName = isInsAway ? 'INDIAN STRIKERS' : (match.opponentName || match.teamB || 'TEAM B');
 
-  const opponentLogoUrl = (() => {
-    if (match.opponentLogo) return match.opponentLogo;
-    const opp = opponents.find((o: any) => o.id === match.opponentId);
-    return opp?.logoUrl || null;
-  })();
+  const teamALogoUrl = isInsHome ? '/INS%20LOGO.PNG' : (opponents.find((o: any) => o.id === match.homeTeamId)?.logoUrl || '/INS%20LOGO.PNG');
+  const teamBLogoUrl = isInsAway ? '/INS%20LOGO.PNG' : (opponents.find((o: any) => o.id === (match.opponentId || match.opponent_id))?.logoUrl || '/INS%20LOGO.PNG');
+
+  const teamAScore = match.isHomeBattingFirst ? normalizedData.innings1 : normalizedData.innings2;
+  const teamBScore = match.isHomeBattingFirst ? normalizedData.innings2 : normalizedData.innings1;
+
+  const innings1Name = match.isHomeBattingFirst ? teamAName : teamBName;
+  const innings2Name = match.isHomeBattingFirst ? teamBName : teamAName;
+  const innings1Logo = match.isHomeBattingFirst ? teamALogoUrl : teamBLogoUrl;
+  const innings2Logo = match.isHomeBattingFirst ? teamBLogoUrl : teamALogoUrl;
+  
+  const score1 = match.isHomeBattingFirst ? normalizedData.innings1 : normalizedData.innings2;
+  const score2 = match.isHomeBattingFirst ? normalizedData.innings2 : normalizedData.innings1;
 
   const handleDownloadImage = async () => {
     if (!containerRef.current) return;
@@ -644,634 +1261,493 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
       exit={{ opacity: 0 }}
     >
       <PremiumModalContent onClick={e => e.stopPropagation()} ref={containerRef}>
-        <MatchHeaderCard>
-          {/* TOP UTILITIES */}
-          <div style={{ position: 'absolute', top: 12, left: 16, right: 16, display: 'flex', justifyContent: 'space-between', zIndex: 10 }}>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <IconButton onClick={handleShare} title="Share Link" style={{ background: 'rgba(255,255,255,0.08)', opacity: 1, padding: 8 }}>
-                <Share2 size={18} />
-              </IconButton>
-              <IconButton onClick={handleDownloadImage} title="Download Image" style={{ background: 'rgba(255,255,255,0.08)', opacity: 1, padding: 8 }}>
-                <ImageIcon size={18} />
-              </IconButton>
+        {!isEditable && (
+          <ModalHeader>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <IconButton onClick={onClose}><ChevronLeft size={24} /></IconButton>
+              <div>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#FFF', margin: 0 }}>MATCH CENTER</h2>
+                <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>{match.match_id || match.id}</div>
+              </div>
             </div>
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              title="Close"
-              style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', opacity: 1, padding: 8 }}
-            >
-              <X size={22} />
-            </IconButton>
-          </div>
-
-          <TournamentLabel>
-            {match.tournament || 'RCA T20 TOURNAMENT'}
-          </TournamentLabel>
-
-          <TeamsHorizontalRow>
-            {/* TEAM A */}
-            <TeamBlock>
-              <TeamLogoFrame>
-                {teamALogoUrl 
-                  ? <img src={teamALogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={teamAName} crossOrigin="anonymous" />
-                  : <span style={{ fontSize: '3rem' }}>🏏</span>
-                }
-              </TeamLogoFrame>
-              <TeamInfo>
-                <TeamNameLabel style={{ color: (match.homeTeamId === '00000000-0000-0000-0000-000000000000' || match.homeTeamId === 'IND_STRIKERS') ? '#38BDF8' : '#FFF' }}>{teamAName}</TeamNameLabel>
-                <ScoreValue>
-                  {(() => {
-                    const inn = match.isHomeBattingFirst ? normalizedData.innings1 : normalizedData.innings2;
-                    return (
-                      <>
-                        {inn?.totalRuns || 0}/{inn?.wickets || 0}
-                        <span>({formatOvers(inn?.totalBalls || 0, match.maxOvers)})</span>
-                      </>
-                    );
-                  })()}
-                </ScoreValue>
-              </TeamInfo>
-            </TeamBlock>
-
-            <VSBadgeHeader>VS</VSBadgeHeader>
-
-            {/* TEAM B */}
-            <TeamBlock $reverse>
-              {opponentLogoUrl
-                ? <TeamLogoFrame><img src={opponentLogoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={teamBName} crossOrigin="anonymous" /></TeamLogoFrame>
-                : <TeamLogoFrame><span style={{ fontSize: '3rem' }}>🏏</span></TeamLogoFrame>
-              }
-              <TeamInfo $align="right">
-                <TeamNameLabel style={{ color: (match.opponentId === '00000000-0000-0000-0000-000000000000' || match.opponentId === 'IND_STRIKERS') ? '#38BDF8' : '#FFF' }}>{teamBName.toUpperCase()}</TeamNameLabel>
-                <ScoreValue>
-                  {(() => {
-                    const inn = match.isHomeBattingFirst ? normalizedData.innings2 : normalizedData.innings1;
-                    return (
-                      <>
-                        {inn?.totalRuns || 0}/{inn?.wickets || 0}
-                        <span>({formatOvers(inn?.totalBalls || 0, match.maxOvers)})</span>
-                      </>
-                    );
-                  })()}
-                </ScoreValue>
-              </TeamInfo>
-            </TeamBlock>
-          </TeamsHorizontalRow>
-
-          <ResultHighlightBar>
-            {match.resultNote || (match.status === 'completed' ? 'MATCH COMPLETED' : 'MATCH IN PROGRESS')}
-          </ResultHighlightBar>
-
-          <MetaGrid>
-            <MetaItemHeader>
-              <Clock size={12} style={{ color: '#38BDF8' }} />
-              {match.date ? new Date(match.date).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : 'TODAY'}
-            </MetaItemHeader>
-            <MetaItemHeader>
-              <Target size={12} style={{ color: '#38BDF8' }} />
-              {resolvedGround}
-            </MetaItemHeader>
-          </MetaGrid>
-        </MatchHeaderCard>
-
-        {/* Innings Switcher if both exist */}
-        {normalizedData.innings1 && normalizedData.innings2 && (
-          <div style={{ padding: '12px 20px', display: 'flex', gap: 10, background: 'rgba(255,255,255,0.03)' }}>
-            <button
-              onClick={() => setSelectedInnings(1)}
-              style={{
-                flex: 1, padding: '8px', borderRadius: 8, border: 'none',
-                background: selectedInnings === 1 ? '#38BDF8' : 'rgba(255,255,255,0.05)',
-                color: selectedInnings === 1 ? '#000' : '#FFF',
-                fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer'
-              }}
-            >
-              {match.isHomeBattingFirst ? teamAName : teamBName}
-            </button>
-            <button
-              onClick={() => setSelectedInnings(2)}
-              style={{
-                flex: 1, padding: '8px', borderRadius: 8, border: 'none',
-                background: selectedInnings === 2 ? '#38BDF8' : 'rgba(255,255,255,0.05)',
-                color: selectedInnings === 2 ? '#000' : '#FFF',
-                fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer'
-              }}
-            >
-              {match.isHomeBattingFirst ? teamBName : teamAName}
-            </button>
-          </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <IconButton onClick={handleDownloadImage} title="Download Scorecard"><ImageIcon size={20} /></IconButton>
+              <IconButton onClick={handleShare} title="Share Scorecard"><Share2 size={20} /></IconButton>
+              <IconButton onClick={onClose} title="Close"><X size={20} /></IconButton>
+            </div>
+          </ModalHeader>
         )}
 
-        <TabContainer>
-          <TabButton $active={tab === 'info'} onClick={() => setTab('info')}>
-            <Info size={14} style={{ display: 'inline', marginBottom: '-2px' }} /> Info
-          </TabButton>
-          <TabButton $active={tab === 'scorecard'} onClick={() => setTab('scorecard')}>
-            📋 Scorecard
-          </TabButton>
-          <TabButton $active={tab === 'commentary'} onClick={() => setTab('commentary')}>
-            🎙️ Commentary
-          </TabButton>
-          <TabButton $active={tab === 'analytics'} onClick={() => setTab('analytics')}>
-            <BarChart2 size={14} style={{ display: 'inline', marginBottom: '-2px' }} /> Analytics
-          </TabButton>
-        </TabContainer>
+        {isEditable && (
+          <ModalHeader style={{ background: 'transparent', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <IconButton onClick={onClose} style={{ color: '#FFF' }}><ChevronLeft size={24} /></IconButton>
+              <div style={{ color: '#FFF' }}>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 900, margin: 0 }}>EDIT SCORECARD</h2>
+                <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Update historical match data</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={async () => {
+                  if (!onSave || !editState) return;
+                  setIsSaving(true);
+                  try {
+                    await onSave(editState);
+                    onClose();
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                disabled={isSaving}
+                style={{ 
+                  background: '#38BDF8', 
+                  color: '#000', 
+                  border: 'none', 
+                  padding: '8px 16px', 
+                  borderRadius: '8px', 
+                  fontWeight: 900, 
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  opacity: isSaving ? 0.7 : 1
+                }}
+              >
+                <Save size={16} /> {isSaving ? 'SAVING...' : 'SAVE CHANGES'}
+              </button>
+              <IconButton onClick={onClose} style={{ color: '#FFF' }}><X size={20} /></IconButton>
+            </div>
+          </ModalHeader>
+        )}
 
-        <ScrollContent>
-          {!currentInningsData ? (
-            <div style={{ padding: '40px', textAlign: 'center', opacity: 0.4 }}>NO DATA AVAILABLE FOR THIS TEAM</div>
-          ) : (
-            <>
-              {tab === 'info' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  <ScoreSummaryCard style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800, textTransform: 'uppercase' }}>MATCH FORMAT</div>
-                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFF' }}>{match.matchType || match.matchFormat || 'T20'}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800, textTransform: 'uppercase' }}>TOSS</div>
-                      <div style={{ fontSize: '1rem', fontWeight: 700, color: '#FAB005' }}>
-                        {tossString || match.tossResult || match.tossDetails || 'Toss result pending'}
-                      </div>
-                    </div>
-                  </ScoreSummaryCard>
+        <ScrollContent ref={scrollContentRef}>
+          {!isEditable && (
+            <MatchHeaderCard>
+              <div style={{ position: 'absolute', top: -20, right: -20, width: 200, height: 200, background: 'radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%)', zIndex: 0 }} />
+              
+              <TournamentLabel>
+                {match.tournament || match.tournamentName || match.leagueName || 'RCA T20 Tournament'}
+                {(match.matchType || match.stage) && (
+                  <div style={{ fontSize: '0.65rem', opacity: 0.8, marginTop: 4, letterSpacing: 1 }}>
+                    {`${match.matchType || match.stage}${ (match.matchType || match.stage).toLowerCase().includes('match') ? '' : ' Match' }`}
+                  </div>
+                )}
+              </TournamentLabel>
+              
+              <TeamsHorizontalRow>
+                <TeamBlock>
+                  <TeamLogoFrame>
+                    <img src={teamALogoUrl || '/INS%20LOGO.PNG'} alt="" style={{ width: '80%', height: '80%', objectFit: 'contain', filter: 'drop-shadow(0 0 20px rgba(56, 189, 248, 0.3))' }} onError={(e) => (e.currentTarget.src = '/INS%20LOGO.PNG')} />
+                  </TeamLogoFrame>
+                  <TeamInfo>
+                    <TeamNameLabel>{teamAName}</TeamNameLabel>
+                    <ScoreValue>
+                      {teamAScore?.totalRuns || 0}/<span style={{ fontSize: '1.6rem', opacity: 1, fontWeight: 900 }}>{teamAScore?.wickets || 0}</span>
+                    </ScoreValue>
+                  </TeamInfo>
+                </TeamBlock>
 
-                  <div style={{ display: 'flex', gap: 20 }}>
-                    <div style={{ flex: 1 }}>
-                      <TableTitle style={{ color: (match.homeTeamId === '00000000-0000-0000-0000-000000000000' || match.homeTeamId === 'IND_STRIKERS') ? '#38BDF8' : '#FFF' }}>{teamAName} XI</TableTitle>
-                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                        {(match.homeTeamXI || []).map((id: string) => (
-                          <div key={id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', fontWeight: 600 }}>
-                            {getPlayerNameResolved(id)}
-                          </div>
-                        ))}
-                        {(!match.homeTeamXI || match.homeTeamXI.length === 0) && <div style={{ opacity: 0.4, fontSize: '0.8rem' }}>Playing XI not announced</div>}
-                      </div>
+                <VSBadgeHeader>VS</VSBadgeHeader>
+
+                <TeamBlock $reverse>
+                  <TeamLogoFrame>
+                    <img src={teamBLogoUrl || '/INS%20LOGO.PNG'} alt="" style={{ width: '80%', height: '80%', objectFit: 'contain', filter: 'drop-shadow(0 0 20px rgba(251, 176, 5, 0.3))' }} onError={(e) => (e.currentTarget.src = '/INS%20LOGO.PNG')} />
+                  </TeamLogoFrame>
+                  <TeamInfo $align="right">
+                    <TeamNameLabel>{teamBName}</TeamNameLabel>
+                    <ScoreValue>
+                      {teamBScore?.totalRuns || 0}/<span style={{ fontSize: '1.6rem', opacity: 1, fontWeight: 900 }}>{teamBScore?.wickets || 0}</span>
+                    </ScoreValue>
+                  </TeamInfo>
+                </TeamBlock>
+              </TeamsHorizontalRow>
+
+              <ResultHighlightBar>
+                {match.resultSummary || match.resultNote || 'Match in Progress'}
+              </ResultHighlightBar>
+
+              <MetaGrid>
+                <MetaItemHeader><MapPin size={12} /> {resolvedGround}</MetaItemHeader>
+                <MetaItemHeader><Zap size={12} /> {match.overs || match.maxOvers || 20} OVERS</MetaItemHeader>
+                {(match.date || match.matchDate) && (
+                  <MetaItemHeader>
+                    <Clock size={12} /> {(() => {
+                      const d = new Date(match.date || match.matchDate);
+                      const day = d.getDate().toString().padStart(2, '0');
+                      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                      const month = months[d.getMonth()];
+                      const year = d.getFullYear();
+                      return `${day} ${month} ${year}`;
+                    })()}
+                  </MetaItemHeader>
+                )}
+                {tossString && <MetaItemHeader><Target size={12} /> {tossString}</MetaItemHeader>}
+              </MetaGrid>
+            </MatchHeaderCard>
+          )}
+
+          <TabContainer>
+            <TabButton $active={tab === 'info'} onClick={() => setTab('info')}>MATCH INFO</TabButton>
+            <TabButton $active={tab === 'scorecard'} onClick={() => setTab('scorecard')}>SCOREBOARD</TabButton>
+            <TabButton $active={tab === 'commentary'} onClick={() => setTab('commentary')}>COMMENTARY</TabButton>
+            <TabButton $active={tab === 'analytics'} onClick={() => setTab('analytics')}>ANALYTICS</TabButton>
+          </TabContainer>
+
+          <div style={{ marginTop: '24px' }}>
+            {tab === 'info' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '0.65rem', opacity: 0.5, fontWeight: 800, marginBottom: '4px' }}>VENUE</div>
+                    <div style={{ fontWeight: 700 }}>{resolvedGround}</div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '0.65rem', opacity: 0.5, fontWeight: 800, marginBottom: '4px' }}>FORMAT</div>
+                    <div style={{ fontWeight: 700 }}>{match.matchFormat || 'T20'} ({match.maxOvers || 20} Ov)</div>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', gap: 20 }}>
+                  <div style={{ flex: 1 }}>
+                    <TableTitle style={{ color: isInsHome ? '#38BDF8' : '#FFF' }}>{teamAName} XI</TableTitle>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                      {(match.homeTeamXI || []).map((id: string) => (
+                        <div key={id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', fontWeight: 600 }}>
+                          {getPlayerNameResolved(id)}
+                        </div>
+                      ))}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <TableTitle style={{ color: (match.opponentId === '00000000-0000-0000-0000-000000000000' || match.opponentId === 'IND_STRIKERS') ? '#38BDF8' : '#FFF' }}>{teamBName} XI</TableTitle>
-                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                        {(match.opponentTeamXI || []).map((id: string) => (
-                          <div key={id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', fontWeight: 600 }}>
-                            {getPlayerNameResolved(id)}
-                          </div>
-                        ))}
-                        {(!match.opponentTeamXI || match.opponentTeamXI.length === 0) && <div style={{ opacity: 0.4, fontSize: '0.8rem' }}>Playing XI not announced</div>}
-                      </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <TableTitle style={{ color: isInsAway ? '#38BDF8' : '#FFF' }}>{teamBName} XI</TableTitle>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                      {(match.opponentTeamXI || []).map((id: string) => (
+                        <div key={id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', fontWeight: 600 }}>
+                          {getPlayerNameResolved(id)}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {tab === 'scorecard' && (
-                <>
-                  <ScoreSummaryCard>
-                    <div>
-                      <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800, textTransform: 'uppercase' }}>TOTAL SCORE</div>
-                      <div style={{ fontSize: '2rem', fontWeight: 900, color: '#FAB005' }}>
-                        {currentInningsData?.totalRuns || 0}/{currentInningsData?.wickets || 0}
-                      </div>
-                    </div>
+            {tab === 'scorecard' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <InningsAccordionHeader 
+                  $active={openInnings.has(1)}
+                  onClick={() => {
+                    const newOpen = new Set(openInnings);
+                    if (newOpen.has(1)) newOpen.delete(1); else newOpen.add(1);
+                    setOpenInnings(newOpen);
+                    setSelectedInnings(1);
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img src={innings1Logo || '/INS%20LOGO.PNG'} alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} onError={(e) => (e.currentTarget.src = '/INS%20LOGO.PNG')} />
+                    <span style={{ fontWeight: 600 }}>{innings1Name}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800, textTransform: 'uppercase' }}>OVERS</div>
-                      <div style={{ fontSize: '1.4rem', fontWeight: 900 }}>
-                        {formatOvers(currentInningsData?.totalBalls || 0, match.maxOvers)}
+                      <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
+                        {(isEditable && editState ? editState.innings1 : normalizedData.innings1)?.totalRuns || 0}/{(isEditable && editState ? editState.innings1 : normalizedData.innings1)?.wickets || 0}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>
+                        ({formatOvers((isEditable && editState ? editState.innings1 : normalizedData.innings1)?.totalBalls || 0)})
                       </div>
                     </div>
-                  </ScoreSummaryCard>
+                    <ChevronDown 
+                      size={18} 
+                      style={{ 
+                        transform: openInnings.has(1) ? 'rotate(180deg)' : 'rotate(0)',
+                        transition: 'transform 0.3s'
+                      }} 
+                    />
+                  </div>
+                </InningsAccordionHeader>
 
-                  <TableTitle><Zap size={14} /> BATTING</TableTitle>
-                  <ScoreCardTable>
-                    <thead>
-                      <tr>
-                        <Th>Batter</Th>
-                        <Th>Out</Th>
-                        <Th>Fielder</Th>
-                        <Th>Bowler</Th>
-                        <Th style={{ textAlign: 'center' }}>R</Th>
-                        <Th style={{ textAlign: 'center' }}>B</Th>
-                        <Th style={{ textAlign: 'center' }}>4s</Th>
-                        <Th style={{ textAlign: 'center' }}>6s</Th>
-                        <Th style={{ textAlign: 'right' }}>SR</Th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(currentInningsData?.batting || []).map(stat => (
-                        <tr key={stat.playerId}>
-                          <Td>{getPlayerNameResolved(stat.playerId, stat.name)}</Td>
-                          <Td style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 600 }}>
-                            {stat.status === 'batting' ? <span style={{ color: '#38BDF8' }}>not out</span> : (stat.outHow || 'out')}
-                          </Td>
-                          <Td style={{ fontSize: '0.65rem', opacity: 0.5 }}>
-                            {stat.fielderId ? getPlayerNameResolved(stat.fielderId) : '—'}
-                          </Td>
-                          <Td style={{ fontSize: '0.65rem', opacity: 0.5 }}>
-                            {stat.bowlerId ? getPlayerNameResolved(stat.bowlerId) : '—'}
-                          </Td>
-                          <Td style={{ textAlign: 'center', color: '#FAB005', fontWeight: 700 }}>{stat.runs}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.balls}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.fours || 0}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.sixes || 0}</Td>
-                          <Td style={{ textAlign: 'right', opacity: 0.8 }}>
-                            {stat.balls > 0 ? ((stat.runs / stat.balls) * 100).toFixed(1) : '0.0'}
-                          </Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </ScoreCardTable>
+                <AnimatePresence>
+                  {openInnings.has(1) && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      {renderInningsTable(isEditable && editState ? editState.innings1 : normalizedData.innings1, 1)}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-
-
-                  {(() => {
-                    const batters = currentInningsData?.batting || [];
-                    // Detect if Home team is batting by checking if any batter exists in the Home players list
-                    let isHomeBatting = batters.some(b => players.some(p => p.id === b.playerId || p.player_id === b.playerId));
-
-                    // Fallback to match metadata if no one has batted yet
-                    if (batters.length === 0) {
-                      isHomeBatting = (selectedInnings === 1 && match.isHomeBattingFirst) ||
-                        (selectedInnings === 2 && !match.isHomeBattingFirst);
-                    }
-
-                    const playingXI = isHomeBatting ? (match.homeTeamXI || []) : (match.opponentTeamXI || []);
-                    const battingIds = new Set(batters.map(b => b.playerId));
-                    const dnbPlayers = playingXI.filter((id: string) => !battingIds.has(id));
-
-                    if (dnbPlayers.length === 0) return null;
-
-                    return (
-                      <div style={{
-                        padding: '12px 8px',
-                        fontSize: '0.7rem',
-                        color: 'rgba(255,255,255,0.4)',
-                        fontStyle: 'italic',
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        marginBottom: '24px'
-                      }}>
-                        <span style={{ fontWeight: 800, textTransform: 'uppercase', marginRight: 6, fontStyle: 'normal', opacity: 0.8 }}>Did Not Bat:</span>
-                        {dnbPlayers.map((id: string, idx: number) => (
-                          <span key={id}>
-                            {getPlayerNameResolved(id)}{idx < dnbPlayers.length - 1 ? ', ' : ''}
-                          </span>
-                        ))}
+                {(isEditable && editState ? editState.innings2 : normalizedData.innings2) && (
+                  <>
+                    <InningsAccordionHeader 
+                      $active={openInnings.has(2)}
+                      onClick={() => {
+                        const newOpen = new Set(openInnings);
+                        if (newOpen.has(2)) newOpen.delete(2); else newOpen.add(2);
+                        setOpenInnings(newOpen);
+                        setSelectedInnings(2);
+                      }}
+                      style={{ marginTop: '8px' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <img src={innings2Logo || '/INS%20LOGO.PNG'} alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} onError={(e) => (e.currentTarget.src = '/INS%20LOGO.PNG')} />
+                        <span style={{ fontWeight: 600 }}>{innings2Name}</span>
                       </div>
-                    );
-                  })()}
-
-                  <TableTitle><Target size={14} /> BOWLING</TableTitle>
-                  <ScoreCardTable>
-                    <thead>
-                      <tr>
-                        <Th>Bowler</Th>
-                        <Th style={{ textAlign: 'center' }}>O</Th>
-                        <Th style={{ textAlign: 'center' }}>M</Th>
-                        <Th style={{ textAlign: 'center' }}>R</Th>
-                        <Th style={{ textAlign: 'center' }}>W</Th>
-                        <Th style={{ textAlign: 'center' }}>WD</Th>
-                        <Th style={{ textAlign: 'center' }}>NB</Th>
-                        <Th style={{ textAlign: 'right' }}>Econ</Th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(currentInningsData?.bowling || []).map(stat => (
-                        <tr key={stat.playerId}>
-                          <Td>{getPlayerNameResolved(stat.playerId, stat.name)}</Td>
-                          <Td style={{ textAlign: 'center' }}>{stat.overs}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.maidens}</Td>
-                          <Td style={{ textAlign: 'center' }}>{stat.runs}</Td>
-                          <Td style={{ textAlign: 'center', color: '#38BDF8' }}>{stat.wickets}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.wides}</Td>
-                          <Td style={{ textAlign: 'center', opacity: 0.6 }}>{stat.noBalls}</Td>
-                          <Td style={{ textAlign: 'right', opacity: 0.8 }}>
-                            {stat.overs > 0 ? (stat.runs / stat.overs).toFixed(2) : '0.00'}
-                          </Td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </ScoreCardTable>
-
-                  <ExtrasRow>
-                    <span style={{ opacity: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>EXTRAS</span>
-                    <span style={{ fontWeight: 900 }}>
-                      {Object.values(currentInningsData?.extras || {}).reduce((a: any, b: any) => (Number(a) || 0) + (Number(b) || 0), 0)}{' '}
-                      <span style={{ opacity: 0.4, fontSize: '0.65rem', marginLeft: 4 }}>
-                      (wd {currentInningsData?.extras?.wides ?? 0}, nb {currentInningsData?.extras?.noBalls ?? 0}, b {currentInningsData?.extras?.byes ?? 0}, lb {currentInningsData?.extras?.legByes ?? 0})
-                      </span>
-                    </span>
-                  </ExtrasRow>
-                </>
-              )}
-
-              {tab === 'commentary' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  {(() => {
-                    const historyData = currentInningsData?.history;
-                    const historyFiltered = (Array.isArray(historyData) ? historyData : [])
-                      .filter(b => b && typeof b === 'object')
-                      .reverse();
-
-                    if (historyFiltered.length === 0) {
-                      return <div key="no-comm" style={{ padding: '40px', textAlign: 'center', opacity: 0.4 }}>NO COMMENTARY AVAILABLE FOR THIS MATCH SUMMARY</div>;
-                    }
-
-                    const showSignOff = match.status === 'completed' && selectedInnings === 2;
-
-                    const overGroups: Record<number, any[]> = {};
-                    historyFiltered.forEach(ball => {
-                      const ov = ball.overNumber ?? ball.over_number ?? 0;
-                      if (!overGroups[ov]) overGroups[ov] = [];
-                      overGroups[ov].push(ball);
-                    });
-                    const sortedOvers = Object.keys(overGroups).map(Number).sort((a, b) => b - a);
-
-                    return (
-                      <>
-                        {showSignOff && (
-                          <div style={{ 
-                            padding: '24px', 
-                            background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 
-                            borderRadius: 16, 
-                            border: '1px solid rgba(56, 189, 248, 0.3)', 
-                            textAlign: 'center',
-                            marginBottom: 24,
-                            boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-                          }}>
-                            <div style={{ color: '#38BDF8', fontSize: '0.7rem', fontWeight: 900, letterSpacing: 3, marginBottom: 8 }}>MATCH COMPLETE</div>
-                            <div style={{ color: '#FFF', fontSize: '1.2rem', fontWeight: 900, marginBottom: 12 }}>{match.resultSummary || match.resultNote}</div>
-                            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', fontStyle: 'italic' }}>
-                              "Thank you for following the live coverage on Indian Strikers. We hope you enjoyed the broadcast. Signing off!"
-                            </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
+                            {(isEditable && editState ? editState.innings2 : normalizedData.innings2)?.totalRuns || 0}/{(isEditable && editState ? editState.innings2 : normalizedData.innings2)?.wickets || 0}
                           </div>
-                        )}
-                        {sortedOvers.map(overNum => {
-                          const balls = overGroups[overNum];
-                          if (!balls || balls.length === 0) return null;
+                          <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>
+                            ({formatOvers((isEditable && editState ? editState.innings2 : normalizedData.innings2)?.totalBalls || 0)})
+                          </div>
+                        </div>
+                        <ChevronDown 
+                          size={18} 
+                          style={{ 
+                            transform: openInnings.has(2) ? 'rotate(180deg)' : 'rotate(0)',
+                            transition: 'transform 0.3s'
+                          }} 
+                        />
+                      </div>
+                    </InningsAccordionHeader>
 
-                          const historyAtThisPoint = historyFiltered.filter(b => (b.overNumber ?? b.over_number ?? 0) <= overNum);
-                          const runsAtEnd = historyAtThisPoint.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
-                          const wktsAtEnd = historyAtThisPoint.filter(b => b.isWicket).length;
-                          const overRuns = balls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
-                          const overWkts = balls.filter(b => b.isWicket).length;
-                          const lastBall = balls[0];
-                          const bName = getPlayerNameResolved(lastBall?.bowlerId || lastBall?.bowler_id);
-                          const bBalls = historyAtThisPoint.filter(b => lastBall && (b.bowlerId === (lastBall.bowlerId || lastBall.bowler_id) || b.bowler_id === (lastBall.bowlerId || lastBall.bowler_id)));
-                          const bRuns = bBalls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
-                          const bWkts = bBalls.filter(b => b.isWicket).length;
-                          const bOvers = getOvers(bBalls.filter(b => b.isLegal || b.is_legal).length);
+                    <AnimatePresence>
+                      {openInnings.has(2) && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          style={{ overflow: 'hidden' }}
+                        >
+                          {renderInningsTable(isEditable && editState ? editState.innings2 : normalizedData.innings2, 2)}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                )}
+              </div>
+            )}
 
-                          return (
-                            <div key={overNum}>
-                              <div style={{
-                                background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-                                borderRadius: 12,
-                                overflow: 'hidden',
-                                display: 'flex',
-                                flexDirection: 'row',
-                                color: '#FFF',
-                                boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-                                marginBottom: 16,
-                                minHeight: 60,
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                border: '1px solid rgba(56, 189, 248, 0.3)',
-                                position: 'sticky', top: 0, zIndex: 10
-                              }}>
-                                <div style={{ padding: '10px 16px', background: 'rgba(56, 189, 248, 0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(56, 189, 248, 0.2)', minWidth: 90 }}>
-                                  <div style={{ color: '#38BDF8', fontSize: '0.65rem', letterSpacing: 2 }}>OVER {overNum + 1}</div>
-                                  <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>{overRuns} RUNS</div>
-                                </div>
-                                <div style={{ flex: 1, padding: '10px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2 }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                      <span style={{ opacity: 0.8, fontSize: '0.65rem' }}>BOWLER: {bName.toUpperCase()}</span>
-                                      {(() => {
-                                        const strikerId = lastBall?.strikerId || lastBall?.striker_id;
-                                        const nonStrikerId = lastBall?.nonStrikerId || lastBall?.non_striker_id;
-                                        const sName = getPlayerNameResolved(strikerId).split(' ')[0];
-                                        const nsName = getPlayerNameResolved(nonStrikerId).split(' ')[0];
-                                        const getScoreAt = (pId: string) => {
-                                          const pBalls = historyAtThisPoint.filter(b => b.strikerId === pId || b.striker_id === pId);
-                                          const pRuns = pBalls.reduce((s, b) => s + (Number(b.runs) || 0), 0);
-                                          return `${pRuns}(${pBalls.length})`;
-                                        };
-                                        return (
-                                          <div style={{ display: 'flex', gap: 8, fontSize: '0.6rem', color: '#FAB005' }}>
-                                            <span>• {sName}* {getScoreAt(strikerId)}</span>
-                                            <span>• {nsName} {getScoreAt(nonStrikerId)}</span>
-                                          </div>
-                                        );
-                                      })()}
-                                    </div>
-                                    <span style={{ fontWeight: 900, color: '#FAB005' }}>{bOvers}-{bWkts}-{bRuns}</span>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ opacity: 0.6, fontSize: '0.65rem' }}>TOTAL:</span>
-                                    <span style={{ fontWeight: 900 }}>{runsAtEnd}/{wktsAtEnd}</span>
-                                  </div>
-                                </div>
+            {tab === 'commentary' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {(() => {
+                  const currentData = selectedInnings === 1 ? normalizedData.innings1 : normalizedData.innings2;
+                  const historyData = currentData?.history;
+                  const historyFiltered = (Array.isArray(historyData) ? historyData : [])
+                    .filter(b => b && typeof b === 'object')
+                    .reverse();
+
+                  if (historyFiltered.length === 0) {
+                    return <div key="no-comm" style={{ padding: '40px', textAlign: 'center', opacity: 0.4 }}>NO COMMENTARY AVAILABLE FOR THIS MATCH</div>;
+                  }
+
+                  const overGroups: Record<number, any[]> = {};
+                  historyFiltered.forEach(ball => {
+                    const ov = ball.overNumber ?? ball.over_number ?? 0;
+                    if (!overGroups[ov]) overGroups[ov] = [];
+                    overGroups[ov].push(ball);
+                  });
+                  const sortedOvers = Object.keys(overGroups).map(Number).sort((a, b) => b - a);
+
+                  return (
+                    <>
+                      {sortedOvers.map(overNum => {
+                        const balls = overGroups[overNum];
+                        if (!balls || balls.length === 0) return null;
+                        const overRuns = balls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                        const lastBall = balls[0];
+                        const bName = getPlayerNameResolved(lastBall?.bowlerId || lastBall?.bowler_id);
+
+                        return (
+                          <div key={overNum}>
+                            <div style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)', borderRadius: 12, overflow: 'hidden', display: 'flex', color: '#FFF', boxShadow: '0 8px 30px rgba(0,0,0,0.4)', marginBottom: 16, fontSize: '0.75rem', fontWeight: 700, border: '1px solid rgba(56, 189, 248, 0.3)', position: 'sticky', top: 0, zIndex: 10 }}>
+                              <div style={{ padding: '10px 16px', background: 'rgba(56, 189, 248, 0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(56, 189, 248, 0.2)', minWidth: 90 }}>
+                                <div style={{ color: '#38BDF8', fontSize: '0.65rem', letterSpacing: 2 }}>OVER {overNum + 1}</div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>{overRuns} RUNS</div>
                               </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
-                                {balls.map((ball, i) => (
-                                  <div key={i} style={{
-                                    display: 'flex', gap: 14, padding: '12px', background: '#111827',
-                                    borderRadius: 10, borderLeft: `3px solid ${ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.1)'}`,
-                                    transition: 'all 0.2s',
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                                  }}>
-                                    <span style={{ opacity: 0.4, fontWeight: 900, fontSize: '0.7rem', minWidth: 28, paddingTop: 2 }}>{overNum}.{ball.ballNumber ?? ball.ball_number ?? i}</span>
-                                    <div style={{ flex: 1 }}>
-                                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: ball.isWicket ? '#FF4D4D' : '#FFF' }}>
-                                        {ball.commentary || `${ball.runs} run(s)`}
-                                      </div>
-                                      <div style={{ fontSize: '0.65rem', opacity: 0.4, marginTop: 4 }}>
-                                        {getPlayerNameResolved(ball.bowlerId)} to {getPlayerNameResolved(ball.strikerId)}
-                                      </div>
-                                      {ball.isWicket && (
-                                        <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6, fontSize: '0.7rem', fontWeight: 900, color: '#FF4D4D', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                          <Zap size={10} /> {ball.out_how || 'OUT!'} — {getPlayerNameResolved(ball.strikerId || ball.striker_id)} has to depart.
-                                        </div>
-                                      )}
-                                    </div>
-                                    <span style={{
-                                      fontWeight: 950, fontSize: '1rem',
-                                      color: ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.7)',
-                                      minWidth: 20, textAlign: 'center'
-                                    }}>
-                                      {(() => {
-                                        const isWide = ball.type === 'wide';
-                                        const isNoBall = ball.type === 'no-ball';
-                                        const isLB = ball.type === 'leg-bye';
-                                        const isB = ball.type === 'bye';
-                                        if (ball.isWicket) {
-                                          const prefix = isNoBall ? 'NB' : isWide ? 'WD' : '';
-                                          const amount = ball.runs > 0 ? `+${ball.runs}` : '';
-                                          return prefix ? `${prefix}${amount}+W` : 'W';
-                                        }
-                                        if (isWide) return `WD${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                                        if (isNoBall) return `NB${ball.runs > 0 ? '+' + ball.runs : ''}`;
-                                        if (isLB) return `LB${ball.runs}`;
-                                        if (isB) return `B${ball.runs}`;
-                                        return ball.runs;
-                                      })()}
-                                    </span>
-                                  </div>
-                                ))}
+                              <div style={{ flex: 1, padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
+                                <span style={{ opacity: 0.8, fontSize: '0.65rem' }}>BOWLER: {bName.toUpperCase()}</span>
                               </div>
-                              <div style={{ height: 30 }} />
                             </div>
-                          );
-                        })}
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
+                              {balls.map((ball, i) => (
+                                <div key={i} style={{ display: 'flex', gap: 14, padding: '12px', background: '#111827', borderRadius: 10, borderLeft: `3px solid ${ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.1)'}`, transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+                                  <span style={{ opacity: 0.4, fontWeight: 900, fontSize: '0.7rem', minWidth: 28, paddingTop: 2 }}>{overNum}.{ball.ballNumber ?? ball.ball_number ?? i}</span>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: ball.isWicket ? '#FF4D4D' : '#FFF' }}>{ball.commentary || `${ball.runs} run(s)`}</div>
+                                    <div style={{ fontSize: '0.65rem', opacity: 0.4, marginTop: 4 }}>{getPlayerNameResolved(ball.bowlerId)} to {getPlayerNameResolved(ball.strikerId)}</div>
+                                    {ball.isWicket && <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6, fontSize: '0.7rem', fontWeight: 900, color: '#FF4D4D', display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={10} /> {ball.out_how || 'OUT!'} — {getPlayerNameResolved(ball.strikerId || ball.striker_id)} has to depart.</div>}
+                                  </div>
+                                  <span style={{ fontWeight: 950, fontSize: '1rem', color: ball.isWicket ? '#FF4D4D' : ball.runs >= 4 ? '#38BDF8' : 'rgba(255,255,255,0.7)', minWidth: 20, textAlign: 'center' }}>
+                                    {ball.isWicket ? 'W' : (ball.type === 'wide' ? 'WD' : (ball.type === 'no-ball' ? 'NB' : ball.runs))}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{ height: 30 }} />
+                          </div>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
 
-              {tab === 'analytics' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
-                  {(() => {
-                    const overStats: Record<number, any> = {};
-                    const maxOvers = match.maxOvers || 20;
+            {tab === 'analytics' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 40 }}>
+                {(() => {
+                  const overStats: Record<number, any> = {};
+                  const maxOvers = match.maxOvers || 20;
+
+                  for (let i = 1; i <= maxOvers; i++) {
+                    overStats[i] = { over: i, runs1: 0, cumulative1: 0, runs2: 0, cumulative2: 0, wickets1: 0, wickets2: 0 };
+                  }
+
+                  const processInn = (inn: any, key: string) => {
+                    if (!inn) return;
+                    let cum = 0;
+                    const h = Array.isArray(inn.history) ? inn.history : [];
+                    const groups: Record<number, any[]> = {};
+                    h.forEach((b: any) => {
+                      const ov = (b.overNumber ?? b.over_number ?? 0) + 1;
+                      if (!groups[ov]) groups[ov] = [];
+                      groups[ov].push(b);
+                    });
 
                     for (let i = 1; i <= maxOvers; i++) {
-                      overStats[i] = { over: i, runs1: 0, cumulative1: 0, runs2: 0, cumulative2: 0, wickets1: 0, wickets2: 0 };
+                      const balls = groups[i] || [];
+                      const runs = balls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.isWide || b.isNoBall || b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
+                      const wkts = balls.filter(b => b.isWicket).length;
+                      cum += runs;
+                      overStats[i][`runs${key}`] = runs;
+                      overStats[i][`cumulative${key}`] = cum;
+                      overStats[i][`wickets${key}`] = wkts;
                     }
+                  };
 
-                    const processInn = (inn: any, key: string) => {
-                      if (!inn) return;
-                      let cum = 0;
-                      const h = Array.isArray(inn.history) ? inn.history : [];
-                      const groups: Record<number, any[]> = {};
-                      h.forEach((b: any) => {
-                        const ov = (b.overNumber ?? b.over_number ?? 0) + 1;
-                        if (!groups[ov]) groups[ov] = [];
-                        groups[ov].push(b);
-                      });
+                  processInn(normalizedData.innings1, '1');
+                  processInn(normalizedData.innings2, '2');
 
-                      for (let i = 1; i <= maxOvers; i++) {
-                        const balls = groups[i] || [];
-                        const runs = balls.reduce((s, b) => s + (Number(b.runs) || 0) + (b.isWide || b.isNoBall || b.type === 'wide' || b.type === 'no-ball' ? 1 : 0), 0);
-                        const wkts = balls.filter(b => b.isWicket).length;
-                        cum += runs;
-                        overStats[i][`runs${key}`] = runs;
-                        overStats[i][`cumulative${key}`] = cum;
-                        overStats[i][`wickets${key}`] = wkts;
-                      }
-                    };
+                  const analyticsData = Object.values(overStats);
+                  const team1Name = match.isHomeBattingFirst ? teamAName : teamBName;
+                  const team2Name = match.isHomeBattingFirst ? teamBName : teamAName;
 
-                    processInn(normalizedData.innings1, '1');
-                    processInn(normalizedData.innings2, '2');
+                  const ins1Color = isInsHome === match.isHomeBattingFirst ? '#38BDF8' : '#FAB005';
+                  const ins2Color = ins1Color === '#38BDF8' ? '#FAB005' : '#38BDF8';
 
-                    const analyticsData = Object.values(overStats);
-                    const getTeamName = (inn: any, num: number) => {
-                      const bId = inn?.battingTeamId;
-                      if (bId === 'HOME') return teamAName;
-                      if (bId === 'AWAY') return teamBName;
-                      
-                      // Fallback: If battingTeamId is missing, guess based on innings number and isHomeBattingFirst
-                      const isHome = num === 1 ? match.isHomeBattingFirst : !match.isHomeBattingFirst;
-                      return isHome ? teamAName : teamBName;
-                    };
-
-                    const team1Name = getTeamName(normalizedData.innings1, 1);
-                    const team2Name = getTeamName(normalizedData.innings2, 2);
-
-                    // Highlight logic: Blue (#38BDF8) if it is Indian Strikers' innings
-                    const isInsInn1 = (match.homeTeamId === '00000000-0000-0000-0000-000000000000' || match.homeTeamId === 'IND_STRIKERS') 
-                        ? match.isHomeBattingFirst 
-                        : (match.opponentId === '00000000-0000-0000-0000-000000000000' || match.opponentId === 'IND_STRIKERS')
-                        ? !match.isHomeBattingFirst
-                        : true; // Default to first innings if INS not playing (neutral highlight)
-
-                    const ins1Color = isInsInn1 ? '#38BDF8' : '#FAB005';
-                    const ins2Color = isInsInn1 ? '#FAB005' : '#38BDF8';
-
-                    return (
-                      <>
-                        <div style={{ background: '#1E293B', padding: '20px 10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
-                          <TableTitle style={{ marginLeft: 10 }}><BarChart2 size={14} /> MANHATTAN (Runs per Over)</TableTitle>
-                          <div style={{ width: '100%', height: 250, marginTop: 20 }}>
-                            <ResponsiveContainer width="100%" height="100%">
+                  return (
+                    <>
+                      <div style={{ background: '#1E293B', padding: '20px 10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
+                        <TableTitle style={{ marginLeft: 10 }}><BarChart2 size={14} /> MANHATTAN (Runs per Over)</TableTitle>
+                        <div style={{ width: '100%', height: 250, marginTop: 20 }}>
+                          <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={analyticsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <XAxis dataKey="over" stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} />
-                                <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} width={30} />
-                                <Tooltip
-                                  contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
-                                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                />
-                                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
-                                <Bar dataKey="runs1" name={team1Name} fill={ins1Color} radius={[4, 4, 0, 0]} barSize={8}>
-                                  <LabelList 
-                                    dataKey="wickets1" 
-                                    content={(props: any) => {
-                                      const { x, y, width, value } = props;
-                                      if (!value || value <= 0) return null;
-                                      return (
-                                        <circle 
-                                          cx={x + width / 2} 
-                                          cy={y - 10} 
-                                          r={4} 
-                                          fill="#ef4444" 
-                                          stroke="#FFF" 
-                                          strokeWidth={1} 
-                                        />
-                                      );
-                                    }}
-                                  />
-                                </Bar>
-                                <Bar dataKey="runs2" name={team2Name} fill={ins2Color} radius={[4, 4, 0, 0]} barSize={8}>
-                                  <LabelList 
-                                    dataKey="wickets2" 
-                                    content={(props: any) => {
-                                      const { x, y, width, value } = props;
-                                      if (!value || value <= 0) return null;
-                                      return (
-                                        <circle 
-                                          cx={x + width / 2} 
-                                          cy={y - 10} 
-                                          r={4} 
-                                          fill="#ef4444" 
-                                          stroke="#FFF" 
-                                          strokeWidth={1} 
-                                        />
-                                      );
-                                    }}
-                                  />
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
+                              <XAxis dataKey="over" stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} />
+                              <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} width={30} />
+                              <Tooltip
+                                contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
+                                cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                              />
+                              <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
+                              <Bar dataKey="runs1" name={team1Name} fill={ins1Color} radius={[4, 4, 0, 0]} barSize={8} />
+                              <Bar dataKey="runs2" name={team2Name} fill={ins2Color} radius={[4, 4, 0, 0]} barSize={8} />
+                            </BarChart>
+                          </ResponsiveContainer>
                         </div>
+                      </div>
 
-                        <div style={{ background: '#1E293B', padding: '20px 10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
-                          <TableTitle style={{ marginLeft: 10 }}><BarChart2 size={14} /> WORM (Cumulative Runs)</TableTitle>
-                          <div style={{ width: '100%', height: 250, marginTop: 20 }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                              <LineChart data={analyticsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <XAxis dataKey="over" stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} />
-                                <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} width={30} />
-                                <Tooltip
-                                  contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
-                                />
-                                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
-                                <Line type="monotone" name={team1Name} dataKey="cumulative1" stroke={ins1Color} strokeWidth={3} dot={{ r: 3, fill: ins1Color }} />
-                                <Line type="monotone" name={team2Name} dataKey="cumulative2" stroke={ins2Color} strokeWidth={3} dot={{ r: 3, fill: ins2Color }} />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </div>
+                      <div style={{ background: '#1E293B', padding: '20px 10px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
+                        <TableTitle style={{ marginLeft: 10 }}><BarChart2 size={14} /> WORM (Cumulative Runs)</TableTitle>
+                        <div style={{ width: '100%', height: 250, marginTop: 20 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={analyticsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                              <XAxis dataKey="over" stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} />
+                              <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} axisLine={false} width={30} />
+                              <Tooltip
+                                contentStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: '0.8rem' }}
+                              />
+                              <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
+                              <Line type="monotone" name={team1Name} dataKey="cumulative1" stroke={ins1Color} strokeWidth={3} dot={{ r: 3, fill: ins1Color }} />
+                              <Line type="monotone" name={team2Name} dataKey="cumulative2" stroke={ins2Color} strokeWidth={3} dot={{ r: 3, fill: ins2Color }} />
+                            </LineChart>
+                          </ResponsiveContainer>
                         </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-            </>
-          )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        <datalist id="player-names-list">
+          {(players || []).map(p => (
+            <option key={p.id || p.player_id} value={p.name} />
+          ))}
+          {/* Also include opponent players for Bowler/Fielder fields */}
+          {(() => {
+            const opp = opponents.find(o => o.id === initialMatch.opponentId);
+            return (opp?.players || []).map((p: any) => (
+              <option key={p.id || `opp-${p.name}`} value={p.name} />
+            ));
+          })()}
+        </datalist>
         </ScrollContent>
+
+        <FABContainer>
+          <FloatingButton
+            onClick={() => scrollContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+            title="Scroll to top"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <ArrowUp size={16} />
+          </FloatingButton>
+          <FloatingButton
+            onClick={() => {
+              if (openInnings.size > 0) setOpenInnings(new Set());
+              else setOpenInnings(new Set([1, 2]));
+            }}
+            title={openInnings.size > 0 ? "Collapse all" : "Expand all"}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            {openInnings.size > 0 ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </FloatingButton>
+        </FABContainer>
+        {showSuccess && (
+          <motion.div
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 100 }}
+            style={{
+              position: 'fixed',
+              top: 24,
+              right: 24,
+              zIndex: 10000,
+              background: '#10B981',
+              color: 'white',
+              padding: '16px 24px',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)',
+              fontWeight: 900,
+              fontSize: '0.9rem',
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
+            }}
+          >
+            <CheckCircle2 size={24} />
+            MATCH DATA SYNCED SUCCESSFULLY
+          </motion.div>
+        )}
       </PremiumModalContent>
     </PremiumModalOverlay>
   );
