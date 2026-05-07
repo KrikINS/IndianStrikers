@@ -459,7 +459,9 @@ const mapMatchToDB = (m) => {
     'final_score_home', 'final_score_away', 'is_live_scored', 
     'is_home_batting_first', 'tournament_id', 'is_neutral', 'home_team_id', 
     'home_team_name', 'home_logo', 'performers', 'scorecard', 'is_career_synced', 'is_test',
-    'live_data', 'target_score', 'live_state', 'total_runs', 'total_wickets', 'total_balls'
+    'live_data', 'target_score', 'live_state', 'total_runs', 'total_wickets', 'total_balls',
+    'innings1_wides', 'innings1_no_balls', 'innings1_byes', 'innings1_leg_byes',
+    'innings2_wides', 'innings2_no_balls', 'innings2_byes', 'innings2_leg_byes'
   ];
 
   // 1. First, map camelCase to snake_case
@@ -760,9 +762,11 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
         id, status, is_career_synced, updated_at, 
         scorecard, final_score_home, final_score_away, 
         total_runs, total_wickets, total_balls,
-        result_summary, result_note, toss_winner_id, toss_choice, max_overs
+        result_summary, result_note, toss_winner_id, toss_choice, max_overs,
+        innings1_wides, innings1_no_balls, innings1_byes, innings1_leg_byes,
+        innings2_wides, innings2_no_balls, innings2_byes, innings2_leg_byes
       ) 
-       VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
+       VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) 
        ON CONFLICT (id) DO UPDATE SET 
          status=EXCLUDED.status, 
          is_career_synced=EXCLUDED.is_career_synced, 
@@ -777,7 +781,15 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
          result_note=EXCLUDED.result_note,
          toss_winner_id=EXCLUDED.toss_winner_id,
          toss_choice=EXCLUDED.toss_choice,
-         max_overs=EXCLUDED.max_overs`,
+         max_overs=EXCLUDED.max_overs,
+         innings1_wides=EXCLUDED.innings1_wides,
+         innings1_no_balls=EXCLUDED.innings1_no_balls,
+         innings1_byes=EXCLUDED.innings1_byes,
+         innings1_leg_byes=EXCLUDED.innings1_leg_byes,
+         innings2_wides=EXCLUDED.innings2_wides,
+         innings2_no_balls=EXCLUDED.innings2_no_balls,
+         innings2_byes=EXCLUDED.innings2_byes,
+         innings2_leg_byes=EXCLUDED.innings2_leg_byes`,
       [
         id, 'completed', !is_test,
         JSON.stringify(scorecard || {}),
@@ -798,8 +810,16 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
         matchData.resultSummary || matchData.result_note || null,
         matchData.resultNote || matchData.resultSummary || null,
         tossWinnerId || null,
-        matchData.toss?.choice || matchData.toss_choice || 'Bat',
-        parseInt(matchData.maxOvers || matchData.max_overs || 20)
+        matchData.toss?.choice || null,
+        matchData.maxOvers || 20,
+        Number(scorecard?.innings1?.extras?.wides || scorecard?.innings1?.extras?.wide || 0),
+        Number(scorecard?.innings1?.extras?.noBalls || scorecard?.innings1?.extras?.no_ball || 0),
+        Number(scorecard?.innings1?.extras?.byes || scorecard?.innings1?.extras?.bye || 0),
+        Number(scorecard?.innings1?.extras?.legByes || scorecard?.innings1?.extras?.leg_bye || 0),
+        Number(scorecard?.innings2?.extras?.wides || scorecard?.innings2?.extras?.wide || 0),
+        Number(scorecard?.innings2?.extras?.noBalls || scorecard?.innings2?.extras?.no_ball || 0),
+        Number(scorecard?.innings2?.extras?.byes || scorecard?.innings2?.extras?.bye || 0),
+        Number(scorecard?.innings2?.extras?.legByes || scorecard?.innings2?.extras?.leg_bye || 0)
       ]
     );
 
