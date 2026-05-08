@@ -83,7 +83,7 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
                 <div className="flex flex-col items-center gap-6 flex-1">
                     <div className="w-48 h-48 rounded-[3rem] bg-[#0f172a] p-4 border-2 border-white/20 shadow-2xl overflow-hidden flex items-center justify-center">
                         {resolvedHomeLogo ? (
-                            <img src={resolvedHomeLogo} className="w-full h-full object-contain" alt="Home" crossOrigin="anonymous" />
+                            <img src={resolvedHomeLogo} className="w-full h-full object-contain" alt="Home" />
                         ) : (
                             <div className="text-6xl font-black text-white/20">{resolvedHomeName.substring(0,3).toUpperCase()}</div>
                         )}
@@ -99,7 +99,7 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
                 <div className="flex flex-col items-center gap-6 flex-1">
                     <div className="w-48 h-48 rounded-[3rem] bg-[#0f172a] p-4 border-2 border-white/20 shadow-2xl overflow-hidden flex items-center justify-center">
                         {opponentLogo ? (
-                            <img src={opponentLogo} className="w-full h-full object-contain" alt="Away" crossOrigin="anonymous" />
+                            <img src={opponentLogo} className="w-full h-full object-contain" alt="Away" />
                         ) : (
                             <div className="text-6xl font-black text-white/20">{opponentName.substring(0,3).toUpperCase()}</div>
                         )}
@@ -171,7 +171,7 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
             {/* BRANDING FOOTER */}
             <div className="bg-[#020617] border-t-8 border-blue-600 py-16 px-24 flex items-center justify-between">
                 <div className="flex items-center gap-8">
-                    <img src={homeTeamLogo} alt="Logo" className="w-24 h-24 object-contain" crossOrigin="anonymous" />
+                    <img src={homeTeamLogo} alt="Logo" className="w-24 h-24 object-contain" />
                     <div>
                         <div className="text-4xl font-black uppercase tracking-tighter">INDIAN STRIKERS</div>
                         <div className="text-xl font-bold uppercase tracking-widest text-blue-500">Official Team Sheet</div>

@@ -1259,15 +1259,19 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   };
 
   const getTeamName = (teamId: string) => {
-    if (teamId === initialMatch.homeTeamId) return initialMatch.homeTeamName || 'Home Team';
-    if (teamId === initialMatch.opponentId) return initialMatch.opponentName || 'Away Team';
-    return 'Unknown Team';
+    const normalizedId = teamId === '00000000-0000-0000-0000-000000000000' || !teamId ? 'IND_STRIKERS' : teamId;
+    const homeId = initialMatch.homeTeamId === '00000000-0000-0000-0000-000000000000' || !initialMatch.homeTeamId ? 'IND_STRIKERS' : initialMatch.homeTeamId;
+    
+    if (normalizedId === homeId) return initialMatch.homeTeamName;
+    return initialMatch.opponentName;
   };
 
   const getTeamLogo = (teamId: string) => {
-    if (teamId === initialMatch.homeTeamId) return initialMatch.homeTeamLogo;
-    if (teamId === initialMatch.opponentId) return initialMatch.opponentLogo;
-    return null;
+    const normalizedId = teamId === '00000000-0000-0000-0000-000000000000' || !teamId ? 'IND_STRIKERS' : teamId;
+    const homeId = initialMatch.homeTeamId === '00000000-0000-0000-0000-000000000000' || !initialMatch.homeTeamId ? 'IND_STRIKERS' : initialMatch.homeTeamId;
+
+    if (normalizedId === homeId) return initialMatch.homeTeamLogo || initialMatch.homeLogo;
+    return initialMatch.opponentLogo;
   };
 
   return (

@@ -102,7 +102,7 @@ const PasswordConfirmModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean;
 };
 
 // Gallery Modal Component
-const GalleryModal = ({ isOpen, onClose, history, onSelect }: { isOpen: boolean; onClose: () => void; history: string[]; onSelect: (url: string) => void }) => {
+const GalleryModal = ({ isOpen, onClose, history, onSelect, onDelete }: { isOpen: boolean; onClose: () => void; history: string[]; onSelect: (url: string) => void; onDelete: (url: string) => void }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-fade-in">
@@ -128,11 +128,28 @@ const GalleryModal = ({ isOpen, onClose, history, onSelect }: { isOpen: boolean;
                   onClick={() => { onSelect(url); onClose(); }}
                 >
                   <img src={url} alt={`Gallery ${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  
+                  {/* Selection Overlay */}
                   <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/20 flex items-center justify-center transition-colors">
                     <div className="bg-blue-600 text-white p-3 rounded-full scale-0 group-hover:scale-100 transition-transform shadow-lg">
                       <UserCheck size={24} />
                     </div>
                   </div>
+
+                  {/* Delete Button Overlay */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm('Delete this image from gallery?')) {
+                        onDelete(url);
+                      }
+                    }}
+                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-xl scale-0 group-hover:scale-100 transition-all hover:bg-red-600 shadow-lg z-10"
+                    title="Delete Image"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -594,6 +611,22 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleDeleteGalleryImage = (url: string) => {
+    setFormData(prev => {
+      const newHistory = (prev.avatarHistory || []).filter(h => h !== url);
+      // If the deleted image was the current avatar, reset avatar to empty or next in history
+      const newAvatarUrl = prev.avatarUrl === url 
+        ? (newHistory.length > 0 ? newHistory[0] : '') 
+        : prev.avatarUrl;
+        
+      return {
+        ...prev,
+        avatarHistory: newHistory,
+        avatarUrl: newAvatarUrl
+      };
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1378,6 +1411,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         onClose={() => setShowGalleryModal(false)} 
         history={formData.avatarHistory || []}
         onSelect={(url) => setFormData(prev => ({ ...prev, avatarUrl: url }))}
+        onDelete={handleDeleteGalleryImage}
       />
 
       {/* Password Modal */}

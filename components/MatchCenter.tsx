@@ -1069,43 +1069,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                 <td>
                                                                     <div className="flex flex-col gap-1 py-1">
                                                                         <div className="team-cell">
-                                                                            {(() => {
-                                                                                const isHomeIns = !m.homeTeamId || m.homeTeamId === '00000000-0000-0000-0000-000000000000' || m.homeTeamId === 'IND_STRIKERS';
-                                                                                const hTeam = m.homeTeamId ? opponents.find(o => o.id === m.homeTeamId) : null;
-                                                                                const hLogo = (isHomeIns && !m.isNeutral) ? '/INS%20LOGO.PNG' : (hTeam?.logoUrl);
-                                                                                const hName = (isHomeIns && !m.isNeutral) ? 'INDIAN STRIKERS' : (hTeam?.name || 'TEAM A');
-                                                                                return (
-                                                                                    <>
-                                                                                        <div className="relative flex items-center justify-center">
-                                                                                            {hLogo ? (
-                                                                                                <img 
-                                                                                                    src={hLogo} 
-                                                                                                    crossOrigin="anonymous" 
-                                                                                                    className="team-avatar" 
-                                                                                                    alt={hName} 
-                                                                                                    onError={(e) => {
-                                                                                                        e.currentTarget.style.display = 'none';
-                                                                                                        const fb = e.currentTarget.nextElementSibling as HTMLElement;
-                                                                                                        if (fb) fb.style.display = 'flex';
-                                                                                                    }}
-                                                                                                />
-                                                                                            ) : null}
-                                                                                            <div className="team-avatar-fallback text-slate-500" style={{ display: hLogo ? 'none' : 'flex' }}>
-                                                                                                {hName.charAt(0)}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                        <span>{hName}</span>
-                                                                                    </>
-                                                                                );
-                                                                            })()}
-                                                                            <span className="vs-cell">VS</span>
                                                                             <div className="relative flex items-center justify-center">
-                                                                                {opp?.logoUrl ? (
+                                                                                {m.homeLogo ? (
                                                                                     <img 
-                                                                                        src={opp.logoUrl} 
-                                                                                        crossOrigin="anonymous" 
-                                                                                        alt={opp?.name} 
+                                                                                        src={m.homeLogo} 
                                                                                         className="team-avatar" 
+                                                                                        alt={m.homeTeamName} 
                                                                                         onError={(e) => {
                                                                                             e.currentTarget.style.display = 'none';
                                                                                             const fb = e.currentTarget.nextElementSibling as HTMLElement;
@@ -1113,11 +1082,32 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                                         }}
                                                                                     />
                                                                                 ) : null}
-                                                                                <div className="team-avatar-fallback text-slate-500" style={{ display: opp?.logoUrl ? 'none' : 'flex' }}>
-                                                                                    {(opp?.name || '?').charAt(0)}
+                                                                                <div className="team-avatar-fallback text-slate-500" style={{ display: m.homeLogo ? 'none' : 'flex' }}>
+                                                                                    {m.homeTeamName.charAt(0)}
                                                                                 </div>
                                                                             </div>
-                                                                            <span className="uppercase">{(opp?.name || 'Unknown').toUpperCase()}</span>
+                                                                            <span>{m.homeTeamName}</span>
+
+                                                                            <span className="vs-cell">VS</span>
+
+                                                                            <div className="relative flex items-center justify-center">
+                                                                                {m.opponentLogo ? (
+                                                                                    <img 
+                                                                                        src={m.opponentLogo} 
+                                                                                        className="team-avatar" 
+                                                                                        alt={m.opponentName} 
+                                                                                        onError={(e) => {
+                                                                                            e.currentTarget.style.display = 'none';
+                                                                                            const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                                            if (fb) fb.style.display = 'flex';
+                                                                                        }}
+                                                                                    />
+                                                                                ) : null}
+                                                                                <div className="team-avatar-fallback text-slate-500" style={{ display: m.opponentLogo ? 'none' : 'flex' }}>
+                                                                                    {m.opponentName.charAt(0)}
+                                                                                </div>
+                                                                            </div>
+                                                                            <span className="uppercase">{m.opponentName}</span>
                                                                         </div>
                                                                         <div className="match-meta-info pl-1.5 opacity-70">
                                                                             {(() => {
@@ -1240,8 +1230,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                         >
                             <MatchCenterTile
                                 match={selectedCardMatch}
-                                homeTeamName={(!selectedCardMatch.homeTeamId || selectedCardMatch.homeTeamId === '00000000-0000-0000-0000-000000000000' || selectedCardMatch.homeTeamId === 'IND_STRIKERS') ? 'Indian Strikers' : (opponents.find(o => o.id === selectedCardMatch.homeTeamId)?.name || 'Team A')}
-                                homeTeamLogo={(!selectedCardMatch.homeTeamId || selectedCardMatch.homeTeamId === '00000000-0000-0000-0000-000000000000' || selectedCardMatch.homeTeamId === 'IND_STRIKERS') ? '/INS%20LOGO.PNG' : (opponents.find(o => o.id === selectedCardMatch.homeTeamId)?.logoUrl || '')}
+                                homeTeamName={selectedCardMatch.homeTeamName}
+                                homeTeamLogo={selectedCardMatch.homeLogo}
                                 allOpponents={opponents}
                                 opponent={opponents.find(o => o.id === selectedCardMatch.opponentId)}
                                 onSelectPlayingXI={handleSelectPlayingXI}
@@ -1393,8 +1383,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     <div id="match-summary-graphic" style={{ width: '450px', background: '#020617' }}>
                         <MatchCenterTile 
                             match={matches.find(m => m.id === summaryMatchId)!}
-                            homeTeamName="Indian Strikers"
-                            homeTeamLogo={teamLogo || '/INS%20LOGO.PNG'}
+                            homeTeamName={matches.find(m => m.id === summaryMatchId)?.homeTeamName || 'Indian Strikers'}
+                            homeTeamLogo={matches.find(m => m.id === summaryMatchId)?.homeLogo || '/INS LOGO.PNG'}
                             opponent={opponents.find(o => o.id === matches.find(m => m.id === summaryMatchId)?.opponentId)}
                             isGraphic={true}
                             grounds={grounds}

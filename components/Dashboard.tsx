@@ -886,7 +886,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                 return <div className="py-6"><p className="text-xs font-bold text-slate-400 italic">Exploring new seasons...</p></div>;
               }
 
-              const opponentLogo = displayMatch.opponentId ? opponents.find(o => o.id === displayMatch.opponentId)?.logoUrl : null;
+              const opponentLogo = displayMatch.opponentId ? (opponents.find(o => o.id === displayMatch.opponentId)?.logoUrl || displayMatch.opponentLogo) : displayMatch.opponentLogo;
 
               return (
                 <div className="space-y-4">

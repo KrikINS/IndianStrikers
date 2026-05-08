@@ -75,22 +75,11 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     const isToday = timeContext === 'TODAY';
     const isPast = timeContext === 'PAST';
 
-    const homeTeamName = (() => {
-        if (match.homeTeamId === '00000000-0000-0000-0000-000000000000') return 'Indian Strikers';
-        if (!match.homeTeamId) return match.isNeutral ? 'Team A' : 'Indian Strikers';
-        const opp = allOpponents.find(o => o.id === match.homeTeamId);
-        return opp?.name || match.homeTeamName || 'Team A';
-    })();
-    
-    const homeTeamLogo = (() => {
-        if (match.homeTeamId === '00000000-0000-0000-0000-000000000000') return '/INS LOGO.PNG';
-        if (!match.homeTeamId) return match.isNeutral ? '' : '/INS LOGO.PNG';
-        const opp = allOpponents.find(o => o.id === match.homeTeamId);
-        return opp?.logoUrl || '';
-    })();
+    const homeTeamName = match.homeTeamName;
+    const homeTeamLogo = match.homeLogo;
 
-    const opponentName = opponent?.name || match.opponentName || 'Opponent';
-    const opponentLogo = (opponent?.logoUrl && opponent.logoUrl !== '') ? opponent.logoUrl : (match.opponentLogo || '');
+    const opponentName = match.opponentName;
+    const opponentLogo = match.opponentLogo;
 
     return (
         <div 
@@ -176,7 +165,6 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         {homeTeamLogo ? (
                             <img 
                                 src={homeTeamLogo} 
-                                crossOrigin="anonymous" 
                                 className="team-logo-md object-contain" 
                                 alt={homeTeamName} 
                                 onError={(e) => {
@@ -224,7 +212,6 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         {opponentLogo ? (
                             <img 
                                 src={opponentLogo} 
-                                crossOrigin="anonymous" 
                                 className="team-logo-md object-contain" 
                                 alt={opponentName} 
                                 onError={(e) => {

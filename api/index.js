@@ -557,11 +557,14 @@ app.get('/api/matches', async (_req, res) => {
   const { data, error } = await db.query(`
     SELECT 
       m.*,
-      o.name AS opponent_name,
-      o.logo_url AS opponent_logo,
+      o1.name AS opponent_name,
+      o1.logo_url AS opponent_logo,
+      COALESCE(o2.name, 'INDIAN STRIKERS') AS home_team_name,
+      COALESCE(o2.logo_url, '/INS LOGO.PNG') AS home_logo,
       g.name AS ground_name
     FROM matches m
-    LEFT JOIN opponents o ON o.id = m.opponent_id
+    LEFT JOIN opponents o1 ON o1.id = m.opponent_id
+    LEFT JOIN opponents o2 ON o2.id = m.home_team_id
     LEFT JOIN grounds g ON g.id = m.ground_id
     ORDER BY m.date DESC
   `);
@@ -602,11 +605,14 @@ app.get('/api/matches/:id', async (req, res) => {
   const { data, error } = await db.getOne(`
     SELECT 
       m.*,
-      o.name AS opponent_name,
-      o.logo_url AS opponent_logo,
+      o1.name AS opponent_name,
+      o1.logo_url AS opponent_logo,
+      COALESCE(o2.name, 'INDIAN STRIKERS') AS home_team_name,
+      COALESCE(o2.logo_url, '/INS LOGO.PNG') AS home_logo,
       g.name AS ground_name
     FROM matches m
-    LEFT JOIN opponents o ON o.id = m.opponent_id
+    LEFT JOIN opponents o1 ON o1.id = m.opponent_id
+    LEFT JOIN opponents o2 ON o2.id = m.home_team_id
     LEFT JOIN grounds g ON g.id = m.ground_id
     WHERE m.id = $1
   `, [req.params.id]);
