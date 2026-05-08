@@ -557,8 +557,29 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
           }
           .team-cell { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; white-space: nowrap; color: #111827; }
-          .team-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: contain; background: transparent; border: 1px solid #e2e8f0; }
-          .team-avatar-fallback { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 10px; font-weight: 900; }
+          .team-avatar { 
+            width: 28px; 
+            height: 28px; 
+            border-radius: 50%; 
+            object-fit: contain; 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            padding: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          }
+          .team-avatar-fallback { 
+            width: 28px; 
+            height: 28px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            font-size: 11px; 
+            font-weight: 900; 
+            color: #64748b;
+          }
           .badge-type { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 900; display: inline-flex; align-items: center; gap: 4px; }
           .badge-t20 { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
           .badge-odi { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
@@ -653,11 +674,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
           .team-logo-md {
             width: 160px;
             height: 160px;
-            border-radius: 0;
-            border: none;
-            background: transparent !important;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.03) !important;
             object-fit: contain;
             display: block;
+            padding: 8%;
             filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
           }
