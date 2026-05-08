@@ -17,6 +17,7 @@ const MembershipRequestForm: React.FC<MembershipRequestFormProps> = ({ onClose }
         associationYear: ''
     });
     const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+    const [errorMsg, setErrorMsg] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,9 +26,10 @@ const MembershipRequestForm: React.FC<MembershipRequestFormProps> = ({ onClose }
             await addMembershipRequest(formData);
             setStatus('success');
             setTimeout(onClose, 2000);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
             setStatus('error');
+            setErrorMsg(e.message || 'Something went wrong. Please try again.');
         }
     };
 
@@ -140,8 +142,8 @@ const MembershipRequestForm: React.FC<MembershipRequestFormProps> = ({ onClose }
 
                     {status === 'error' && (
                         <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-xl text-sm font-bold">
-                            <AlertCircle size={16} />
-                            Something went wrong. Please try again.
+                            <AlertCircle size={16} className="shrink-0" />
+                            {errorMsg || 'Something went wrong. Please try again.'}
                         </div>
                     )}
 

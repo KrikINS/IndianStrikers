@@ -97,6 +97,12 @@ const UserManagement: React.FC = () => {
     }
   };
 
+  const handleRejectRequest = (id: string) => {
+    if (window.confirm("Reject this membership request?")) {
+      updateMembershipRequestStatus(id, 'Rejected').then(() => loadData());
+    }
+  };
+
   return (
     <div className="animate-fade-in space-y-4">
       <div className="flex flex-row justify-between items-center p-4 bg-white/5 rounded-xl border border-white/10 gap-2 sm:gap-4">
@@ -222,13 +228,22 @@ const UserManagement: React.FC = () => {
                     <td className="px-4 py-2 text-right">
                       <div className="flex justify-end gap-2">
                           {r.status === 'Pending' && (
-                             <button 
-                               onClick={() => handleApproveRequest(r)} 
-                               className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-bold uppercase rounded hover:bg-emerald-700 transition-all shadow-md active:scale-95"
-                               title="Approve Membership Request"
-                             >
-                               APPROVE
-                             </button>
+                             <div className="flex items-center gap-2">
+                               <button 
+                                 onClick={() => handleRejectRequest(r.id)} 
+                                 className="px-3 py-1 bg-red-500/10 text-red-500 text-[10px] font-bold uppercase rounded border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-sm active:scale-95"
+                                 title="Reject Membership Request"
+                               >
+                                 REJECT
+                               </button>
+                               <button 
+                                 onClick={() => handleApproveRequest(r)} 
+                                 className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-bold uppercase rounded hover:bg-emerald-700 transition-all shadow-md active:scale-95"
+                                 title="Approve Membership Request"
+                               >
+                                 APPROVE
+                               </button>
+                             </div>
                           )}
 
                       </div>

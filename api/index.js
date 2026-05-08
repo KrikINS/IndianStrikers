@@ -1207,6 +1207,25 @@ app.get('/api/membership_requests', authGuard(['admin']), async (req, res) => {
 
 app.post('/api/membership_requests', async (req, res) => {
   const { name, email, contact_number, associated_before, association_year, status } = req.body;
+
+  // Check for existing user with same email or phone
+  const { data: existingUser } = await db.getOne(
+    'SELECT id FROM users WHERE email = $1 OR contact_number = $2',
+    [email, contact_number]
+  );
+  if (existingUser) {
+    return res.status(400).json({ error: 'This email or phone number is already linked to an existing account.' });
+  }
+
+  // Check for existing pending/approved request with same email or phone
+  const { data: existingRequest } = await db.getOne(
+    'SELECT id FROM membership_requests WHERE email = $1 OR contact_number = $2',
+    [email, contact_number]
+  );
+  if (existingRequest) {
+    return res.status(400).json({ error: 'An application with this email or phone number is already in progress.' });
+  }
+
   const { data, error } = await db.getOne(
     'INSERT INTO membership_requests (name, email, contact_number, associated_before, association_year, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
     [name, email, contact_number, associated_before, association_year, status || 'Pending']

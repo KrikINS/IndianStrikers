@@ -193,8 +193,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
         associationYear: ''
       });
       setMemSuccess(true);
-    } catch (e) {
-      alert("Failed to submit. Please try again.");
+    } catch (e: any) {
+      alert(e.message || "Failed to submit. Please try again.");
     } finally {
       setMemSubmitting(false);
     }
