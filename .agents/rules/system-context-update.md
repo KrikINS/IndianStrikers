@@ -7,4 +7,4 @@ trigger: always_on
 - **Primary Keys:** Matches/Tournaments use UUID; Players use BIGINT.
 - **JSONB Queries:** Always use `@>` for `home_team_xi` searches.
 - **Legacy Stats:** Updates must be written to `player_legacy_stats` after matches are finalized.
-- **Active Context:** Current priority is the 'RCA T20 Tournament - Hayes League'.
+- **Active Context:** Develop and maintain the entire Indian Strikers platform ecosystem. Consider all matches and tournaments (e.g., historical 'Hayer League' data) when performing data analysis or structural updates.

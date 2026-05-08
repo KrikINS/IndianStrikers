@@ -1333,33 +1333,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     return mid && typeof mid === 'string' && mid.length > 10;
   };
 
-  // ABSOLUTE METADATA LAW (V5): Guaranteed resolution for active tournament
-  const METADATA_LAW: any = {
-    grounds: {
-      'a2903265-670b-4886-8699-661b0546e46c': 'RCA GROUND'
-    },
-    tournaments: {
-      'RCA T20 TOURNAMENT': 'PRINCE ABDULAZIZ BIN NASSER T20 TOURNAMENT',
-      'default': 'PRINCE ABDULAZIZ BIN NASSER T20 TOURNAMENT'
-    },
-    opponents: {
-      'SAUDI KNIGHTS': 'SAUDI KNIGHTS',
-      'OPPONENT': 'SAUDI KNIGHTS'
-    }
-  };
-
+  // ABSOLUTE METADATA LAW (V6): Strictly use Match Record and Master Data
   const resolveGroundName = (gid: string | undefined, gname: string | undefined) => {
-    if (!gid) return gname || 'RCA GROUND';
+    if (!gid) return gname || 'GROUND';
     const fromMaster = (grounds || []).find(g => String(g.id) === String(gid))?.name;
-    return fromMaster || METADATA_LAW.grounds[gid] || gname || 'RCA GROUND';
+    return fromMaster || gname || 'GROUND';
   };
 
   const resolveTournament = (tid: string | undefined, tname: string | undefined) => {
-    if (!tid && !tname) return METADATA_LAW.tournaments['default'];
     const fromMaster = (tournaments || []).find((t: any) => tid && String(t.id) === String(tid))?.name;
-    if (fromMaster && fromMaster !== 'RCA T20 TOURNAMENT') return fromMaster;
-    if (tname === 'RCA T20 TOURNAMENT') return METADATA_LAW.tournaments['RCA T20 TOURNAMENT'];
-    return tname || METADATA_LAW.tournaments['default'];
+    return fromMaster || tname || 'EXHIBITION MATCH';
   };
 
   useEffect(() => {
@@ -1501,8 +1484,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const resolvedTournament = resolveTournament(meta.tournamentId, meta.tournament);
       const resolvedGroundName = resolveGroundName(meta.groundId, meta.venue);
 
-      const opponentMeta = (allOpponents || []).find((o: any) => String(o.id) === String(meta.opponentId) || o.name === meta.opponentName);
-      const resolvedOpponentName = (opponentMeta?.name && opponentMeta.name !== 'OPPONENT') ? opponentMeta.name : (meta.opponentName === 'OPPONENT' ? 'SAUDI KNIGHTS' : (meta.opponentName || 'SAUDI KNIGHTS'));
+      const opponentMeta = (allOpponents || []).find((o: any) => String(o.id) === String(meta.opponentId));
+      const resolvedOpponentName = opponentMeta?.name || meta.opponentName || 'OPPONENT';
       const resolvedAwayLogo = meta.opponentLogo || opponentMeta?.logoUrl || '';
 
       store.initializeMatch({

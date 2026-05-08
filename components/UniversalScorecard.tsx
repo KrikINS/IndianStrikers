@@ -1259,18 +1259,12 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   };
 
   const getTeamName = (teamId: string) => {
-    const normalizedId = teamId === '00000000-0000-0000-0000-000000000000' || !teamId ? 'IND_STRIKERS' : teamId;
-    const homeId = initialMatch.homeTeamId === '00000000-0000-0000-0000-000000000000' || !initialMatch.homeTeamId ? 'IND_STRIKERS' : initialMatch.homeTeamId;
-    
-    if (normalizedId === homeId) return initialMatch.homeTeamName;
+    if (teamId === initialMatch.homeTeamId) return initialMatch.homeTeamName;
     return initialMatch.opponentName;
   };
 
   const getTeamLogo = (teamId: string) => {
-    const normalizedId = teamId === '00000000-0000-0000-0000-000000000000' || !teamId ? 'IND_STRIKERS' : teamId;
-    const homeId = initialMatch.homeTeamId === '00000000-0000-0000-0000-000000000000' || !initialMatch.homeTeamId ? 'IND_STRIKERS' : initialMatch.homeTeamId;
-
-    if (normalizedId === homeId) return initialMatch.homeTeamLogo || initialMatch.homeLogo;
+    if (teamId === initialMatch.homeTeamId) return initialMatch.homeTeamLogo || initialMatch.homeLogo;
     return initialMatch.opponentLogo;
   };
 
@@ -1330,7 +1324,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
         <ScrollContent ref={scrollContentRef}>
           <MatchHeaderCard>
-            <TournamentLabel>{initialMatch.tournamentName || 'Match Details'}</TournamentLabel>
+            <TournamentLabel>{initialMatch.tournament || 'Match Details'}</TournamentLabel>
             
             <TeamsHorizontalRow>
               <TeamBlock>

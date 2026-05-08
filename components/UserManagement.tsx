@@ -86,7 +86,7 @@ const UserManagement: React.FC = () => {
         username: req.email.split('@')[0], 
         email: req.email,
         contactNumber: req.contactNumber,
-        password: 'changeme123', 
+        password: '#INS2026', 
         role: 'member', 
         playerId: match?.id 
       });

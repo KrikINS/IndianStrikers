@@ -212,6 +212,27 @@ app.post('/api/users', authGuard(['admin']), async (req, res) => {
     [username, email || null, hash, role, name, avatar_url, player_id, can_score || false, contact_number || null]
   );
   if (error) return res.status(400).json({ error: error.message });
+  // Notification Logic for New Users
+  if (email) {
+    console.log('------------------------------------------------------------');
+    console.log(`[EMAIL DISPATCH] To: ${email}`);
+    console.log(`[EMAIL SUBJECT] Welcome to Indian Strikers - Access Granted`);
+    console.log(`[EMAIL BODY] 
+      Hello ${name || username},
+      
+      Your membership application has been approved!
+      
+      You can now access the portal using the following credentials:
+      User ID: ${username}
+      Password: ${password} (Temporary)
+      
+      Login here: ${req.headers.origin || 'https://indianstrikers.com'}
+      
+      Please change your password immediately after your first login.
+    `);
+    console.log('------------------------------------------------------------');
+  }
+
   res.json(data);
 });
 app.put('/api/users/:id', authGuard(['admin']), async (req, res) => {
