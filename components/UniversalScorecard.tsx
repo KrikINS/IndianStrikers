@@ -486,7 +486,6 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     setIsSaving(true);
     try {
       // Normalize editState to remove temporary IDs
-      // Normalize editState to remove temporary IDs
       const finalState = JSON.parse(JSON.stringify(editState));
       
       const cleanBatting = (inn: any) => {

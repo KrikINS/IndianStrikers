@@ -183,7 +183,7 @@ const INITIAL_SCORER_STATE: MatchScorerState = {
     wagonWheelQuickSave: false,
     isWaitingForBowler: false,
     pendingMilestone: null,
-    partnership_notified: [],
+    partnershipNotified: [],
     pendingIntroduction: null,
     offlineQueue: [],
     systemCommentary: [],
@@ -375,7 +375,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             try {
                 console.log(`[Store] Syncing matches (attempt ${attempt}/${maxAttempts})...`);
                 const rawDbMatches = (await api.getMatches()) || [];
-                const dbMatches = rawDbMatches.filter(m => !m.is_test && m.id !== '00000000-0000-0000-0000-000000000001');
+                const dbMatches = rawDbMatches.filter(m => !m.isTest && m.id !== '00000000-0000-0000-0000-000000000001');
 
                 // If we got data, set it and break. If we got an empty list on the last attempt, also set it.
                 if (dbMatches.length > 0 || attempt === maxAttempts) {
@@ -403,7 +403,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
     getSortedMatches: () => {
         const { matches } = get();
-        const cleanMatches = matches.filter(m => !m.is_test && m.id !== '00000000-0000-0000-0000-000000000001');
+        const cleanMatches = matches.filter(m => !m.isTest && m.id !== '00000000-0000-0000-0000-000000000001');
         return [...cleanMatches].sort((a, b) => {
             const statusOrder = { 'live': 0, 'upcoming': 1, 'completed': 2 };
             if (statusOrder[a.status] !== statusOrder[b.status]) {
@@ -418,11 +418,10 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     purgeTestData: async () => {
         try {
             const testMatches = get().matches.filter(m =>
-                m.is_test || m.opponentName === 'Sandbox XI' || (m.opponentId && String(m.opponentId).includes('sandbox'))
+                m.isTest || m.opponentName === 'Sandbox XI' || (m.opponentId && String(m.opponentId).includes('sandbox'))
             );
             if (testMatches.length === 0) return;
             for (const m of testMatches) {
-                await api.deleteMatchStats(m.id);
                 await api.deleteMatch(m.id);
             }
             set((state) => ({
@@ -700,7 +699,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             bowlerId: state.currentBowlerId || undefined,
             isLegal,
             commentary: finalCommentary,
-            wagon_wheel_zone: zone,
+            wagonWheelZone: zone,
             timestamp: new Date().toISOString()
         };
 
@@ -783,7 +782,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             const payload = state.prepareSyncPayload();
             // FORCE UPSERT: Overwrite cloud data with local state regardless of versioning
             await api.updateMatch(state.matchId, {
-                live_data: payload,
+                liveData: payload,
                 last_updated: new Date().toISOString(),
                 force_upsert: true // Signal to backend to prioritize this payload
             });

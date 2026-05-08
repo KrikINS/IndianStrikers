@@ -13,8 +13,8 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
   const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
 
   const [summary, setSummary] = useState({
-    tossWinner: match.toss_winner_id || (match.toss?.winner === 'Indian Strikers' ? HOME_TEAM_ID : match.opponentId) || '',
-    tossChoice: match.toss_choice || match.toss?.choice || 'Bat',
+    tossWinner: match.tossWinnerId || (match.toss?.winner === 'Indian Strikers' ? HOME_TEAM_ID : match.opponentId) || '',
+    tossChoice: match.tossChoice || match.toss?.choice || 'Bat',
     maxOvers: match.maxOvers || 20,
     resultType: match.resultType || 'Normal Result',
     homeScore: match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 },
@@ -322,10 +322,10 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
         <div className="control-grid">
           <div className="input-group">
             <label>TOSS WON BY</label>
-            <select title="Toss Winner" value={summary.tossWinner} onChange={(e) => setSummary({...summary, tossWinner: e.target.value})}>
+            <select title="Toss Winner" value={summary.tossWinner || ''} onChange={(e) => setSummary({...summary, tossWinner: e.target.value})}>
               <option value="">Select Team</option>
               <option value={HOME_TEAM_ID}>Indian Strikers</option>
-              <option value={match.opponentId}>{opponentName}</option>
+              <option value={match.opponentId || ''}>{opponentName}</option>
             </select>
           </div>
           <div className="input-group">
