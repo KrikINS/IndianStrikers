@@ -628,8 +628,15 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     <select 
                       value={stat.playerId || ''} 
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                                const newBatting = [...editState[innKey].batting];
                         const selectedId = e.target.value;
+                        const newBatting = [...editState[innKey].batting];
+                        
+                        // Prevent duplicates
+                        if (selectedId && newBatting.some((b, i) => i !== idx && String(b.playerId) === String(selectedId))) {
+                          alert("This player is already in the batting list!");
+                          return;
+                        }
+
                         const selectedPlayer = battingSquad.find((p: any) => p.id === selectedId);
                         newBatting[idx] = { 
                           ...newBatting[idx], 
@@ -971,18 +978,34 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
               <tr key={stat.playerId || idx}>
                 <Td>
                   {isCurrentInningsEditable ? (
-                    <input 
-                      value={stat.name} 
-                      list="player-names-list"
+                    <select 
+                      value={stat.playerId || ''} 
                       onChange={(e) => {
+                        const selectedId = e.target.value;
                         const newBowling = [...editState[innKey].bowling];
-                        newBowling[idx] = { ...newBowling[idx], name: e.target.value };
+                        
+                        // Prevent duplicates
+                        if (selectedId && newBowling.some((b, i) => i !== idx && String(b.playerId) === String(selectedId))) {
+                          alert("This bowler is already in the bowling list!");
+                          return;
+                        }
+
+                        const selectedPlayer = bowlingSquad.find((p: any) => p.id === selectedId);
+                        newBowling[idx] = { 
+                          ...newBowling[idx], 
+                          playerId: selectedId,
+                          name: selectedPlayer?.name || '' 
+                        };
                         setEditState({ ...editState, [innKey]: { ...editState[innKey], bowling: newBowling } });
                       }}
-                      aria-label="Bowler Name"
-                      placeholder="Bowler Name"
+                      aria-label="Select Bowler"
                       style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px 8px', borderRadius: '4px', width: '100%', fontSize: '0.8rem' }}
-                    />
+                    >
+                      <option value="">Select Bowler</option>
+                      {bowlingSquad.map((p: any) => (
+                        <option key={p.id} value={p.id} style={{ background: '#FFF', color: '#000' }}>{p.name}</option>
+                      ))}
+                    </select>
                   ) : (
                     getPlayerNameResolved(stat.playerId, stat.name)
                   )}
@@ -1839,6 +1862,24 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
         <ScrollContent ref={scrollContentRef}>
           <MatchHeaderCard>
             <div style={{ textAlign: 'center', marginBottom: 12 }}>
+              <div style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: 6, 
+                background: 'rgba(16, 185, 129, 0.1)', 
+                border: '1px solid rgba(16, 185, 129, 0.3)', 
+                color: '#10B981', 
+                padding: '4px 12px', 
+                borderRadius: '20px', 
+                fontSize: '0.6rem', 
+                fontWeight: 900, 
+                textTransform: 'uppercase', 
+                letterSpacing: 1.5,
+                marginBottom: 12
+              }}>
+                <CheckCircle2 size={10} />
+                System Sync: Active
+              </div>
               <TournamentLabel>{initialMatch.tournament || 'Match Details'}</TournamentLabel>
               <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 2 }}>
                 {initialMatch.stage ? `${initialMatch.stage} MATCH` : 'MATCH DETAILS'}
