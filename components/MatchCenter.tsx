@@ -1083,10 +1083,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                                     />
                                                                                 ) : null}
                                                                                 <div className="team-avatar-fallback text-slate-500" style={{ display: m.homeLogo ? 'none' : 'flex' }}>
-                                                                                    {m.homeTeamName.charAt(0)}
+                                                                                    {(m.homeTeamName || "I").charAt(0)}
                                                                                 </div>
                                                                             </div>
-                                                                            <span>{m.homeTeamName}</span>
+                                                                            <span>{m.homeTeamName || "INDIAN STRIKERS"}</span>
 
                                                                             <span className="vs-cell">VS</span>
 
@@ -1104,10 +1104,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                                     />
                                                                                 ) : null}
                                                                                 <div className="team-avatar-fallback text-slate-500" style={{ display: m.opponentLogo ? 'none' : 'flex' }}>
-                                                                                    {m.opponentName.charAt(0)}
+                                                                                    {(m.opponentName || "O").charAt(0)}
                                                                                 </div>
                                                                             </div>
-                                                                            <span className="uppercase">{m.opponentName}</span>
+                                                                            <span className="uppercase">{m.opponentName || "OPPONENT"}</span>
                                                                         </div>
                                                                         <div className="match-meta-info pl-1.5 opacity-70">
                                                                             {(() => {
@@ -1230,7 +1230,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                         >
                             <MatchCenterTile
                                 match={selectedCardMatch}
-                                homeTeamName={selectedCardMatch.homeTeamName}
+                                homeTeamName={selectedCardMatch.homeTeamName || 'Indian Strikers'}
                                 homeTeamLogo={selectedCardMatch.homeLogo}
                                 allOpponents={opponents}
                                 opponent={opponents.find(o => o.id === selectedCardMatch.opponentId)}
