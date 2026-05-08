@@ -167,12 +167,28 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             console.log(`[Sync] Finalizing match ${match.id} on cloud...`);
             
             // Ensure even summary-only matches have a valid scorecard object for the UI
-            const finalScorecard = data.scorecard || {
-                innings1: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.finalScoreHome?.runs || 0, totalWickets: data.finalScoreHome?.wickets || 0, totalOvers: data.finalScoreHome?.overs || 0, history: [] },
-                innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.finalScoreAway?.runs || 0, totalWickets: data.finalScoreAway?.wickets || 0, totalOvers: data.finalScoreAway?.overs || 0, history: [] }
-            };
+            const finalScorecard = data.scorecard || 
+                (data.innings1 ? { innings1: data.innings1, innings2: data.innings2 } : null) || 
+                {
+                    innings1: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.finalScoreHome?.runs || 0, totalWickets: data.finalScoreHome?.wickets || 0, totalOvers: data.finalScoreHome?.overs || 0, history: [] },
+                    innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.finalScoreAway?.runs || 0, totalWickets: data.finalScoreAway?.wickets || 0, totalOvers: data.finalScoreAway?.overs || 0, history: [] }
+                };
 
-            const finalData = { ...data, scorecard: finalScorecard, isCareerSynced: true };
+            const finalData = { 
+                ...data, 
+                scorecard: finalScorecard, 
+                finalScoreHome: data.finalScoreHome || {
+                    runs: finalScorecard.innings1.totalRuns,
+                    wickets: finalScorecard.innings1.wickets,
+                    overs: finalScorecard.innings1.totalOvers || (Math.floor(finalScorecard.innings1.totalBalls / 6) + (finalScorecard.innings1.totalBalls % 6) / 10)
+                },
+                finalScoreAway: data.finalScoreAway || {
+                    runs: finalScorecard.innings2.totalRuns,
+                    wickets: finalScorecard.innings2.wickets,
+                    overs: finalScorecard.innings2.totalOvers || (Math.floor(finalScorecard.innings2.totalBalls / 6) + (finalScorecard.innings2.totalBalls % 6) / 10)
+                },
+                isCareerSynced: true 
+            };
 
             // Pass the performers array if they exist (Full Scorecard) or empty array (Summary Update)
             const performersToSync = options.skipCareerSync ? [] : (data.performers || []);
