@@ -371,11 +371,10 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
             type="button" 
             className="btn-save" 
             onClick={handleSave} 
-            disabled={isSaving || match.isLocked}
-            style={match.isLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+            disabled={isSaving}
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
-            {isSaving ? 'Updating...' : (match.isLocked ? 'LOCKED' : 'UPDATE')}
+            {isSaving ? 'Updating...' : 'UPDATE'}
           </button>
         </div>
       </div>

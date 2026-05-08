@@ -486,16 +486,35 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     setIsSaving(true);
     try {
       // Normalize editState to remove temporary IDs
+      // Normalize editState to remove temporary IDs
       const finalState = JSON.parse(JSON.stringify(editState));
+      
       const cleanBatting = (inn: any) => {
-        if (!inn.batting) return;
+        if (!inn || !inn.batting) return;
         inn.batting = inn.batting.map((b: any) => ({
           ...b,
           playerId: (b.playerId && String(b.playerId).startsWith('new-')) ? undefined : b.playerId
         }));
       };
+
+      // Recalculate totals before saving to ensure consistency
+      const recalculateInnings = (inn: any) => {
+        if (!inn) return;
+        const runs = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0) + 
+                     Object.values(inn.extras || {}).reduce((s: number, e: any) => s + (Number(e) || 0), 0);
+        const wickets = (inn.batting || []).filter((b: any) => b.status === 'out' || (b.outHow && b.outHow !== 'Not Out')).length;
+        const balls = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.balls) || 0), 0);
+        
+        inn.totalRuns = runs;
+        inn.wickets = wickets;
+        inn.totalBalls = balls;
+        inn.totalOvers = Math.floor(balls / 6) + (balls % 6) / 10;
+      };
+
       cleanBatting(finalState.innings1);
       cleanBatting(finalState.innings2);
+      recalculateInnings(finalState.innings1);
+      recalculateInnings(finalState.innings2);
 
       await onSave(finalState);
       

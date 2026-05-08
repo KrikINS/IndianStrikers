@@ -339,7 +339,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
     finalizeMatch: async (id, matchData, updatedPlayers) => {
         const match = get().matches.find(m => m.id === id);
-        if (match?.isLocked) {
+        
+        // Allow bypass if manualOverride is requested (used for admin corrections)
+        if (match?.isLocked && !matchData.isManualOverride) {
             throw new Error("Match is locked. No further modifications allowed.");
         }
 

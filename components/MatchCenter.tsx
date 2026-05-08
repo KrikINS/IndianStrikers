@@ -166,7 +166,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         try {
             console.log(`[Sync] Finalizing match ${match.id} on cloud...`);
             
-            // Ensure even summary-only matches have a valid scorecard object for the UI
+            // 1. Ensure even summary-only matches have a valid scorecard object
             const finalScorecard = data.scorecard || 
                 (data.innings1 ? { innings1: data.innings1, innings2: data.innings2 } : null) || 
                 {
@@ -174,21 +174,46 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.finalScoreAway?.runs || 0, totalWickets: data.finalScoreAway?.wickets || 0, totalOvers: data.finalScoreAway?.overs || 0, history: [] }
                 };
 
+            // 2. Recalculate for absolute accuracy (Protection against stale UI totals)
+            const calcInningsTotals = (inn: any) => {
+                if (!inn) return { runs: 0, wickets: 0, balls: 0 };
+                
+                const runs = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0) + 
+                             Object.values(inn.extras || {}).reduce((s: number, e: any) => s + (Number(e) || 0), 0);
+                
+                const wickets = (inn.batting || []).filter((b: any) => 
+                    b.status === 'out' || (b.outHow && b.outHow !== 'Not Out' && b.outHow !== 'batting')
+                ).length;
+                
+                const balls = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.balls) || 0), 0);
+                
+                return { runs, wickets, balls };
+            };
+
+            const t1 = calcInningsTotals(finalScorecard.innings1);
+            const t2 = calcInningsTotals(finalScorecard.innings2);
+
             const finalData = { 
                 ...data, 
                 scorecard: finalScorecard, 
-                finalScoreHome: data.finalScoreHome || {
-                    runs: finalScorecard.innings1.totalRuns,
-                    wickets: finalScorecard.innings1.wickets,
-                    overs: finalScorecard.innings1.totalOvers || (Math.floor(finalScorecard.innings1.totalBalls / 6) + (finalScorecard.innings1.totalBalls % 6) / 10)
+                finalScoreHome: {
+                    runs: t1.runs || finalScorecard.innings1.totalRuns || data.finalScoreHome?.runs || data.homeScore?.runs || 0,
+                    wickets: t1.wickets || finalScorecard.innings1.wickets || data.finalScoreHome?.wickets || data.homeScore?.wickets || 0,
+                    overs: t1.balls > 0 ? (Math.floor(t1.balls / 6) + (t1.balls % 6) / 10) : (finalScorecard.innings1.totalOvers || data.finalScoreHome?.overs || data.homeScore?.overs || 0)
                 },
-                finalScoreAway: data.finalScoreAway || {
-                    runs: finalScorecard.innings2.totalRuns,
-                    wickets: finalScorecard.innings2.wickets,
-                    overs: finalScorecard.innings2.totalOvers || (Math.floor(finalScorecard.innings2.totalBalls / 6) + (finalScorecard.innings2.totalBalls % 6) / 10)
+                finalScoreAway: {
+                    runs: t2.runs || finalScorecard.innings2.totalRuns || data.finalScoreAway?.runs || data.awayScore?.runs || 0,
+                    wickets: t2.wickets || finalScorecard.innings2.wickets || data.finalScoreAway?.wickets || data.awayScore?.wickets || 0,
+                    overs: t2.balls > 0 ? (Math.floor(t2.balls / 6) + (t2.balls % 6) / 10) : (finalScorecard.innings2.totalOvers || data.finalScoreAway?.overs || data.awayScore?.overs || 0)
                 },
-                isCareerSynced: true 
+                isCareerSynced: true,
+                isManualOverride: true // Bypass lock check if needed
             };
+
+            console.log(`[Sync] Pushing recalculated payload for ${match.id}:`, { 
+                home: finalData.finalScoreHome, 
+                away: finalData.finalScoreAway 
+            });
 
             // Pass the performers array if they exist (Full Scorecard) or empty array (Summary Update)
             const performersToSync = options.skipCareerSync ? [] : (data.performers || []);
