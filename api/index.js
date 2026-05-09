@@ -580,8 +580,8 @@ app.get('/api/matches', async (_req, res) => {
       m.*,
       o1.name AS opponent_name,
       o1.logo_url AS opponent_logo,
-      COALESCE(o2.name, 'INDIAN STRIKERS') AS home_team_name,
-      COALESCE(o2.logo_url, '/INS LOGO.PNG') AS home_logo,
+      COALESCE(o2.name, m.home_team_name, 'Team 1') AS home_team_name,
+      COALESCE(o2.logo_url, m.home_logo, '') AS home_logo,
       g.name AS ground_name
     FROM matches m
     LEFT JOIN opponents o1 ON o1.id = m.opponent_id
@@ -628,8 +628,8 @@ app.get('/api/matches/:id', async (req, res) => {
       m.*,
       o1.name AS opponent_name,
       o1.logo_url AS opponent_logo,
-      COALESCE(o2.name, 'INDIAN STRIKERS') AS home_team_name,
-      COALESCE(o2.logo_url, '/INS LOGO.PNG') AS home_logo,
+      COALESCE(o2.name, m.home_team_name, 'Team 1') AS home_team_name,
+      COALESCE(o2.logo_url, m.home_logo, '') AS home_logo,
       g.name AS ground_name
     FROM matches m
     LEFT JOIN opponents o1 ON o1.id = m.opponent_id
@@ -773,14 +773,26 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
     
     // Toss Handling
     let tossWinnerId = matchData.toss_winner_id;
+    // Generic toss winner resolution: use the stored toss_winner_id first.
+    // If the matchData provides a winner name, match it against team1 (home) or team2 (away)
+    // by checking against the stored opponent_id.
     if (!tossWinnerId && matchData.toss?.winner) {
+      const { data: m } = await db.getOne('SELECT opponent_id, home_team_id FROM matches WHERE id = $1', [id]);
       const winnerName = String(matchData.toss.winner).toLowerCase();
-      if (winnerName.includes('strikers') || winnerName.includes('home')) {
-        tossWinnerId = '00000000-0000-0000-0000-000000000000';
+      // If the winner name matches the stored team2 name pattern, use opponent_id
+      const awayId = m?.opponent_id;
+      const homeId = m?.home_team_id;
+      // Try to match against the stored team names via opponents table
+      const { data: teams } = await db.query(
+        'SELECT id, name FROM opponents WHERE id = ANY($1::uuid[])',
+        [[awayId, homeId].filter(Boolean)]
+      );
+      const matched = (teams || []).find(t => t.name?.toLowerCase().includes(winnerName) || winnerName.includes(t.name?.toLowerCase()));
+      if (matched) {
+        tossWinnerId = matched.id;
       } else {
-        // Find opponent ID for this match
-        const { data: m } = await db.getOne('SELECT opponent_id FROM matches WHERE id = $1', [id]);
-        tossWinnerId = m?.opponent_id;
+        // Last fallback: if winner string contains 'home' or is unknown, use homeId
+        tossWinnerId = winnerName.includes('home') ? homeId : awayId;
       }
     }
 

@@ -361,17 +361,17 @@ const mapMatch = (m: any): ScheduledMatch => {
     return {
         id: m.id,
         date: m.date,
-        opponentId: m.opponent_id,
+        team2Id: m.opponent_id,
         groundId: m.ground_id,
         tournament: m.tournament,
         tournamentId: m.tournament_id,
         matchFormat: m.match_format,
         status: m.status,
         maxOvers: m.max_overs,
-        homeTeamXI: Array.isArray(m.home_team_xi) ? m.home_team_xi : [],
-        opponentTeamXI: Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : [],
-        finalScoreHome: normalizeScore(m.final_score_home, m.is_home_batting_first ? rawScorecard?.innings1 : rawScorecard?.innings2),
-        finalScoreAway: normalizeScore(m.final_score_away, m.is_home_batting_first ? rawScorecard?.innings2 : rawScorecard?.innings1),
+        team1XI: Array.isArray(m.home_team_xi) ? m.home_team_xi : [],
+        team2XI: Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : [],
+        team1Score: normalizeScore(m.final_score_home, m.is_home_batting_first ? rawScorecard?.innings1 : rawScorecard?.innings2),
+        team2Score: normalizeScore(m.final_score_away, m.is_home_batting_first ? rawScorecard?.innings2 : rawScorecard?.innings1),
         scorecard: rawScorecard,
         resultNote: m.result_note,
         resultSummary: m.result_summary,
@@ -381,18 +381,18 @@ const mapMatch = (m: any): ScheduledMatch => {
         isLiveScored: !!m.is_live_scored,
         stage: m.stage || (m.tournament ? 'League' : 'League'),
         venue: m.venue || m.ground_name || '',
-        opponentName: (m.opponent_name || 'OPPONENT').toUpperCase(),
-        opponentLogo: m.opponent_logo || '',
-        homeTeamName: (m.home_team_name || 'INDIAN STRIKERS').toUpperCase(),
-        homeLogo: m.home_logo || '',
+        team2Name: (m.opponent_name || 'OPPONENT').toUpperCase(),
+        team2Logo: m.opponent_logo || '',
+        team1Name: (m.home_team_name || 'Team 1').toUpperCase(),
+        team1Logo: m.home_logo || '',
         liveData: m.live_data,
         liveState: m.live_state,
         tossWinnerId: m.toss_winner_id,
         tossChoice: m.toss_choice,
         tossDetails: m.toss_details,
-        homeTeamId: m.home_team_id,
+        team1Id: m.home_team_id,
         isNeutral: !!m.is_neutral,
-        isHomeBattingFirst: !!m.is_home_batting_first,
+        isTeam1BattingFirst: !!m.is_home_batting_first,
         isTest: !!m.is_test,
         lastUpdated: m.updated_at
     };
@@ -415,25 +415,23 @@ const translateToDB = (match: Partial<ScheduledMatch>) => {
   const dbMatch: any = {};
   if (match.id !== undefined) dbMatch.id = match.id;
   if (match.date !== undefined) dbMatch.date = match.date;
-  if (match.opponentId !== undefined) dbMatch.opponent_id = match.opponentId;
+  // Symmetrical → DB column mapping
+  if (match.team2Id !== undefined) dbMatch.opponent_id = match.team2Id;
   if (match.groundId !== undefined) dbMatch.ground_id = match.groundId;
   if (match.tournament !== undefined) dbMatch.tournament = match.tournament;
   if (match.tournamentId !== undefined) dbMatch.tournament_id = match.tournamentId;
   if (match.matchFormat !== undefined) dbMatch.match_format = match.matchFormat;
   if (match.status !== undefined) dbMatch.status = match.status;
   if (match.maxOvers !== undefined) dbMatch.max_overs = match.maxOvers;
-  if (match.homeTeamXI !== undefined) dbMatch.home_team_xi = match.homeTeamXI;
-  if (match.opponentTeamXI !== undefined) dbMatch.opponent_team_xi = match.opponentTeamXI;
+  if (match.team1XI !== undefined) dbMatch.home_team_xi = match.team1XI;
+  if (match.team2XI !== undefined) dbMatch.opponent_team_xi = match.team2XI;
   if (match.isLocked !== undefined) dbMatch.is_locked = match.isLocked;
   if (match.isCareerSynced !== undefined) dbMatch.is_career_synced = match.isCareerSynced;
   if (match.isLiveScored !== undefined) dbMatch.is_live_scored = match.isLiveScored;
-  if (match.isHomeBattingFirst !== undefined) dbMatch.is_home_batting_first = match.isHomeBattingFirst;
-  if (match.homeTeamId !== undefined) {
-    dbMatch.home_team_id = match.homeTeamId;
-  } else if (match.isNeutral === false) {
-    // Safety: ensure Indian Strikers ID is always present for non-neutral matches
-    dbMatch.home_team_id = '00000000-0000-0000-0000-000000000000';
-  }
+  if (match.isTeam1BattingFirst !== undefined) dbMatch.is_home_batting_first = match.isTeam1BattingFirst;
+  if (match.team1Id !== undefined) dbMatch.home_team_id = match.team1Id;
+  if (match.team1Name !== undefined) dbMatch.home_team_name = match.team1Name;
+  if (match.team1Logo !== undefined) dbMatch.home_logo = match.team1Logo;
   if (match.isNeutral !== undefined) dbMatch.is_neutral = match.isNeutral;
   if (match.isTest !== undefined) dbMatch.is_test = match.isTest;
   if (match.tossWinnerId !== undefined) dbMatch.toss_winner_id = match.tossWinnerId;
@@ -448,6 +446,8 @@ const translateToDB = (match: Partial<ScheduledMatch>) => {
   if (match.forceUpsert !== undefined) dbMatch.force_upsert = match.forceUpsert;
   if (match.venue !== undefined) dbMatch.venue = match.venue;
   if (match.stage !== undefined) dbMatch.stage = match.stage;
+  if (match.team1Score !== undefined) dbMatch.final_score_home = match.team1Score;
+  if (match.team2Score !== undefined) dbMatch.final_score_away = match.team2Score;
   
   return dbMatch;
 };

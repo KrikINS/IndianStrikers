@@ -8,10 +8,11 @@ interface PlayingXIModalProps {
     homePlayers: Player[]; // Roster from PlayerList/SquadRoster
     opponentTeams: OpponentTeam[];
     opponentId: string | null;
-    teamType: 'home' | 'opponent' | 'view';
+    homeTeamId: string | null;  // Actual ID of the home/team1 entity
+    teamType: 'team1' | 'team2' | 'view';  // formerly 'home' | 'opponent' | 'view'
     initialSelection?: string[];
     onClose: () => void;
-    onSave: (matchId: string, teamType: 'home' | 'opponent', selection: string[]) => void;
+    onSave: (matchId: string, teamType: 'team1' | 'team2', selection: string[]) => void;
     onShare?: (matchId: string) => void;
     onQuickAddPlayer?: (name: string) => void;
 }
@@ -22,6 +23,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     homePlayers, 
     opponentTeams, 
     opponentId,
+    homeTeamId,
     teamType,
     initialSelection: rawInitialSelection = [],
     onClose,
@@ -85,7 +87,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     const handleSave = async () => {
         if (selectedPlayers.length === 0) return;
         setIsSaving(true);
-        if (teamType === 'home' || teamType === 'opponent') {
+        if (teamType === 'team1' || teamType === 'team2') {
             await onSave(matchId, teamType, selectedPlayers);
         }
         setIsSaving(false);
@@ -94,13 +96,14 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
 
     // PERMANENT ENFORCEMENT: Filter selection lists based on the team being selected.
     const displayPlayers = useMemo(() => {
-        const isInsId = (id: string | null) => id === '00000000-0000-0000-0000-000000000000' || id === 'IND_STRIKERS';
+        const INS_UUID = '00000000-0000-0000-0000-000000000000';
+        const isInsTeam = (id: string | null) => id === INS_UUID || id === 'IND_STRIKERS';
         
-        // Target team is either the specific opponentId passed or Indian Strikers (if teamType is home)
-        const targetTeamId = teamType === 'home' ? '00000000-0000-0000-0000-000000000000' : opponentId;
-        const isINS = isInsId(targetTeamId);
+        // team1 uses homeTeamId; team2 uses opponentId
+        const targetTeamId = teamType === 'team1' ? (homeTeamId || INS_UUID) : opponentId;
+        const isINS = isInsTeam(targetTeamId);
 
-        if (isINS) {
+        if (isINS || teamType === 'team1' && !targetTeamId) {
             // Only Active Indian Strikers members (Case-insensitive teamId check)
             return homePlayers.filter(p => 
                 p.isActive && 
@@ -108,8 +111,8 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
             );
         }
         
-        // For any other team (or if specifically selecting opponent players)
-        // 1. Get players from master list assigned to this specific opponent and marked Active
+        // For any other team (or if specifically selecting team2 players)
+        // 1. Get players from master list assigned to this specific team and marked Active
         const opponentPlayersFromMaster = homePlayers.filter(p => 
             !p.isClubPlayer && 
             String(p.primaryTeamId) === String(targetTeamId) && 
@@ -122,14 +125,15 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
         const quickAdded = (targetOpponent?.players || []).filter(p => !masterIds.has(String(p.id)));
 
         return [...opponentPlayersFromMaster, ...quickAdded];
-    }, [homePlayers, opponentTeams, teamType, opponentId]);
+    }, [homePlayers, opponentTeams, teamType, opponentId, homeTeamId]);
 
     const title = (() => {
         if (teamType === 'view') return 'Match Day Team Sheet';
-        const targetTeamId = teamType === 'home' ? '00000000-0000-0000-0000-000000000000' : opponentId;
-        const name = (targetTeamId === '00000000-0000-0000-0000-000000000000' || targetTeamId === 'IND_STRIKERS') 
+        const targetTeamId = teamType === 'team1' ? (homeTeamId || '00000000-0000-0000-0000-000000000000') : opponentId;
+        const isINS = targetTeamId === '00000000-0000-0000-0000-000000000000' || targetTeamId === 'IND_STRIKERS';
+        const name = isINS
             ? 'Indian Strikers' 
-            : (opponentTeams.find(t => t.id === targetTeamId)?.name || 'Opponent');
+            : (opponentTeams.find(t => t.id === targetTeamId)?.name || 'Team');
         return `Select ${name} XI`;
     })();
 

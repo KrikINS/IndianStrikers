@@ -58,8 +58,8 @@ export interface MatchScorerState {
     matchType: 'T20' | 'One Day';
     tournament: string;
     ground: string;
-    opponentName: string;
-    homeTeamName: string | null;
+    team2Name: string;           // formerly opponentName
+    team1Name: string | null;    // formerly homeTeamName
     maxOvers: number;
     toss: {
         winnerId: string | null;
@@ -73,10 +73,10 @@ export interface MatchScorerState {
     currentBowlerId: string | null;
     isFreeHit: boolean;
     isFinished: boolean;
-    homeXI: string[];
-    awayXI: string[];
-    homeLogo?: string;
-    awayLogo?: string;
+    team1XI: string[];           // formerly homeXI
+    team2XI: string[];           // formerly awayXI
+    team1Logo?: string;          // formerly homeLogo
+    team2Logo?: string;          // formerly awayLogo
     historyStack: any[];
     manOfTheMatch: string | null;
     targetScore?: number;
@@ -109,8 +109,8 @@ export interface UnifiedMatchStore extends MatchScorerState {
     addMatch: (match: Omit<ScheduledMatch, 'id'>) => Promise<string>;
     updateMatch: (id: string, updates: Partial<ScheduledMatch>) => Promise<void>;
     deleteMatch: (id: string) => Promise<void>;
-    setPlayingXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => Promise<void>;
-    updateMatchXI: (id: string, teamType: 'home' | 'opponent', playerIds: string[]) => Promise<void>;
+    setPlayingXI: (id: string, teamType: 'team1' | 'team2', playerIds: string[]) => Promise<void>;
+    updateMatchXI: (id: string, teamType: 'team1' | 'team2', playerIds: string[]) => Promise<void>;
     updateMatchStatus: (id: string, status: MatchStatus) => Promise<void>;
     finalizeMatch: (id: string, matchData: any, updatedPlayers: any[]) => Promise<void>;
     syncWithCloud: () => Promise<void>;
@@ -160,8 +160,8 @@ const INITIAL_SCORER_STATE: MatchScorerState = {
     matchType: 'T20',
     tournament: '',
     ground: '',
-    opponentName: '',
-    homeTeamName: null,
+    team2Name: '',
+    team1Name: null,
     maxOvers: 20,
     toss: { winnerId: null, choice: null },
     innings1: null,
@@ -172,10 +172,10 @@ const INITIAL_SCORER_STATE: MatchScorerState = {
     currentBowlerId: null,
     isFreeHit: false,
     isFinished: false,
-    homeXI: [],
-    awayXI: [],
-    homeLogo: '',
-    awayLogo: '',
+    team1XI: [],
+    team2XI: [],
+    team1Logo: '',
+    team2Logo: '',
     historyStack: [],
     manOfTheMatch: null,
     targetScore: 0,
@@ -324,12 +324,12 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     },
 
     setPlayingXI: async (id, teamType, playerIds) => {
-        const updates = { [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: playerIds };
+        const updates = { [teamType === 'team1' ? 'team1XI' : 'team2XI']: playerIds };
         await get().updateMatch(id, updates);
     },
 
     updateMatchXI: async (id, teamType, playerIds) => {
-        const updates = { [teamType === 'home' ? 'homeTeamXI' : 'opponentTeamXI']: playerIds };
+        const updates = { [teamType === 'team1' ? 'team1XI' : 'team2XI']: playerIds };
         await get().updateMatch(id, updates);
     },
 
@@ -468,13 +468,14 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
                     matchType: data.matchType || parsedData.matchType,
                     tournament: data.tournament || parsedData.tournament,
                     ground: data.ground || parsedData.ground,
-                    opponentName: data.opponentName || parsedData.opponentName,
-                    homeTeamName: data.homeTeamName || parsedData.homeTeamName || null,
+                    // Support both old (homeXI/awayXI) and new (team1XI/team2XI) payload keys
+                    team2Name: data.team2Name || parsedData.team2Name || data.opponentName || parsedData.opponentName || '',
+                    team1Name: data.team1Name || parsedData.team1Name || data.homeTeamName || parsedData.homeTeamName || null,
                     maxOvers: data.maxOvers || parsedData.maxOvers,
-                    homeXI: data.homeXI || (parsedData.homeXI || []),
-                    awayXI: data.awayXI || (parsedData.awayXI || []),
-                    homeLogo: data.homeLogo || parsedData.homeLogo,
-                    awayLogo: data.awayLogo || parsedData.awayLogo,
+                    team1XI: data.team1XI || parsedData.team1XI || data.homeXI || parsedData.homeXI || [],
+                    team2XI: data.team2XI || parsedData.team2XI || data.awayXI || parsedData.awayXI || [],
+                    team1Logo: data.team1Logo || parsedData.team1Logo || data.homeLogo || parsedData.homeLogo || '',
+                    team2Logo: data.team2Logo || parsedData.team2Logo || data.awayLogo || parsedData.awayLogo || '',
                     strikerId: ensureId(parsedData.strikerId),
                     nonStrikerId: ensureId(parsedData.nonStrikerId),
                     currentBowlerId: ensureId(parsedData.currentBowlerId)
@@ -489,13 +490,13 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             matchType: data.matchType,
             tournament: data.tournament,
             ground: data.ground,
-            opponentName: data.opponentName,
-            homeTeamName: data.homeTeamName || null,
+            team2Name: data.team2Name || data.opponentName || '',
+            team1Name: data.team1Name || data.homeTeamName || null,
             maxOvers: data.maxOvers,
-            homeXI: data.homeXI || [],
-            awayXI: data.awayXI || [],
-            homeLogo: data.homeLogo || '',
-            awayLogo: data.awayLogo || ''
+            team1XI: data.team1XI || data.homeXI || [],
+            team2XI: data.team2XI || data.awayXI || [],
+            team1Logo: data.team1Logo || data.homeLogo || '',
+            team2Logo: data.team2Logo || data.awayLogo || ''
         });
     },
 
@@ -550,13 +551,13 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         const getPlayerName = (id: string) => state.squadPlayers.find(p => p.id === id)?.name || state.opponentPlayers.find(p => p.id === id)?.name || 'Unknown Player';
 
         if (num === 1 && state.systemCommentary?.length === 0) {
-            const tossWinnerName = state.toss.winnerId === 'HOME' ? 'Home Team' : (state.toss.winnerId === 'AWAY' ? state.opponentName : 'Toss Winner');
+            const tossWinnerName = state.toss.winnerId === 'HOME' ? (state.team1Name || 'Home Team') : (state.toss.winnerId === 'AWAY' ? state.team2Name : 'Toss Winner');
             get().addSystemCommentary(`🏏 Toss Update: ${tossWinnerName} has won the toss and elected to ${state.toss.choice?.toLowerCase() || 'bat'} first.`);
 
-            const homeXINames = (state.homeXI || []).map(id => getPlayerName(id)).join(', ');
-            const awayXINames = (state.awayXI || []).map(id => getPlayerName(id)).join(', ');
-            if (homeXINames) get().addSystemCommentary(`📋 Playing XI - Home: ${homeXINames}`);
-            if (awayXINames) get().addSystemCommentary(`📋 Playing XI - Away: ${awayXINames}`);
+            const team1XINames = (state.team1XI || []).map(id => getPlayerName(id)).join(', ');
+            const team2XINames = (state.team2XI || []).map(id => getPlayerName(id)).join(', ');
+            if (team1XINames) get().addSystemCommentary(`📋 Playing XI - ${state.team1Name || 'Team 1'}: ${team1XINames}`);
+            if (team2XINames) get().addSystemCommentary(`📋 Playing XI - ${state.team2Name || 'Team 2'}: ${team2XINames}`);
         }
 
         const strikerName = getPlayerName(ensureId(strId));
@@ -1032,7 +1033,10 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             matchType: state.matchType,
             tournament: state.tournament,
             ground: state.ground,
-            opponentName: state.opponentName,
+            team2Name: state.team2Name,
+            team1Name: state.team1Name,
+            team1Logo: state.team1Logo,
+            team2Logo: state.team2Logo,
             maxOvers: state.maxOvers,
             targetScore: state.targetScore ?? 0,
 
@@ -1057,8 +1061,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             wagonWheelQuickSave: state.wagonWheelQuickSave,
 
             // XI — IDs only, never full player objects
-            homeXI: (state.homeXI || []).map(p => (typeof p === 'object' && p !== null) ? (p as any).id : p),
-            awayXI: (state.awayXI || []).map(p => (typeof p === 'object' && p !== null) ? (p as any).id : p),
+            team1XI: (state.team1XI || []).map(p => (typeof p === 'object' && p !== null) ? (p as any).id : p),
+            team2XI: (state.team2XI || []).map(p => (typeof p === 'object' && p !== null) ? (p as any).id : p),
 
             // Milestone tracking (tiny)
             partnershipNotified: state.partnershipNotified ?? [],

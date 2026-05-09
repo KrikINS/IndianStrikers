@@ -229,16 +229,16 @@ export interface OpponentTeam {
 export interface ScheduledMatch {
   id: string;
   isNeutral?: boolean;
-  homeTeamId?: string | null; 
-  opponentId: string | null; 
+  team1Id?: string | null;    // formerly homeTeamId
+  team2Id: string | null;     // formerly opponentId
   date: string;
   groundId: string | null;
   tournament: string;
   tournamentId?: string | null;
   stage: MatchStage;
   status: MatchStatus;
-  homeTeamXI: string[]; 
-  opponentTeamXI: string[]; 
+  team1XI: string[];           // formerly homeTeamXI
+  team2XI: string[];           // formerly opponentTeamXI
   toss?: {
     winner: string;
     choice: 'Bat' | 'Field';
@@ -247,22 +247,22 @@ export interface ScheduledMatch {
   tossChoice?: 'Bat' | 'Bowl' | null;
   tossDetails?: string;
   maxOvers?: number;
-  resultSummary?: string; 
-  finalScoreHome?: { runs: number; wickets: number; overs: number };
-  finalScoreAway?: { runs: number; wickets: number; overs: number };
-  resultNote?: string; 
-  resultType?: string; 
+  resultSummary?: string;
+  team1Score?: { runs: number; wickets: number; overs: number }; // formerly finalScoreHome
+  team2Score?: { runs: number; wickets: number; overs: number }; // formerly finalScoreAway
+  resultNote?: string;
+  resultType?: string;
   scorecard?: FullScorecardData;
   isLiveScored?: boolean;
   isLocked?: boolean;
-  isHomeBattingFirst?: boolean;
+  isTeam1BattingFirst?: boolean; // formerly isHomeBattingFirst
   isCareerSynced?: boolean;
   isTest?: boolean;
   matchFormat?: 'T20' | 'One Day';
-  opponentName?: string;
-  homeTeamName?: string;
-  homeLogo?: string;
-  opponentLogo?: string;
+  team2Name?: string;            // formerly opponentName
+  team1Name?: string;            // formerly homeTeamName
+  team1Logo?: string;            // formerly homeLogo
+  team2Logo?: string;            // formerly opponentLogo
   performers?: Performer[];
   title?: string;
   time?: string;

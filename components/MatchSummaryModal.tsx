@@ -4,21 +4,20 @@ import { ScheduledMatch } from '../types';
 
 interface MatchSummaryModalProps {
   match: ScheduledMatch;
+  homeTeamName: string;
   opponentName: string;
   onSave: (summary: any) => void;
   onClose: () => void;
 }
 
-export default function MatchSummaryModal({ match, opponentName, onSave, onClose }: MatchSummaryModalProps) {
-  const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
-
+export default function MatchSummaryModal({ match, homeTeamName, opponentName, onSave, onClose }: MatchSummaryModalProps) {
   const [summary, setSummary] = useState({
-    tossWinner: match.tossWinnerId || (match.toss?.winner === 'Indian Strikers' ? HOME_TEAM_ID : match.opponentId) || '',
+    tossWinner: match.tossWinnerId || match.team1Id || '',
     tossChoice: match.tossChoice || match.toss?.choice || 'Bat',
     maxOvers: match.maxOvers || 20,
     resultType: match.resultType || 'Normal Result',
-    homeScore: match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 },
-    awayScore: match.finalScoreAway || { runs: 0, wickets: 0, overs: 0 },
+    homeScore: match.team1Score || { runs: 0, wickets: 0, overs: 0 },
+    awayScore: match.team2Score || { runs: 0, wickets: 0, overs: 0 },
   });
 
   const [initialSummary] = useState(summary);
@@ -202,18 +201,21 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
           <div className="fixture-title uppercase">
             <div className="flex flex-col items-center gap-2">
                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center p-1.5 border border-white/10">
-                  <img src="/INS%20LOGO.PNG" className="max-h-full max-w-full object-contain" alt="INS" />
+                  {match.team1Logo ? (
+                    <img src={match.team1Logo} className="max-h-full max-w-full object-contain" alt={homeTeamName} />
+                  ) : (
+                    <div className="text-[10px] text-slate-500 font-black">{String(homeTeamName).slice(0,3)}</div>
+                  )}
                </div>
-               <span className="text-xs">INDIAN STRIKERS</span> 
+               <span className="text-xs">{homeTeamName}</span> 
             </div>
             
             <span className="vs-pill">VS</span> 
             
             <div className="flex flex-col items-center gap-2">
                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center p-1.5 border border-white/10">
-                  {/* We need the opponent logo here - will pass it from parent */}
-                  {match.opponentLogo ? (
-                    <img src={match.opponentLogo} className="max-h-full max-w-full object-contain" alt={opponentName} />
+                  {match.team2Logo ? (
+                    <img src={match.team2Logo} className="max-h-full max-w-full object-contain" alt={opponentName} />
                   ) : (
                     <div className="text-[10px] text-slate-500 font-black">{String(opponentName).slice(0,3)}</div>
                   )}
@@ -231,14 +233,14 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
         <div className="grid grid-cols-2 gap-6 mb-8">
           {/* Home Team Inputs */}
           <div className="bg-slate-800/40 p-5 rounded-2xl border border-slate-700/50">
-            <span className="team-label text-center mb-4 text-blue-400">Indian Strikers</span>
+            <span className="team-label text-center mb-4 text-blue-400">{homeTeamName}</span>
             <div className="space-y-4">
               <div className="flex items-end gap-2 justify-center">
                 <div className="text-center w-20">
                   <label className="text-[10px] text-slate-500 font-black block mb-1">TOTAL RUNS</label>
                   <input 
                     id="home-runs"
-                    title="Indian Strikers Runs"
+                    title={`${homeTeamName} Runs`}
                     type="number" 
                     className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-black text-xl focus:border-blue-500 outline-none"
                     value={summary.homeScore.runs}
@@ -250,7 +252,7 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
                   <label className="text-[10px] text-slate-500 font-black block mb-1">WKTS</label>
                   <input 
                     id="home-wickets"
-                    title="Indian Strikers Wickets"
+                    title={`${homeTeamName} Wickets`}
                     type="number" 
                     className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-black text-xl focus:border-blue-500 outline-none"
                     value={summary.homeScore.wickets}
@@ -262,7 +264,7 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
                 <label className="text-[10px] text-slate-500 font-black block mb-1">OVERS COMPLETED</label>
                 <input 
                   id="home-overs"
-                  title="Indian Strikers Overs"
+                  title={`${homeTeamName} Overs`}
                   type="number"
                   step="0.1"
                   className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-bold text-base focus:border-blue-500 outline-none max-w-[120px] mx-auto block"
@@ -324,8 +326,8 @@ export default function MatchSummaryModal({ match, opponentName, onSave, onClose
             <label>TOSS WON BY</label>
             <select title="Toss Winner" value={summary.tossWinner || ''} onChange={(e) => setSummary({...summary, tossWinner: e.target.value})}>
               <option value="">Select Team</option>
-              <option value={HOME_TEAM_ID}>Indian Strikers</option>
-              <option value={match.opponentId || ''}>{opponentName}</option>
+              <option value={match.team1Id || ''} >{homeTeamName}</option>
+              <option value={match.team2Id || ''}>{opponentName}</option>
             </select>
           </div>
           <div className="input-group">

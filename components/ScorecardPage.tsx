@@ -8,10 +8,9 @@ import { ArrowLeft } from 'lucide-react';
 
 interface ScorecardPageProps {
     opponents: OpponentTeam[];
-    homeTeamName: string;
 }
 
-export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents, homeTeamName }) => {
+export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents }) => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { matches, finalizeMatch } = useMatchCenter();

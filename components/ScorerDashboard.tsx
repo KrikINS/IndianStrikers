@@ -1090,8 +1090,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const innings1 = useMatchCenter(state => state.innings1);
   const innings2 = useMatchCenter(state => state.innings2);
   const toss = useMatchCenter(state => state.toss);
-  const homeXI = useMatchCenter(state => state.homeXI);
-  const awayXI = useMatchCenter(state => state.awayXI);
+  const team1XI = useMatchCenter(state => state.team1XI);
+  const team2XI = useMatchCenter(state => state.team2XI);
   const matchId = useMatchCenter(state => state.matchId);
   const isWaitingForBowler = useMatchCenter(state => state.isWaitingForBowler);
 
@@ -1118,7 +1118,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   // Derive players for convenience
   const players = squadPlayers;
 
-  // homeXI and awayXI are now defined via selectors at the top
+  // team1XI and team2XI are now defined via selectors at the top
   const { matchId: storeMatchId } = store;
   const [selStriker, setSelStriker] = useState<string | null>(null);
   const [selNonStriker, setSelNonStriker] = useState<string | null>(null);
@@ -1175,7 +1175,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     if (homePlayer) return homePlayer.name;
     const awayPlayer = opponentPlayers.find(p => String(p.id) === searchId);
     if (awayPlayer) return awayPlayer.name;
-    // awayXI may store names directly for opponent teams without registered IDs
+    // team2XI may store names directly for opponent teams without registered IDs
     return searchId;
   };
 
@@ -1484,21 +1484,21 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const resolvedTournament = resolveTournament(meta.tournamentId, meta.tournament);
       const resolvedGroundName = resolveGroundName(meta.groundId, meta.venue);
 
-      const opponentMeta = (allOpponents || []).find((o: any) => String(o.id) === String(meta.opponentId));
-      const resolvedOpponentName = opponentMeta?.name || meta.opponentName || 'OPPONENT';
-      const resolvedAwayLogo = meta.opponentLogo || opponentMeta?.logoUrl || '';
+      const opponentMeta = (allOpponents || []).find((o: any) => String(o.id) === String(meta.team2Id));
+      const resolvedTeam2Name = opponentMeta?.name || meta.team2Name || 'OPPONENT';
+      const resolvedTeam2Logo = meta.team2Logo || opponentMeta?.logoUrl || '';
 
       store.initializeMatch({
         matchId: meta.id,
         matchType: meta.matchFormat || 'T20',
         tournament: resolvedTournament,
         ground: resolvedGroundName,
-        opponentName: resolvedOpponentName,
+        team2Name: resolvedTeam2Name,
         maxOvers: meta.maxOvers || 20,
-        homeXI: meta.homeTeamXI || [],
-        awayXI: meta.opponentTeamXI || [],
-        homeLogo: teamLogo || '/INS%20LOGO.PNG',
-        awayLogo: resolvedAwayLogo,
+        team1XI: meta.team1XI || [],
+        team2XI: meta.team2XI || [],
+        team1Logo: meta.team1Logo || teamLogo || '/INS%20LOGO.PNG',
+        team2Logo: resolvedTeam2Logo,
         liveData: meta.liveData
       });
     };
@@ -1561,23 +1561,23 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
         // PERMANENT RESOLUTION LAW: Resolve IDs to Names/Logos from master data
         const groundMeta = grounds.find(g => g.id === matchMeta.groundId);
-        const opponentMeta = allOpponents.find((o: any) => o.id === matchMeta.opponentId || o.name === matchMeta.opponentName);
+        const opponentMeta = allOpponents.find((o: any) => o.id === matchMeta.team2Id || o.name === matchMeta.team2Name);
 
         const resolvedGroundName = groundMeta?.name || (typeof matchMeta.venue === 'object' ? (matchMeta.venue as any)?.name : matchMeta.venue) || 'Local Ground';
-        const resolvedOpponentName = opponentMeta?.name || matchMeta.opponentName || 'OPPONENT';
-        const resolvedAwayLogo = matchMeta.opponentLogo || opponentMeta?.logoUrl || '';
+        const resolvedTeam2Name = opponentMeta?.name || matchMeta.team2Name || 'OPPONENT';
+        const resolvedTeam2Logo = matchMeta.team2Logo || opponentMeta?.logoUrl || '';
 
         store.initializeMatch({
           matchId: matchMeta.id,
           matchType: matchMeta.matchFormat || 'T20',
           tournament: matchMeta.tournament || 'Live Match',
           ground: resolvedGroundName,
-          opponentName: resolvedOpponentName,
+          team2Name: resolvedTeam2Name,
           maxOvers: matchMeta.maxOvers || ld.maxOvers || 20,
-          homeXI: matchMeta.homeTeamXI || [],
-          awayXI: matchMeta.opponentTeamXI || [],
-          homeLogo: teamLogo || '/INS%20LOGO.PNG',
-          awayLogo: resolvedAwayLogo,
+          team1XI: matchMeta.team1XI || [],
+          team2XI: matchMeta.team2XI || [],
+          team1Logo: matchMeta.team1Logo || teamLogo || '/INS%20LOGO.PNG',
+          team2Logo: resolvedTeam2Logo,
           liveData: ld
         });
       }
@@ -1885,12 +1885,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           matchType: matchMeta.matchFormat || 'T20',
                           tournament: matchMeta.tournament || 'Live Match',
                           ground: matchMeta.venue || 'Local Ground',
-                          opponentName: matchMeta.opponentName || 'OPPONENT',
+                          team2Name: matchMeta.team2Name || 'OPPONENT',
                           maxOvers: matchMeta.maxOvers || 20,
-                          homeXI: matchMeta.homeTeamXI || [],
-                          awayXI: matchMeta.opponentTeamXI || [],
-                          homeLogo: teamLogo,
-                          awayLogo: matchMeta.opponentLogo || '',
+                          team1XI: matchMeta.team1XI || [],
+                          team2XI: matchMeta.team2XI || [],
+                          team1Logo: teamLogo,
+                          team2Logo: matchMeta.team2Logo || '',
                           liveData: matchMeta.liveData
                         });
                         toast.success("Synchronized with Cloud!");
@@ -1971,8 +1971,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   if (setupStep !== null) {
     const isReadyToStart = tossWinner && tossChoice &&
-      (homeXI?.length || 0) === 11 &&
-      (awayXI?.length || 0) === 11 &&
+      (team1XI?.length || 0) === 11 &&
+      (team2XI?.length || 0) === 11 &&
       selStriker && selNonStriker && selBowler;
 
     const handleStartMatch = async () => {
@@ -2030,8 +2030,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         updateMatch(activeMatchId, {
           isHomeBattingFirst: startBatTeamId === 'HOME',
           status: 'live',
-          homeTeamXI: homeXI || [],
-          opponentTeamXI: awayXI || [],
+          team1XI: team1XI || [],
+          team2XI: team2XI || [],
           liveData: {
             ...cleanedStore,
             strikerId: selStriker!,
@@ -2076,9 +2076,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 const groundId = matchMeta?.groundId || store.ground;
                 const displayGround = resolveGroundName(groundId, store.ground);
 
-                const opponentMeta = (allOpponents || []).find(o => String(o.id) === String(matchMeta?.opponentId) || o.name === store.opponentName);
-                const displayOpponentName = (opponentMeta?.name && opponentMeta.name !== 'OPPONENT') ? opponentMeta.name : (store.opponentName === 'OPPONENT' ? 'SAUDI KNIGHTS' : (store.opponentName || 'SAUDI KNIGHTS'));
-                const displayOpponentLogo = (store.awayLogo && !store.awayLogo.includes('null') && store.awayLogo.length > 5) ? store.awayLogo : (matchMeta?.opponentLogo || opponentMeta?.logoUrl || '');
+                const opponentMeta = (allOpponents || []).find(o => String(o.id) === String(matchMeta?.opponentId) || o.name === store.team2Name);
+                const displayTeam2Name = (opponentMeta?.name && opponentMeta.name !== 'OPPONENT') ? opponentMeta.name : (store.team2Name === 'OPPONENT' ? 'SAUDI KNIGHTS' : (store.team2Name || 'SAUDI KNIGHTS'));
+                const displayTeam2Logo = (store.team2Logo && !store.team2Logo.includes('null') && store.team2Logo.length > 5) ? store.team2Logo : (matchMeta?.opponentLogo || opponentMeta?.logoUrl || '');
 
                 return (
                   <>
@@ -2090,20 +2090,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     <TeamRow>
                       <TeamBlock>
                         <TeamLogoCircle $active>
-                          <img src={store.homeLogo || teamLogo || '/INS%20LOGO.PNG'} alt="H" />
+                          <img src={store.team1Logo || teamLogo || '/INS%20LOGO.PNG'} alt="H" />
                         </TeamLogoCircle>
-                        <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>INDIAN STRIKERS</span>
+                        <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>{(store.team1Name || 'INDIAN STRIKERS').toUpperCase()}</span>
                       </TeamBlock>
                       <TeamBlock>
                         <TeamLogoCircle>
-                          {displayOpponentLogo ? (
-                            <img src={displayOpponentLogo} alt="A" />
+                          {displayTeam2Logo ? (
+                            <img src={displayTeam2Logo} alt="A" />
                           ) : (
                             <Shield size={40} color="rgba(255,255,255,0.3)" />
                           )}
                         </TeamLogoCircle>
                         <span style={{ fontStyle: 'italic', fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: '#FAB005' }}>
-                          {displayOpponentName.toUpperCase()}
+                          {displayTeam2Name.toUpperCase()}
                         </span>
                       </TeamBlock>
                     </TeamRow>
@@ -2138,10 +2138,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 12 }}>Who won the toss?</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
                 <TossOption $selected={tossWinner === 'home'} onClick={() => setTossWinner('home')}>
-                  Indian Strikers
+                  {store.team1Name || 'INDIAN STRIKERS'}
                 </TossOption>
                 <TossOption $selected={tossWinner === 'away'} onClick={() => setTossWinner('away')}>
-                  {store.opponentName || matchMeta?.opponentName || 'OPPONENT'}
+                  {store.team2Name || matchMeta?.opponentName || 'OPPONENT'}
                 </TossOption>
               </div>
 
@@ -2188,11 +2188,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   {setupStep === 'squad_home' ? <Shield size={20} color="#FAB005" /> : <Users size={20} color="#FAB005" />}
                   <h3 style={{ margin: 0, fontWeight: 900 }}>
-                    {setupStep === 'squad_home' ? 'INDIAN STRIKERS ROSTER' : `${(store.opponentName || 'OPPONENT').toUpperCase()} ROSTER`}
+                    {setupStep === 'squad_home' ? `${(store.team1Name || 'INDIAN STRIKERS').toUpperCase()} ROSTER` : `${(store.team2Name || 'OPPONENT').toUpperCase()} ROSTER`}
                   </h3>
                 </div>
                 <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#FAB005' }}>
-                  {setupStep === 'squad_home' ? homeXI.length : awayXI.length} / 11
+                  {setupStep === 'squad_home' ? team1XI.length : team2XI.length} / 11
                 </div>
               </div>
 
@@ -2218,7 +2218,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     return matchesRole && isActuallyActive;
                   })
                   .map((p: any) => {
-                    const currentXI = setupStep === 'squad_home' ? homeXI : awayXI;
+                    const currentXI = setupStep === 'squad_home' ? team1XI : team2XI;
                     const isSelected = (currentXI || []).includes(p.id);
 
                     return (
@@ -2236,7 +2236,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             return;
                           }
                           store.updateMatchSettings({
-                            [setupStep === 'squad_home' ? 'homeXI' : 'awayXI']: newSquad
+                            [setupStep === 'squad_home' ? 'team1XI' : 'team2XI']: newSquad
                           });
                         }}
                       >
@@ -2274,7 +2274,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 </ActionButton>
                 <ActionButton
                   $variant="primary"
-                  disabled={(setupStep === 'squad_home' ? homeXI.length : awayXI.length) < 11}
+                  disabled={(setupStep === 'squad_home' ? team1XI.length : team2XI.length) < 11}
                   onClick={() => setSetupStep(setupStep === 'squad_home' ? 'squad_away' : 'openers_bat')}
                 >
                   {setupStep === 'squad_home' ? 'Next Team' : 'Choose Openers'}
@@ -2288,7 +2288,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     : (opponentPlayers || []);
                   const selectedIds = pool.slice(0, 11).map((p: any) => p.id);
                   store.updateMatchSettings({
-                    [setupStep === 'squad_home' ? 'homeXI' : 'awayXI']: selectedIds
+                    [setupStep === 'squad_home' ? 'team1XI' : 'team2XI']: selectedIds
                   });
                 }}
                 style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.7rem', marginTop: 12, cursor: 'pointer', textDecoration: 'underline' }}
@@ -2318,8 +2318,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 };
 
                 const batTeamId = getInningsBattingTeam();
-                const batTeamName = batTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || matchMeta?.opponentName || 'OPPONENT');
-                const batSquadIds = batTeamId === 'HOME' ? homeXI : awayXI;
+                const batTeamName = batTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.team2Name || matchMeta?.opponentName || 'OPPONENT');
+                const batSquadIds = batTeamId === 'HOME' ? team1XI : team2XI;
                 const batPool = batTeamId === 'HOME'
                   ? (players || []).filter((p: any) => (batSquadIds || []).includes(p.id))
                   : (opponentPlayers || []).filter((p: any) => (batSquadIds || []).includes(p.id));
@@ -2385,8 +2385,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 };
 
                 const bowlTeamId = getInningsBowlingTeam();
-                const bowlTeamName = bowlTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.opponentName || matchMeta?.opponentName || 'OPPONENT');
-                const bowlSquadIds = bowlTeamId === 'HOME' ? homeXI : awayXI;
+                const bowlTeamName = bowlTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.team2Name || matchMeta?.opponentName || 'OPPONENT');
+                const bowlSquadIds = bowlTeamId === 'HOME' ? team1XI : team2XI;
                 const bowlPool = bowlTeamId === 'HOME'
                   ? (players || []).filter((p: any) => (bowlSquadIds || []).includes(p.id))
                   : (opponentPlayers || []).filter((p: any) => (bowlSquadIds || []).includes(p.id));
@@ -2425,7 +2425,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
                 <ActionButton onClick={() => setSetupStep('openers_bat')}>Back to Batsmen</ActionButton>
                 <ActionButton $variant="primary" disabled={!isReadyToStart} onClick={handleStartMatch}>
-                  {store.innings1 ? `Start ${(store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.opponentName || 'Opponent') : 'Indian Strikers') : (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.opponentName || 'Opponent')))} Innings` : 'Start Match'}
+                  {store.innings1 ? `Start ${(store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.team2Name || 'Opponent') : 'Indian Strikers') : (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.team2Name || 'Opponent')))} Innings` : 'Start Match'}
                 </ActionButton>
               </div>
             </>
@@ -2757,9 +2757,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       };
 
       const playerStatsUpdate: any[] = [];
-      const homeXI = store.homeXI || [];
+      const team1XI = store.team1XI || [];
 
-      homeXI.forEach(pid => {
+      team1XI.forEach(pid => {
         let runs = 0;
         let balls = 0;
         let fours = 0;
@@ -2851,11 +2851,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
         let resultMessage = '';
         if (totalScore >= target) {
-          resultMessage = `${(store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : store.opponentName).toUpperCase()} WON BY ${10 - totalWickets} WICKETS`;
+          resultMessage = `${(store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : store.team2Name).toUpperCase()} WON BY ${10 - totalWickets} WICKETS`;
         } else if (totalScore === target - 1) {
           resultMessage = "MATCH TIED";
         } else {
-          resultMessage = `${(store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : store.opponentName).toUpperCase()} WON BY ${target - 1 - totalScore} RUNS`;
+          resultMessage = `${(store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : store.team2Name).toUpperCase()} WON BY ${target - 1 - totalScore} RUNS`;
         }
         updatePayload.resultSummary = resultMessage;
       }
@@ -3107,20 +3107,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%' }}>
                 <img
-                  src={store.homeLogo || '/INS%20LOGO.PNG'}
+                  src={store.team1Logo || teamLogo || '/INS%20LOGO.PNG'}
                   style={{ width: 30, height: 30, objectFit: 'contain' }}
                   alt="HOME"
                 />
                 <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
-                  INDIAN STRIKERS
+                  {(store.team1Name || 'INDIAN STRIKERS').toUpperCase()}
                 </span>
                 <span style={{ fontSize: '10px', fontWeight: 900, color: '#FAB005', opacity: 0.8 }}>VS</span>
                 <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
-                  {(store.opponentName || matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
+                  {(store.team2Name || matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
                 </span>
-                {store.awayLogo || matchMeta?.opponentLogo ? (
+                {store.team2Logo || matchMeta?.opponentLogo ? (
                   <img
-                    src={store.awayLogo || matchMeta?.opponentLogo}
+                    src={store.team2Logo || matchMeta?.opponentLogo}
                     style={{ width: 30, height: 30, objectFit: 'contain' }}
                     alt="AWAY"
                   />
@@ -3129,11 +3129,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               <div style={{ fontSize: '7.5px', fontWeight: 900, opacity: 0.9, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2 }}>
                 {store.toss.winnerId && (
                   <div style={{ color: '#FAB005' }}>
-                    {store.toss.winnerId === 'HOME' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT')} won toss & elected to {store.toss.choice}
+                    {store.toss.winnerId === 'HOME' ? 'Indian Strikers' : (store.team2Name || 'OPPONENT')} won toss & elected to {store.toss.choice}
                   </div>
                 )}
                 <div style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  {`${(store.currentInnings === 1 ? (store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT')) : (store.toss.choice === 'Bat' ? (store.opponentName || 'OPPONENT') : 'Indian Strikers')) : (store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.opponentName || 'OPPONENT') : 'Indian Strikers') : (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.opponentName || 'OPPONENT'))))}  •  ${store.maxOvers || 20} Overs`}
+                  {`${(store.currentInnings === 1 ? (store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.team2Name || 'OPPONENT')) : (store.toss.choice === 'Bat' ? (store.team2Name || 'OPPONENT') : 'Indian Strikers')) : (store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.team2Name || 'OPPONENT') : 'Indian Strikers') : (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.team2Name || 'OPPONENT'))))}  •  ${store.maxOvers || 20} Overs`}
                 </div>
               </div>
             </div>
@@ -3181,7 +3181,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                       <h3 style={{ fontSize: '1rem', color: 'rgba(84, 147, 202, 1)', marginBottom: 8, textTransform: 'uppercase' }}>Indian Strikers</h3>
                       <SelectionGrid style={{ maxHeight: '50vh' }}>
                         {(players || [])
-                          .filter((p: Player) => (homeXI || []).includes(p.id))
+                          .filter((p: Player) => (team1XI || []).includes(p.id))
                           .map((p: Player) => (
                             <div key={p.id} style={{
                               fontSize: '0.6rem',
@@ -3198,14 +3198,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                               <span style={{ opacity: 0.6, fontSize: '0.55rem', fontWeight: 400, textTransform: 'uppercase' }}>{p.role}</span>
                             </div>
                           ))}
-                        {homeXI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.55rem' }}>No XI Selected</div>}
+                        {team1XI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.55rem' }}>No XI Selected</div>}
                       </SelectionGrid>
                     </div>
                     <div>
                       <h3 style={{ fontSize: '1rem', color: '#FAB005', marginBottom: 8, textTransform: 'uppercase' }}>{matchMeta?.opponentName || 'OPPONENT'}</h3>
                       <SelectionGrid style={{ maxHeight: '50vh' }}>
                         {(opponentPlayers || [])
-                          .filter(p => (awayXI || []).includes(p.id))
+                          .filter(p => (team2XI || []).includes(p.id))
                           .map(p => (
                             <div key={p.id} style={{
                               fontSize: '0.6rem',
@@ -3222,7 +3222,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                               <span style={{ opacity: 0.6, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>{p.role}</span>
                             </div>
                           ))}
-                        {awayXI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.8rem' }}>No XI Selected</div>}
+                        {team2XI.length === 0 && <div style={{ opacity: 0.4, fontSize: '0.8rem' }}>No XI Selected</div>}
                       </SelectionGrid>
                     </div>
                   </div>
@@ -3609,7 +3609,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <SelectionGrid style={{ maxHeight: '50vh' }}>
                   {(() => {
                     const fieldingTeamId = currentInnings.bowlingTeamId;
-                    const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
+                    const fieldingTeamXI = fieldingTeamId === 'HOME' ? team1XI : team2XI;
                     const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
                     const maxOversPerB = Math.ceil((store.maxOvers || 20) / 5);
                     return (fieldingPool || [])
@@ -3770,7 +3770,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <SelectionGrid style={{ maxHeight: '50vh' }}>
                   {(() => {
                     const fieldingTeamId = currentInnings.bowlingTeamId;
-                    const fieldingTeamXI = fieldingTeamId === 'HOME' ? homeXI : awayXI;
+                    const fieldingTeamXI = fieldingTeamId === 'HOME' ? team1XI : team2XI;
                     const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
                     return (fieldingPool || [])
                       .filter((p: any) => (fieldingTeamXI || []).includes(p.id))
@@ -4018,10 +4018,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               <div style={{ flex: 1, overflowY: 'auto', padding: '40px 20px' }}>
                 <div style={{ textAlign: 'center', marginBottom: 40 }}>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 24, marginBottom: 24 }}>
-                    <img src={store.homeLogo || '/INS%20LOGO.PNG'} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="H" />
+                    <img src={store.team1Logo || teamLogo || '/INS%20LOGO.PNG'} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="H" />
                     <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'rgba(0,0,0,0.1)' }}>VS</span>
-                    {store.awayLogo || matchMeta?.opponentLogo ? (
-                      <img src={store.awayLogo || matchMeta?.opponentLogo} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="A" />
+                    {store.team2Logo || matchMeta?.opponentLogo ? (
+                      <img src={store.team2Logo || matchMeta?.opponentLogo} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="A" />
                     ) : <Shield size={40} color="rgba(0,0,0,0.1)" />}
                   </div>
                   <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#001F3F', margin: 0 }}>INNINGS BREAK</h1>
@@ -4084,7 +4084,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     setSelBowler(null);
                   }}
                 >
-                  START {(store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.opponentName || 'OPPONENT') : 'INDIAN STRIKERS') : (store.toss.choice === 'Bat' ? 'INDIAN STRIKERS' : (store.opponentName || 'OPPONENT')))} INNINGS
+                  START {(store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.team2Name || 'OPPONENT') : 'INDIAN STRIKERS') : (store.toss.choice === 'Bat' ? 'INDIAN STRIKERS' : (store.team2Name || 'OPPONENT')))} INNINGS
                 </ActionButton>
               </div>
             </InningsBreakModal>
@@ -4210,9 +4210,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
                     {/* Header: Logos & Status */}
                     <div className="absolute top-8 inset-x-8 z-20 flex items-center justify-between">
-                      <img src="/INS%20LOGO.PNG" className="w-14 h-14 object-contain filter drop-shadow-2xl" alt="Logo" />
+                      <img src={store.team1Logo || teamLogo || '/INS%20LOGO.PNG'} className="w-14 h-14 object-contain filter drop-shadow-2xl" alt="Logo" />
                       <div className="text-right">
-                        <p className="text-[10px] font-black italic tracking-[0.2em] text-sky-400 uppercase">Indian Strikers Official</p>
+                        <p className="text-[10px] font-black italic tracking-[0.2em] text-sky-400 uppercase">Match Official Feed</p>
                         <p className="text-xl font-black italic text-white leading-none tracking-tighter">PLAYER OF THE MATCH</p>
                       </div>
                     </div>
@@ -4335,7 +4335,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <SelectionGrid style={{ maxHeight: '50vh' }}>
                   {(() => {
                     const battingTeamId = currentInnings.battingTeamId;
-                    const battingTeamXI = battingTeamId === 'HOME' ? homeXI : awayXI;
+                    const battingTeamXI = battingTeamId === 'HOME' ? team1XI : team2XI;
                     const battingPool = battingTeamId === 'HOME' ? players : opponentPlayers;
                     const available = (battingPool || []).filter((p: any) =>
                       battingTeamXI.includes(p.id) &&
@@ -4388,7 +4388,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   })()}
                   {(() => {
                     const battingTeamId = currentInnings.battingTeamId;
-                    const battingXI = battingTeamId === 'HOME' ? homeXI : awayXI;
+                    const battingXI = battingTeamId === 'HOME' ? team1XI : team2XI;
                     const battingPool = battingTeamId === 'HOME' ? players : opponentPlayers;
                     const available = (battingPool || []).filter((p: any) =>
                       battingXI.includes(p.id) &&
@@ -4767,12 +4767,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                                     matchType: matchMeta.matchFormat || 'T20',
                                     tournament: matchMeta.tournament || 'Live Match',
                                     ground: matchMeta.venue || 'Local Ground',
-                                    opponentName: matchMeta.opponentName || 'OPPONENT',
+                                    team2Name: matchMeta.team2Name || 'OPPONENT',
                                     maxOvers: matchMeta.maxOvers || 20,
-                                    homeXI: matchMeta.homeTeamXI || [],
-                                    awayXI: matchMeta.opponentTeamXI || [],
-                                    homeLogo: teamLogo,
-                                    awayLogo: matchMeta.opponentLogo || '',
+                                    team1XI: matchMeta.team1XI || [],
+                                    team2XI: matchMeta.team2XI || [],
+                                    team1Logo: teamLogo,
+                                    team2Logo: matchMeta.team2Logo || '',
                                     liveData: matchMeta.liveData
                                   });
                                   toast.success("Corrected from Mobile!");
@@ -4915,7 +4915,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   overs: Number(store.getOvers(store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0))
                 }
               }}
-              opponentName={matchMeta.opponentName || 'Opponent'}
+              opponentName={matchMeta.team2Name || 'Opponent'}
               onClose={() => setShowMatchSummaryModal(false)}
               onSave={async (summary) => {
                 setSyncStatus('loading');
@@ -5050,7 +5050,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             />
                             <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
                             
-                            <Bar dataKey="runs1" name={(store.innings1?.battingTeamId === 'HOME' ? (store.homeTeamName || 'INDIAN STRIKERS') : (store.opponentName || 'OPPONENT')).toUpperCase()} fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={10}>
+                            <Bar dataKey="runs1" name={(store.innings1?.battingTeamId === 'HOME' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()} fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={10}>
                               {manhattanData.map((entry, index) => (
                                 <Cell key={`cell1-${index}`} fill={entry.wickets1 > 0 ? '#ef4444' : '#38BDF8'} />
                               ))}
@@ -5061,7 +5061,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                               }} />
                             </Bar>
 
-                            <Bar dataKey="runs2" name={(store.innings2?.battingTeamId === 'HOME' ? (store.homeTeamName || 'INDIAN STRIKERS') : (store.opponentName || 'OPPONENT')).toUpperCase()} fill="#FAB005" radius={[4, 4, 0, 0]} barSize={10}>
+                            <Bar dataKey="runs2" name={(store.innings2?.battingTeamId === 'HOME' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()} fill="#FAB005" radius={[4, 4, 0, 0]} barSize={10}>
                               {manhattanData.map((entry, index) => (
                                 <Cell key={`cell2-${index}`} fill={entry.wickets2 > 0 ? '#ef4444' : '#FAB005'} />
                               ))}
@@ -5095,7 +5095,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             {analyticsWormData.innings1.length > 0 && (
                               <Line
                                 data={analyticsWormData.innings1}
-                                name={(store.innings1?.battingTeamId === 'HOME' ? (store.homeTeamName || 'INDIAN STRIKERS') : (store.opponentName || 'OPPONENT')).toUpperCase()}
+                                name={(store.innings1?.battingTeamId === 'HOME' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()}
                                 type="monotone"
                                 dataKey="runs"
                                 stroke="#38BDF8"
@@ -5110,7 +5110,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                             {store.currentInnings === 2 && analyticsWormData.innings2.length > 0 && (
                               <Line
                                 data={analyticsWormData.innings2}
-                                name={(store.innings2?.battingTeamId === 'HOME' ? (store.homeTeamName || 'INDIAN STRIKERS') : (store.opponentName || 'OPPONENT')).toUpperCase()}
+                                name={(store.innings2?.battingTeamId === 'HOME' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()}
                                 type="monotone"
                                 dataKey="runs"
                                 stroke="#FAB005"

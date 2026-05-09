@@ -249,7 +249,7 @@ const AppContent: React.FC<{
                   <Route path="commentary" element={<CommentaryManager />} />
                 </Route>
               
-              <Route path="/scorecard/:id" element={<ScorecardPage opponents={opponents} homeTeamName={teamLogo ? 'Indian Strikers' : 'Indian Strikers'} />} />
+              <Route path="/scorecard/:id" element={<ScorecardPage opponents={opponents} />} />
               <Route 
                 path="/tournaments/:id" 
                 element={

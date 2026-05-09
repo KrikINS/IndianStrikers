@@ -45,6 +45,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
             const selectedOpponent = opponents.find(o => o.id === formData.opponentId);
             
             const homeTeamName = formData.homeTeamId === '00000000-0000-0000-0000-000000000000' ? 'Indian Strikers' : (selectedHome?.name || 'Team A');
+            const homeLogo = formData.homeTeamId === '00000000-0000-0000-0000-000000000000' ? '/INS%20LOGO.PNG' : (selectedHome?.logoUrl || '');
             const opponentName = selectedOpponent?.name || 'Opponent';
             const opponentLogo = selectedOpponent?.logoUrl || '';
             
@@ -55,11 +56,12 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
 
             const newMatch: Omit<ScheduledMatch, 'id'> = {
                 isNeutral: formData.homeTeamId !== '00000000-0000-0000-0000-000000000000' && formData.opponentId !== '00000000-0000-0000-0000-000000000000',
-                homeTeamId: formData.homeTeamId,
-                homeTeamName: homeTeamName,
-                opponentId: formData.opponentId || null,
-                opponentName,
-                opponentLogo,
+                team1Id: formData.homeTeamId,
+                team1Name: homeTeamName,
+                team1Logo: homeLogo,
+                team2Id: formData.opponentId || null,
+                team2Name: opponentName,
+                team2Logo: opponentLogo,
                 date: (formData.date && !isNaN(new Date(formData.date).getTime())) 
                     ? new Date(formData.date).toISOString() 
                     : new Date().toISOString(),
@@ -70,8 +72,8 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                 stage: formData.stage,
                 status: formData.status,
                 matchFormat: formData.matchFormat,
-                homeTeamXI: [],
-                opponentTeamXI: [],
+                team1XI: [],
+                team2XI: [],
                 isLocked: false
             };
 

@@ -245,10 +245,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         if (!match) return;
 
         const diff = Math.abs(summary.homeScore.runs - summary.awayScore.runs);
-        const homeTeam = match.isNeutral ? opponents.find(o => o.id === match.homeTeamId) : null;
-        const homeName = match.isNeutral ? (homeTeam?.name || 'Team A') : 'Indian Strikers';
-        const opponent = opponents.find(o => o.id === match.opponentId);
-        const oppName = opponent?.name || 'Opponent';
+        const homeName = match.team1Name || opponents.find(o => o.id === match.team1Id)?.name || 'Team A';
+        const opponent = opponents.find(o => o.id === match.team2Id);
+        const oppName = match.team2Name || opponent?.name || 'Opponent';
 
         const autoResult = summary.resultType === 'Abandoned' ? 'Match Abandoned'
             : summary.resultType === 'Tie' ? 'Match Tied'
@@ -258,8 +257,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                             : summary.awayScore.runs > summary.homeScore.runs ? `${oppName} won by ${diff} runs`
                                 : 'Match Tied';
 
-        const HOME_TEAM_ID = '00000000-0000-0000-0000-000000000000';
-        const tossWinnerName = summary.tossWinner === HOME_TEAM_ID ? homeName : oppName;
+        const tossWinnerName = summary.tossWinner === match.team1Id ? homeName : oppName;
 
         const summaryScorecard = match.scorecard || {
             innings1: { 
@@ -284,8 +282,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
         try {
             await handleManualScoreSubmit({
-                finalScoreHome: summary.homeScore,
-                finalScoreAway: summary.awayScore,
+                team1Score: summary.homeScore,
+                team2Score: summary.awayScore,
                 resultNote: autoResult,
                 resultSummary: autoResult,
                 scorecard: summaryScorecard,
@@ -325,12 +323,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
     const [xiModalConfig, setXiModalConfig] = useState<{
         isOpen: boolean;
         matchId: string;
-        teamType: 'home' | 'opponent' | 'view';
+        teamType: 'team1' | 'team2' | 'view';
         opponentId: string | null;
     }>({
         isOpen: false,
         matchId: '',
-        teamType: 'home',
+        teamType: 'team1',
         opponentId: null
     });
     const [summaryMatchId, setSummaryMatchId] = useState<string | null>(null);
@@ -341,7 +339,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         setEditingMatch(null);
     };
 
-    const handleSelectPlayingXI = (matchId: string, mode: 'home' | 'opponent' | 'lock' | 'view') => {
+    const handleSelectPlayingXI = (matchId: string, mode: 'team1' | 'team2' | 'lock' | 'view') => {
         const match = matches.find(m => m.id === matchId);
         if (!match) return;
 
@@ -355,7 +353,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 isOpen: false,
                 matchId,
                 teamType: 'view',
-                opponentId: match.opponentId
+                opponentId: match.team2Id
             });
             setTimeout(() => {
                 captureGraphic(matchId);
@@ -366,12 +364,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         setXiModalConfig({
             isOpen: true,
             matchId,
-            teamType: mode as 'home' | 'opponent' | 'view',
-            opponentId: match.opponentId
+            teamType: mode as 'team1' | 'team2' | 'view',
+            opponentId: match.team2Id
         });
     };
 
-    const handleSaveXI = async (matchId: string, teamType: 'home' | 'opponent', selection: string[]) => {
+    const handleSaveXI = async (matchId: string, teamType: 'team1' | 'team2', selection: string[]) => {
         const match = matches.find(m => m.id === matchId);
         if (!match) return;
 
@@ -396,9 +394,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             return;
         }
 
-        if (match.homeTeamXI.length !== 11) {
-            alert(`Please select exactly 11 players for ${match.isNeutral ? (opponents.find(o => o.id === match.homeTeamId)?.name || 'Home Team') : 'Indian Strikers'} before starting.`);
-            handleSelectPlayingXI(matchId, 'home');
+        if (match.team1XI.length !== 11) {
+            alert(`Please select exactly 11 players for ${match.team1Name || opponents.find(o => o.id === match.team1Id)?.name || 'Home Team'} before starting.`);
+            handleSelectPlayingXI(matchId, 'team1');
             return;
         }
 
@@ -407,10 +405,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             matchType: match.matchFormat || 'T20',
             tournament: match.tournament || 'Live Match',
             ground: grounds.find(g => g.id === match.groundId)?.name || 'Default Ground',
-            opponentName: match.opponentName || 'Opponent',
+            team2Name: match.team2Name || 'Opponent',
+            team1Name: match.team1Name || null,
+            team1Logo: match.team1Logo || '',
+            team2Logo: match.team2Logo || '',
             maxOvers: match.maxOvers || 20,
-            homeXI: match.homeTeamXI,
-            awayXI: match.opponentTeamXI
+            team1XI: match.team1XI,
+            team2XI: match.team2XI
         });
 
         if (match.status === 'upcoming') {
@@ -422,7 +423,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
     const handleLockSquads = (matchId: string) => {
         const match = matches.find(m => m.id === matchId);
-        if (!match || match.homeTeamXI.length !== 11) {
+        if (!match || match.team1XI.length !== 11) {
             alert("Cannot lock team. Please select 11 players first.");
             return;
         }
@@ -1128,69 +1129,69 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                         <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                                                                         <span className="time-sub">{new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                                                                     </div>
-                                                                </td>
-                                                                <td>
-                                                                    <div className="flex flex-col gap-1 py-1">
-                                                                        <div className="team-cell">
-                                                                            <div className="relative flex items-center justify-center">
-                                                                                {m.homeLogo ? (
-                                                                                    <img 
-                                                                                        src={m.homeLogo} 
-                                                                                        className="team-avatar" 
-                                                                                        alt={m.homeTeamName} 
-                                                                                        onError={(e) => {
-                                                                                            e.currentTarget.style.display = 'none';
-                                                                                            const fb = e.currentTarget.nextElementSibling as HTMLElement;
-                                                                                            if (fb) fb.style.display = 'flex';
-                                                                                        }}
-                                                                                    />
-                                                                                ) : null}
-                                                                                <div className="team-avatar-fallback text-slate-500" style={{ display: m.homeLogo ? 'none' : 'flex' }}>
-                                                                                    {(m.homeTeamName || "I").charAt(0)}
-                                                                                </div>
-                                                                            </div>
-                                                                            <span>{m.homeTeamName || "INDIAN STRIKERS"}</span>
+                                                                 </td>
+                                                                 <td>
+                                                                     <div className="flex flex-col gap-1 py-1">
+                                                                         <div className="team-cell">
+                                                                             <div className="relative flex items-center justify-center">
+                                                                                 {m.team1Logo ? (
+                                                                                     <img 
+                                                                                         src={m.team1Logo} 
+                                                                                         className="team-avatar" 
+                                                                                         alt={m.team1Name} 
+                                                                                         onError={(e) => {
+                                                                                             e.currentTarget.style.display = 'none';
+                                                                                             const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                                             if (fb) fb.style.display = 'flex';
+                                                                                         }}
+                                                                                     />
+                                                                                 ) : null}
+                                                                                 <div className="team-avatar-fallback text-slate-500" style={{ display: m.team1Logo ? 'none' : 'flex' }}>
+                                                                                     {(m.team1Name || "T").charAt(0)}
+                                                                                 </div>
+                                                                             </div>
+                                                                             <span>{m.team1Name || "TEAM 1"}</span>
 
-                                                                            <span className="vs-cell">VS</span>
+                                                                             <span className="vs-cell">VS</span>
 
-                                                                            <div className="relative flex items-center justify-center">
-                                                                                {m.opponentLogo ? (
-                                                                                    <img 
-                                                                                        src={m.opponentLogo} 
-                                                                                        className="team-avatar" 
-                                                                                        alt={m.opponentName} 
-                                                                                        onError={(e) => {
-                                                                                            e.currentTarget.style.display = 'none';
-                                                                                            const fb = e.currentTarget.nextElementSibling as HTMLElement;
-                                                                                            if (fb) fb.style.display = 'flex';
-                                                                                        }}
-                                                                                    />
-                                                                                ) : null}
-                                                                                <div className="team-avatar-fallback text-slate-500" style={{ display: m.opponentLogo ? 'none' : 'flex' }}>
-                                                                                    {(m.opponentName || "O").charAt(0)}
-                                                                                </div>
-                                                                            </div>
-                                                                            <span className="uppercase">{m.opponentName || "OPPONENT"}</span>
-                                                                        </div>
-                                                                        <div className="match-meta-info pl-1.5 opacity-70">
-                                                                            {(() => {
-                                                                                const tId = m.tournamentId || tournaments?.find(t => t.name === m.tournament)?.id;
-                                                                                if (tId) {
-                                                                                    return (
-                                                                                        <Link 
-                                                                                            to={`/tournaments/${tId}`}
-                                                                                            className="hover:text-blue-400 hover:underline transition-all"
-                                                                                            onClick={(e) => e.stopPropagation()}
-                                                                                        >
-                                                                                            {m.tournament || 'Exhibition Match'}
-                                                                                        </Link>
-                                                                                    );
-                                                                                }
-                                                                                return m.tournament || 'Exhibition Match';
-                                                                            })()}
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
+                                                                             <div className="relative flex items-center justify-center">
+                                                                                 {m.team2Logo ? (
+                                                                                     <img 
+                                                                                         src={m.team2Logo} 
+                                                                                         className="team-avatar" 
+                                                                                         alt={m.team2Name} 
+                                                                                         onError={(e) => {
+                                                                                             e.currentTarget.style.display = 'none';
+                                                                                             const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                                             if (fb) fb.style.display = 'flex';
+                                                                                         }}
+                                                                                     />
+                                                                                 ) : null}
+                                                                                 <div className="team-avatar-fallback text-slate-500" style={{ display: m.team2Logo ? 'none' : 'flex' }}>
+                                                                                     {(m.team2Name || "O").charAt(0)}
+                                                                                 </div>
+                                                                             </div>
+                                                                             <span className="uppercase">{m.team2Name || "OPPONENT"}</span>
+                                                                         </div>
+                                                                         <div className="match-meta-info pl-1.5 opacity-70">
+                                                                             {(() => {
+                                                                                 const tId = m.tournamentId || tournaments?.find(t => t.name === m.tournament)?.id;
+                                                                                 if (tId) {
+                                                                                     return (
+                                                                                         <Link 
+                                                                                             to={`/tournaments/${tId}`}
+                                                                                             className="hover:text-blue-400 hover:underline transition-all"
+                                                                                             onClick={(e) => e.stopPropagation()}
+                                                                                         >
+                                                                                             {m.tournament || 'Exhibition Match'}
+                                                                                         </Link>
+                                                                                     );
+                                                                                 }
+                                                                                 return m.tournament || 'Exhibition Match';
+                                                                             })()}
+                                                                         </div>
+                                                                     </div>
+                                                                 </td>
                                                                 <td className="text-slate-500 text-xs font-bold uppercase">{grounds.find(g => g.id === m.groundId)?.name || 'TBD'}</td>
                                                                 <td>
                                                                     <span className={`badge-type ${m.matchFormat === 'T20' ? 'badge-t20' : 'badge-odi'}`}>
@@ -1293,10 +1294,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                         >
                             <MatchCenterTile
                                 match={selectedCardMatch}
-                                homeTeamName={selectedCardMatch.homeTeamName || 'Indian Strikers'}
-                                homeTeamLogo={selectedCardMatch.homeLogo}
+                                homeTeamName={selectedCardMatch.team1Name || 'Team 1'}
+                                homeTeamLogo={selectedCardMatch.team1Logo}
                                 allOpponents={opponents}
-                                opponent={opponents.find(o => o.id === selectedCardMatch.opponentId)}
+                                opponent={opponents.find(o => o.id === selectedCardMatch.team2Id)}
                                 onSelectPlayingXI={handleSelectPlayingXI}
                                 onShareSummary={captureMatchSummary}
                                 onEditMatch={setEditingMatch}
@@ -1333,8 +1334,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                         opponentTeams={opponents}
                         onSave={handleSaveXI}
                         onShare={(id) => handleSelectPlayingXI(id, 'view')}
-                        initialSelection={xiModalConfig.teamType === 'home' ? matches.find(m => m.id === xiModalConfig.matchId)?.homeTeamXI || [] : matches.find(m => m.id === xiModalConfig.matchId)?.opponentTeamXI || []}
+                        initialSelection={xiModalConfig.teamType === 'team1' ? matches.find(m => m.id === xiModalConfig.matchId)?.team1XI || [] : matches.find(m => m.id === xiModalConfig.matchId)?.team2XI || []}
                         opponentId={xiModalConfig.opponentId}
+                        homeTeamId={matches.find(m => m.id === xiModalConfig.matchId)?.team1Id || null}
                         onQuickAddPlayer={handleQuickAddOpponentPlayer}
                     />
                 )}
@@ -1361,7 +1363,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 <MatchSummaryModal
                     onClose={() => setManualScoreConfig(null)}
                     match={matches.find(m => m.id === manualScoreConfig.matchId)!}
-                    opponentName={opponents.find(o => o.id === (matches.find(m => m.id === manualScoreConfig.matchId)?.opponentId))?.name || 'Opponent'}
+                    homeTeamName={matches.find(m => m.id === manualScoreConfig.matchId)?.team1Name || 'Team 1'}
+                    opponentName={opponents.find(o => o.id === (matches.find(m => m.id === manualScoreConfig.matchId)?.team2Id))?.name || matches.find(m => m.id === manualScoreConfig.matchId)?.team2Name || 'Opponent'}
                     onSave={handleSummaryUpdate}
                 />
             )}
@@ -1446,9 +1449,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     <div id="match-summary-graphic" style={{ width: '450px', background: '#020617' }}>
                         <MatchCenterTile 
                             match={matches.find(m => m.id === summaryMatchId)!}
-                            homeTeamName={matches.find(m => m.id === summaryMatchId)?.homeTeamName || 'Indian Strikers'}
-                            homeTeamLogo={matches.find(m => m.id === summaryMatchId)?.homeLogo || '/INS LOGO.PNG'}
-                            opponent={opponents.find(o => o.id === matches.find(m => m.id === summaryMatchId)?.opponentId)}
+                            homeTeamName={matches.find(m => m.id === summaryMatchId)?.team1Name || 'Team 1'}
+                            homeTeamLogo={matches.find(m => m.id === summaryMatchId)?.team1Logo || ''}
+                            opponent={opponents.find(o => o.id === matches.find(m => m.id === summaryMatchId)?.team2Id)}
                             isGraphic={true}
                             grounds={grounds}
                             userRole={userRole}

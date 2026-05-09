@@ -455,17 +455,17 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   const [tab, setTab] = useState<'info' | 'scorecard' | 'commentary' | 'analytics'>('scorecard');
   
   const normalizedMatch = useMemo(() => {
-    const hId = initialMatch.homeTeamId || initialMatch.home_team_id || 'HOME';
-    const oId = initialMatch.opponentId || initialMatch.opponent_id || 'AWAY';
+    const hId = initialMatch.team1Id || initialMatch.homeTeamId || initialMatch.home_team_id || 'HOME';
+    const oId = initialMatch.team2Id || initialMatch.opponentId || initialMatch.opponent_id || 'AWAY';
     return {
       ...initialMatch,
-      homeTeamId: hId,
-      opponentId: oId,
-      homeTeamName: initialMatch.homeTeamName || initialMatch.home_team_name || (hId === 'HOME' ? 'Indian Strikers' : 'Home Team'),
-      opponentName: initialMatch.opponentName || initialMatch.opponent_name || 'Opponent',
-      homeTeamLogo: initialMatch.homeTeamLogo || initialMatch.home_team_logo || initialMatch.homeLogo || '/INS LOGO.PNG',
-      opponentLogo: initialMatch.opponentLogo || initialMatch.opponent_logo || '/assets/default_team.png',
-      isHomeBattingFirst: initialMatch.isHomeBattingFirst !== undefined ? initialMatch.isHomeBattingFirst : initialMatch.is_home_batting_first,
+      team1Id: hId,
+      team2Id: oId,
+      team1Name: initialMatch.team1Name || initialMatch.homeTeamName || initialMatch.home_team_name || 'Home Team',
+      team2Name: initialMatch.team2Name || initialMatch.opponentName || initialMatch.opponent_name || 'Opponent',
+      team1Logo: initialMatch.team1Logo || initialMatch.homeTeamLogo || initialMatch.home_team_logo || initialMatch.homeLogo || '/assets/default_team.png',
+      team2Logo: initialMatch.team2Logo || initialMatch.opponentLogo || initialMatch.opponent_logo || '/assets/default_team.png',
+      isTeam1BattingFirst: initialMatch.isTeam1BattingFirst !== undefined ? initialMatch.isTeam1BattingFirst : initialMatch.isHomeBattingFirst !== undefined ? initialMatch.isHomeBattingFirst : initialMatch.is_home_batting_first,
       groundId: initialMatch.groundId || initialMatch.ground_id,
       tossWinnerId: initialMatch.tossWinnerId || initialMatch.toss_winner_id,
       tossChoice: initialMatch.tossChoice || initialMatch.toss_choice
@@ -552,7 +552,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   const getPlayerNameResolved = (id: any, fallbackName?: string) => {
     const p = players.find(p => p.id === id || p.player_id === id);
     if (p) return p.name;
-    const opp = opponents.find(o => o.id === initialMatch.opponentId);
+    const opp = opponents.find(o => o.id === normalizedMatch.team2Id);
     const oppP = opp?.players?.find((p: any) => p.id === id);
     if (oppP) return oppP.name;
     return fallbackName || 'Unknown Player';
@@ -573,9 +573,12 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     const isCurrentInningsEditable = isEditable && editState;
     const innKey = `innings${innNo}` as 'innings1' | 'innings2';
     
-    const isHomeInnings = (innNo === 1 && initialMatch.isHomeBattingFirst) || (innNo === 2 && !initialMatch.isHomeBattingFirst);
-    const battingSquadIds = isHomeInnings ? initialMatch.homeTeamXI : initialMatch.opponentTeamXI;
-    const bowlingSquadIds = isHomeInnings ? initialMatch.opponentTeamXI : initialMatch.homeTeamXI;
+    const isTeam1Innings = (innNo === 1 && normalizedMatch.isTeam1BattingFirst) || (innNo === 2 && !normalizedMatch.isTeam1BattingFirst);
+    // Support both old (homeTeamXI/opponentTeamXI) and new (team1XI/team2XI) payload keys for backward compat
+    const t1XI = initialMatch.team1XI || initialMatch.homeTeamXI || [];
+    const t2XI = initialMatch.team2XI || initialMatch.opponentTeamXI || [];
+    const battingSquadIds = isTeam1Innings ? t1XI : t2XI;
+    const bowlingSquadIds = isTeam1Innings ? t2XI : t1XI;
 
     const battingSquad = (battingSquadIds || []).map((id: string) => ({ id, name: getPlayerNameResolved(id) }));
     const bowlingSquad = (bowlingSquadIds || []).map((id: string) => ({ id, name: getPlayerNameResolved(id) }));
