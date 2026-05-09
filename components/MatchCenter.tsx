@@ -196,23 +196,23 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             const finalData = { 
                 ...data, 
                 scorecard: finalScorecard, 
-                finalScoreHome: {
-                    runs: t1.runs || finalScorecard.innings1.totalRuns || data.finalScoreHome?.runs || data.homeScore?.runs || 0,
-                    wickets: t1.wickets || finalScorecard.innings1.wickets || data.finalScoreHome?.wickets || data.homeScore?.wickets || 0,
-                    overs: t1.balls > 0 ? (Math.floor(t1.balls / 6) + (t1.balls % 6) / 10) : (finalScorecard.innings1.totalOvers || data.finalScoreHome?.overs || data.homeScore?.overs || 0)
+                team1Score: {
+                    runs: t1.runs || finalScorecard.innings1.totalRuns || data.team1Score?.runs || data.finalScoreHome?.runs || 0,
+                    wickets: t1.wickets || finalScorecard.innings1.wickets || data.team1Score?.wickets || data.finalScoreHome?.wickets || 0,
+                    overs: t1.balls > 0 ? (Math.floor(t1.balls / 6) + (t1.balls % 6) / 10) : (finalScorecard.innings1.totalOvers || data.team1Score?.overs || data.finalScoreHome?.overs || 0)
                 },
-                finalScoreAway: {
-                    runs: t2.runs || finalScorecard.innings2.totalRuns || data.finalScoreAway?.runs || data.awayScore?.runs || 0,
-                    wickets: t2.wickets || finalScorecard.innings2.wickets || data.finalScoreAway?.wickets || data.awayScore?.wickets || 0,
-                    overs: t2.balls > 0 ? (Math.floor(t2.balls / 6) + (t2.balls % 6) / 10) : (finalScorecard.innings2.totalOvers || data.finalScoreAway?.overs || data.awayScore?.overs || 0)
+                team2Score: {
+                    runs: t2.runs || finalScorecard.innings2.totalRuns || data.team2Score?.runs || data.finalScoreAway?.runs || 0,
+                    wickets: t2.wickets || finalScorecard.innings2.wickets || data.team2Score?.wickets || data.finalScoreAway?.wickets || 0,
+                    overs: t2.balls > 0 ? (Math.floor(t2.balls / 6) + (t2.balls % 6) / 10) : (finalScorecard.innings2.totalOvers || data.team2Score?.overs || data.finalScoreAway?.overs || 0)
                 },
                 isCareerSynced: true,
                 isManualOverride: true // Bypass lock check if needed
             };
 
             console.log(`[Sync] Pushing recalculated payload for ${match.id}:`, { 
-                home: finalData.finalScoreHome, 
-                away: finalData.finalScoreAway 
+                team1: finalData.team1Score, 
+                team2: finalData.team2Score 
             });
 
             // Pass the performers array if they exist (Full Scorecard) or empty array (Summary Update)

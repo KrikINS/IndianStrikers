@@ -990,7 +990,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         try {
             if (targetStatus) {
                 // LOCKING: Extract primitive values to match database schema
-                const score = match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 };
+                const score = match.team1Score || match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 };
 
                 // Convert overs (e.g. 18.2) to total balls
                 const overs = Number(score.overs || 0);

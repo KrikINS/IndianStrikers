@@ -2028,7 +2028,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         );
 
         updateMatch(activeMatchId, {
-          isHomeBattingFirst: startBatTeamId === 'HOME',
+          isTeam1BattingFirst: startBatTeamId === 'HOME',
           status: 'live',
           team1XI: team1XI || [],
           team2XI: team2XI || [],
@@ -2318,7 +2318,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 };
 
                 const batTeamId = getInningsBattingTeam();
-                const batTeamName = batTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.team2Name || matchMeta?.opponentName || 'OPPONENT');
+                const batTeamName = batTeamId === 'HOME' ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1') : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
                 const batSquadIds = batTeamId === 'HOME' ? team1XI : team2XI;
                 const batPool = batTeamId === 'HOME'
                   ? (players || []).filter((p: any) => (batSquadIds || []).includes(p.id))
@@ -2385,7 +2385,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 };
 
                 const bowlTeamId = getInningsBowlingTeam();
-                const bowlTeamName = bowlTeamId === 'HOME' ? 'INDIAN STRIKERS' : (store.team2Name || matchMeta?.opponentName || 'OPPONENT');
+                const bowlTeamName = bowlTeamId === 'HOME' ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1') : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
                 const bowlSquadIds = bowlTeamId === 'HOME' ? team1XI : team2XI;
                 const bowlPool = bowlTeamId === 'HOME'
                   ? (players || []).filter((p: any) => (bowlSquadIds || []).includes(p.id))
@@ -2834,12 +2834,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         updatePayload.targetScore = target;
       } else {
         updatePayload.status = 'completed';
-        updatePayload.finalScoreHome = { 
+        updatePayload.team1Score = { 
           runs: store.innings1?.totalRuns || 0, 
           wickets: store.innings1?.wickets || 0, 
           overs: store.getOvers(store.innings1?.totalBalls || 0) 
         };
-        updatePayload.finalScoreAway = { 
+        updatePayload.team2Score = { 
           runs: store.innings2?.totalRuns || 0, 
           wickets: store.innings2?.wickets || 0, 
           overs: store.getOvers(store.innings2?.totalBalls || 0) 
@@ -2849,13 +2849,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           innings2: store.innings2
         };
 
+        const inn2BatName = store.innings2?.battingTeamId === 'HOME'
+          ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1')
+          : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
+        const inn1BatName = store.innings1?.battingTeamId === 'HOME'
+          ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1')
+          : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
+
         let resultMessage = '';
         if (totalScore >= target) {
-          resultMessage = `${(store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : store.team2Name).toUpperCase()} WON BY ${10 - totalWickets} WICKETS`;
+          resultMessage = `${inn2BatName.toUpperCase()} WON BY ${10 - totalWickets} WICKETS`;
         } else if (totalScore === target - 1) {
           resultMessage = "MATCH TIED";
         } else {
-          resultMessage = `${(store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : store.team2Name).toUpperCase()} WON BY ${target - 1 - totalScore} RUNS`;
+          resultMessage = `${inn1BatName.toUpperCase()} WON BY ${target - 1 - totalScore} RUNS`;
         }
         updatePayload.resultSummary = resultMessage;
       }
