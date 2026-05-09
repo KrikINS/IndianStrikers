@@ -447,6 +447,8 @@ const mapMatchToDB = (m) => {
     'team2Score': 'final_score_away',
     'team1Name': 'home_team_name',
     'team1Logo': 'home_logo',
+    'team2Name': 'opponent_name',
+    'team2Logo': 'opponent_logo',
     // Legacy field names (kept for backward compatibility with any raw callers)
     'opponentId': 'opponent_id',
     'groundId': 'ground_id',
