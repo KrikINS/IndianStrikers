@@ -113,6 +113,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete, teamLogo = '' }
     login(normalizedUser, password, 'auto')
       .then(res => {
         sessionStorage.setItem('authToken', res.token);
+        localStorage.setItem('authToken', res.token); // Persist across refreshes
         // Use full user object if available, otherwise fallback
         const userObj = res.user || { name: res.username || normalizedUser, username: res.username || normalizedUser };
         

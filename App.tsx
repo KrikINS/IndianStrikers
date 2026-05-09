@@ -432,6 +432,8 @@ const AppInternal: React.FC = () => {
     sessionStorage.removeItem('userRole');
     sessionStorage.removeItem('currentUser');
     sessionStorage.removeItem('isAdminView');
+    sessionStorage.removeItem('authToken');
+    localStorage.removeItem('authToken');
   };
 
   const handleAddPlayer = async (player: Player) => {

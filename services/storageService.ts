@@ -4,7 +4,8 @@ import { Player, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingS
 // const API_URL = 'https://strikers-app-227875153596.us-central1.run.app/api';
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
 const getHeaders = () => {
-  const token = sessionStorage.getItem('authToken');
+  // Read from sessionStorage (active tab) first, fallback to localStorage (persisted across refreshes)
+  const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
   return {
     'Content-Type': 'application/json',
     'Authorization': token ? `Bearer ${token}` : ''
@@ -14,9 +15,10 @@ const getHeaders = () => {
 const handleResponse = async (res: Response) => {
   if (!res.ok) {
     if (res.status === 401) {
-      const token = sessionStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
       if (token) {
         sessionStorage.removeItem('authToken');
+        localStorage.removeItem('authToken');
         window.location.reload(); 
       }
       throw new Error("Session expired. Please login again.");
