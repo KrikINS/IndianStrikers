@@ -593,8 +593,8 @@ app.get('/api/matches', async (_req, res) => {
       m.*,
       o1.name AS opponent_name,
       o1.logo_url AS opponent_logo,
-      COALESCE(o2.name, m.home_team_name, 'Team 1') AS home_team_name,
-      COALESCE(o2.logo_url, m.home_logo, '') AS home_logo,
+      COALESCE(o2.name, 'Team 1') AS home_team_name,
+      COALESCE(o2.logo_url, '') AS home_logo,
       g.name AS ground_name
     FROM matches m
     LEFT JOIN opponents o1 ON o1.id = m.opponent_id
@@ -641,8 +641,8 @@ app.get('/api/matches/:id', async (req, res) => {
       m.*,
       o1.name AS opponent_name,
       o1.logo_url AS opponent_logo,
-      COALESCE(o2.name, m.home_team_name, 'Team 1') AS home_team_name,
-      COALESCE(o2.logo_url, m.home_logo, '') AS home_logo,
+      COALESCE(o2.name, 'Team 1') AS home_team_name,
+      COALESCE(o2.logo_url, '') AS home_logo,
       g.name AS ground_name
     FROM matches m
     LEFT JOIN opponents o1 ON o1.id = m.opponent_id
