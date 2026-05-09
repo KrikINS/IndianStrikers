@@ -437,6 +437,17 @@ const mapMatchToDB = (m) => {
   
   // Property mapping: camelCase -> snake_case
   const keyMap = {
+    // New symmetrical field names (primary)
+    'team1Id': 'home_team_id',
+    'team2Id': 'opponent_id',
+    'team1XI': 'home_team_xi',
+    'team2XI': 'opponent_team_xi',
+    'isTeam1BattingFirst': 'is_home_batting_first',
+    'team1Score': 'final_score_home',
+    'team2Score': 'final_score_away',
+    'team1Name': 'home_team_name',
+    'team1Logo': 'home_logo',
+    // Legacy field names (kept for backward compatibility with any raw callers)
     'opponentId': 'opponent_id',
     'groundId': 'ground_id',
     'homeTeamXI': 'home_team_xi',
@@ -514,10 +525,10 @@ const mapMatchToDB = (m) => {
   const final = {};
   const jsonColumns = ['home_team_xi', 'opponent_team_xi', 'performers', 'scorecard', 'live_data'];
   
-  // Extra: If finalScore objects are present, extract runs/wickets to top-level columns
-  // We check both camelCase (from frontend) and snake_case (just in case)
-  const scoreHome = mapped.finalScoreHome || mapped.final_score_home;
-  const scoreAway = mapped.finalScoreAway || mapped.final_score_away;
+  // Extra: If score objects are present, extract runs to integer columns.
+  // Supports both new (team1Score/team2Score) and legacy (finalScoreHome/Away) keys.
+  const scoreHome = mapped.team1Score || mapped.finalScoreHome || mapped.final_score_home;
+  const scoreAway = mapped.team2Score || mapped.finalScoreAway || mapped.final_score_away;
 
   if (scoreHome && typeof scoreHome === 'object') {
     dbReady.final_score_home = scoreHome.runs;
@@ -761,15 +772,19 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
       return 0;
     };
 
-    const isHomeBattingFirst = matchData.is_home_batting_first ?? (matchData.live_data?.isHomeBattingFirst);
+    // Support both new (team1Score/team2Score) and legacy (finalScoreHome/Away) field names
+    const scoreHome = matchData.team1Score || matchData.finalScoreHome;
+    const scoreAway = matchData.team2Score || matchData.finalScoreAway;
+
+    const isHomeBattingFirst = matchData.isTeam1BattingFirst ?? matchData.is_home_batting_first ?? matchData.live_data?.isTeam1BattingFirst ?? matchData.live_data?.isHomeBattingFirst;
     
     const finalScoreHomeValue = isHomeBattingFirst 
-      ? (getRuns(matchData.finalScoreHome) || Number(scorecard?.innings1?.totalRuns || 0))
-      : (getRuns(matchData.finalScoreHome) || Number(scorecard?.innings2?.totalRuns || 0));
+      ? (getRuns(scoreHome) || Number(scorecard?.innings1?.totalRuns || 0))
+      : (getRuns(scoreHome) || Number(scorecard?.innings2?.totalRuns || 0));
       
     const finalScoreAwayValue = isHomeBattingFirst
-      ? (getRuns(matchData.finalScoreAway) || Number(scorecard?.innings2?.totalRuns || 0))
-      : (getRuns(matchData.finalScoreAway) || Number(scorecard?.innings1?.totalRuns || 0));
+      ? (getRuns(scoreAway) || Number(scorecard?.innings2?.totalRuns || 0))
+      : (getRuns(scoreAway) || Number(scorecard?.innings1?.totalRuns || 0));
     
     // Toss Handling
     let tossWinnerId = matchData.toss_winner_id;
@@ -835,15 +850,13 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
         finalScoreHomeValue,
         finalScoreAwayValue,
         finalScoreHomeValue,
-        (matchData.finalScoreHome?.wickets || (isHomeBattingFirst ? scorecard?.innings1?.totalWickets : scorecard?.innings2?.totalWickets) || 0),
+        (scoreHome?.wickets || (isHomeBattingFirst ? scorecard?.innings1?.totalWickets : scorecard?.innings2?.totalWickets) || 0),
         (() => {
-          // Fix: Use matchData.finalScoreHome?.overs or fallback to scorecard history length
-          const overs = matchData.finalScoreHome?.overs || 
+          const overs = scoreHome?.overs || 
                         (isHomeBattingFirst ? scorecard?.innings1?.totalOvers : scorecard?.innings2?.totalOvers) || 0;
           const parts = String(overs).split('.');
           const balls = (parseInt(parts[0]) * 6) + (parseInt(parts[1]) || 0);
           if (balls > 0) return balls;
-          // Last fallback: count history length
           return (isHomeBattingFirst ? scorecard?.innings1?.history?.length : scorecard?.innings2?.history?.length) || 0;
         })(),
         matchData.resultSummary || matchData.result_note || null,
