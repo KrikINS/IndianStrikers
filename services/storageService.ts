@@ -385,8 +385,20 @@ const mapMatch = (m: any): ScheduledMatch => {
         venue: m.venue || m.ground_name || '',
         team2Name: (m.opponent_name || 'OPPONENT').toUpperCase(),
         team2Logo: m.opponent_logo || '',
-        team1Name: (m.home_team_name || 'Team 1').toUpperCase(),
-        team1Logo: m.home_logo || '',
+        team1Name: (() => {
+            const isLegacyStrikers = !m.home_team_id ||
+                m.home_team_id === '00000000-0000-0000-0000-000000000000' ||
+                m.home_team_id === 'IND_STRIKERS';
+            if (isLegacyStrikers && (!m.home_team_name || m.home_team_name === 'Team 1')) return 'INDIAN STRIKERS';
+            return (m.home_team_name || 'Team 1').toUpperCase();
+        })(),
+        team1Logo: (() => {
+            const isLegacyStrikers = !m.home_team_id ||
+                m.home_team_id === '00000000-0000-0000-0000-000000000000' ||
+                m.home_team_id === 'IND_STRIKERS';
+            if (isLegacyStrikers && (!m.home_logo || m.home_logo === '')) return '/INS LOGO.PNG';
+            return m.home_logo || '';
+        })(),
         liveData: m.live_data,
         liveState: m.live_state,
         tossWinnerId: m.toss_winner_id,
