@@ -1,5 +1,6 @@
 declare global {
   const __BUILD_TIME__: string;
+  const __APP_VERSION__: string;
 }
 
 const formatBuildDate = (isoString: string) => {
@@ -18,4 +19,4 @@ const formatBuildDate = (isoString: string) => {
 
 const BUILD_SUFFIX = typeof __BUILD_TIME__ !== 'undefined' ? formatBuildDate(__BUILD_TIME__) : 'dev';
 
-export const APP_VERSION = `v2.7.2-20260508-0523`;
+export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : `v2.8.0-${BUILD_SUFFIX}`;

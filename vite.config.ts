@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       '__BUILD_TIME__': JSON.stringify(new Date().toISOString()),
+      '__APP_VERSION__': JSON.stringify(`v2.8.0-${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12)}`),
     },
     resolve: {
       alias: {
