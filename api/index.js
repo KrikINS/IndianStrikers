@@ -1860,29 +1860,81 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 .sort((a, b) => new Date(b.date || Date.now()) - new Date(a.date || Date.now()))
                 .slice(0, 5)
                 .map(row => {
+                    // --- Enrich from scorecard first (same priority logic as the aggregation loop) ---
+                    let rfRuns = Number(row.runs || 0);
+                    let rfBalls = Number(row.balls || 0);
+                    let rfStatus = (row.player_record_status || '').toLowerCase().trim();
+                    let rfBWickets = Number(row.wickets || 0);
+                    let rfBRuns = Number(row.runs_conceded || 0);
+                    let rfBOvers = Number(row.overs_bowled || 0);
+
+                    try {
+                        const sc = row.scorecard
+                            ? (typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard)
+                            : null;
+                        const ld = row.live_data
+                            ? (typeof row.live_data === 'string' ? JSON.parse(row.live_data) : row.live_data)
+                            : null;
+
+                        if (sc) {
+                            const allBatting = [...(sc.innings1?.batting || []), ...(sc.innings2?.batting || [])];
+                            const allBowling = [...(sc.innings1?.bowling || []), ...(sc.innings2?.bowling || [])];
+                            const bat = allBatting.find(b => String(b.playerId) === String(playerId));
+                            const bowl = allBowling.find(b => String(b.playerId) === String(playerId));
+                            if (bat) {
+                                rfRuns   = Number(bat.runs)  || 0;
+                                rfBalls  = Number(bat.balls) || 0;
+                                rfStatus = (bat.outHow || (bat.isNotOut ? 'not out' : 'out')).toLowerCase().trim();
+                            }
+                            if (bowl) {
+                                rfBOvers   = Number(bowl.overs || bowl.bowlingOvers) || 0;
+                                rfBRuns    = Number(bowl.runs || bowl.bowlingRuns || bowl.runsConceded) || 0;
+                                rfBWickets = Number(bowl.wickets) || 0;
+                            }
+                        }
+
+                        // Fallback to live_data if scorecard had nothing
+                        if (ld && !rfBalls && !rfBOvers) {
+                            const bat = (ld.innings1?.battingStats || {})[playerId] || (ld.innings2?.battingStats || {})[playerId];
+                            const bowl = (ld.innings1?.bowlingStats || {})[playerId] || (ld.innings2?.bowlingStats || {})[playerId];
+                            if (bat) {
+                                rfRuns   = Number(bat.runs)  || 0;
+                                rfBalls  = Number(bat.balls) || 0;
+                                rfStatus = (bat.outHow || (bat.isNotOut ? 'not out' : (bat.isOut ? 'out' : 'batting'))).toLowerCase().trim();
+                            }
+                            if (bowl) {
+                                rfBOvers   = Number(bowl.overs || bowl.bowlingOvers) || 0;
+                                rfBRuns    = Number(bowl.runs || bowl.bowlingRuns || bowl.runsConceded) || 0;
+                                rfBWickets = Number(bowl.wickets) || 0;
+                            }
+                        }
+                    } catch (e) {
+                        // silently ignore parse errors, fall through to raw values
+                    }
+
                     const hasPMSRow = row.pms_player_id !== null && row.pms_player_id !== undefined;
-                    const rawStatus = (row.player_record_status || '').toLowerCase().trim();
-                    const explicitDNB = ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(rawStatus);
-                    const balls = Number(row.balls || 0);
+                    const explicitDNB = ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(rfStatus);
+                    const isNotOut = rfStatus === 'not out' || rfStatus === 'retired hurt' || !!row.is_not_out;
+                    const isOut = rfStatus !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(rfStatus);
+
+                    // isDNB: only if there's no PMS row AND no scorecard data, or explicitly marked DNB.
+                    // A player who batted (balls > 0 after scorecard enrichment) is never DNB.
+                    const isDNBRow = explicitDNB || (rfBalls === 0 && !hasPMSRow) || (rfBalls === 0 && !(isNotOut || isOut));
                     
-                    const isNotOut = rawStatus === 'not out' || rawStatus === 'retired hurt' || !!row.is_not_out;
-                    const isOut = rawStatus !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(rawStatus);
-                    const isDNBRow = !hasPMSRow || explicitDNB || !((isNotOut || isOut) && balls > 0);
-                    
-                    const batStatus = isDNBRow ? 'DNB' : (row.player_record_status || 'DNB');
+                    const batStatus = isDNBRow ? 'DNB' : (rfStatus || 'DNB');
                     
                     return {
-                        runs: isDNBRow ? 0 : (row.runs || 0),
-                        balls: isDNBRow ? 0 : balls,
-                        isNotOut: !isDNBRow && isNotOut,
-                        isDNB: isDNBRow,
-                        isLive: row.match_status === 'live',
-                        status: batStatus,
-                        date: row.date,
-                        matchId: row.match_id,
-                        wickets: Number(row.wickets || 0),
-                        bowlingRuns: Number(row.runs_conceded || 0),
-                        bowlingOvers: Number(row.overs_bowled || 0)
+                        runs:        isDNBRow ? 0 : rfRuns,
+                        balls:       isDNBRow ? 0 : rfBalls,
+                        isNotOut:    !isDNBRow && isNotOut,
+                        isDNB:       isDNBRow,
+                        isLive:      row.match_status === 'live',
+                        status:      batStatus,
+                        date:        row.date,
+                        matchId:     row.match_id,
+                        wickets:     rfBWickets,
+                        bowlingRuns: rfBRuns,
+                        bowlingOvers:rfBOvers
                     };
                 })
         });

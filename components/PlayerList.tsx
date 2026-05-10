@@ -366,18 +366,10 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         try {
           const stats = await getPlayerDetailedStats(viewingPlayer.id);
           
-          // UNIFY STATS TO LEADERBOARD TRUTH
-          // Instead of recalculating, we use the pre-calculated career stats already in the Store/Player object
-          // This ensures Anas Ummer (4361 runs) and others match the high-level Leaderboard truth.
-          const unifiedStats = {
-            ...stats,
-            total: {
-              batting: (viewingPlayer.battingStats && (viewingPlayer.battingStats.matches || 0) > 0) ? viewingPlayer.battingStats : stats.total.batting,
-              bowling: (viewingPlayer.bowlingStats && (viewingPlayer.bowlingStats.matches || 0) > 0) ? viewingPlayer.bowlingStats : stats.total.bowling
-            }
-          };
-
-          setDetailedStats(unifiedStats as any);
+          // Trust the server-calculated total directly — it sums legacy + all tournament
+          // stats precisely via the Max-Inclusion query. Do not override with store data
+          // (enrichedPlayers approximation) as that causes incorrect Career Total values.
+          setDetailedStats(stats as any);
         } catch (e) {
           console.error("Failed to fetch detailed stats", e);
           setDetailedStats(null);
