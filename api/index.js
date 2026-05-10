@@ -755,10 +755,14 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
   }
 
   try {
-    // 0. Check if match is locked
+    // 0. Check if match is locked — allow bypass for admin corrections (isManualOverride flag)
     const { data: match } = await db.getOne('SELECT is_locked FROM matches WHERE id = $1', [id]);
-    if (match?.is_locked) {
+    const isAdminOverride = !!matchData.isManualOverride;
+    if (match?.is_locked && !isAdminOverride) {
       return res.status(403).json({ error: 'This match is LOCKED and cannot be modified.' });
+    }
+    if (isAdminOverride && match?.is_locked) {
+      console.log(`[Finalize] Admin override: bypassing lock for match ${id}`);
     }
 
     // 1. Update match status/data

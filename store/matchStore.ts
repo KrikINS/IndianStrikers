@@ -347,15 +347,30 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
 
         try {
             await api.finalizeMatch(id, matchData, updatedPlayers);
+            // Optimistic update: patch the local store immediately with the saved summary data
+            // so scorecard and match card reflect changes before the next cloud sync.
             set((state) => ({
                 matches: state.matches.map(m => m.id === id ? {
                     ...m,
-                    ...matchData,
+                    // Preserve existing fields and layer the incoming summary on top
                     status: 'completed' as MatchStatus,
                     isCareerSynced: matchData.isCareerSynced ?? m.isCareerSynced,
-                    isLocked: true // Automatically lock on finalize
+                    isLocked: true, // Automatically lock on finalize
+                    // Summary-specific fields
+                    team1Score: matchData.team1Score ?? m.team1Score,
+                    team2Score: matchData.team2Score ?? m.team2Score,
+                    resultSummary: matchData.resultSummary ?? matchData.resultNote ?? m.resultSummary,
+                    resultNote: matchData.resultNote ?? matchData.resultSummary ?? m.resultNote,
+                    tossWinnerId: matchData.toss_winner_id ?? matchData.tossWinnerId ?? m.tossWinnerId,
+                    tossChoice: matchData.toss?.choice ?? matchData.tossChoice ?? m.tossChoice,
+                    maxOvers: matchData.maxOvers ?? m.maxOvers,
+                    scorecard: matchData.scorecard ?? m.scorecard,
                 } : m)
             }));
+            // Trigger a background cloud sync to pull the authoritative DB state
+            setTimeout(() => {
+                get().syncWithCloud?.().catch((e: any) => console.warn('[Store] Post-finalize sync failed:', e?.message));
+            }, 500);
         } catch (e: any) {
             console.error("Failed to finalize match:", e);
             throw new Error(`Sync Failed: ${e.message}`);
