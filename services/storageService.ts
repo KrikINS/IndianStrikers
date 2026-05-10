@@ -413,7 +413,8 @@ const mapMatch = (m: any): ScheduledMatch => {
         isNeutral: !!m.is_neutral,
         isTeam1BattingFirst: !!m.is_home_batting_first,
         isTest: !!m.is_test,
-        lastUpdated: m.updated_at
+        lastUpdated: m.updated_at,
+        matchResult: m.result_note || m.result_summary || null,
     };
 };
 

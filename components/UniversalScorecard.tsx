@@ -484,14 +484,20 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
   // --- LIVE INNINGS TOTAL CALCULATION (for dynamic accordion header) ---
   const calcLiveTotal = (inn: any) => {
-    if (!inn) return { runs: 0, wickets: 0 };
+    if (!inn) return { runs: 0, wickets: 0, overs: 0 };
     const batRuns = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0);
     const extraRuns = Object.values(inn.extras || {}).reduce((s: number, e: any) => s + (Number(e) || 0), 0);
-    // 'retired hurt' counts as NOT out
-    const wkts = (inn.batting || []).filter((b: any) =>
-      b.status === 'out' || (b.outHow && !['not out', 'retired hurt'].includes(b.outHow.toLowerCase()))
-    ).length;
-    return { runs: batRuns + (extraRuns as number), wickets: wkts };
+    // ONLY status === 'out' counts as a wicket — do NOT check outHow separately
+    const wkts = (inn.batting || []).filter((b: any) => b.status === 'out').length;
+    // Overs from bowling table (excludes no-balls from overs total)
+    const bowlingBalls = (inn.bowling || []).reduce((s: number, bl: any) => {
+      const ov = Number(bl.overs) || 0;
+      return s + Math.floor(ov) * 6 + Math.round((ov % 1) * 10);
+    }, 0);
+    const overs = bowlingBalls > 0
+      ? Math.floor(bowlingBalls / 6) + (bowlingBalls % 6) / 10
+      : (inn.totalOvers || 0);
+    return { runs: batRuns + (extraRuns as number), wickets: wkts, overs };
   };
 
   const handleSave = async () => {
@@ -516,16 +522,21 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
         const batRuns = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0);
         const extraRuns = Object.values(inn.extras || {}).reduce((s: number, e: any) => s + (Number(e) || 0), 0);
         const runs = batRuns + extraRuns;
-        // 'retired hurt' is not a wicket for team stats
-        const wickets = (inn.batting || []).filter((b: any) =>
-          b.status === 'out' || (b.outHow && !['not out', 'retired hurt'].includes(b.outHow.toLowerCase()))
-        ).length;
-        const balls = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.balls) || 0), 0);
+        // ONLY status === 'out' is a wicket — do NOT double-count via outHow
+        const wickets = (inn.batting || []).filter((b: any) => b.status === 'out').length;
+        // Derive overs from bowling table to exclude no-balls
+        const bowlingBalls = (inn.bowling || []).reduce((s: number, bl: any) => {
+          const ov = Number(bl.overs) || 0;
+          return s + Math.floor(ov) * 6 + Math.round((ov % 1) * 10);
+        }, 0);
+        const batBalls = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.balls) || 0), 0);
+        // Use bowling balls for overs (correct), batting balls as fallback
+        const totalBalls = bowlingBalls > 0 ? bowlingBalls : batBalls;
         
         inn.totalRuns = runs;
         inn.wickets = wickets;
-        inn.totalBalls = balls;
-        inn.totalOvers = Math.floor(balls / 6) + (balls % 6) / 10;
+        inn.totalBalls = totalBalls;
+        inn.totalOvers = Math.floor(totalBalls / 6) + (totalBalls % 6) / 10;
       };
 
       cleanBatting(finalState.innings1);
@@ -734,7 +745,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 <Td style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 600 }}>
                   {isCurrentInningsEditable ? (
                     <select
-                      value={stat.status === 'batting' ? (stat.outHow === 'retired hurt' ? 'retired hurt' : 'not out') : (stat.outHow || 'out')}
+                      value={stat.status === 'batting' ? (stat.outHow === 'retired hurt' ? 'retired hurt' : (stat.outHow ? 'not out' : '')) : (stat.outHow || '')}
                       onChange={(e) => {
                                 const newBatting = [...editState[innKey].batting];
                         const val = e.target.value;
@@ -756,6 +767,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                       title="Select dismissal type"
                       style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px 4px', borderRadius: '4px', width: '100%', fontSize: '0.7rem' }}
                     >
+                      <option value="" style={{ background: '#FFF', color: '#666' }}>-- Select Status --</option>
                       <option value="not out" style={{ background: '#FFF', color: '#000' }}>Not Out</option>
                       <option value="bowled" style={{ background: '#FFF', color: '#000' }}>Bowled</option>
                       <option value="caught" style={{ background: '#FFF', color: '#000' }}>Caught</option>
@@ -2058,7 +2070,13 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                   />
                   LIVE MATCH
                 </div>
-              ) : match.matchResult || 'Match in progress'}
+              ) : (
+                normalizedMatch.resultNote ||
+                normalizedMatch.resultSummary ||
+                (normalizedMatch.status === 'completed' || normalizedMatch.status === 'finalized'
+                  ? `${normalizedMatch.team1Name} vs ${normalizedMatch.team2Name} — Result`
+                  : 'Match in Progress')
+              )}
             </ResultHighlightBar>
 
             {/* Match Info Bar - Single Line */}
@@ -2122,7 +2140,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           const live = (isEditable && editState) ? calcLiveTotal(editState.innings1) : null;
                           const runs = live ? live.runs : (src?.totalRuns ?? 0);
                           const wkts = live ? live.wickets : (src?.wickets ?? 0);
-                          return <span>{runs}/{wkts} <span style={{ opacity: 0.5, fontSize: "0.7rem", marginLeft: 8 }}>({formatOvers(src?.totalBalls || 0)})</span></span>;
+                          const ovsDisplay = live ? live.overs : formatOvers(src?.totalBalls || 0);
+                          return <span>{runs}/{wkts} <span style={{ opacity: 0.5, fontSize: "0.7rem", marginLeft: 8 }}>({ovsDisplay})</span></span>;
                         })()}
                       </div>
                       <ChevronDown size={16} style={{ transform: openInnings.has(1) ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s', opacity: 0.5 }} />
@@ -2152,7 +2171,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           const live = (isEditable && editState) ? calcLiveTotal(editState.innings2) : null;
                           const runs = live ? live.runs : (src?.totalRuns ?? 0);
                           const wkts = live ? live.wickets : (src?.wickets ?? 0);
-                          return <span>{runs}/{wkts} <span style={{ opacity: 0.5, fontSize: "0.7rem", marginLeft: 8 }}>({formatOvers(src?.totalBalls || 0)})</span></span>;
+                          const ovsDisplay = live ? live.overs : formatOvers(src?.totalBalls || 0);
+                          return <span>{runs}/{wkts} <span style={{ opacity: 0.5, fontSize: "0.7rem", marginLeft: 8 }}>({ovsDisplay})</span></span>;
                         })()}
                       </div>
                       <ChevronDown size={16} style={{ transform: openInnings.has(2) ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s', opacity: 0.5 }} />
