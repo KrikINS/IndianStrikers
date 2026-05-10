@@ -293,22 +293,22 @@ const VSBadgeHeader = styled.div`
 
 const ResultHighlightBar = styled.div`
   background: linear-gradient(90deg, rgba(56, 189, 248, 0.2) 0%, rgba(56, 189, 248, 0.05) 100%);
-  padding: 10px 16px;
+  padding: 8px 8px;
   border-radius: 8px;
   text-align: center;
-  color: #38BDF8;
+  color: rgba(56, 189, 248, 1);
   font-weight: 900;
   font-size: 0.85rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  letter-spacing: 2px;
+  border: 1px solid rgba(56, 189, 248, 0.1);
   margin-top: 2px;
 `;
 
 const MetaGrid = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   padding-top: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 `;
@@ -376,10 +376,10 @@ const Td = styled.td`
 const ExtrasRow = styled.div`
   display: flex;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 4px 10px;
   background: #1E293B;
-  border-radius: 10px;
-  font-size: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
   border: 1px solid rgba(255, 255, 255, 0.05);
   color: #FFFFFF;
 `;
@@ -620,7 +620,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
       if (ball.isWicket) {
         wickets++;
         const overs = Math.floor(balls / 6) + (balls % 6) / 10;
-        fow.push({ wicket: wickets, runs, overs, batterName: ball.batterName });
+        const bName = ball.batterName || getPlayerNameResolved(ball.outPlayerId || ball.strikerId);
+        fow.push({ wicket: wickets, runs, overs, batterName: bName });
       }
     });
     return fow;
@@ -677,7 +678,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
     return (
       <div style={{ paddingBottom: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', marginBottom: '8px' }}>
           <TableTitle style={{ marginBottom: 0 }}><Zap size={14} /> BATTING</TableTitle>
           {isCurrentInningsEditable && (
             <button
@@ -952,13 +953,13 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               {/* Read-only auto-calculated extras */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '0.6rem', opacity: 0.5 }}>WD</span>
+                <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>WD</span>
                 <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 700, minWidth: 24, textAlign: 'center' }}>
                   {data.extras?.wides || data.extras?.wide || 0}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '0.6rem', opacity: 0.5 }}>NB</span>
+                <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>NB</span>
                 <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 700, minWidth: 24, textAlign: 'center' }}>
                   {data.extras?.noBalls || data.extras?.noBall || 0}
                 </span>
@@ -1033,13 +1034,13 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
         </ExtrasRow>
 
         {!isCurrentInningsEditable && fowData.length > 0 && (
-          <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
-            <div style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.5, marginBottom: '8px', textTransform: 'uppercase' }}>Fall of Wickets</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ marginTop: '6px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.5, marginBottom: '6px', textTransform: 'uppercase' }}>Fall of Wickets</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {fowData.map((f: any) => (
                 <div key={f.wicket} style={{ fontSize: '0.75rem' }}>
                   <span style={{ fontWeight: 800, color: '#38BDF8' }}>{f.runs}-{f.wicket}</span>
-                  <span style={{ opacity: 0.5, marginLeft: '4px' }}>({f.batterName}, {f.overs} ov)</span>
+                  <span style={{ opacity: 0.6, marginLeft: '4px' }}>({f.batterName}, {f.overs} ov)</span>
                 </div>
               ))}
             </div>
@@ -1052,9 +1053,9 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           const didNotBat = battingSquad.filter((p: any) => p.id && !battingIds.has(p.id));
           if (didNotBat.length === 0) return null;
           return (
-            <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.4, marginBottom: '6px', textTransform: 'uppercase' }}>Did Not Bat</div>
-              <div style={{ fontSize: '0.75rem', opacity: 0.8, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ marginTop: '6px', padding: '6px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ fontSize: '0.6rem', fontWeight: 800, opacity: 0.5, marginBottom: '2px', textTransform: 'uppercase' }}>Did Not Bat</div>
+              <div style={{ fontSize: '0.75rem', opacity: 0.9, display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                 {didNotBat.map((p: any, i: number) => (
                   <span key={p.id}>{p.name}{i < didNotBat.length - 1 ? ',' : ''}</span>
                 ))}
@@ -2091,7 +2092,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
             <ResultHighlightBar>
               {match.status === 'live' ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                   <motion.div
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ repeat: Infinity, duration: 1.5 }}
@@ -2111,29 +2112,29 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
             {/* Match Info Bar - Single Line */}
             <div style={{
-              display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center',
-              marginTop: 20, padding: '12px', background: 'rgba(255,255,255,0.03)',
-              borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)',
+              display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'center',
+              marginTop: 2, padding: '6px', background: 'rgba(255,255,255,0.00)',
+              borderRadius: 8, border: '0px solid rgba(255,255,255,0.05)',
               alignItems: 'center'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MapPin size={12} style={{ color: '#38BDF8' }} />
-                <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#FFF', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <MapPin size={14} style={{ color: '#38BDF8' }} />
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#FFF', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                   {grounds.find((g: any) => g.id === normalizedMatch.groundId)?.name || normalizedMatch.venue || 'TBD'}
                 </div>
               </div>
               <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Clock size={12} style={{ color: '#38BDF8' }} />
-                <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#FFF', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <Clock size={14} style={{ color: '#38BDF8' }} />
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#FFF', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                   {normalizedMatch.date ? new Date(normalizedMatch.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'TBD'}
                 </div>
               </div>
               <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Zap size={12} style={{ color: '#38BDF8' }} />
-                <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#FFF', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  {normalizedMatch.tossWinnerId ? `${getTeamName(normalizedMatch.tossWinnerId)} won & chose to ${normalizedMatch.tossChoice || 'Bat'}` : 'Toss Result'}
+                <Zap size={14} style={{ color: '#38BDF8' }} />
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#FFF', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {normalizedMatch.tossWinnerId ? `${getTeamName(normalizedMatch.tossWinnerId)} won the toss & chose to ${normalizedMatch.tossChoice || 'Bat'}` : 'Toss Result'}
                 </div>
               </div>
             </div>
@@ -2146,10 +2147,10 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
             <TabButton $active={tab === 'analytics'} onClick={() => setTab('analytics')}>Analytics</TabButton>
           </TabContainer>
 
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 12 }}>
             {tab === 'scorecard' && (
               <>
-                <div style={{ marginBottom: 12 }}>
+                <div style={{ marginBottom: 8 }}>
                   <InningsAccordionHeader
                     $active={openInnings.has(1)}
                     onClick={() => {
@@ -2160,8 +2161,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ background: '#38BDF8', color: '#FFF', padding: '2px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 900 }}>1st INN</div>
-                      <div style={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>{getTeamName(normalizedData.innings1?.battingTeamId)}</div>
+                      <div style={{ background: 'rgba(3, 10, 56, 1)', color: '#FFF', padding: '2px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 900 }}>1st INN</div>
+                      <div style={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>{getTeamName(normalizedData.innings1?.battingTeamId)}</div>
                     </div>
                     <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div>
@@ -2190,8 +2191,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ background: '#38BDF8', color: '#FFF', padding: '2px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 900 }}>2nd INN</div>
-                      <div style={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>{getTeamName(normalizedData.innings2?.battingTeamId)}</div>
+                      <div style={{ background: 'rgba(3, 10, 56, 1)', color: '#FFF', padding: '2px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 900 }}>2nd INN</div>
+                      <div style={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>{getTeamName(normalizedData.innings2?.battingTeamId)}</div>
                     </div>
                     <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div>

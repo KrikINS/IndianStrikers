@@ -112,6 +112,9 @@ export interface BallRecord {
   bowlerId?: string;
   strikerId?: string;
   nonStrikerId?: string;
+  outPlayerId?: string;
+  batterName?: string;
+  bowlerName?: string;
   overNumber: number;
   ballNumber: number; // 1-6 for the over display
   ballIndex: number;  // 1-indexed cumulative balls in innings
