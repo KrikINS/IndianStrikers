@@ -7,6 +7,7 @@ interface LineupGraphicProps {
     opponents: OpponentTeam[];
     players: Player[];
     grounds: Ground[];
+    teamType?: 'team1' | 'team2' | 'view';
     team1XI?: string[];
     team2XI?: string[];
     homeTeamName?: string;
@@ -18,11 +19,15 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
     opponents,
     players,
     grounds,
+    teamType = 'team1',
     team1XI,
     team2XI,
     homeTeamName = 'Indian Strikers',
     homeTeamLogo = '/INS%20LOGO.PNG'
 }) => {
+    const isTeam2 = teamType === 'team2';
+    
+    // Symmetrical team resolution
     const opponent = opponents.find(o => o.id === (match.team2Id || match.opponentId));
     const opponentName = opponent?.name || match.team2Name || match.opponentName || 'Opponent';
     const opponentLogo = opponent?.logoUrl || match.team2Logo || match.opponentLogo;
@@ -33,12 +38,20 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
 
     const ground = grounds.find(g => g.id === match.groundId);
     
-    // Get home XI players from the full squad roster
-    // Safety net: Use props first, then match fields, then fallback to empty array
-    const targetXI = team1XI || match.team1XI || match.homeTeamXI || [];
-    const homeXIPlayers = (targetXI || [])
-        .map(id => players.find(p => String(p.id) === String(id)))
+    // Get target XI players based on teamType
+    // Safety net: Use specific props first, then match fields, then fallback to empty array
+    const targetXIIds = isTeam2 
+        ? (team2XI || match.team2XI || match.opponentTeamXI || [])
+        : (team1XI || match.team1XI || match.homeTeamXI || []);
+
+    // CRITICAL SAFETY NET: (targetXIIds || []).map pattern to prevent crash
+    const displayXIPlayers = (targetXIIds || [])
+        .map(id => (players || []).find(p => String(p.id) === String(id)))
         .filter((p): p is Player => !!p);
+
+    // Active Team Metadata for the display
+    const activeTeamName = isTeam2 ? opponentName : resolvedHomeName;
+    const activeTeamLogo = isTeam2 ? opponentLogo : resolvedHomeLogo;
 
     const matchDate = match.date ? new Date(match.date) : new Date();
     const dateFormatted = isNaN(matchDate.getTime()) 
@@ -146,8 +159,8 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
                     </div>
 
                     <div className="grid grid-cols-1 gap-4">
-                        {homeXIPlayers.length > 0 ? (
-                            homeXIPlayers.map((player, idx) => (
+                        {displayXIPlayers.length > 0 ? (
+                            displayXIPlayers.map((player, idx) => (
                                 <div 
                                     key={player.id} 
                                     className="flex items-center justify-between bg-white/5 hover:bg-white/10 transition-all border border-white/10 rounded-[2rem] p-6 shadow-xl"
@@ -166,7 +179,7 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
                                         </div>
                                     </div>
                                     
-                                    <div className="text-2xl font-black italic text-white/10 pr-4">INDIAN STRIKERS</div>
+                                    <div className="text-2xl font-black italic text-white/10 pr-4">{activeTeamName.toUpperCase()}</div>
                                 </div>
                             ))
                         ) : (
@@ -181,9 +194,9 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
             {/* BRANDING FOOTER */}
             <div className="bg-[#020617] border-t-8 border-blue-600 py-16 px-24 flex items-center justify-between">
                 <div className="flex items-center gap-8">
-                    <img src={homeTeamLogo} alt="Logo" className="w-24 h-24 object-contain" />
+                    <img src={activeTeamLogo} alt="Logo" className="w-24 h-24 object-contain" />
                     <div>
-                        <div className="text-4xl font-black uppercase tracking-tighter">INDIAN STRIKERS</div>
+                        <div className="text-4xl font-black uppercase tracking-tighter">{activeTeamName.toUpperCase()}</div>
                         <div className="text-xl font-bold uppercase tracking-widest text-blue-500">Official Team Sheet</div>
                     </div>
                 </div>
