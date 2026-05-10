@@ -8,14 +8,19 @@ interface MatchSummaryModalProps {
   opponentName: string;
   onSave: (summary: any) => void;
   onClose: () => void;
+  isAdmin?: boolean;
 }
 
-export default function MatchSummaryModal({ match, homeTeamName, opponentName, onSave, onClose }: MatchSummaryModalProps) {
+export default function MatchSummaryModal({ match, homeTeamName, opponentName, onSave, onClose, isAdmin }: MatchSummaryModalProps) {
+  // Resolve team IDs with legacy field fallbacks
+  const team1Id = match.team1Id || (match as any).homeTeamId || 'team1';
+  const team2Id = match.team2Id || (match as any).opponentId || 'team2';
+
   const [summary, setSummary] = useState({
-    tossWinner: match.tossWinnerId || match.team1Id || '',
+    tossWinner: match.tossWinnerId || (match as any).toss_winner_id || team1Id || '',
     tossChoice: match.tossChoice || match.toss?.choice || 'Bat',
     maxOvers: match.maxOvers || 20,
-    resultType: match.resultType || 'Normal Result',
+    resultType: (match as any).resultType || 'Normal Result',
     homeScore: match.team1Score || { runs: 0, wickets: 0, overs: 0 },
     awayScore: match.team2Score || { runs: 0, wickets: 0, overs: 0 },
   });
@@ -326,8 +331,8 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
             <label>TOSS WON BY</label>
             <select title="Toss Winner" value={summary.tossWinner || ''} onChange={(e) => setSummary({...summary, tossWinner: e.target.value})}>
               <option value="">Select Team</option>
-              <option value={match.team1Id || ''} >{homeTeamName}</option>
-              <option value={match.team2Id || ''}>{opponentName}</option>
+              <option value={team1Id}>{homeTeamName}</option>
+              <option value={team2Id}>{opponentName}</option>
             </select>
           </div>
           <div className="input-group">
@@ -361,19 +366,28 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
           </div>
         )}
 
+        {match.isLocked && (
+          <div className={`mb-4 p-3 rounded-xl flex items-center gap-3 border text-xs font-bold uppercase tracking-wider ${
+            isAdmin
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+          }`}>
+            <span>{isAdmin ? '⚠️' : '🔒'}</span>
+            <span>
+              {isAdmin
+                ? 'Admin Override — This match is locked, but your changes will be saved.'
+                : 'Match is locked. Contact an admin to make changes.'}
+            </span>
+          </div>
+        )}
+
         <div className="modal-footer">
-          {match.isLocked ? (
-            <div className="flex-1 flex items-center gap-2 text-rose-500 font-bold bg-rose-500/10 px-4 py-2 rounded-lg border border-rose-500/20 mr-4">
-              <span className="animate-pulse">🔒</span>
-              MATCH IS LOCKED. CONTACT ADMIN TO EDIT.
-            </div>
-          ) : null}
           <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
           <button 
             type="button" 
             className="btn-save" 
             onClick={handleSave} 
-            disabled={isSaving}
+            disabled={isSaving || (!isAdmin && !!match.isLocked)}
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
             {isSaving ? 'Updating...' : 'UPDATE'}
