@@ -261,26 +261,62 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
         const tossWinnerName = summary.tossWinner === match.team1Id ? homeName : oppName;
 
-        const summaryScorecard = match.scorecard || {
-            innings1: { 
-                batting: [], 
-                bowling: [], 
-                extras: { wide: summary.homeScore?.wides || 0, no_ball: 0, legByes: 0, byes: 0 }, 
-                totalRuns: summary.homeScore?.runs || 0, 
-                totalWickets: summary.homeScore?.wickets || 0, 
-                totalOvers: summary.homeScore?.overs || 0,
-                history: []
-            }, 
-            innings2: { 
-                batting: [], 
-                bowling: [], 
-                extras: { wide: summary.awayScore?.wides || 0, no_ball: 0, legByes: 0, byes: 0 }, 
-                totalRuns: summary.awayScore?.runs || 0, 
-                totalWickets: summary.awayScore?.wickets || 0, 
-                totalOvers: summary.awayScore?.overs || 0,
-                history: []
-            } 
-        };
+        // Determine which innings corresponds to which team.
+        // innings1 = team that batted FIRST; innings2 = team that batted SECOND.
+        // is_home_batting_first tells us if home team (team1) batted first.
+        const isHomeBattingFirst = match.isTeam1BattingFirst ?? (match as any).is_home_batting_first ?? true;
+        const homeInningsKey = isHomeBattingFirst ? 'innings1' : 'innings2';
+        const awayInningsKey = isHomeBattingFirst ? 'innings2' : 'innings1';
+
+        // Build the scorecard: if an existing scorecard blob exists, deep-clone it and
+        // patch the totalRuns/wickets/totalOvers for each innings with the new summary values.
+        // This is the critical fix — without it the JSONB blob retains stale computed totals.
+        let summaryScorecard: any;
+        if (match.scorecard) {
+            summaryScorecard = JSON.parse(JSON.stringify(match.scorecard));
+
+            // Patch home innings totals
+            if (summaryScorecard[homeInningsKey]) {
+                summaryScorecard[homeInningsKey].totalRuns = summary.homeScore.runs ?? summaryScorecard[homeInningsKey].totalRuns;
+                summaryScorecard[homeInningsKey].wickets   = summary.homeScore.wickets ?? summaryScorecard[homeInningsKey].wickets;
+                if (summary.homeScore.overs) {
+                    const parts = String(summary.homeScore.overs).split('.');
+                    summaryScorecard[homeInningsKey].totalOvers = summary.homeScore.overs;
+                    summaryScorecard[homeInningsKey].totalBalls = (parseInt(parts[0]) * 6) + (parseInt(parts[1] || '0'));
+                }
+            }
+
+            // Patch away innings totals
+            if (summaryScorecard[awayInningsKey]) {
+                summaryScorecard[awayInningsKey].totalRuns = summary.awayScore.runs ?? summaryScorecard[awayInningsKey].totalRuns;
+                summaryScorecard[awayInningsKey].wickets   = summary.awayScore.wickets ?? summaryScorecard[awayInningsKey].wickets;
+                if (summary.awayScore.overs) {
+                    const parts = String(summary.awayScore.overs).split('.');
+                    summaryScorecard[awayInningsKey].totalOvers = summary.awayScore.overs;
+                    summaryScorecard[awayInningsKey].totalBalls = (parseInt(parts[0]) * 6) + (parseInt(parts[1] || '0'));
+                }
+            }
+        } else {
+            // No existing scorecard — build a minimal shell from the summary
+            summaryScorecard = {
+                innings1: {
+                    batting: [], bowling: [],
+                    extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 },
+                    totalRuns: (isHomeBattingFirst ? summary.homeScore : summary.awayScore)?.runs || 0,
+                    wickets:   (isHomeBattingFirst ? summary.homeScore : summary.awayScore)?.wickets || 0,
+                    totalOvers:(isHomeBattingFirst ? summary.homeScore : summary.awayScore)?.overs || 0,
+                    totalBalls: 0, history: []
+                },
+                innings2: {
+                    batting: [], bowling: [],
+                    extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 },
+                    totalRuns: (isHomeBattingFirst ? summary.awayScore : summary.homeScore)?.runs || 0,
+                    wickets:   (isHomeBattingFirst ? summary.awayScore : summary.homeScore)?.wickets || 0,
+                    totalOvers:(isHomeBattingFirst ? summary.awayScore : summary.homeScore)?.overs || 0,
+                    totalBalls: 0, history: []
+                }
+            };
+        }
 
         try {
             await handleManualScoreSubmit({
@@ -293,7 +329,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 isLiveScored: false,
                 toss: { winner: tossWinnerName, choice: summary.tossChoice },
                 toss_winner_id: summary.tossWinner,
+                tossWinnerId: summary.tossWinner,
+                tossChoice: summary.tossChoice,
                 maxOvers: summary.maxOvers,
+                isTeam1BattingFirst: isHomeBattingFirst,
             }, { skipCareerSync: true });
         } catch (err) {
             console.error('[SummarySync] Error in submission block:', err);

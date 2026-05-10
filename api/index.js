@@ -782,15 +782,20 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
     const scoreHome = matchData.team1Score || matchData.finalScoreHome;
     const scoreAway = matchData.team2Score || matchData.finalScoreAway;
 
-    const isHomeBattingFirst = matchData.isTeam1BattingFirst ?? matchData.is_home_batting_first ?? matchData.live_data?.isTeam1BattingFirst ?? matchData.live_data?.isHomeBattingFirst;
+    const isHomeBattingFirst = matchData.isTeam1BattingFirst ?? matchData.is_home_batting_first ?? matchData.live_data?.isTeam1BattingFirst ?? matchData.live_data?.isHomeBattingFirst ?? true;
     
+    // Use explicit value from scoreHome/Away first; fall back to scorecard blob only as last resort.
+    // Using ?? (not ||) so a score of 0 doesn't incorrectly fall through.
+    const homeRuns = getRuns(scoreHome);
+    const awayRuns = getRuns(scoreAway);
+
     const finalScoreHomeValue = isHomeBattingFirst 
-      ? (getRuns(scoreHome) || Number(scorecard?.innings1?.totalRuns || 0))
-      : (getRuns(scoreHome) || Number(scorecard?.innings2?.totalRuns || 0));
+      ? (homeRuns !== 0 ? homeRuns : Number(scorecard?.innings1?.totalRuns ?? 0))
+      : (homeRuns !== 0 ? homeRuns : Number(scorecard?.innings2?.totalRuns ?? 0));
       
     const finalScoreAwayValue = isHomeBattingFirst
-      ? (getRuns(scoreAway) || Number(scorecard?.innings2?.totalRuns || 0))
-      : (getRuns(scoreAway) || Number(scorecard?.innings1?.totalRuns || 0));
+      ? (awayRuns !== 0 ? awayRuns : Number(scorecard?.innings2?.totalRuns ?? 0))
+      : (awayRuns !== 0 ? awayRuns : Number(scorecard?.innings1?.totalRuns ?? 0));
     
     // Toss Handling
     let tossWinnerId = matchData.toss_winner_id;
@@ -860,14 +865,18 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
         finalScoreHomeValue,
         finalScoreAwayValue,
         finalScoreHomeValue,
-        (scoreHome?.wickets || (isHomeBattingFirst ? scorecard?.innings1?.totalWickets : scorecard?.innings2?.totalWickets) || 0),
+        (scoreHome?.wickets ?? (isHomeBattingFirst 
+          ? (scorecard?.innings1?.wickets ?? scorecard?.innings1?.totalWickets ?? 0) 
+          : (scorecard?.innings2?.wickets ?? scorecard?.innings2?.totalWickets ?? 0))),
         (() => {
           const overs = scoreHome?.overs || 
-                        (isHomeBattingFirst ? scorecard?.innings1?.totalOvers : scorecard?.innings2?.totalOvers) || 0;
+                        (isHomeBattingFirst 
+                          ? (scorecard?.innings1?.totalOvers || scorecard?.innings1?.overs)
+                          : (scorecard?.innings2?.totalOvers || scorecard?.innings2?.overs)) || 0;
           const parts = String(overs).split('.');
           const balls = (parseInt(parts[0]) * 6) + (parseInt(parts[1]) || 0);
           if (balls > 0) return balls;
-          return (isHomeBattingFirst ? scorecard?.innings1?.history?.length : scorecard?.innings2?.history?.length) || 0;
+          return (isHomeBattingFirst ? scorecard?.innings1?.totalBalls : scorecard?.innings2?.totalBalls) || 0;
         })(),
         matchData.resultSummary || matchData.result_note || null,
         matchData.resultNote || matchData.resultSummary || null,
