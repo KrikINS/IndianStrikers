@@ -7,6 +7,8 @@ interface LineupGraphicProps {
     opponents: OpponentTeam[];
     players: Player[];
     grounds: Ground[];
+    team1XI?: string[];
+    team2XI?: string[];
     homeTeamName?: string;
     homeTeamLogo?: string;
 }
@@ -16,31 +18,39 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
     opponents,
     players,
     grounds,
+    team1XI,
+    team2XI,
     homeTeamName = 'Indian Strikers',
     homeTeamLogo = '/INS%20LOGO.PNG'
 }) => {
-    const opponent = opponents.find(o => o.id === match.opponentId);
-    const opponentName = opponent?.name || match.opponentName || 'Opponent';
-    const opponentLogo = opponent?.logoUrl || match.opponentLogo;
+    const opponent = opponents.find(o => o.id === (match.team2Id || match.opponentId));
+    const opponentName = opponent?.name || match.team2Name || match.opponentName || 'Opponent';
+    const opponentLogo = opponent?.logoUrl || match.team2Logo || match.opponentLogo;
     
-    const homeTeam = match.isNeutral ? opponents.find(o => o.id === match.homeTeamId) : null;
+    const homeTeam = match.isNeutral ? opponents.find(o => o.id === (match.team1Id || match.homeTeamId)) : null;
     const resolvedHomeName = match.isNeutral ? (homeTeam?.name || 'Team A') : homeTeamName;
     const resolvedHomeLogo = match.isNeutral ? (homeTeam?.logoUrl || '') : homeTeamLogo;
 
     const ground = grounds.find(g => g.id === match.groundId);
     
     // Get home XI players from the full squad roster
-    const homeXIPlayers = match.homeTeamXI
+    // Safety net: Use props first, then match fields, then fallback to empty array
+    const targetXI = team1XI || match.team1XI || match.homeTeamXI || [];
+    const homeXIPlayers = (targetXI || [])
         .map(id => players.find(p => String(p.id) === String(id)))
         .filter((p): p is Player => !!p);
 
-    const matchDate = new Date(match.date);
-    const dateFormatted = matchDate.toLocaleDateString(undefined, { 
-        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
-    }).toUpperCase();
-    const timeFormatted = matchDate.toLocaleTimeString(undefined, { 
-        hour: '2-digit', minute: '2-digit', hour12: true 
-    }).toUpperCase();
+    const matchDate = match.date ? new Date(match.date) : new Date();
+    const dateFormatted = isNaN(matchDate.getTime()) 
+        ? 'DATE TBD' 
+        : matchDate.toLocaleDateString(undefined, { 
+            weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+        }).toUpperCase();
+    const timeFormatted = isNaN(matchDate.getTime())
+        ? 'TIME TBD'
+        : matchDate.toLocaleTimeString(undefined, { 
+            hour: '2-digit', minute: '2-digit', hour12: true 
+        }).toUpperCase();
 
     return (
         <div 
@@ -116,7 +126,7 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
                 </div>
                 <div className="flex items-center gap-3 text-3xl font-black uppercase tracking-widest text-blue-400 bg-blue-500/20 px-6 py-2 rounded-2xl border border-blue-500/30">
                     <Hash size={32} />
-                    {ground?.name.match(/\d+/) ? ground.name.match(/\d+/)![0] : 'MAIN'}
+                    {ground?.name?.match(/\d+/) ? ground.name.match(/\d+/)![0] : 'MAIN'}
                 </div>
                 <div className="px-6 py-2 border-2 border-blue-500/50 rounded-2xl text-2xl font-black text-white uppercase tracking-wider">
                     {match.matchFormat || 'T20'}

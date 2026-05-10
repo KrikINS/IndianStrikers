@@ -780,15 +780,15 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         <div className="hidden sm:flex items-center gap-6 px-4 border-l border-slate-100">
           <div className="text-center min-w-[40px]">
             <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Runs</p>
-            <p className="text-[13px] font-black text-slate-900">{player.runsScored}</p>
+            <p className="text-[13px] font-black text-slate-900">{player.battingStats?.runs || player.runsScored || 0}</p>
           </div>
           <div className="text-center min-w-[40px]">
             <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Wkts</p>
-            <p className="text-[13px] font-black text-slate-900">{player.wicketsTaken}</p>
+            <p className="text-[13px] font-black text-slate-900">{player.bowlingStats?.wickets || player.wicketsTaken || 0}</p>
           </div>
           <div className="text-center min-w-[40px]">
             <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Mat</p>
-            <p className="text-[13px] font-black text-slate-700">{player.matchesPlayed}</p>
+            <p className="text-[13px] font-black text-slate-700">{player.battingStats?.matches || player.matchesPlayed || 0}</p>
           </div>
         </div>
 
@@ -800,21 +800,6 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   };
 
   const renderPlayerCard = (player: Player) => {
-    // tournament_stats refers to all tournament performances for this player
-    const tournament_stats = performerData.filter(perf => String(perf.playerId) === String(player.id) || String(perf.id) === String(player.id));
-    const totalMatchRuns = tournament_stats.reduce((sum, s) => sum + (Number(s.runs) || 0), 0);
-    const totalMatchWkts = tournament_stats.reduce((sum, s) => sum + (Number(s.wickets) || 0), 0);
-    const totalMatchGames = tournament_stats.reduce((sum, s) => sum + (Number(s.matches) || 1), 0);
-
-    const legacyRow = legacyStats.find(l => String(l.player_id) === String(player.id));
-    const baseRuns = Number(legacyRow?.runs || player.runsScored || 0);
-    const baseWkts = Number(legacyRow?.wickets || player.wicketsTaken || 0);
-    const baseMatches = Number(legacyRow?.matches || player.matchesPlayed || 0);
-
-    const displayRuns = baseRuns + totalMatchRuns;
-    const displayWkts = baseWkts + totalMatchWkts;
-    const displayMatches = baseMatches + totalMatchGames;
-
     return (
     <div
       key={player.id}
@@ -899,19 +884,19 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
             <span className="text-slate-400 block uppercase text-[10px]">MTCH</span>
             <span className="font-bold text-slate-700 text-sm">
-              {displayMatches}
+              {player.battingStats?.matches || player.matchesPlayed || 0}
             </span>
           </div>
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
             <span className="text-slate-400 block uppercase text-[10px]">Runs</span>
             <span className="font-bold text-slate-700 text-sm">
-              {displayRuns}
+              {player.battingStats?.runs || player.runsScored || 0}
             </span>
           </div>
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
             <span className="text-slate-400 block uppercase text-[10px]">Wkts</span>
             <span className="font-bold text-slate-700 text-sm">
-              {displayWkts}
+              {player.bowlingStats?.wickets || player.wicketsTaken || 0}
             </span>
           </div>
         </div>

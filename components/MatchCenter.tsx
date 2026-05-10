@@ -1482,6 +1482,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                          opponents={opponents}
                          players={players}
                          grounds={grounds}
+                         team1XI={matches.find(m => m.id === xiModalConfig.matchId)?.team1XI}
+                         team2XI={matches.find(m => m.id === xiModalConfig.matchId)?.team2XI}
+                         homeTeamName={matches.find(m => m.id === xiModalConfig.matchId)?.team1Name}
+                         homeTeamLogo={matches.find(m => m.id === xiModalConfig.matchId)?.team1Logo}
                        />
                    </div>
                 )}
