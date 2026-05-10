@@ -18,10 +18,10 @@ interface PlayingXIModalProps {
 }
 
 
-export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({ 
-    matchId, 
-    homePlayers, 
-    opponentTeams, 
+export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
+    matchId,
+    homePlayers,
+    opponentTeams,
     opponentId,
     homeTeamId,
     teamType,
@@ -39,7 +39,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
 
     // Emergency: If roster is empty, force a re-fetch from store
     React.useEffect(() => {
-        if ((teamType === 'home' || teamType === 'view') && homePlayers.length === 0) {
+        if ((teamType === 'team1' || teamType === 'view') && homePlayers.length === 0) {
             console.log("[PlayingXI] Squad roster empty, forcing re-fetch...");
             fetchPlayers();
         }
@@ -63,7 +63,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
 
     const togglePlayer = (id: string | number, name: string) => {
         if (isViewOnly) return;
-        
+
         const stringId = String(id);
         setSelectedPlayers(prev => {
             const isAlreadySelected = prev.includes(stringId);
@@ -98,24 +98,24 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     const displayPlayers = useMemo(() => {
         const INS_UUID = '00000000-0000-0000-0000-000000000000';
         const isInsTeam = (id: string | null) => id === INS_UUID || id === 'IND_STRIKERS';
-        
+
         // team1 uses homeTeamId; team2 uses opponentId
         const targetTeamId = teamType === 'team1' ? (homeTeamId || INS_UUID) : opponentId;
         const isINS = isInsTeam(targetTeamId);
 
         if (isINS || teamType === 'team1' && !targetTeamId) {
             // Only Active Indian Strikers members (Case-insensitive teamId check)
-            return homePlayers.filter(p => 
-                p.isActive && 
+            return homePlayers.filter(p =>
+                p.isActive &&
                 (p.teamId?.toUpperCase() === 'IND_STRIKERS' || p.isClubPlayer)
             );
         }
-        
+
         // For any other team (or if specifically selecting team2 players)
         // 1. Get players from master list assigned to this specific team and marked Active
-        const opponentPlayersFromMaster = homePlayers.filter(p => 
-            !p.isClubPlayer && 
-            String(p.primaryTeamId) === String(targetTeamId) && 
+        const opponentPlayersFromMaster = homePlayers.filter(p =>
+            !p.isClubPlayer &&
+            String(p.primaryTeamId) === String(targetTeamId) &&
             p.isActive
         );
 
@@ -132,7 +132,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
         const targetTeamId = teamType === 'team1' ? (homeTeamId || '00000000-0000-0000-0000-000000000000') : opponentId;
         const isINS = targetTeamId === '00000000-0000-0000-0000-000000000000' || targetTeamId === 'IND_STRIKERS';
         const name = isINS
-            ? 'Indian Strikers' 
+            ? 'Indian Strikers'
             : (opponentTeams.find(t => t.id === targetTeamId)?.name || 'Team');
         return `Select ${name} XI`;
     })();
@@ -152,8 +152,8 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                             </p>
                         )}
                     </div>
-                    <button 
-                        onClick={onClose} 
+                    <button
+                        onClick={onClose}
                         title="Close Modal"
                         aria-label="Close"
                         className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400 hover:text-emerald-500"
@@ -165,22 +165,22 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                 {/* Content Area */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
                     {/* QUICK ADD SECTION - Only for Opponents */}
-                    {teamType === 'opponent' && onQuickAddPlayer && (
+                    {teamType === 'team2' && onQuickAddPlayer && (
                         <div className="flex gap-2 mb-6 p-4 bg-emerald-600/5 rounded-2xl border border-emerald-500/20 shadow-sm">
-                            <input 
-                                type="text" 
-                                placeholder="Quick Player Name..." 
+                            <input
+                                type="text"
+                                placeholder="Quick Player Name..."
                                 className="flex-1 px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600 text-sm"
                                 value={quickAddName}
                                 onChange={(e) => setQuickAddName(e.target.value)}
-                                onKeyDown={(e) => { 
+                                onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
                                         handleQuickAdd();
                                     }
                                 }}
                             />
-                            <button 
+                            <button
                                 onClick={handleQuickAdd}
                                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold uppercase tracking-wider transition-all text-xs"
                             >
@@ -197,7 +197,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                             const playerImage = (player as any).avatarUrl || (player as any).photo || '';
 
                             return (
-                                <div 
+                                <div
                                     key={player.id || player.name}
                                     onClick={() => togglePlayer(player.id || player.name, player.name)}
                                     className={`group flex items-center gap-3 p-2 rounded-xl border transition-all cursor-pointer shadow-sm
@@ -232,7 +232,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                 <div className="p-6 md:p-8 border-t border-slate-800 bg-slate-900/50 flex justify-between items-center">
                     <div className="flex gap-4 items-center">
                         {onShare && (
-                            <button 
+                            <button
                                 onClick={() => onShare(matchId)}
                                 title="Generate Shareable Graphic"
                                 className="p-3 text-slate-400 hover:text-emerald-500 transition-colors bg-slate-800 rounded-xl border border-slate-700 hover:border-emerald-500/50"
@@ -240,7 +240,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                                 <Share2 size={20} />
                             </button>
                         )}
-                        <button 
+                        <button
                             onClick={onClose}
                             title="Close Modal"
                             className="px-6 py-3 text-slate-400 font-bold uppercase hover:text-white transition-colors"
@@ -249,13 +249,13 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                         </button>
                     </div>
                     {!isViewOnly && (
-                        <button 
+                        <button
                             onClick={handleSave}
                             disabled={selectedPlayers.length === 0 || !hasChanged || isSaving}
                             title={selectedPlayers.length === 11 ? "Save Squad" : (hasChanged ? `Need ${11 - selectedPlayers.length} more players` : "No changes made")}
                             className={`flex items-center gap-2 px-8 py-3 rounded-xl font-black uppercase transition-all
                                 ${selectedPlayers.length > 0 && hasChanged && !isSaving
-                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40' 
+                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40'
                                     : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
                         >
                             {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}

@@ -270,8 +270,22 @@ export interface ScheduledMatch {
   lastUpdated?: string;
   liveData?: any;
   liveState?: any;
+  matchResult?: string | null;
   forceUpsert?: boolean;
   systemCommentary?: SystemCommentary[];
+
+  // Legacy Properties (Deprecated)
+  homeTeamId?: string | null;
+  opponentId?: string | null;
+  homeTeamXI?: string[];
+  opponentTeamXI?: string[];
+  finalScoreHome?: { runs: number; wickets: number; overs: number };
+  finalScoreAway?: { runs: number; wickets: number; overs: number };
+  opponentName?: string;
+  homeTeamName?: string;
+  homeLogo?: string;
+  opponentLogo?: string;
+  isHomeBattingFirst?: boolean;
 }
 
 export interface FieldPosition {

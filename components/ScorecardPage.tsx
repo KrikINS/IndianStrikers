@@ -14,7 +14,7 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents }) => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { matches, finalizeMatch, currentUser } = useMatchCenter();
-    const { players } = useStore();
+    const { squadPlayers: players } = useStore();
     const isAdmin = currentUser?.role === 'admin';
     
     const match = matches.find(m => m.id === id);

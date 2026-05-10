@@ -200,7 +200,7 @@ const MatchHeaderCard = styled.div`
 `;
 
 const TournamentLabel = styled.div`
-  font-size: 1.3rem;
+  font-size: 2rem;
   font-weight: 900;
   color: #38BDF8;
   text-transform: uppercase;
@@ -647,7 +647,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     const rem = balls % 6;
     if (maxOvers && fullOvers >= maxOvers) return `${fullOvers} Overs`;
     if (rem === 0 && fullOvers > 0) return `${fullOvers} Overs`;
-    return `${fullOvers}.${rem}`;
+    return `${fullOvers}.${rem} Overs`;
   };
 
   const renderInningsTable = (data: any, innNo: number) => {
@@ -2169,7 +2169,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           const src = (isEditable && editState) ? editState.innings1 : normalizedData.innings1;
                           // Always calculate totals to ensure consistency with bowling-table overs and status-only wickets
                           const live = calcLiveTotal(src);
-                          return <span>{live.runs}/{live.wickets} <span style={{ opacity: 0.5, fontSize: "0.7rem", marginLeft: 8 }}>({live.overs})</span></span>;
+                          const totalBalls = Math.floor(live.overs) * 6 + Math.round((live.overs % 1) * 10);
+                          return <span>{live.runs}/{live.wickets} <span style={{ opacity: 0.5, fontSize: "0.7rem", marginLeft: 8 }}>({formatOvers(totalBalls)})</span></span>;
                         })()}
                       </div>
                       <ChevronDown size={16} style={{ transform: openInnings.has(1) ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s', opacity: 0.5 }} />
@@ -2198,7 +2199,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           const src = (isEditable && editState) ? editState.innings2 : normalizedData.innings2;
                           // Always calculate totals to ensure consistency with bowling-table overs and status-only wickets
                           const live = calcLiveTotal(src);
-                          return <span>{live.runs}/{live.wickets} <span style={{ opacity: 0.5, fontSize: "0.7rem", marginLeft: 8 }}>({live.overs})</span></span>;
+                          const totalBalls = Math.floor(live.overs) * 6 + Math.round((live.overs % 1) * 10);
+                          return <span>{live.runs}/{live.wickets} <span style={{ opacity: 0.5, fontSize: "0.7rem", marginLeft: 8 }}>({formatOvers(totalBalls)})</span></span>;
                         })()}
                       </div>
                       <ChevronDown size={16} style={{ transform: openInnings.has(2) ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s', opacity: 0.5 }} />

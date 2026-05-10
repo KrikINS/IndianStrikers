@@ -409,12 +409,12 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
                         <div className="flex items-center gap-3 justify-between">
                            <div className="text-center flex-1">
                               <p className="text-[10px] font-black text-slate-900 uppercase truncate">INS</p>
-                              <p className="text-sm font-black text-slate-900">{match.team1Score?.runs ?? match.finalScoreHome?.runs}/{match.team1Score?.wickets ?? match.finalScoreHome?.wickets}</p>
+                              <p className="text-sm font-black text-slate-900">{match.team1Score?.runs ?? 0}/{match.team1Score?.wickets ?? 0}</p>
                            </div>
                            <span className="text-[10px] font-black text-slate-300 italic">VS</span>
                            <div className="text-center flex-1">
-                              <p className="text-[10px] font-black text-slate-900 uppercase truncate">{(match.team2Name || match.opponentName)?.substring(0,3)}</p>
-                              <p className="text-sm font-black text-slate-900">{match.team2Score?.runs ?? match.finalScoreAway?.runs}/{match.team2Score?.wickets ?? match.finalScoreAway?.wickets}</p>
+                              <p className="text-[10px] font-black text-slate-900 uppercase truncate">{match.team2Name?.substring(0,3)}</p>
+                              <p className="text-sm font-black text-slate-900">{match.team2Score?.runs ?? 0}/{match.team2Score?.wickets ?? 0}</p>
                            </div>
                         </div>
                         <p className="text-[10px] font-bold text-slate-500 text-center mt-3 border-t border-slate-100 pt-2 italic">
@@ -494,7 +494,7 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
                     <div className="flex justify-between items-start mb-6">
                        <div>
                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">{match.stage || 'League Match'}</p>
-                         <h4 className="text-xs font-black text-slate-900 uppercase italic">vs {match.team2Name || match.opponentName || 'Opponent'}</h4>
+                         <h4 className="text-xs font-black text-slate-900 uppercase italic">vs {match.team2Name || 'Opponent'}</h4>
                        </div>
                        <div className="p-2 bg-slate-50 rounded-xl border border-slate-100 text-slate-400">
                          <Calendar size={14} />
@@ -508,9 +508,8 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
                           </div>
                           <div className="w-14 h-14 rounded-2xl border-4 border-white bg-white shadow-lg overflow-hidden flex items-center justify-center text-[10px] font-black uppercase text-slate-300">
                              {(() => {
-                               const logoUrl = match.team2Logo || match.opponentLogo ||
-                                 opponents.find(o => o.id === (match.team2Id || match.opponentId))?.logoUrl;
-                               const initials = (match.team2Name || match.opponentName)?.substring(0,2) || 'OP';
+                               const logoUrl = match.team2Logo || opponents.find(o => o.id === match.team2Id)?.logoUrl;
+                               const initials = match.team2Name?.substring(0,2) || 'OP';
                                return logoUrl ? (
                                  <img src={logoUrl}  className="w-full h-full object-contain" alt="" />
                                ) : (
@@ -522,10 +521,10 @@ export default function TournamentDetailView({ userRole = 'guest', currentUser }
                        
                        <div>
                           <p className="text-lg font-black text-slate-900 leading-none mb-1">
-                            {match.status === 'completed' ? `${match.team1Score?.runs ?? match.finalScoreHome?.runs ?? 0}/${match.team1Score?.wickets ?? match.finalScoreHome?.wickets ?? 0}` : 'UPCOMING'}
+                            {match.status === 'completed' ? `${match.team1Score?.runs ?? 0}/${match.team1Score?.wickets ?? 0}` : 'UPCOMING'}
                           </p>
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                            {match.status === 'completed' ? `vs ${match.team2Score?.runs ?? match.finalScoreAway?.runs ?? 0}/${match.team2Score?.wickets ?? match.finalScoreAway?.wickets ?? 0}` : new Date(match.date).toLocaleDateString()}
+                            {match.status === 'completed' ? `vs ${match.team2Score?.runs ?? 0}/${match.team2Score?.wickets ?? 0}` : new Date(match.date).toLocaleDateString()}
                           </p>
                        </div>
                     </div>
