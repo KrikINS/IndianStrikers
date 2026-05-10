@@ -157,10 +157,12 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         }
     };
 
-    const handleManualScoreSubmit = async (data: any, options: { skipCareerSync?: boolean } = {}) => {
-        if (!manualScoreConfig) return;
+    const handleManualScoreSubmit = async (data: any, options: { skipCareerSync?: boolean, matchId?: string } = {}) => {
+        // Accept matchId directly (to bypass async state race) or fall back to manualScoreConfig
+        const resolvedMatchId = options.matchId || manualScoreConfig?.matchId;
+        if (!resolvedMatchId) return;
 
-        const match = matches.find(m => m.id === manualScoreConfig.matchId);
+        const match = matches.find(m => m.id === resolvedMatchId);
         if (!match) return;
 
         try {
@@ -1378,9 +1380,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     onClose={() => setViewScorecardMatch(null)}
                     isEditable={(viewScorecardMatch as any).isEditable}
                     onSave={async (data) => {
-                        // Set manualScoreConfig temporarily so handleManualScoreSubmit works
-                        setManualScoreConfig({ matchId: viewScorecardMatch.id, showPlayers: true });
-                        await handleManualScoreSubmit(data);
+                        // Pass matchId directly to avoid async state race with setManualScoreConfig
+                        await handleManualScoreSubmit(data, { matchId: viewScorecardMatch.id });
                     }}
                 />
             )}

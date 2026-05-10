@@ -813,6 +813,10 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
       }
     }
 
+    // SAFETY: Sanitize toss_winner_id — empty strings and zero-UUIDs crash PostgreSQL UUID columns
+    const isValidUUID = (v) => v && typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v) && v !== '00000000-0000-0000-0000-000000000000';
+    const safeTossWinnerId = isValidUUID(tossWinnerId) ? tossWinnerId : null;
+
     const { error: matchError } = await db.query(
       `INSERT INTO matches (
         id, status, is_career_synced, updated_at, 
@@ -863,7 +867,7 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
         })(),
         matchData.resultSummary || matchData.result_note || null,
         matchData.resultNote || matchData.resultSummary || null,
-        tossWinnerId || null,
+        safeTossWinnerId,
         matchData.toss?.choice || null,
         matchData.maxOvers || 20,
         Number(scorecard?.innings1?.extras?.wides || scorecard?.innings1?.extras?.wide || 0),
@@ -993,7 +997,7 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
 
     res.json({ ok: true });
   } catch (e) {
-    console.error('[Finalize Match Error]', e);
+    console.error('[Finalize Match Error]', e.message, e.stack);
     res.status(500).json({ error: e.message });
   }
 });

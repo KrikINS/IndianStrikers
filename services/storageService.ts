@@ -27,7 +27,12 @@ const handleResponse = async (res: Response) => {
     // CRITICAL: Previously returned null for 500s, causing False Positive "Saves"
     // Now we throw so the Store can detect failure and preserve local state.
     if (res.status >= 500) {
-      const dbError = new Error(`Database/Server Error (${res.status})`);
+      let serverMsg = `Database/Server Error (${res.status})`;
+      try {
+        const body = await res.json();
+        if (body?.error) serverMsg = `Sync Failed: ${body.error}`;
+      } catch { /* body not JSON, keep generic message */ }
+      const dbError = new Error(serverMsg);
       (dbError as any).status = res.status;
       (dbError as any).isSyncError = true;
       throw dbError;

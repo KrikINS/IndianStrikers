@@ -106,7 +106,7 @@ const TabContainer = styled.div`
 
 const TabButton = styled.button<{ $active: boolean }>`
   flex: 1;
-  padding: 14px 0;
+  padding: 8px 0;
   background: none;
   border: none;
   border-bottom: 2px solid ${props => props.$active ? '#38BDF8' : 'transparent'};
@@ -128,7 +128,7 @@ const InningsAccordionHeader = styled.div<{ $active: boolean }>`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  padding: 6px 10px;
   background: ${props => props.$active ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255, 255, 255, 0.03)'};
   border: 1px solid ${props => props.$active ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)'};
   border-radius: 12px;
@@ -170,7 +170,7 @@ const FloatingButton = styled(motion.button)`
 const ScrollContent = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 12px;
   background: transparent;
 
   &::-webkit-scrollbar {
@@ -350,13 +350,13 @@ const TableTitle = styled.h3`
 const ScoreCardTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 32px;
+  margin-bottom: 16px;
   font-size: 0.8rem;
 `;
 
 const Th = styled.th`
   text-align: left;
-  padding: 10px 8px;
+  padding: 5px 6px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   opacity: 0.6;
   font-weight: 800;
@@ -367,7 +367,7 @@ const Th = styled.th`
 `;
 
 const Td = styled.td`
-  padding: 12px 8px;
+  padding: 6px 6px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   font-weight: 600;
   color: #FFFFFF;
@@ -376,7 +376,7 @@ const Td = styled.td`
 const ExtrasRow = styled.div`
   display: flex;
   justify-content: space-between;
-  padding: 14px 12px;
+  padding: 8px 10px;
   background: #1E293B;
   border-radius: 10px;
   font-size: 0.75rem;
@@ -476,13 +476,27 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   const [openInnings, setOpenInnings] = useState<Set<number>>(new Set([1]));
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [editState, setEditState] = useState<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContentRef = useRef<HTMLDivElement>(null);
   const grounds = useMasterData(state => (state as any).grounds || []);
 
+  // --- LIVE INNINGS TOTAL CALCULATION (for dynamic accordion header) ---
+  const calcLiveTotal = (inn: any) => {
+    if (!inn) return { runs: 0, wickets: 0 };
+    const batRuns = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0);
+    const extraRuns = Object.values(inn.extras || {}).reduce((s: number, e: any) => s + (Number(e) || 0), 0);
+    // 'retired hurt' counts as NOT out
+    const wkts = (inn.batting || []).filter((b: any) =>
+      b.status === 'out' || (b.outHow && !['not out', 'retired hurt'].includes(b.outHow.toLowerCase()))
+    ).length;
+    return { runs: batRuns + (extraRuns as number), wickets: wkts };
+  };
+
   const handleSave = async () => {
     if (!onSave) return;
+    setSaveError(null);
     setIsSaving(true);
     try {
       // Normalize editState to remove temporary IDs
@@ -499,9 +513,13 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
       // Recalculate totals before saving to ensure consistency
       const recalculateInnings = (inn: any) => {
         if (!inn) return;
-        const runs = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0) + 
-                     Object.values(inn.extras || {}).reduce((s: number, e: any) => s + (Number(e) || 0), 0);
-        const wickets = (inn.batting || []).filter((b: any) => b.status === 'out' || (b.outHow && b.outHow !== 'Not Out')).length;
+        const batRuns = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0);
+        const extraRuns = Object.values(inn.extras || {}).reduce((s: number, e: any) => s + (Number(e) || 0), 0);
+        const runs = batRuns + extraRuns;
+        // 'retired hurt' is not a wicket for team stats
+        const wickets = (inn.batting || []).filter((b: any) =>
+          b.status === 'out' || (b.outHow && !['not out', 'retired hurt'].includes(b.outHow.toLowerCase()))
+        ).length;
         const balls = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.balls) || 0), 0);
         
         inn.totalRuns = runs;
@@ -515,6 +533,40 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
       recalculateInnings(finalState.innings1);
       recalculateInnings(finalState.innings2);
 
+      // --- VALIDATION: account for batting order when comparing to match summary ---
+      // innings1 = team that batted FIRST (not necessarily team1)
+      const t1Summary = initialMatch.team1Score || initialMatch.finalScoreHome;
+      const t2Summary = initialMatch.team2Score || initialMatch.finalScoreAway;
+      const isTeam1BF = normalizedMatch.isTeam1BattingFirst;
+      // Correctly map: innings1 -> the team that batted first's summary score
+      const summaryInn1Runs = (isTeam1BF ? t1Summary : t2Summary)?.runs ?? null;
+      const summaryInn2Runs = (isTeam1BF ? t2Summary : t1Summary)?.runs ?? null;
+      const calcInn1 = finalState.innings1?.totalRuns;
+      const calcInn2 = finalState.innings2?.totalRuns;
+      const mismatchLines: string[] = [];
+      if (summaryInn1Runs !== null && calcInn1 !== undefined && calcInn1 !== summaryInn1Runs) {
+        mismatchLines.push(`1st Innings: scorecard ${calcInn1} vs summary ${summaryInn1Runs} runs`);
+
+
+
+
+      }
+      if (summaryInn2Runs !== null && calcInn2 !== undefined && calcInn2 !== summaryInn2Runs) {
+        mismatchLines.push(`2nd Innings: scorecard ${calcInn2} vs summary ${summaryInn2Runs} runs`);
+
+
+
+
+      }
+      if (mismatchLines.length > 0) {
+        setSaveError(`Score mismatch - save will update the match summary:\n${mismatchLines.join('\n')}`);
+
+
+
+
+        // Don't block - scorecard is the source of truth when explicitly editing
+      }
+
       await onSave(finalState);
       
       // If we are here, save was successful
@@ -525,7 +577,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
       }, 2000);
     } catch (err) {
       console.error("Failed to save scorecard:", err);
-      alert("Failed to save changes. Please try again.");
+      setSaveError("Failed to save changes. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -550,11 +602,18 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   };
 
   const getPlayerNameResolved = (id: any, fallbackName?: string) => {
-    const p = players.find(p => p.id === id || p.player_id === id);
+    if (!id) return fallbackName || '';
+    const sid = String(id);
+    const p = players.find(p => String(p.id) === sid || String((p as any).player_id) === sid);
     if (p) return p.name;
     const opp = opponents.find(o => o.id === normalizedMatch.team2Id);
-    const oppP = opp?.players?.find((p: any) => p.id === id);
+    const oppP = opp?.players?.find((p: any) => String(p.id) === sid);
     if (oppP) return oppP.name;
+    // Search all opponents if not found in team2
+    for (const o of opponents) {
+      const found = o.players?.find((p: any) => String(p.id) === sid);
+      if (found) return found.name;
+    }
     return fallbackName || 'Unknown Player';
   };
 
@@ -580,8 +639,16 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     const battingSquadIds = isTeam1Innings ? t1XI : t2XI;
     const bowlingSquadIds = isTeam1Innings ? t2XI : t1XI;
 
-    const battingSquad = (battingSquadIds || []).map((id: string) => ({ id, name: getPlayerNameResolved(id) }));
-    const bowlingSquad = (bowlingSquadIds || []).map((id: string) => ({ id, name: getPlayerNameResolved(id) }));
+    // All players from the club roster for fallback when XI is not defined
+    const allOpponentPlayers = opponents.flatMap((o: any) => (o.players || []).map((p: any) => ({ id: String(p.id), name: p.name })));
+    const allClubPlayers = players.map((p: any) => ({ id: String(p.id), name: p.name }));
+
+    const battingSquadFromXI = (battingSquadIds || []).map((id: string) => ({ id, name: getPlayerNameResolved(id) }));
+    const bowlingSquadFromXI = (bowlingSquadIds || []).map((id: string) => ({ id, name: getPlayerNameResolved(id) }));
+
+    // Use full roster as fallback when XI is empty (legacy matches)
+    const battingSquad = battingSquadFromXI.length > 0 ? battingSquadFromXI : (isTeam1Innings ? allClubPlayers : allOpponentPlayers);
+    const bowlingSquad = bowlingSquadFromXI.length > 0 ? bowlingSquadFromXI : (isTeam1Innings ? allOpponentPlayers : allClubPlayers);
 
     return (
       <div style={{ paddingBottom: '24px' }}>
@@ -667,14 +734,21 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 <Td style={{ fontSize: '0.65rem', opacity: 0.7, fontWeight: 600 }}>
                   {isCurrentInningsEditable ? (
                     <select
-                      value={stat.status === 'batting' ? 'not out' : (stat.outHow || 'out')}
+                      value={stat.status === 'batting' ? (stat.outHow === 'retired hurt' ? 'retired hurt' : 'not out') : (stat.outHow || 'out')}
                       onChange={(e) => {
                                 const newBatting = [...editState[innKey].batting];
                         const val = e.target.value;
+                        // 'not out' and 'retired hurt' are both non-wicket statuses
+                        const isNotOut = val === 'not out' || val === 'retired hurt';
                         newBatting[idx] = { 
                           ...newBatting[idx], 
-                          status: val === 'not out' ? 'batting' : 'out', 
-                          outHow: val === 'not out' ? undefined : val 
+                          status: isNotOut ? 'batting' : 'out', 
+                          outHow: val === 'not out' ? undefined : val,
+                          // Clear fielder/bowler when switching to a status that disables them
+                          fielderId: ['not out', 'retired out', 'retired hurt', 'bowled', 'lbw', 'hit wicket'].includes(val) ? undefined : newBatting[idx].fielderId,
+                          fielderName: ['not out', 'retired out', 'retired hurt', 'bowled', 'lbw', 'hit wicket'].includes(val) ? undefined : newBatting[idx].fielderName,
+                          bowlerId: ['not out', 'retired out', 'retired hurt', 'run out'].includes(val) ? undefined : newBatting[idx].bowlerId,
+                          bowlerName: ['not out', 'retired out', 'retired hurt', 'run out'].includes(val) ? undefined : newBatting[idx].bowlerName,
                         };
                         setEditState({ ...editState, [innKey]: { ...editState[innKey], batting: newBatting } });
                       }}
@@ -689,65 +763,70 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                       <option value="run out" style={{ background: '#FFF', color: '#000' }}>Run Out</option>
                       <option value="stumped" style={{ background: '#FFF', color: '#000' }}>Stumped</option>
                       <option value="hit wicket" style={{ background: '#FFF', color: '#000' }}>Hit Wicket</option>
-                      <option value="retired" style={{ background: '#FFF', color: '#000' }}>Retired</option>
+                      <option value="retired out" style={{ background: '#FFF', color: '#000' }}>Retired Out</option>
+                      <option value="retired hurt" style={{ background: '#FFF', color: '#000' }}>Retired Hurt</option>
                     </select>
                   ) : (
                     <span style={{ color: stat.status === 'batting' ? '#38BDF8' : '#FFF' }}>
-                      {stat.status === 'batting' ? 'not out' : (stat.outHow || 'out')}
+                      {stat.status === 'batting' ? (stat.outHow === 'retired hurt' ? 'Retired Hurt' : 'not out') : (stat.outHow || 'out')}
                     </span>
                   )}
                 </Td>
+                {/* FIELDER */}
                 <Td>
-                  {isCurrentInningsEditable ? (
-                    <select 
-                      value={stat.fielderId || ''} 
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                                const newBatting = [...editState[innKey].batting];
-                        const selectedId = e.target.value;
-                        const selectedPlayer = bowlingSquad.find((p: any) => p.id === selectedId);
-                        newBatting[idx] = { 
-                          ...newBatting[idx], 
-                          fielderId: selectedId, 
-                          fielderName: selectedPlayer?.name || '' 
-                        };
-                        setEditState({ ...editState, [innKey]: { ...editState[innKey], batting: newBatting } });
-                      }}
-                      aria-label="Select Fielder"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px 8px', borderRadius: '4px', width: '100%', fontSize: '0.8rem' }}
-                    >
-                      <option value="">Select Fielder</option>
-                      {bowlingSquad.map((p: any) => (
-                        <option key={p.id} value={p.id} style={{ background: '#FFF', color: '#000' }}>{p.name}</option>
-                      ))}
-                    </select>
-                  ) : (
+                  {isCurrentInningsEditable ? (() => {
+                    const outHow = (stat.outHow || '').toLowerCase();
+                    const disableFielder = !outHow || ['not out', 'retired out', 'retired hurt', 'bowled', 'lbw', 'hit wicket'].includes(outHow);
+                    return (
+                      <select
+                        value={disableFielder ? '' : (stat.fielderId || '')}
+                        disabled={disableFielder}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                          const newBatting = [...editState[innKey].batting];
+                          const selectedId = e.target.value;
+                          const selectedPlayer = bowlingSquad.find((p: any) => p.id === selectedId);
+                          newBatting[idx] = { ...newBatting[idx], fielderId: selectedId, fielderName: selectedPlayer?.name || '' };
+                          setEditState({ ...editState, [innKey]: { ...editState[innKey], batting: newBatting } });
+                        }}
+                        aria-label="Select Fielder"
+                        style={{ background: disableFielder ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: disableFielder ? 'rgba(255,255,255,0.2)' : '#FFF', padding: '4px 8px', borderRadius: '4px', width: '100%', fontSize: '0.8rem', cursor: disableFielder ? 'not-allowed' : 'pointer' }}
+                      >
+                        <option value="">{disableFielder ? 'â€”' : 'Select Fielder'}</option>
+                        {!disableFielder && bowlingSquad.map((p: any) => (
+                          <option key={p.id} value={p.id} style={{ background: '#FFF', color: '#000' }}>{p.name}</option>
+                        ))}
+                      </select>
+                    );
+                  })() : (
                     <div style={{ opacity: 0.8 }}>{getPlayerNameResolved(stat.fielderId, stat.fielderName)}</div>
                   )}
                 </Td>
+                {/* BOWLER */}
                 <Td>
-                  {isCurrentInningsEditable ? (
-                    <select 
-                      value={stat.bowlerId || ''} 
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                                const newBatting = [...editState[innKey].batting];
-                        const selectedId = e.target.value;
-                        const selectedPlayer = bowlingSquad.find((p: any) => p.id === selectedId);
-                        newBatting[idx] = { 
-                          ...newBatting[idx], 
-                          bowlerId: selectedId, 
-                          bowlerName: selectedPlayer?.name || '' 
-                        };
-                        setEditState({ ...editState, [innKey]: { ...editState[innKey], batting: newBatting } });
-                      }}
-                      aria-label="Select Bowler"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#FFF', padding: '4px 8px', borderRadius: '4px', width: '100%', fontSize: '0.8rem' }}
-                    >
-                      <option value="">Select Bowler</option>
-                      {bowlingSquad.map((p: any) => (
-                        <option key={p.id} value={p.id} style={{ background: '#FFF', color: '#000' }}>{p.name}</option>
-                      ))}
-                    </select>
-                  ) : (
+                  {isCurrentInningsEditable ? (() => {
+                    const outHow = (stat.outHow || '').toLowerCase();
+                    const disableBowler = !outHow || ['not out', 'retired out', 'retired hurt', 'run out'].includes(outHow);
+                    return (
+                      <select
+                        value={disableBowler ? '' : (stat.bowlerId || '')}
+                        disabled={disableBowler}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                          const newBatting = [...editState[innKey].batting];
+                          const selectedId = e.target.value;
+                          const selectedPlayer = bowlingSquad.find((p: any) => p.id === selectedId);
+                          newBatting[idx] = { ...newBatting[idx], bowlerId: selectedId, bowlerName: selectedPlayer?.name || '' };
+                          setEditState({ ...editState, [innKey]: { ...editState[innKey], batting: newBatting } });
+                        }}
+                        aria-label="Select Bowler"
+                        style={{ background: disableBowler ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: disableBowler ? 'rgba(255,255,255,0.2)' : '#FFF', padding: '4px 8px', borderRadius: '4px', width: '100%', fontSize: '0.8rem', cursor: disableBowler ? 'not-allowed' : 'pointer' }}
+                      >
+                        <option value="">{disableBowler ? 'â€”' : 'Select Bowler'}</option>
+                        {!disableBowler && bowlingSquad.map((p: any) => (
+                          <option key={p.id} value={p.id} style={{ background: '#FFF', color: '#000' }}>{p.name}</option>
+                        ))}
+                      </select>
+                    );
+                  })() : (
                     <div style={{ opacity: 0.8 }}>{getPlayerNameResolved(stat.bowlerId, stat.bowlerName)}</div>
                   )}
                 </Td>
@@ -866,36 +945,48 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                    />
                  </div>
                ))}
-               <div style={{ marginLeft: 'auto', display: 'flex', gap: '16px', alignItems: 'center' }}>
-                 <div style={{ textAlign: 'right' }}>
-                   <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800 }}>TEAM TOTAL</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38BDF8' }}>
-                      {editState && editState[innKey].batting.reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0) + 
-                       Object.values(editState[innKey].extras).reduce((s: number, e: any) => s + (Number(e) || 0), 0)}
+                             <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                  {/* Save Error Banner */}
+                  {saveError && (
+                    <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 10, padding: '8px 14px', maxWidth: 340, textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#F87171', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>âš  Save Blocked</div>
+                      {saveError.split('\n').map((line, i) => (
+                        <div key={i} style={{ fontSize: '0.72rem', color: '#FCA5A5', lineHeight: 1.5 }}>{line}</div>
+                      ))}
+                      <button onClick={() => setSaveError(null)} style={{ marginTop: 6, fontSize: '0.6rem', color: '#F87171', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 900, textTransform: 'uppercase' }}>Dismiss</button>
                     </div>
-                 </div>
-                 <button 
-                   onClick={handleSave}
-                   disabled={isSaving}
-                   style={{ 
-                     background: 'linear-gradient(135deg, #3B82F6, #2563EB)', 
-                     color: '#FFF', 
-                     padding: '8px 24px', 
-                     borderRadius: '12px', 
-                     fontWeight: 900, 
-                     fontSize: '0.8rem', 
-                     cursor: isSaving ? 'wait' : 'pointer',
-                     display: 'flex',
-                     alignItems: 'center',
-                     gap: 8,
-                     opacity: isSaving ? 0.7 : 1,
-                     boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
-                   }}
-                 >
-                   {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-                   {isSaving ? 'SAVING...' : 'SAVE CHANGES'}
-                 </button>
-               </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.6rem', opacity: 0.5, fontWeight: 800 }}>TEAM TOTAL</div>
+                       <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#38BDF8' }}>
+                         {editState && editState[innKey].batting.reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0) + 
+                          Object.values(editState[innKey].extras).reduce((s: number, e: any) => s + (Number(e) || 0), 0)}
+                       </div>
+                    </div>
+                    <button 
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      style={{ 
+                        background: 'linear-gradient(135deg, #3B82F6, #2563EB)', 
+                        color: '#FFF', 
+                        padding: '8px 24px', 
+                        borderRadius: '12px', 
+                        fontWeight: 900, 
+                        fontSize: '0.8rem', 
+                        cursor: isSaving ? 'wait' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        opacity: isSaving ? 0.7 : 1,
+                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+                      }}
+                    >
+                      {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                      {isSaving ? 'SAVING...' : 'SAVE CHANGES'}
+                    </button>
+                  </div>
+                </div>
              </div>
           ) : (
             <span style={{ fontWeight: 900 }}>
@@ -1271,8 +1362,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
         totalBalls: inn.totalBalls || (inn.totalOvers ? Math.floor(inn.totalOvers) * 6 + Math.round((inn.totalOvers % 1) * 10) : 0),
         history: (inn.history || []).map((b: any) => ({ ...b, innings: innNo })),
         battingTeamId: inn.battingTeamId || inn.batting_team_id || (innNo === 1 
-          ? (normalizedMatch.isHomeBattingFirst ? normalizedMatch.homeTeamId : normalizedMatch.opponentId)
-          : (normalizedMatch.isHomeBattingFirst ? normalizedMatch.opponentId : normalizedMatch.homeTeamId))
+          ? (normalizedMatch.isTeam1BattingFirst ? normalizedMatch.team1Id : normalizedMatch.team2Id)
+          : (normalizedMatch.isTeam1BattingFirst ? normalizedMatch.team2Id : normalizedMatch.team1Id))
       };
     };
 
@@ -1336,24 +1427,24 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
   const getTeamName = (teamId: string | undefined | null) => {
     if (!teamId) return 'Team';
-    const hId = String(normalizedMatch.homeTeamId);
-    const oId = String(normalizedMatch.opponentId);
+    const hId = String(normalizedMatch.team1Id);
+    const oId = String(normalizedMatch.team2Id);
     const targetId = String(teamId);
     
-    if (targetId === hId) return normalizedMatch.homeTeamName;
-    if (targetId === oId) return normalizedMatch.opponentName;
+    if (targetId === hId) return normalizedMatch.team1Name;
+    if (targetId === oId) return normalizedMatch.team2Name;
     
     // Fallback for special identifiers
-    if (targetId === 'home' || targetId === '00000000-0000-0000-0000-000000000000') return normalizedMatch.homeTeamName;
-    if (targetId === 'away' || targetId === 'opponent') return normalizedMatch.opponentName;
+    if (targetId === 'home' || targetId === '00000000-0000-0000-0000-000000000000') return normalizedMatch.team1Name;
+    if (targetId === 'away' || targetId === 'opponent') return normalizedMatch.team2Name;
     
-    return normalizedMatch.opponentName; // Default to opponent if no match
+    return normalizedMatch.team2Name; // Default to team2 if no match
   };
 
   const getTeamLogo = (teamId: string | undefined | null) => {
     const targetId = String(teamId);
-    if (targetId === String(normalizedMatch.homeTeamId)) return normalizedMatch.homeTeamLogo;
-    return normalizedMatch.opponentLogo;
+    if (targetId === String(normalizedMatch.team1Id)) return normalizedMatch.team1Logo;
+    return normalizedMatch.team2Logo;
   };
 
   const renderMatchInfo = () => {
@@ -1371,7 +1462,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, color: '#38BDF8' }}>
               <Shield size={16} />
-              <div style={{ fontWeight: 900, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 1 }}>{normalizedMatch.homeTeamName} XI</div>
+              <div style={{ fontWeight: 900, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: 1 }}>{normalizedMatch.team1Name} XI</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {homeXI.length > 0 ? homeXI.map((id: any) => {
@@ -1544,7 +1635,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           {isWicket && (
                             <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(244, 63, 94, 0.1)', borderRadius: 8, borderLeft: '3px solid #F43F5E' }}>
                               <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#FFF' }}>{getPlayerNameResolved(ball.strikerId)} OUT</div>
-                              <div style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.6 }}>{ballStats.bRuns} ({ballStats.bBalls} balls) • {ball.wicketType}</div>
+                              <div style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.6 }}>{ballStats.bRuns} ({ballStats.bBalls} balls) â€¢ {ball.wicketType}</div>
                             </div>
                           )}
                         </div>
@@ -1893,15 +1984,15 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
               <TeamBlock>
                 <TeamLogoFrame>
                   <img 
-                    src={normalizedMatch.homeTeamLogo} 
-                    alt="Home" 
+                    src={normalizedMatch.team1Logo || '/INS LOGO.PNG'} 
+                    alt={normalizedMatch.team1Name || 'Team 1'} 
                     style={{ width: '80%', height: '80%', objectFit: 'contain' }} 
                   />
                 </TeamLogoFrame>
                 <TeamInfo>
-                  <TeamNameLabel>{normalizedMatch.homeTeamName}</TeamNameLabel>
+                  <TeamNameLabel>{normalizedMatch.team1Name}</TeamNameLabel>
                   <ScoreValue>
-                    {normalizedData.innings1?.battingTeamId === normalizedMatch.homeTeamId ? (
+                    {normalizedData.innings1?.battingTeamId === normalizedMatch.team1Id ? (
                       <>
                         {normalizedData.innings1?.totalRuns}
                         <span>/{normalizedData.innings1?.wickets}</span>
@@ -1909,7 +2000,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           ({formatOvers(normalizedData.innings1?.totalBalls || 0)})
                         </div>
                       </>
-                    ) : normalizedData.innings2?.battingTeamId === normalizedMatch.homeTeamId ? (
+                    ) : normalizedData.innings2?.battingTeamId === normalizedMatch.team1Id ? (
                       <>
                         {normalizedData.innings2?.totalRuns}
                         <span>/{normalizedData.innings2?.wickets}</span>
@@ -1927,15 +2018,15 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
               <TeamBlock $reverse>
                 <TeamLogoFrame>
                   <img 
-                    src={normalizedMatch.opponentLogo} 
-                    alt="Away" 
+                    src={normalizedMatch.team2Logo || '/assets/default_team.png'} 
+                    alt={normalizedMatch.team2Name || 'Team 2'} 
                     style={{ width: '80%', height: '80%', objectFit: 'contain' }} 
                   />
                 </TeamLogoFrame>
                 <TeamInfo $align="right">
-                  <TeamNameLabel>{normalizedMatch.opponentName}</TeamNameLabel>
+                  <TeamNameLabel>{normalizedMatch.team2Name}</TeamNameLabel>
                   <ScoreValue>
-                    {normalizedData.innings1?.battingTeamId === normalizedMatch.opponentId ? (
+                    {normalizedData.innings1?.battingTeamId === normalizedMatch.team2Id ? (
                       <>
                         {normalizedData.innings1?.totalRuns}
                         <span>/{normalizedData.innings1?.wickets}</span>
@@ -1943,7 +2034,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           ({formatOvers(normalizedData.innings1?.totalBalls || 0)})
                         </div>
                       </>
-                    ) : normalizedData.innings2?.battingTeamId === initialMatch.opponentId ? (
+                    ) : normalizedData.innings2?.battingTeamId === normalizedMatch.team2Id ? (
                       <>
                         {normalizedData.innings2?.totalRuns}
                         <span>/{normalizedData.innings2?.wickets}</span>
@@ -2026,8 +2117,13 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     </div>
                     <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div>
-                        {normalizedData.innings1?.totalRuns}/{normalizedData.innings1?.wickets} 
-                        <span style={{ opacity: 0.5, fontSize: '0.7rem', marginLeft: 8 }}>({formatOvers(normalizedData.innings1?.totalBalls || 0)})</span>
+                        {(() => {
+                          const src = (isEditable && editState) ? editState.innings1 : normalizedData.innings1;
+                          const live = (isEditable && editState) ? calcLiveTotal(editState.innings1) : null;
+                          const runs = live ? live.runs : (src?.totalRuns ?? 0);
+                          const wkts = live ? live.wickets : (src?.wickets ?? 0);
+                          return <span>{runs}/{wkts} <span style={{ opacity: 0.5, fontSize: "0.7rem", marginLeft: 8 }}>({formatOvers(src?.totalBalls || 0)})</span></span>;
+                        })()}
                       </div>
                       <ChevronDown size={16} style={{ transform: openInnings.has(1) ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s', opacity: 0.5 }} />
                     </div>
@@ -2051,8 +2147,13 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                     </div>
                     <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div>
-                        {normalizedData.innings2?.totalRuns}/{normalizedData.innings2?.wickets} 
-                        <span style={{ opacity: 0.5, fontSize: '0.7rem', marginLeft: 8 }}>({formatOvers(normalizedData.innings2?.totalBalls || 0)})</span>
+                        {(() => {
+                          const src = (isEditable && editState) ? editState.innings2 : normalizedData.innings2;
+                          const live = (isEditable && editState) ? calcLiveTotal(editState.innings2) : null;
+                          const runs = live ? live.runs : (src?.totalRuns ?? 0);
+                          const wkts = live ? live.wickets : (src?.wickets ?? 0);
+                          return <span>{runs}/{wkts} <span style={{ opacity: 0.5, fontSize: "0.7rem", marginLeft: 8 }}>({formatOvers(src?.totalBalls || 0)})</span></span>;
+                        })()}
                       </div>
                       <ChevronDown size={16} style={{ transform: openInnings.has(2) ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s', opacity: 0.5 }} />
                     </div>

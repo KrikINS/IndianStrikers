@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw, Camera, Download, Zap, X } from 'lucide-react';
+import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw, Camera, Download, Zap, X, Eye } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {
@@ -76,7 +76,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     const isPast = timeContext === 'PAST';
 
     const homeTeamName = match.team1Name || defaultHomeTeamName;
-    const homeTeamLogo = match.team1Logo || defaultHomeTeamLogo;
+    const homeTeamLogo = match.team1Logo || defaultHomeTeamLogo || '/INS LOGO.PNG';
 
     const opponentName = match.team2Name;
     const opponentLogo = match.team2Logo;
@@ -338,7 +338,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                 onClick={() => onViewScorecard(match)} 
                                 className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-3.5 rounded-xl shadow-lg shadow-blue-900/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98] text-[11px] uppercase tracking-widest"
                             >
-                                <Users size={16} /> MATCH CENTER
+                                <Eye size={16} /> VIEW SCORECARD
                             </button>
 
                             {/* Action Menu Toggle */}
