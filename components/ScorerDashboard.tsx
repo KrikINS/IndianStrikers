@@ -804,6 +804,35 @@ const SliderText = styled.div`
   text-transform: uppercase;
 `;
 
+const LandscapeLockOverlay = styled.div`
+  display: none;
+  
+  @media screen and (max-width: 768px) and (orientation: landscape) {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: #001f3f;
+    color: white;
+    z-index: 99999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 30px;
+    font-weight: 800;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.5px;
+    
+    &::after {
+      content: "Please rotate your device to portrait mode for the best scoring experience.";
+      margin-top: 16px;
+      font-size: 1.1rem;
+      max-width: 300px;
+    }
+  }
+`;
+
+
 const SliderProgress = styled(motion.div)`
   position: absolute;
   left: 0;
@@ -5150,6 +5179,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             )}
           </AnimatePresence>
         </>
+        <LandscapeLockOverlay>
+          <RotateCcw size={48} style={{ marginBottom: 16, opacity: 0.5 }} />
+        </LandscapeLockOverlay>
       </DashboardContainer>
     );
   } catch (error) {
