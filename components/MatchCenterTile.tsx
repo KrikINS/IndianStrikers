@@ -371,7 +371,25 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                             <Camera size={14} className="text-sky-400" /> CAPTURE CARD
                                         </button>
 
-                                        {/* 2. Admin/Scorer Actions */}
+                                        {/* 2. Admin Actions: Manual Updates (Strictly Admin) */}
+                                        {isAdmin && !match.isLocked && (
+                                            <>
+                                                <button 
+                                                    onClick={() => { setShowActions(false); onUpdateManualScore(match.id, 'summary'); }} 
+                                                    className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-blue-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
+                                                >
+                                                    <Edit2 size={14} className="text-blue-500" /> EDIT SUMMARY
+                                                </button>
+                                                <button 
+                                                    onClick={() => { setShowActions(false); onUpdateManualScore(match.id, 'full'); }} 
+                                                    className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-emerald-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
+                                                >
+                                                    <RefreshCcw size={14} className="text-emerald-500" /> UPDATE SCORECARD
+                                                </button>
+                                            </>
+                                        )}
+
+                                        {/* 3. Scorer/Admin Actions: Live Scoring */}
                                         {isScorerOrAdmin && (
                                             <>
                                                 {isLive ? (
@@ -383,22 +401,6 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                                     </button>
                                                 ) : (
                                                     <>
-                                                        {!match.isLocked && (
-                                                            <>
-                                                                <button 
-                                                                    onClick={() => { setShowActions(false); onUpdateManualScore(match.id, 'summary'); }} 
-                                                                    className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-blue-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
-                                                                >
-                                                                    <Edit2 size={14} className="text-blue-500" /> EDIT SUMMARY
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => { setShowActions(false); onUpdateManualScore(match.id, 'full'); }} 
-                                                                    className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-emerald-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
-                                                                >
-                                                                    <RefreshCcw size={14} className="text-emerald-500" /> UPDATE SCORECARD
-                                                                </button>
-                                                            </>
-                                                        )}
                                                         {isToday && !isCompleted && (
                                                             <button 
                                                                 onClick={() => { setShowActions(false); onStartScoring(match.id); }} 
@@ -409,24 +411,24 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                                         )}
                                                     </>
                                                 )}
+                                            </>
+                                        )}
 
-                                                {/* Admin Only: Edit/Delete */}
-                                                {isAdmin && !match.isLocked && !isCompleted && (
-                                                    <>
-                                                        <button 
-                                                            onClick={(e) => { e.stopPropagation(); setShowActions(false); onEditMatch(match); }}
-                                                            className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-blue-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
-                                                        >
-                                                            <Edit2 size={14} className="text-slate-400" /> CONFIGURE MATCH
-                                                        </button>
-                                                        <button 
-                                                            onClick={(e) => { e.stopPropagation(); setShowActions(false); if (window.confirm('Delete this match?')) onDeleteMatch(match.id); }}
-                                                            className="w-full px-5 py-4 text-left text-[11px] font-black text-rose-500 hover:bg-rose-600/20 flex items-center gap-3 transition-colors uppercase tracking-widest"
-                                                        >
-                                                            <Trash2 size={14} /> DELETE MATCH
-                                                        </button>
-                                                    </>
-                                                )}
+                                        {/* 4. Admin Only: Config/Delete */}
+                                        {isAdmin && !match.isLocked && !isCompleted && (
+                                            <>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); setShowActions(false); onEditMatch(match); }}
+                                                    className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-blue-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
+                                                >
+                                                    <Edit2 size={14} className="text-slate-400" /> CONFIGURE MATCH
+                                                </button>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); setShowActions(false); if (window.confirm('Delete this match?')) onDeleteMatch(match.id); }}
+                                                    className="w-full px-5 py-4 text-left text-[11px] font-black text-rose-500 hover:bg-rose-600/20 flex items-center gap-3 transition-colors uppercase tracking-widest"
+                                                >
+                                                    <Trash2 size={14} /> DELETE MATCH
+                                                </button>
                                             </>
                                         )}
                                     </div>

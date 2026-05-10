@@ -13,8 +13,9 @@ interface ScorecardPageProps {
 export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents }) => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { matches, finalizeMatch } = useMatchCenter();
+    const { matches, finalizeMatch, currentUser } = useMatchCenter();
     const { players } = useStore();
+    const isAdmin = currentUser?.role === 'admin';
     
     const match = matches.find(m => m.id === id);
 
@@ -37,9 +38,10 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ opponents }) => {
             match={match}
             players={players}
             opponents={opponents}
-            isEditable={true}
+            isEditable={isAdmin}
             onClose={() => navigate('/match-center')}
             onSave={async (finalData) => {
+                if (!isAdmin) return;
                 await finalizeMatch(match.id, { ...finalData, isCareerSynced: true }, finalData.performers || []);
                 navigate('/match-center');
             }}

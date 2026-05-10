@@ -1307,7 +1307,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                 onViewScorecard={setViewScorecardMatch}
                                 onUpdateManualScore={(id, mode) => {
                                     if (mode === 'full') {
-                                        setViewScorecardMatch({ ...selectedCardMatch, isEditable: true } as any);
+                                        setViewScorecardMatch({ ...selectedCardMatch, isEditable: isAdmin } as any);
                                     } else {
                                         setManualScoreConfig({ matchId: id, showPlayers: false });
                                     }
@@ -1361,7 +1361,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 />
             )}
 
-            {manualScoreConfig && !manualScoreConfig.showPlayers && (
+            {isAdmin && manualScoreConfig && !manualScoreConfig.showPlayers && (
                 <MatchSummaryModal
                     onClose={() => setManualScoreConfig(null)}
                     match={matches.find(m => m.id === manualScoreConfig.matchId)!}
@@ -1378,7 +1378,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     players={players}
                     opponents={opponents}
                     onClose={() => setViewScorecardMatch(null)}
-                    isEditable={(viewScorecardMatch as any).isEditable}
+                    isEditable={(viewScorecardMatch as any).isEditable && isAdmin}
                     onSave={async (data) => {
                         // Pass matchId directly to avoid async state race with setManualScoreConfig
                         await handleManualScoreSubmit(data, { matchId: viewScorecardMatch.id });
