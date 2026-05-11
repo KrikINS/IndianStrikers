@@ -1956,16 +1956,27 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
                 }}
               >
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Shield size={14} color="#001F3F" />
-                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#001F3F' }}>{m.opponentName}</div>
+                <div style={{ textAlign: 'left', flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {m.team1Logo || m.homeLogo ? (
+                        <img src={m.team1Logo || m.homeLogo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt="T1" />
+                      ) : <Shield size={16} color="#001F3F" opacity={0.3} />}
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#001F3F' }}>{m.team1Name || m.homeTeamName || 'INS'}</span>
+                    </div>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, opacity: 0.2 }}>VS</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#001F3F' }}>{m.team2Name || m.opponentName || 'OPP'}</span>
+                      {m.team2Logo || m.opponentLogo ? (
+                        <img src={m.team2Logo || m.opponentLogo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt="T2" />
+                      ) : <Shield size={16} color="#001F3F" opacity={0.3} />}
+                    </div>
                     {m.status === 'live' && (
-                      <span style={{ background: '#FF4B2B', color: 'white', fontSize: '8px', fontWeight: 900, padding: '2px 6px', borderRadius: 4 }}>LIVE</span>
+                      <span style={{ background: '#FF4B2B', color: 'white', fontSize: '8px', fontWeight: 900, padding: '2px 6px', borderRadius: 4, marginLeft: 'auto' }}>LIVE</span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: 4, fontWeight: 600 }}>
-                    {m.tournament} • {new Date(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  <div style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 600, paddingLeft: 4 }}>
+                    {m.tournament || 'EXHIBITION MATCH'} • {new Date(m.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </div>
                 </div>
                 <ChevronRight size={20} color="#FAB005" />
