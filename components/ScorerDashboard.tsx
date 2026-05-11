@@ -4083,8 +4083,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   <h3 style={{ fontSize: '0.9rem', fontWeight: 900, marginBottom: 16, borderLeft: '4px solid #FAB005', paddingLeft: 12 }}>TOP PERFORMERS</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     {calculateTopPerformers().slice(0, 2).map((p, i) => (
-                      <div key={p.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '14px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: 4, color: '#FFF' }}>{p.name}</p>
+                      <div key={p.id} style={{ background: '#F8F9FA', padding: '14px', borderRadius: 14, border: '1px solid #E9ECEF' }}>
+                        <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: 4, color: '#001F3F' }}>{p.name}</p>
                         <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#FAB005' }}>
                           {p.runs > 0 ? `${p.runs} (${p.balls})` : `${p.wickets} Wickets`}
                         </p>
