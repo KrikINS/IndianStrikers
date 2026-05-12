@@ -10,8 +10,8 @@ interface LineupGraphicProps {
     teamType?: 'team1' | 'team2' | 'view';
     team1XI?: string[];
     team2XI?: string[];
-    homeTeamName?: string;
-    homeTeamLogo?: string;
+    team1Name?: string;
+    team1Logo?: string;
 }
 
 export const LineupGraphic: React.FC<LineupGraphicProps> = ({
@@ -22,8 +22,8 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
     teamType = 'team1',
     team1XI,
     team2XI,
-    homeTeamName = 'Indian Strikers',
-    homeTeamLogo = '/INS%20LOGO.PNG'
+    team1Name = 'Indian Strikers',
+    team1Logo = '/INS%20LOGO.PNG'
 }) => {
     const isTeam2 = teamType === 'team2';
     
@@ -33,8 +33,8 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
     const opponentLogo = opponent?.logoUrl || match.team2Logo || match.opponentLogo;
     
     const homeTeam = match.isNeutral ? opponents.find(o => o.id === (match.team1Id || match.homeTeamId)) : null;
-    const resolvedHomeName = match.isNeutral ? (homeTeam?.name || 'Team A') : homeTeamName;
-    const resolvedHomeLogo = match.isNeutral ? (homeTeam?.logoUrl || '') : homeTeamLogo;
+    const resolvedHomeName = match.isNeutral ? (homeTeam?.name || 'Team A') : team1Name;
+    const resolvedHomeLogo = match.isNeutral ? (homeTeam?.logoUrl || '') : team1Logo;
 
     const ground = grounds.find(g => g.id === match.groundId);
     

@@ -5,10 +5,10 @@ import { useMatchCenter } from '../store/matchStore';
 
 interface PlayingXIModalProps {
     matchId: string;
-    homePlayers: Player[]; // Roster from PlayerList/SquadRoster
-    opponentTeams: OpponentTeam[];
-    opponentId: string | null;
-    homeTeamId: string | null;  // Actual ID of the home/team1 entity
+    team1Players: Player[]; // Roster from PlayerList/SquadRoster
+    availableOpponents: OpponentTeam[];
+    team2Id: string | null;
+    team1Id: string | null;  // Actual ID of the home/team1 entity
     teamType: 'team1' | 'team2' | 'view';  // formerly 'home' | 'opponent' | 'view'
     initialSelection?: string[];
     onClose: () => void;
@@ -20,10 +20,10 @@ interface PlayingXIModalProps {
 
 export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
     matchId,
-    homePlayers,
-    opponentTeams,
-    opponentId,
-    homeTeamId,
+    team1Players,
+    availableOpponents,
+    team2Id,
+    team1Id,
     teamType,
     initialSelection: rawInitialSelection = [],
     onClose,
@@ -39,11 +39,11 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
 
     // Emergency: If roster is empty, force a re-fetch from store
     React.useEffect(() => {
-        if ((teamType === 'team1' || teamType === 'view') && homePlayers.length === 0) {
+        if ((teamType === 'team1' || teamType === 'view') && team1Players.length === 0) {
             console.log("[PlayingXI] Squad roster empty, forcing re-fetch...");
             fetchPlayers();
         }
-    }, [homePlayers.length, teamType, fetchPlayers]);
+    }, [team1Players.length, teamType, fetchPlayers]);
 
     // Sync state with props if initial selection changes (e.g. data load lag or background sync)
     React.useEffect(() => {
@@ -59,7 +59,7 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
         return sortedA.some((val, index) => String(val) !== String(sortedB[index]));
     }, [selectedPlayers, initialSelection]);
     const isViewOnly = teamType === 'view';
-    const opponent = opponentTeams.find(t => t.id === opponentId);
+    const opponent = availableOpponents.find(t => t.id === team2Id);
 
     const togglePlayer = (id: string | number, name: string) => {
         if (isViewOnly) return;
@@ -99,13 +99,13 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
         const INS_UUID = '00000000-0000-0000-0000-000000000000';
         const isInsTeam = (id: string | null) => id === INS_UUID || id === 'IND_STRIKERS';
 
-        // team1 uses homeTeamId; team2 uses opponentId
-        const targetTeamId = teamType === 'team1' ? (homeTeamId || INS_UUID) : opponentId;
+        // team1 uses team1Id; team2 uses team2Id
+        const targetTeamId = teamType === 'team1' ? (team1Id || INS_UUID) : team2Id;
         const isINS = isInsTeam(targetTeamId);
 
         if (isINS || teamType === 'team1' && !targetTeamId) {
             // Only Active Indian Strikers members (Case-insensitive teamId check)
-            return homePlayers.filter(p =>
+            return team1Players.filter(p =>
                 p.isActive &&
                 (p.teamId?.toUpperCase() === 'IND_STRIKERS' || p.isClubPlayer)
             );
@@ -113,27 +113,27 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
 
         // For any other team (or if specifically selecting team2 players)
         // 1. Get players from master list assigned to this specific team and marked Active
-        const opponentPlayersFromMaster = homePlayers.filter(p =>
+        const opponentPlayersFromMaster = team1Players.filter(p =>
             !p.isClubPlayer &&
             String(p.primaryTeamId) === String(targetTeamId) &&
             p.isActive
         );
 
         // 2. Identify Quick-Add players from the opponent object (historical/temporary entries)
-        const targetOpponent = opponentTeams.find(t => t.id === targetTeamId);
+        const targetOpponent = availableOpponents.find(t => t.id === targetTeamId);
         const masterIds = new Set(opponentPlayersFromMaster.map(p => String(p.id)));
         const quickAdded = (targetOpponent?.players || []).filter(p => !masterIds.has(String(p.id)));
 
         return [...opponentPlayersFromMaster, ...quickAdded];
-    }, [homePlayers, opponentTeams, teamType, opponentId, homeTeamId]);
+    }, [team1Players, availableOpponents, teamType, team2Id, team1Id]);
 
     const title = (() => {
         if (teamType === 'view') return 'Match Day Team Sheet';
-        const targetTeamId = teamType === 'team1' ? (homeTeamId || '00000000-0000-0000-0000-000000000000') : opponentId;
+        const targetTeamId = teamType === 'team1' ? (team1Id || '00000000-0000-0000-0000-000000000000') : team2Id;
         const isINS = targetTeamId === '00000000-0000-0000-0000-000000000000' || targetTeamId === 'IND_STRIKERS';
         const name = isINS
             ? 'Indian Strikers'
-            : (opponentTeams.find(t => t.id === targetTeamId)?.name || 'Team');
+            : (availableOpponents.find(t => t.id === targetTeamId)?.name || 'Team');
         return `Select ${name} XI`;
     })();
 

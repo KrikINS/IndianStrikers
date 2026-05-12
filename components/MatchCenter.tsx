@@ -33,9 +33,9 @@ interface MatchCenterProps {
     onRefresh?: () => Promise<void>;
 }
 
-const MatchAction: React.FC<{ 
-    match: ScheduledMatch; 
-    onToggleLock: (id: string, current: boolean) => Promise<void>; 
+const MatchAction: React.FC<{
+    match: ScheduledMatch;
+    onToggleLock: (id: string, current: boolean) => Promise<void>;
     isAdmin: boolean;
 }> = ({ match, onToggleLock, isAdmin }) => {
     const [isProcessing, setIsProcessing] = useState(false);
@@ -49,7 +49,7 @@ const MatchAction: React.FC<{
     const handleAction = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isProcessing) return;
-        
+
         setIsProcessing(true);
         try {
             await onToggleLock(match.id, localLocked);
@@ -66,10 +66,10 @@ const MatchAction: React.FC<{
     const isLockedPressed = localLocked ? "true" : "false";
 
     return (
-        <button 
-            onClick={handleAction} 
+        <button
+            onClick={handleAction}
             disabled={isProcessing}
-            className={`p-1.5 transition-all duration-200 ${localLocked ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-400 hover:text-amber-500'}`} 
+            className={`p-1.5 transition-all duration-200 ${localLocked ? 'text-emerald-500 hover:text-emerald-400' : 'text-slate-400 hover:text-amber-500'}`}
             title={localLocked ? "Unlock Match (Now Internal)" : "Lock Match (Finalize Stats)"}
             aria-pressed={isLockedPressed}
         >
@@ -135,7 +135,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
     const hasAutoSynced = useRef(false);
     React.useEffect(() => {
         if (hasAutoSynced.current) return;
-        
+
         console.log("[MatchCenter] Initial Auto-sync triggered");
         if (syncWithCloud && !isLoading) {
             hasAutoSynced.current = true;
@@ -167,54 +167,54 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
         try {
             console.log(`[Sync] Finalizing match ${match.id} on cloud...`);
-            
+
             // 1. Ensure even summary-only matches have a valid scorecard object
-            const finalScorecard = data.scorecard || 
-                (data.innings1 ? { innings1: data.innings1, innings2: data.innings2 } : null) || 
-                {
-                    innings1: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.finalScoreHome?.runs || 0, totalWickets: data.finalScoreHome?.wickets || 0, totalOvers: data.finalScoreHome?.overs || 0, history: [] },
-                    innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.finalScoreAway?.runs || 0, totalWickets: data.finalScoreAway?.wickets || 0, totalOvers: data.finalScoreAway?.overs || 0, history: [] }
-                };
+            const finalScorecard = data.scorecard ||
+                (data.innings1 ? { innings1: data.innings1, innings2: data.innings2 } : null) ||
+            {
+                innings1: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.team1Score?.runs || data.finalScoreHome?.runs || 0, totalWickets: data.team1Score?.wickets || data.finalScoreHome?.wickets || 0, totalOvers: data.team1Score?.overs || data.finalScoreHome?.overs || 0, history: [] },
+                innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.team2Score?.runs || data.finalScoreAway?.runs || 0, totalWickets: data.team2Score?.wickets || data.finalScoreAway?.wickets || 0, totalOvers: data.team2Score?.overs || data.finalScoreAway?.overs || 0, history: [] }
+            };
 
             // 2. Recalculate for absolute accuracy (Protection against stale UI totals)
             const calcInningsTotals = (inn: any) => {
                 if (!inn) return { runs: 0, wickets: 0, balls: 0 };
-                
-                const runs = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0) + 
-                             Object.values(inn.extras || {}).reduce((s: number, e: any) => s + (Number(e) || 0), 0);
-                
-                const wickets = (inn.batting || []).filter((b: any) => 
+
+                const runs = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0) +
+                    Object.values(inn.extras || {}).reduce((s: number, e: any) => s + (Number(e) || 0), 0);
+
+                const wickets = (inn.batting || []).filter((b: any) =>
                     b.status === 'out' || (b.outHow && b.outHow !== 'Not Out' && b.outHow !== 'batting')
                 ).length;
-                
+
                 const balls = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.balls) || 0), 0);
-                
+
                 return { runs, wickets, balls };
             };
 
             const t1 = calcInningsTotals(finalScorecard.innings1);
             const t2 = calcInningsTotals(finalScorecard.innings2);
 
-            const finalData = { 
-                ...data, 
-                scorecard: finalScorecard, 
+            const finalData = {
+                ...data,
+                scorecard: finalScorecard,
                 team1Score: {
-                    runs: t1.runs || finalScorecard.innings1.totalRuns || data.team1Score?.runs || data.finalScoreHome?.runs || 0,
-                    wickets: t1.wickets || finalScorecard.innings1.wickets || data.team1Score?.wickets || data.finalScoreHome?.wickets || 0,
-                    overs: t1.balls > 0 ? (Math.floor(t1.balls / 6) + (t1.balls % 6) / 10) : (finalScorecard.innings1.totalOvers || data.team1Score?.overs || data.finalScoreHome?.overs || 0)
+                    runs: t1.runs || finalScorecard.innings1.totalRuns || data.team1Score?.runs || 0,
+                    wickets: t1.wickets || finalScorecard.innings1.wickets || data.team1Score?.wickets || 0,
+                    overs: t1.balls > 0 ? (Math.floor(t1.balls / 6) + (t1.balls % 6) / 10) : (finalScorecard.innings1.totalOvers || data.team1Score?.overs || 0)
                 },
                 team2Score: {
-                    runs: t2.runs || finalScorecard.innings2.totalRuns || data.team2Score?.runs || data.finalScoreAway?.runs || 0,
-                    wickets: t2.wickets || finalScorecard.innings2.wickets || data.team2Score?.wickets || data.finalScoreAway?.wickets || 0,
-                    overs: t2.balls > 0 ? (Math.floor(t2.balls / 6) + (t2.balls % 6) / 10) : (finalScorecard.innings2.totalOvers || data.team2Score?.overs || data.finalScoreAway?.overs || 0)
+                    runs: t2.runs || finalScorecard.innings2.totalRuns || data.team2Score?.runs || 0,
+                    wickets: t2.wickets || finalScorecard.innings2.wickets || data.team2Score?.wickets || 0,
+                    overs: t2.balls > 0 ? (Math.floor(t2.balls / 6) + (t2.balls % 6) / 10) : (finalScorecard.innings2.totalOvers || data.team2Score?.overs || 0)
                 },
                 isCareerSynced: true,
                 isManualOverride: true // Bypass lock check if needed
             };
 
-            console.log(`[Sync] Pushing recalculated payload for ${match.id}:`, { 
-                team1: finalData.team1Score, 
-                team2: finalData.team2Score 
+            console.log(`[Sync] Pushing recalculated payload for ${match.id}:`, {
+                team1: finalData.team1Score,
+                team2: finalData.team2Score
             });
 
             // Pass the performers array if they exist (Full Scorecard) or empty array (Summary Update)
@@ -246,27 +246,27 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         const match = matches.find(m => m.id === manualScoreConfig.matchId);
         if (!match) return;
 
-        const diff = Math.abs(summary.homeScore.runs - summary.awayScore.runs);
-        const homeName = match.team1Name || opponents.find(o => o.id === match.team1Id)?.name || 'Team A';
+        const diff = Math.abs(summary.team1Score.runs - summary.team2Score.runs);
+        const team1Name = match.team1Name || opponents.find(o => o.id === match.team1Id)?.name || 'Team 1';
         const opponent = opponents.find(o => o.id === match.team2Id);
-        const oppName = match.team2Name || opponent?.name || 'Opponent';
+        const team2Name = match.team2Name || opponent?.name || 'Team 2';
 
         const autoResult = summary.resultType === 'Abandoned' ? 'Match Abandoned'
             : summary.resultType === 'Tie' ? 'Match Tied'
-                : summary.resultType === 'Forfeit (Home)' ? `${oppName} won (${homeName} Forfeit)`
-                    : summary.resultType === 'Forfeit (Opponent)' ? `${homeName} won (${oppName} Forfeit)`
-                        : summary.homeScore.runs > summary.awayScore.runs ? `${homeName} won by ${diff} runs`
-                            : summary.awayScore.runs > summary.homeScore.runs ? `${oppName} won by ${diff} runs`
+                : summary.resultType === 'Forfeit (Team 1)' ? `${team2Name} won (${team1Name} Forfeit)`
+                    : summary.resultType === 'Forfeit (Team 2)' ? `${team1Name} won (${team2Name} Forfeit)`
+                        : summary.team1Score.runs > summary.team2Score.runs ? `${team1Name} won by ${diff} runs`
+                            : summary.team2Score.runs > summary.team1Score.runs ? `${team2Name} won by ${diff} runs`
                                 : 'Match Tied';
 
-        const tossWinnerName = summary.tossWinner === match.team1Id ? homeName : oppName;
+        const tossWinnerName = summary.tossWinner === match.team1Id ? team1Name : team2Name;
 
         // Determine which innings corresponds to which team.
         // innings1 = team that batted FIRST; innings2 = team that batted SECOND.
-        // is_home_batting_first tells us if home team (team1) batted first.
-        const isHomeBattingFirst = match.isTeam1BattingFirst ?? (match as any).is_home_batting_first ?? true;
-        const homeInningsKey = isHomeBattingFirst ? 'innings1' : 'innings2';
-        const awayInningsKey = isHomeBattingFirst ? 'innings2' : 'innings1';
+        // isTeam1BattingFirst tells us if team1 batted first.
+        const isTeam1BattingFirst = match.isTeam1BattingFirst ?? (match as any).is_home_batting_first ?? true;
+        const team1InningsKey = isTeam1BattingFirst ? 'innings1' : 'innings2';
+        const team2InningsKey = isTeam1BattingFirst ? 'innings2' : 'innings1';
 
         // Build the scorecard: if an existing scorecard blob exists, deep-clone it and
         // patch the totalRuns/wickets/totalOvers for each innings with the new summary values.
@@ -275,25 +275,25 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         if (match.scorecard) {
             summaryScorecard = JSON.parse(JSON.stringify(match.scorecard));
 
-            // Patch home innings totals
-            if (summaryScorecard[homeInningsKey]) {
-                summaryScorecard[homeInningsKey].totalRuns = summary.homeScore.runs ?? summaryScorecard[homeInningsKey].totalRuns;
-                summaryScorecard[homeInningsKey].wickets   = summary.homeScore.wickets ?? summaryScorecard[homeInningsKey].wickets;
-                if (summary.homeScore.overs) {
-                    const parts = String(summary.homeScore.overs).split('.');
-                    summaryScorecard[homeInningsKey].totalOvers = summary.homeScore.overs;
-                    summaryScorecard[homeInningsKey].totalBalls = (parseInt(parts[0]) * 6) + (parseInt(parts[1] || '0'));
+            // Patch team1 innings totals
+            if (summaryScorecard[team1InningsKey]) {
+                summaryScorecard[team1InningsKey].totalRuns = summary.team1Score.runs ?? summaryScorecard[team1InningsKey].totalRuns;
+                summaryScorecard[team1InningsKey].wickets = summary.team1Score.wickets ?? summaryScorecard[team1InningsKey].wickets;
+                if (summary.team1Score.overs) {
+                    const parts = String(summary.team1Score.overs).split('.');
+                    summaryScorecard[team1InningsKey].totalOvers = summary.team1Score.overs;
+                    summaryScorecard[team1InningsKey].totalBalls = (parseInt(parts[0]) * 6) + (parseInt(parts[1] || '0'));
                 }
             }
 
-            // Patch away innings totals
-            if (summaryScorecard[awayInningsKey]) {
-                summaryScorecard[awayInningsKey].totalRuns = summary.awayScore.runs ?? summaryScorecard[awayInningsKey].totalRuns;
-                summaryScorecard[awayInningsKey].wickets   = summary.awayScore.wickets ?? summaryScorecard[awayInningsKey].wickets;
-                if (summary.awayScore.overs) {
-                    const parts = String(summary.awayScore.overs).split('.');
-                    summaryScorecard[awayInningsKey].totalOvers = summary.awayScore.overs;
-                    summaryScorecard[awayInningsKey].totalBalls = (parseInt(parts[0]) * 6) + (parseInt(parts[1] || '0'));
+            // Patch team2 innings totals
+            if (summaryScorecard[team2InningsKey]) {
+                summaryScorecard[team2InningsKey].totalRuns = summary.team2Score.runs ?? summaryScorecard[team2InningsKey].totalRuns;
+                summaryScorecard[team2InningsKey].wickets = summary.team2Score.wickets ?? summaryScorecard[team2InningsKey].wickets;
+                if (summary.team2Score.overs) {
+                    const parts = String(summary.team2Score.overs).split('.');
+                    summaryScorecard[team2InningsKey].totalOvers = summary.team2Score.overs;
+                    summaryScorecard[team2InningsKey].totalBalls = (parseInt(parts[0]) * 6) + (parseInt(parts[1] || '0'));
                 }
             }
         } else {
@@ -302,17 +302,17 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 innings1: {
                     batting: [], bowling: [],
                     extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 },
-                    totalRuns: (isHomeBattingFirst ? summary.homeScore : summary.awayScore)?.runs || 0,
-                    wickets:   (isHomeBattingFirst ? summary.homeScore : summary.awayScore)?.wickets || 0,
-                    totalOvers:(isHomeBattingFirst ? summary.homeScore : summary.awayScore)?.overs || 0,
+                    totalRuns: (isTeam1BattingFirst ? summary.team1Score : summary.team2Score)?.runs || 0,
+                    wickets: (isTeam1BattingFirst ? summary.team1Score : summary.team2Score)?.wickets || 0,
+                    totalOvers: (isTeam1BattingFirst ? summary.team1Score : summary.team2Score)?.overs || 0,
                     totalBalls: 0, history: []
                 },
                 innings2: {
                     batting: [], bowling: [],
                     extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 },
-                    totalRuns: (isHomeBattingFirst ? summary.awayScore : summary.homeScore)?.runs || 0,
-                    wickets:   (isHomeBattingFirst ? summary.awayScore : summary.homeScore)?.wickets || 0,
-                    totalOvers:(isHomeBattingFirst ? summary.awayScore : summary.homeScore)?.overs || 0,
+                    totalRuns: (isTeam1BattingFirst ? summary.team2Score : summary.team1Score)?.runs || 0,
+                    wickets: (isTeam1BattingFirst ? summary.team2Score : summary.team1Score)?.wickets || 0,
+                    totalOvers: (isTeam1BattingFirst ? summary.team2Score : summary.team1Score)?.overs || 0,
                     totalBalls: 0, history: []
                 }
             };
@@ -320,8 +320,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
         try {
             await handleManualScoreSubmit({
-                team1Score: summary.homeScore,
-                team2Score: summary.awayScore,
+                team1Score: summary.team1Score,
+                team2Score: summary.team2Score,
                 resultNote: autoResult,
                 resultSummary: autoResult,
                 scorecard: summaryScorecard,
@@ -332,7 +332,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 tossWinnerId: summary.tossWinner,
                 tossChoice: summary.tossChoice,
                 maxOvers: summary.maxOvers,
-                isTeam1BattingFirst: isHomeBattingFirst,
+                isTeam1BattingFirst: isTeam1BattingFirst,
             }, { skipCareerSync: true });
         } catch (err) {
             console.error('[SummarySync] Error in submission block:', err);
@@ -509,16 +509,16 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             setIsGenerating(false);
         }
     };
-    
+
     const captureMatchSummary = async (matchId: string) => {
         try {
             console.log("[Generator] Starting High-Res Match Summary capture for:", matchId);
             setSummaryMatchId(matchId);
             setIsGenerating(true);
-            
+
             // Allow time for mount and logo loading
             await new Promise(r => setTimeout(r, 1200));
-            
+
             const element = document.getElementById('match-summary-graphic');
             if (!element) {
                 console.error("[Generator] ❌ Summary container not found");
@@ -529,7 +529,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             // Using html-to-image with CORS and Style filters
             const dataUrl = await toPng(element, {
                 quality: 1.0,
-                pixelRatio: 3, 
+                pixelRatio: 3,
                 backgroundColor: '#020617',
                 cacheBust: true,
                 style: {
@@ -553,13 +553,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             console.log("[Generator] ✅ Summary generated successfully via html-to-image.");
         } catch (err: any) {
             console.error("[Generator] ❌ Fatal error during summary capture:", err);
-            
+
             // Extract more detail if it's an Event or DOMException
             let detail = "Check console for technical details.";
             if (err instanceof Event) detail = "An image resource failed to load or has CORS restrictions. Ensure your GCS bucket allows 'http://localhost:3000'.";
             else if (err?.message) detail = err.message;
             else if (err?.name === 'SecurityError') detail = "Security Error: Likely due to external assets (logos/fonts) without correct CORS headers.";
-            
+
             alert(`Failed to generate image: ${detail}`);
         } finally {
             setIsGenerating(false);
@@ -578,13 +578,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             console.log("[Sync] Performing Full Cloud Refresh...");
             wipeLocalMatches();
             useCricketScorer.getState().resetStore();
-            
+
             await syncWithCloud();
             setSyncStatus('success');
-            
+
             setTimeout(() => {
                 setSyncStatus('idle');
-                window.location.reload(); 
+                window.location.reload();
             }, 1000);
         } catch (e: any) {
             alert("❌ Sync failed: " + e.message);
@@ -602,7 +602,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             const matchesFormat = formatFilter === 'All' || m.matchFormat === formatFilter;
             const matchesTournament = tournamentFilter === 'All' || m.tournament === tournamentFilter;
             const matchesYear = yearFilter === 'All' || new Date(m.date).getFullYear().toString() === yearFilter;
-            
+
             return matchesSearch && matchesFormat && matchesTournament && matchesYear;
         });
     }, [getSortedMatches, opponents, searchQuery, formatFilter, tournamentFilter, yearFilter, matches]);
@@ -977,10 +977,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                 onClick={handleCloudSync}
                                 disabled={isSyncing}
                                 className={`px-4 py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${isSyncing
-                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                        : syncStatus === 'success'
-                                            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
-                                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-sm'
+                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                    : syncStatus === 'success'
+                                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-sm'
                                     }`}
                                 title="Sync matches with cloud database"
                             >
@@ -1001,7 +1001,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                     <span className="text-[9px] font-black text-blue-500 uppercase tracking-tighter">Live Scorer</span>
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Access</span>
                                 </div>
-                                
+
                                 <button
                                     title="Cloud Sync Player Stats"
                                     disabled={isSyncingStats}
@@ -1165,74 +1165,74 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                         const opp = opponents.find(o => o.id === m.opponentId);
                                                         return (
                                                             <tr key={m.id} onClick={() => setSelectedCardMatch(m)}>
-                                                                 <td>
+                                                                <td>
                                                                     <div className="date-stack">
                                                                         <span className="date-main">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                                                                         <span className="time-sub">{new Date(m.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                                                                     </div>
-                                                                 </td>
-                                                                 <td>
-                                                                     <div className="flex flex-col gap-1 py-1">
-                                                                         <div className="team-cell">
-                                                                             <div className="relative flex items-center justify-center">
-                                                                                 {m.team1Logo ? (
-                                                                                     <img 
-                                                                                         src={m.team1Logo} 
-                                                                                         className="team-avatar" 
-                                                                                         alt={m.team1Name} 
-                                                                                         onError={(e) => {
-                                                                                             e.currentTarget.style.display = 'none';
-                                                                                             const fb = e.currentTarget.nextElementSibling as HTMLElement;
-                                                                                             if (fb) fb.style.display = 'flex';
-                                                                                         }}
-                                                                                     />
-                                                                                 ) : null}
-                                                                                 <div className="team-avatar-fallback text-slate-500" style={{ display: m.team1Logo ? 'none' : 'flex' }}>
-                                                                                     {(m.team1Name || "T").charAt(0)}
-                                                                                 </div>
-                                                                             </div>
-                                                                             <span>{m.team1Name || "TEAM 1"}</span>
+                                                                </td>
+                                                                <td>
+                                                                    <div className="flex flex-col gap-1 py-1">
+                                                                        <div className="team-cell">
+                                                                            <div className="relative flex items-center justify-center">
+                                                                                {m.team1Logo ? (
+                                                                                    <img
+                                                                                        src={m.team1Logo}
+                                                                                        className="team-avatar"
+                                                                                        alt={m.team1Name}
+                                                                                        onError={(e) => {
+                                                                                            e.currentTarget.style.display = 'none';
+                                                                                            const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                                            if (fb) fb.style.display = 'flex';
+                                                                                        }}
+                                                                                    />
+                                                                                ) : null}
+                                                                                <div className="team-avatar-fallback text-slate-500" style={{ display: m.team1Logo ? 'none' : 'flex' }}>
+                                                                                    {(m.team1Name || "T").charAt(0)}
+                                                                                </div>
+                                                                            </div>
+                                                                            <span>{m.team1Name || "TEAM 1"}</span>
 
-                                                                             <span className="vs-cell">VS</span>
+                                                                            <span className="vs-cell">VS</span>
 
-                                                                             <div className="relative flex items-center justify-center">
-                                                                                 {m.team2Logo ? (
-                                                                                     <img 
-                                                                                         src={m.team2Logo} 
-                                                                                         className="team-avatar" 
-                                                                                         alt={m.team2Name} 
-                                                                                         onError={(e) => {
-                                                                                             e.currentTarget.style.display = 'none';
-                                                                                             const fb = e.currentTarget.nextElementSibling as HTMLElement;
-                                                                                             if (fb) fb.style.display = 'flex';
-                                                                                         }}
-                                                                                     />
-                                                                                 ) : null}
-                                                                                 <div className="team-avatar-fallback text-slate-500" style={{ display: m.team2Logo ? 'none' : 'flex' }}>
-                                                                                     {(m.team2Name || "O").charAt(0)}
-                                                                                 </div>
-                                                                             </div>
-                                                                             <span className="uppercase">{m.team2Name || "OPPONENT"}</span>
-                                                                         </div>
-                                                                         <div className="match-meta-info pl-1.5 opacity-70">
-                                                                             {(() => {
-                                                                                 const tId = m.tournamentId || tournaments?.find(t => t.name === m.tournament)?.id;
-                                                                                 if (tId) {
-                                                                                     return (
-                                                                                         <Link 
-                                                                                             to={`/tournaments/${tId}`}
-                                                                                             className="hover:text-blue-400 hover:underline transition-all"
-                                                                                             onClick={(e) => e.stopPropagation()}
-                                                                                         >
-                                                                                             {m.tournament || 'Exhibition Match'}
-                                                                                         </Link>
-                                                                                     );
-                                                                                 }
-                                                                                 return m.tournament || 'Exhibition Match';
-                                                                             })()}
-                                                                         </div>
-                                                                     </div>
-                                                                 </td>
+                                                                            <div className="relative flex items-center justify-center">
+                                                                                {m.team2Logo ? (
+                                                                                    <img
+                                                                                        src={m.team2Logo}
+                                                                                        className="team-avatar"
+                                                                                        alt={m.team2Name}
+                                                                                        onError={(e) => {
+                                                                                            e.currentTarget.style.display = 'none';
+                                                                                            const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                                                                                            if (fb) fb.style.display = 'flex';
+                                                                                        }}
+                                                                                    />
+                                                                                ) : null}
+                                                                                <div className="team-avatar-fallback text-slate-500" style={{ display: m.team2Logo ? 'none' : 'flex' }}>
+                                                                                    {(m.team2Name || "O").charAt(0)}
+                                                                                </div>
+                                                                            </div>
+                                                                            <span className="uppercase">{m.team2Name || "OPPONENT"}</span>
+                                                                        </div>
+                                                                        <div className="match-meta-info pl-1.5 opacity-70">
+                                                                            {(() => {
+                                                                                const tId = m.tournamentId || tournaments?.find(t => t.name === m.tournament)?.id;
+                                                                                if (tId) {
+                                                                                    return (
+                                                                                        <Link
+                                                                                            to={`/tournaments/${tId}`}
+                                                                                            className="hover:text-blue-400 hover:underline transition-all"
+                                                                                            onClick={(e) => e.stopPropagation()}
+                                                                                        >
+                                                                                            {m.tournament || 'Exhibition Match'}
+                                                                                        </Link>
+                                                                                    );
+                                                                                }
+                                                                                return m.tournament || 'Exhibition Match';
+                                                                            })()}
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
                                                                 <td className="text-slate-500 text-xs font-bold uppercase">{grounds.find(g => g.id === m.groundId)?.name || 'TBD'}</td>
                                                                 <td>
                                                                     <span className={`badge-type ${m.matchFormat === 'T20' ? 'badge-t20' : 'badge-odi'}`}>
@@ -1254,10 +1254,10 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                 {userRole === 'admin' && (
                                                                     <td onClick={(e) => e.stopPropagation()}>
                                                                         <div className="flex items-center gap-2">
-                                                                            <MatchAction 
-                                                                                match={m} 
-                                                                                onToggleLock={handleToggleLock} 
-                                                                                isAdmin={isAdmin} 
+                                                                            <MatchAction
+                                                                                match={m}
+                                                                                onToggleLock={handleToggleLock}
+                                                                                isAdmin={isAdmin}
                                                                             />
                                                                             <button onClick={(e) => { e.stopPropagation(); setEditingMatch(m); }} className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors" title="Edit Metadata"><Plus size={14} /></button>
                                                                             <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Trash2 size={14} /></button>
@@ -1274,13 +1274,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                     <div className="table-footer px-6">
                                         <span>{filteredMatches.length} {filteredMatches.length === 1 ? 'fixture' : 'fixtures'} found</span>
                                         {(searchQuery || formatFilter !== 'All' || tournamentFilter !== 'All' || yearFilter !== 'All') && (
-                                            <button 
-                                                onClick={() => { 
-                                                    setSearchQuery(''); 
-                                                    setFormatFilter('All'); 
+                                            <button
+                                                onClick={() => {
+                                                    setSearchQuery('');
+                                                    setFormatFilter('All');
                                                     setTournamentFilter('All');
                                                     setYearFilter('All');
-                                                }} 
+                                                }}
                                                 className="text-blue-500 font-bold hover:underline"
                                             >
                                                 Clear all filters
@@ -1306,7 +1306,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
                         {activeTab === 'opponents' && (
                             <div className="px-6 pb-20 pt-6">
-                                <OpponentsTab 
+                                <OpponentsTab
                                     userRole={userRole}
                                     currentUser={currentUser}
                                 />
@@ -1319,14 +1319,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             {/* MODALS (Existing logic preserved) */}
             <AnimatePresence>
                 {selectedCardMatch && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }} 
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4"
                         onClick={() => setSelectedCardMatch(null)}
                     >
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
@@ -1335,8 +1335,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                         >
                             <MatchCenterTile
                                 match={selectedCardMatch}
-                                homeTeamName={selectedCardMatch.team1Name || 'Team 1'}
-                                homeTeamLogo={selectedCardMatch.team1Logo}
+                                team1Name={selectedCardMatch.team1Name || 'Team 1'}
+                                team1Logo={selectedCardMatch.team1Logo}
                                 allOpponents={opponents}
                                 opponent={opponents.find(o => o.id === selectedCardMatch.team2Id)}
                                 onSelectPlayingXI={handleSelectPlayingXI}
@@ -1370,14 +1370,14 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                     <PlayingXIModal
                         onClose={() => setXiModalConfig(prev => ({ ...prev, isOpen: false }))}
                         matchId={xiModalConfig.matchId}
-                        teamType={xiModalConfig.teamType as any}
-                        homePlayers={players}
-                        opponentTeams={opponents}
+                        teamType={xiModalConfig.teamType}
+                        team1Players={players}
+                        availableOpponents={opponents}
                         onSave={handleSaveXI}
                         onShare={(id) => handleSelectPlayingXI(id, 'view')}
                         initialSelection={xiModalConfig.teamType === 'team1' ? matches.find(m => m.id === xiModalConfig.matchId)?.team1XI || [] : matches.find(m => m.id === xiModalConfig.matchId)?.team2XI || []}
-                        opponentId={xiModalConfig.opponentId}
-                        homeTeamId={matches.find(m => m.id === xiModalConfig.matchId)?.team1Id || null}
+                        team2Id={xiModalConfig.opponentId}
+                        team1Id={matches.find(m => m.id === xiModalConfig.matchId)?.team1Id || null}
                         onQuickAddPlayer={handleQuickAddOpponentPlayer}
                     />
                 )}
@@ -1428,7 +1428,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
             {summaryPreviewUrl && (
                 <div className="fixed inset-0 z-[10001] bg-slate-950/90 flex items-center justify-center p-4 backdrop-blur-xl transition-all">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         className="bg-slate-900 border border-white/10 rounded-3xl overflow-hidden max-w-lg w-full shadow-2xl"
@@ -1443,13 +1443,13 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                             <img src={summaryPreviewUrl} alt="Match Summary" className="rounded-xl shadow-2xl border border-white/10 max-w-full h-auto" />
                         </div>
                         <div className="p-6 grid grid-cols-2 gap-4">
-                            <button 
+                            <button
                                 onClick={() => setSummaryPreviewUrl(null)}
                                 className="py-4 rounded-2xl bg-white/5 text-white font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
                             >
                                 Close
                             </button>
-                            <button 
+                            <button
                                 onClick={() => {
                                     const link = document.createElement('a');
                                     link.download = `Match_Summary.png`;
@@ -1476,38 +1476,38 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             {/* Hidden Graphic Generator */}
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
                 {xiModalConfig.matchId && (
-                   <div id="team-sheet-graphic" style={{ width: '1080px', height: '1920px' }}>
-                       <LineupGraphic 
-                         match={matches.find(m => m.id === xiModalConfig.matchId)!}
-                         opponents={opponents}
-                         players={players}
-                         grounds={grounds}
-                         teamType={xiModalConfig.teamType as any}
-                         team1XI={matches.find(m => m.id === xiModalConfig.matchId)?.team1XI}
-                         team2XI={matches.find(m => m.id === xiModalConfig.matchId)?.team2XI}
-                         homeTeamName={matches.find(m => m.id === xiModalConfig.matchId)?.team1Name}
-                         homeTeamLogo={matches.find(m => m.id === xiModalConfig.matchId)?.team1Logo}
-                       />
-                   </div>
+                    <div id="team-sheet-graphic" style={{ width: '1080px', height: '1920px' }}>
+                        <LineupGraphic
+                            match={matches.find(m => m.id === xiModalConfig.matchId)!}
+                            opponents={opponents}
+                            players={players}
+                            grounds={grounds}
+                            teamType={xiModalConfig.teamType as any}
+                            team1XI={matches.find(m => m.id === xiModalConfig.matchId)?.team1XI}
+                            team2XI={matches.find(m => m.id === xiModalConfig.matchId)?.team2XI}
+                            team1Name={matches.find(m => m.id === xiModalConfig.matchId)?.team1Name}
+                            team1Logo={matches.find(m => m.id === xiModalConfig.matchId)?.team1Logo}
+                        />
+                    </div>
                 )}
 
                 {summaryMatchId && (
                     <div id="match-summary-graphic" style={{ width: '450px', background: '#020617' }}>
-                        <MatchCenterTile 
+                        <MatchCenterTile
                             match={matches.find(m => m.id === summaryMatchId)!}
-                            homeTeamName={matches.find(m => m.id === summaryMatchId)?.team1Name || 'Team 1'}
-                            homeTeamLogo={matches.find(m => m.id === summaryMatchId)?.team1Logo || ''}
+                            team1Name={matches.find(m => m.id === summaryMatchId)?.team1Name || 'Team 1'}
+                            team1Logo={matches.find(m => m.id === summaryMatchId)?.team1Logo || ''}
                             opponent={opponents.find(o => o.id === matches.find(m => m.id === summaryMatchId)?.team2Id)}
                             isGraphic={true}
                             grounds={grounds}
                             userRole={userRole}
                             isAdmin={isAdmin}
-                            onSelectPlayingXI={() => {}}
-                            onEditMatch={() => {}}
-                            onStartScoring={() => {}}
-                            onViewScorecard={() => {}}
-                            onUpdateManualScore={() => {}}
-                            onDeleteMatch={() => {}}
+                            onSelectPlayingXI={() => { }}
+                            onEditMatch={() => { }}
+                            onStartScoring={() => { }}
+                            onViewScorecard={() => { }}
+                            onUpdateManualScore={() => { }}
+                            onDeleteMatch={() => { }}
                         />
                     </div>
                 )}
@@ -1515,8 +1515,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
             {isGenerating && (
                 <div className="fixed inset-0 z-[10000] bg-slate-950/90 flex flex-col items-center justify-center gap-6 backdrop-blur-xl">
-                    <motion.div 
-                        animate={{ 
+                    <motion.div
+                        animate={{
                             scale: [1, 1.1, 1],
                             rotate: [0, 5, -5, 0]
                         }}

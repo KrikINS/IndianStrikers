@@ -5,8 +5,8 @@ import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {
     match: ScheduledMatch;
-    homeTeamName: string;
-    homeTeamLogo?: string;
+    team1Name: string;
+    team1Logo?: string;
     allOpponents?: OpponentTeam[];
     opponent: OpponentTeam | undefined;
     onSelectPlayingXI: (matchId: string, mode: 'team1' | 'team2' | 'lock' | 'view') => void;
@@ -28,8 +28,8 @@ interface MatchCenterTileProps {
 
 const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     match,
-    homeTeamName: defaultHomeTeamName,
-    homeTeamLogo: defaultHomeTeamLogo,
+    team1Name: defaultTeam1Name,
+    team1Logo: defaultTeam1Logo,
     allOpponents = [],
     opponent,
     onSelectPlayingXI,
@@ -75,8 +75,8 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     const isToday = timeContext === 'TODAY';
     const isPast = timeContext === 'PAST';
 
-    const homeTeamName = match.team1Name || defaultHomeTeamName;
-    const homeTeamLogo = match.team1Logo || defaultHomeTeamLogo || '/INS LOGO.PNG';
+    const team1Name = match.team1Name || defaultTeam1Name;
+    const team1Logo = match.team1Logo || defaultTeam1Logo || '/INS LOGO.PNG';
 
     const opponentName = match.team2Name || match.opponentName || 'Opponent';
     const opponentLogo = match.team2Logo;
@@ -162,11 +162,11 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                 {/* Slot 1 (Home) */}
                 <div className="team-vertical">
                     <div className="logo-wrapper">
-                        {homeTeamLogo ? (
+                        {team1Logo ? (
                             <img 
-                                src={homeTeamLogo} 
+                                src={team1Logo} 
                                 className="team-logo-md object-contain" 
-                                alt={homeTeamName} 
+                                alt={team1Name} 
                                 onError={(e) => {
                                     e.currentTarget.style.display = 'none';
                                     const fb = e.currentTarget.nextElementSibling as HTMLElement;
@@ -174,8 +174,8 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                 }}
                             />
                         ) : null}
-                        <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs" style={{ display: homeTeamLogo ? 'none' : 'flex' }}>
-                            {String(homeTeamName).slice(0, 3).toUpperCase()}
+                        <div className="team-logo-md flex items-center justify-center bg-transparent text-white/20 font-black text-xs" style={{ display: team1Logo ? 'none' : 'flex' }}>
+                            {String(team1Name).slice(0, 3).toUpperCase()}
                         </div>
                         {!isGraphic && (
                             <button
@@ -188,7 +188,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                             </button>
                         )}
                     </div>
-                    <h4 className="team-name-display" style={{ color: '#ffffff' }}>{homeTeamName.toUpperCase()}</h4>
+                    <h4 className="team-name-display" style={{ color: '#ffffff' }}>{team1Name.toUpperCase()}</h4>
                     {(isLive || isCompleted) && match.team1Score && (
                         <div className="team-score-display font-black text-2xl mt-1.5" style={{ color: '#ffffff' }}>
                             <span>{match.team1Score.runs ?? 0}/{match.team1Score.wickets ?? 0}</span>
@@ -284,9 +284,9 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         ? (match.tossDetails || 'MATCH IN PROGRESS') 
                         : (match.resultSummary || match.resultNote || (() => {
                             if (!match.team1Score || !match.team2Score) return match.resultType || 'MATCH COMPLETED';
-                            const diff = Math.abs((match.team1Score.runs ?? 0) - (match.team2Score.runs ?? 0));
-                            const winner = (match.team1Score.runs ?? 0) > (match.team2Score.runs ?? 0) ? homeTeamName : opponentName;
-                            if (diff === 0) return 'MATCH TIED';
+                             const diff = Math.abs((match.team1Score.runs ?? 0) - (match.team2Score.runs ?? 0));
+                             const winner = (match.team1Score.runs ?? 0) > (match.team2Score.runs ?? 0) ? team1Name : opponentName;
+                             if (diff === 0) return 'MATCH TIED';
                             return `${winner.toUpperCase()} WON BY ${diff} RUNS`;
                           })())
                     }
