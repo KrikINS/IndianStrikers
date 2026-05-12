@@ -1404,8 +1404,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                 <MatchSummaryModal
                     onClose={() => setManualScoreConfig(null)}
                     match={matches.find(m => m.id === manualScoreConfig.matchId)!}
-                    homeTeamName={matches.find(m => m.id === manualScoreConfig.matchId)?.team1Name || 'Team 1'}
-                    opponentName={opponents.find(o => o.id === (matches.find(m => m.id === manualScoreConfig.matchId)?.team2Id))?.name || matches.find(m => m.id === manualScoreConfig.matchId)?.team2Name || 'Opponent'}
+                    team1Name={matches.find(m => m.id === manualScoreConfig.matchId)?.team1Name || 'Team 1'}
+                    team2Name={opponents.find(o => o.id === (matches.find(m => m.id === manualScoreConfig.matchId)?.team2Id))?.name || matches.find(m => m.id === manualScoreConfig.matchId)?.team2Name || 'Opponent'}
                     onSave={handleSummaryUpdate}
                     isAdmin={isAdmin}
                 />
