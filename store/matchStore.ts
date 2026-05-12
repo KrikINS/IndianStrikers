@@ -802,8 +802,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             // FORCE UPSERT: Overwrite cloud data with local state regardless of versioning
             await api.updateMatch(state.matchId, {
                 liveData: payload,
-                last_updated: new Date().toISOString(),
-                force_upsert: true // Signal to backend to prioritize this payload
+                lastUpdated: new Date().toISOString(),
+                forceUpsert: true // Signal to backend to prioritize this payload
             });
             console.log("[Store] Force Sync successful");
         } catch (err) {

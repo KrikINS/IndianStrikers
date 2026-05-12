@@ -1647,7 +1647,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         setIsSyncing(true);
         // CRITICAL: Only sync the slimmed payload, not the full store object which contains lists of all players
         const payload = state.prepareSyncPayload ? state.prepareSyncPayload() : state;
-        await updateMatch(activeMatchId, { liveData: payload, last_updated: new Date().toISOString() });
+        await updateMatch(activeMatchId, { liveData: payload, lastUpdated: new Date().toISOString() });
         setIsSyncing(false);
       } catch (err) {
         console.error("[Sync] Failed to update match:", err);
@@ -1701,7 +1701,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           bowler_id: store.currentBowlerId,
           current_innings: store.currentInnings,
         } as any,
-        last_updated: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
         status: 'live' // Ensure status is explicitly live
       });
 
@@ -1774,7 +1774,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Nuclear trace detection for Sandbox matches
   useEffect(() => {
-    if (activeMatchId && (String(activeMatchId).toLowerCase().includes('sandbox') || matchMeta?.opponentName === 'Sandbox XI' || matchMeta?.is_test)) {
+    if (activeMatchId && (String(activeMatchId).toLowerCase().includes('sandbox') || matchMeta?.team2Name === 'Sandbox XI' || matchMeta?.isTest)) {
       console.warn("[Scorer] Sandbox/Test match detected. Redirecting to safety.");
       navigate('/match-center');
     }
@@ -1962,11 +1962,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                       {m.team1Logo || m.homeLogo ? (
                         <img src={m.team1Logo || m.homeLogo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt="T1" />
                       ) : <Shield size={16} color="#001F3F" opacity={0.3} />}
-                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#001F3F' }}>{m.team1Name || m.homeTeamName || 'INS'}</span>
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#001F3F' }}>{m.team1Name || 'INS'}</span>
                     </div>
                     <span style={{ fontSize: '0.7rem', fontWeight: 900, opacity: 0.2 }}>VS</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#001F3F' }}>{m.team2Name || m.opponentName || 'OPP'}</span>
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#001F3F' }}>{m.team2Name || 'OPP'}</span>
                       {m.team2Logo || m.opponentLogo ? (
                         <img src={m.team2Logo || m.opponentLogo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt="T2" />
                       ) : <Shield size={16} color="#001F3F" opacity={0.3} />}
@@ -2181,7 +2181,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   {store.team1Name || 'INDIAN STRIKERS'}
                 </TossOption>
                 <TossOption $selected={tossWinner === 'away'} onClick={() => setTossWinner('away')}>
-                  {store.team2Name || matchMeta?.opponentName || 'OPPONENT'}
+                  {store.team2Name || matchMeta?.team2Name || 'OPPONENT'}
                 </TossOption>
               </div>
 
@@ -2346,21 +2346,23 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               {(() => {
                 // V5 ROBUST DERIVATION: Determine who bats now based on toss and innings
                 const getInningsBattingTeam = () => {
-                  const firstInningsBatTeam = ((String(tossWinner).toLowerCase() === 'home' || String(tossWinner).toLowerCase() === 'indian strikers') && String(tossChoice).toLowerCase() === 'bat') ||
-                    ((String(tossWinner).toLowerCase() === 'away' || String(tossWinner).toLowerCase() === 'opponent') && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
+                  const winnerId = tossWinner === 'home' ? 'HOME' : 'AWAY';
+                  const firstInningsBatTeamId = ((winnerId === 'HOME' && tossChoice === 'Bat') || (winnerId === 'AWAY' && tossChoice === 'Bowl')) ? 'HOME' : 'AWAY';
 
                   // Only flip if innings1 is truly active/completed
                   const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
                   if (isFirstInningsDone) {
-                    return firstInningsBatTeam === 'HOME' ? 'AWAY' : 'HOME';
+                    return firstInningsBatTeamId === 'HOME' ? 'AWAY' : 'HOME';
                   }
-                  return firstInningsBatTeam;
+                  return firstInningsBatTeamId;
                 };
 
-                const batTeamId = getInningsBattingTeam();
-                const batTeamName = batTeamId === 'HOME' ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1') : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
-                const batSquadIds = batTeamId === 'HOME' ? team1XI : team2XI;
-                const batPool = batTeamId === 'HOME'
+                const batTeamType = getInningsBattingTeam();
+                const batTeamId = batTeamType === 'HOME' ? (matchMeta?.team1Id || 'HOME') : (matchMeta?.team2Id || 'AWAY');
+                const batTeamName = batTeamType === 'HOME' ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1') : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
+                
+                const batSquadIds = batTeamType === 'HOME' ? team1XI : team2XI;
+                const batPool = batTeamType === 'HOME'
                   ? (players || []).filter((p: any) => (batSquadIds || []).includes(p.id))
                   : (opponentPlayers || []).filter((p: any) => (batSquadIds || []).includes(p.id));
 
@@ -2416,18 +2418,20 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
               {(() => {
                 const getInningsBowlingTeam = () => {
-                  const firstInningsBatTeam = ((String(tossWinner).toLowerCase() === 'home' || String(tossWinner).toLowerCase() === 'indian strikers') && String(tossChoice).toLowerCase() === 'bat') ||
-                    ((String(tossWinner).toLowerCase() === 'away' || String(tossWinner).toLowerCase() === 'opponent') && String(tossChoice).toLowerCase() === 'bowl') ? 'HOME' : 'AWAY';
+                  const winnerId = tossWinner === 'home' ? 'HOME' : 'AWAY';
+                  const firstInningsBatTeamId = ((winnerId === 'HOME' && tossChoice === 'Bat') || (winnerId === 'AWAY' && tossChoice === 'Bowl')) ? 'HOME' : 'AWAY';
 
                   const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
-                  const batTeamId = isFirstInningsDone ? (firstInningsBatTeam === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeam;
-                  return batTeamId === 'HOME' ? 'AWAY' : 'HOME';
+                  const batTeamType = isFirstInningsDone ? (firstInningsBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeamId;
+                  return batTeamType === 'HOME' ? 'AWAY' : 'HOME';
                 };
 
-                const bowlTeamId = getInningsBowlingTeam();
-                const bowlTeamName = bowlTeamId === 'HOME' ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1') : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
-                const bowlSquadIds = bowlTeamId === 'HOME' ? team1XI : team2XI;
-                const bowlPool = bowlTeamId === 'HOME'
+                const bowlTeamType = getInningsBowlingTeam();
+                const bowlTeamId = bowlTeamType === 'HOME' ? (matchMeta?.team1Id || 'HOME') : (matchMeta?.team2Id || 'AWAY');
+                const bowlTeamName = bowlTeamType === 'HOME' ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1') : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
+                
+                const bowlSquadIds = bowlTeamType === 'HOME' ? team1XI : team2XI;
+                const bowlPool = bowlTeamType === 'HOME'
                   ? (players || []).filter((p: any) => (bowlSquadIds || []).includes(p.id))
                   : (opponentPlayers || []).filter((p: any) => (bowlSquadIds || []).includes(p.id));
 
@@ -2501,7 +2505,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
     const innings = store.currentInnings === 1 ? store.innings1 : store.innings2;
     if (!innings) return;
-    const is_test = matchMeta?.is_test ?? false;
+    const isTest = matchMeta?.isTest ?? false;
     const isLegal = type !== 'wide' && type !== 'no-ball';
 
     const currentStrikerId = store.strikerId;
@@ -2511,7 +2515,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     store.recordBall({ runs: score, type, isWicket, wicketType, subType, outPlayerId, newBatterId, zone, commentary });
 
     const syncBallToCloud = async (retryCount = 0) => {
-      if (!activeMatchId || is_test) return;
+      if (!activeMatchId || isTest) return;
 
       const baseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
       const payload: any = {
@@ -3163,7 +3167,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 </span>
                 <span style={{ fontSize: '10px', fontWeight: 900, color: '#FAB005', opacity: 0.8 }}>VS</span>
                 <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
-                  {(store.team2Name || matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
+                  {(store.team2Name || matchMeta?.team2Name || 'OPPONENT').toUpperCase()}
                 </span>
                 {store.team2Logo || matchMeta?.opponentLogo ? (
                   <img
@@ -3249,7 +3253,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                       </SelectionGrid>
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1rem', color: '#FAB005', marginBottom: 8, textTransform: 'uppercase' }}>{matchMeta?.opponentName || 'OPPONENT'}</h3>
+                      <h3 style={{ fontSize: '1rem', color: '#FAB005', marginBottom: 8, textTransform: 'uppercase' }}>{matchMeta?.team2Name || 'OPPONENT'}</h3>
                       <SelectionGrid style={{ maxHeight: '50vh' }}>
                         {(opponentPlayers || [])
                           .filter(p => (team2XI || []).includes(p.id))
@@ -3336,7 +3340,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                       const target = (store.innings1?.totalRuns || 0) + 1;
                       const runsNeeded = target - (store.innings2?.totalRuns || 0);
                       const ballsRemaining = (store.maxOvers || 20) * 6 - (store.innings2?.totalBalls || 0);
-                      const battingTeam = store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'OPPONENT');
+                      const battingTeam = store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.team2Name || 'OPPONENT');
                       
                       if (runsNeeded <= 0) return `${battingTeam.toUpperCase()} WON`;
                       if (ballsRemaining <= 0) return 'INNINGS OVER';
@@ -4195,9 +4199,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                     const i1 = store.innings1?.totalRuns || 0;
                     const i2 = store.innings2?.totalRuns || 0;
                     if (i2 > i1) {
-                      return `${store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'Away')} WON BY ${10 - (store.innings2?.wickets || 0)} WICKETS`;
+                      return `${store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.team2Name || 'Away')} WON BY ${10 - (store.innings2?.wickets || 0)} WICKETS`;
                     } else if (i1 > i2) {
-                      return `${store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.opponentName || 'Away')} WON BY ${i1 - i2} RUNS`;
+                      return `${store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.team2Name || 'Away')} WON BY ${i1 - i2} RUNS`;
                     }
                     return "MATCH TIED";
                   })()}
@@ -4351,7 +4355,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                       {/* Fixture Info */}
                       <div className="w-full text-center">
                         <p className="text-xs font-black text-white italic uppercase tracking-[0.2em] mb-1">
-                          INDIAN STRIKERS VS {(matchMeta?.opponentName || 'OPPONENT').toUpperCase()}
+                          INDIAN STRIKERS VS {(matchMeta?.team2Name || 'OPPONENT').toUpperCase()}
                         </p>
                         <div className="flex items-center justify-center gap-2 text-sky-400/60 font-black italic text-[10px] uppercase">
                           <span>{venueName}</span>
@@ -4621,7 +4625,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                           toast.loading("Force syncing to cloud...");
                           await updateMatch(activeMatchId, {
                             liveData: store,
-                            last_updated: new Date().toISOString()
+                            lastUpdated: new Date().toISOString()
                           });
                           toast.dismiss();
                           toast.success("Cloud Overwritten successfully!");
@@ -4951,18 +4955,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             <MatchSummaryModal
               match={{
                 ...matchMeta,
-                finalScoreHome: {
-                  runs: store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalRuns : store.innings2?.totalRuns || 0,
-                  wickets: store.innings1?.battingTeamId === 'HOME' ? store.innings1.wickets : store.innings2?.wickets || 0,
-                  overs: Number(store.getOvers(store.innings1?.battingTeamId === 'HOME' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0))
+                team1Score: {
+                  runs: store.innings1?.battingTeamId === matchMeta.team1Id ? store.innings1?.totalRuns || 0 : store.innings2?.totalRuns || 0,
+                  wickets: store.innings1?.battingTeamId === matchMeta.team1Id ? store.innings1?.wickets || 0 : store.innings2?.wickets || 0,
+                  overs: Number(store.getOvers(store.innings1?.battingTeamId === matchMeta.team1Id ? store.innings1?.totalBalls || 0 : store.innings2?.totalBalls || 0))
                 },
-                finalScoreAway: {
-                  runs: store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalRuns : store.innings2?.totalRuns || 0,
-                  wickets: store.innings1?.battingTeamId === 'AWAY' ? store.innings1.wickets : store.innings2?.wickets || 0,
-                  overs: Number(store.getOvers(store.innings1?.battingTeamId === 'AWAY' ? store.innings1.totalBalls : store.innings2?.totalBalls || 0))
+                team2Score: {
+                  runs: store.innings1?.battingTeamId === matchMeta.team2Id ? store.innings1?.totalRuns || 0 : store.innings2?.totalRuns || 0,
+                  wickets: store.innings1?.battingTeamId === matchMeta.team2Id ? store.innings1?.wickets || 0 : store.innings2?.wickets || 0,
+                  overs: Number(store.getOvers(store.innings1?.battingTeamId === matchMeta.team2Id ? store.innings1?.totalBalls || 0 : store.innings2?.totalBalls || 0))
                 }
               }}
-              opponentName={matchMeta.team2Name || 'Opponent'}
+              team1Name={matchMeta.team1Name || 'Indian Strikers'}
+              team2Name={matchMeta.team2Name || 'Opponent'}
               onClose={() => setShowMatchSummaryModal(false)}
               onSave={async (summary) => {
                 setSyncStatus('loading');

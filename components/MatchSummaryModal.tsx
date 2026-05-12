@@ -4,14 +4,14 @@ import { ScheduledMatch } from '../types';
 
 interface MatchSummaryModalProps {
   match: ScheduledMatch;
-  homeTeamName: string;
-  opponentName: string;
+  team1Name: string;
+  team2Name: string;
   onSave: (summary: any) => void;
   onClose: () => void;
   isAdmin?: boolean;
 }
 
-export default function MatchSummaryModal({ match, homeTeamName, opponentName, onSave, onClose, isAdmin }: MatchSummaryModalProps) {
+export default function MatchSummaryModal({ match, team1Name, team2Name, onSave, onClose, isAdmin }: MatchSummaryModalProps) {
   // Resolve team IDs with legacy field fallbacks
   const team1Id = match.team1Id || (match as any).homeTeamId || 'team1';
   const team2Id = match.team2Id || (match as any).opponentId || 'team2';
@@ -207,12 +207,12 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
             <div className="flex flex-col items-center gap-2">
                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center p-1.5 border border-white/10">
                   {match.team1Logo ? (
-                    <img src={match.team1Logo} className="max-h-full max-w-full object-contain" alt={homeTeamName} />
+                    <img src={match.team1Logo} className="max-h-full max-w-full object-contain" alt={team1Name} />
                   ) : (
-                    <div className="text-[10px] text-slate-500 font-black">{String(homeTeamName).slice(0,3)}</div>
+                    <div className="text-[10px] text-slate-500 font-black">{String(team1Name).slice(0,3)}</div>
                   )}
                </div>
-               <span className="text-xs">{homeTeamName}</span> 
+               <span className="text-xs">{team1Name}</span> 
             </div>
             
             <span className="vs-pill">VS</span> 
@@ -220,12 +220,12 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
             <div className="flex flex-col items-center gap-2">
                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center p-1.5 border border-white/10">
                   {match.team2Logo ? (
-                    <img src={match.team2Logo} className="max-h-full max-w-full object-contain" alt={opponentName} />
+                    <img src={match.team2Logo} className="max-h-full max-w-full object-contain" alt={team2Name} />
                   ) : (
-                    <div className="text-[10px] text-slate-500 font-black">{String(opponentName).slice(0,3)}</div>
+                    <div className="text-[10px] text-slate-500 font-black">{String(team2Name).slice(0,3)}</div>
                   )}
                </div>
-               <span className="text-xs">{opponentName}</span>
+               <span className="text-xs">{team2Name}</span>
             </div>
           </div>
           <div className="flex items-center justify-center gap-4 mt-4 text-[#475569] font-bold text-xs uppercase letter-spacing-1">
@@ -238,14 +238,14 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
         <div className="grid grid-cols-2 gap-6 mb-8">
           {/* Home Team Inputs */}
           <div className="bg-slate-800/40 p-5 rounded-2xl border border-slate-700/50">
-            <span className="team-label text-center mb-4 text-blue-400">{homeTeamName}</span>
+            <span className="team-label text-center mb-4 text-blue-400">{team1Name}</span>
             <div className="space-y-4">
               <div className="flex items-end gap-2 justify-center">
                 <div className="text-center w-20">
                   <label className="text-[10px] text-slate-500 font-black block mb-1">TOTAL RUNS</label>
                   <input 
                     id="home-runs"
-                    title={`${homeTeamName} Runs`}
+                    title={`${team1Name} Runs`}
                     type="number" 
                     className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-black text-xl focus:border-blue-500 outline-none"
                     value={summary.homeScore.runs}
@@ -257,7 +257,7 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
                   <label className="text-[10px] text-slate-500 font-black block mb-1">WKTS</label>
                   <input 
                     id="home-wickets"
-                    title={`${homeTeamName} Wickets`}
+                    title={`${team1Name} Wickets`}
                     type="number" 
                     className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-black text-xl focus:border-blue-500 outline-none"
                     value={summary.homeScore.wickets}
@@ -269,7 +269,7 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
                 <label className="text-[10px] text-slate-500 font-black block mb-1">OVERS COMPLETED</label>
                 <input 
                   id="home-overs"
-                  title={`${homeTeamName} Overs`}
+                  title={`${team1Name} Overs`}
                   type="number"
                   step="0.1"
                   className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-bold text-base focus:border-blue-500 outline-none max-w-[120px] mx-auto block"
@@ -282,14 +282,14 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
 
           {/* Away Team Inputs */}
           <div className="bg-emerald-900/10 p-5 rounded-2xl border border-emerald-900/20">
-            <span className="team-label text-center mb-4 text-emerald-400">{opponentName}</span>
+            <span className="team-label text-center mb-4 text-emerald-400">{team2Name}</span>
             <div className="space-y-4">
               <div className="flex items-end gap-2 justify-center">
                 <div className="text-center w-20">
                   <label className="text-[10px] text-emerald-900/50 font-black block mb-1">TOTAL RUNS</label>
                   <input 
                     id="away-runs"
-                    title={`${opponentName} Runs`}
+                    title={`${team2Name} Runs`}
                     type="number" 
                     className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-black text-xl focus:border-emerald-500 outline-none"
                     value={summary.awayScore.runs}
@@ -301,7 +301,7 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
                   <label className="text-[10px] text-emerald-900/50 font-black block mb-1">WKTS</label>
                   <input 
                     id="away-wickets"
-                    title={`${opponentName} Wickets`}
+                    title={`${team2Name} Wickets`}
                     type="number" 
                     className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-black text-xl focus:border-emerald-500 outline-none"
                     value={summary.awayScore.wickets}
@@ -313,7 +313,7 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
                 <label className="text-[10px] text-emerald-900/50 font-black block mb-1">OVERS COMPLETED</label>
                 <input 
                   id="away-overs"
-                  title={`${opponentName} Overs`}
+                  title={`${team2Name} Overs`}
                   type="number"
                   step="0.1"
                   className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-bold text-base focus:border-emerald-500 outline-none max-w-[120px] mx-auto block"
@@ -331,8 +331,8 @@ export default function MatchSummaryModal({ match, homeTeamName, opponentName, o
             <label>TOSS WON BY</label>
             <select title="Toss Winner" value={summary.tossWinner || ''} onChange={(e) => setSummary({...summary, tossWinner: e.target.value})}>
               <option value="">Select Team</option>
-              <option value={team1Id}>{homeTeamName}</option>
-              <option value={team2Id}>{opponentName}</option>
+              <option value={team1Id}>{team1Name}</option>
+              <option value={team2Id}>{team2Name}</option>
             </select>
           </div>
           <div className="input-group">
