@@ -277,6 +277,9 @@ export interface ScheduledMatch {
   forceUpsert?: boolean;
   systemCommentary?: SystemCommentary[];
   targetScore?: number;
+  // Innings extras (read from flat DB columns)
+  innings1Extras?: { wides: number; noBalls: number; byes: number; legByes: number };
+  innings2Extras?: { wides: number; noBalls: number; byes: number; legByes: number };
 
   // Legacy Properties (Deprecated)
   homeTeamId?: string | null;

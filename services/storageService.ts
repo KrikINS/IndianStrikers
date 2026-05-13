@@ -109,6 +109,7 @@ export const getAppUsers = async (): Promise<AppUser[]> => {
     avatarUrl: u.avatar_url,
     playerId: u.player_id,
     canScore: u.can_score,
+    isFirstLogin: u.is_first_login,
     password: ''
   }));
 };
@@ -126,7 +127,8 @@ export const updateAppUser = async (id: string, user: Partial<AppUser>) => {
       name: user.name,
       avatar_url: user.avatarUrl,
       player_id: user.playerId,
-      can_score: user.canScore
+      can_score: user.canScore,
+      is_first_login: user.isFirstLogin
     })
   });
   return handleResponse(res);
@@ -365,6 +367,31 @@ const mapMatch = (m: any): ScheduledMatch => {
         };
     };
 
+    // DB uses legacy column names: home_team_xi / opponent_team_xi / home_team_id / is_home_batting_first
+    // The backend may also alias new names via joins — support both for resilience.
+    const team1XI = Array.isArray(m.home_team_xi) ? m.home_team_xi
+        : Array.isArray(m.team1_xi) ? m.team1_xi : [];
+    const team2XI = Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi
+        : Array.isArray(m.team2_xi) ? m.team2_xi : [];
+    const team1Id = m.home_team_id || m.team1_id || null;
+    const isTeam1BattingFirst = m.is_home_batting_first !== undefined
+        ? !!m.is_home_batting_first
+        : !!m.is_team1_batting_first;
+
+    // Score: DB stores final_score_home / final_score_away as INTEGER
+    // Prefer rich JSONB from scorecard innings over raw integers
+    const team1Score = normalizeScore(
+        m.team1_score,
+        isTeam1BattingFirst ? rawScorecard?.innings1 : rawScorecard?.innings2
+    );
+    const team2Score = normalizeScore(
+        m.team2_score,
+        isTeam1BattingFirst ? rawScorecard?.innings2 : rawScorecard?.innings1
+    );
+    // Backfill runs from legacy integer columns if scorecard not available
+    if (!team1Score.runs && m.final_score_home) team1Score.runs = Number(m.final_score_home);
+    if (!team2Score.runs && m.final_score_away) team2Score.runs = Number(m.final_score_away);
+
     return {
         id: m.id,
         date: m.date,
@@ -375,10 +402,10 @@ const mapMatch = (m: any): ScheduledMatch => {
         matchFormat: m.match_format,
         status: m.status,
         maxOvers: m.max_overs,
-        team1XI: Array.isArray(m.team1_xi) ? m.team1_xi : [],
-        team2XI: Array.isArray(m.team2_xi) ? m.team2_xi : [],
-        team1Score: normalizeScore(m.team1_score, m.is_team1_batting_first ? rawScorecard?.innings1 : rawScorecard?.innings2),
-        team2Score: normalizeScore(m.team2_score, m.is_team1_batting_first ? rawScorecard?.innings2 : rawScorecard?.innings1),
+        team1XI,
+        team2XI,
+        team1Score,
+        team2Score,
         scorecard: rawScorecard,
         resultNote: m.result_note,
         resultSummary: m.result_summary,
@@ -386,21 +413,21 @@ const mapMatch = (m: any): ScheduledMatch => {
         isLocked: !!m.is_locked,
         isCareerSynced: !!m.is_career_synced,
         isLiveScored: !!m.is_live_scored,
-        stage: m.stage || (m.tournament ? 'League' : 'League'),
+        stage: m.stage || 'League',
         venue: m.venue || m.ground_name || '',
         team2Name: (m.team2_name || m.opponent_name || 'OPPONENT').toUpperCase(),
         team2Logo: m.team2_logo || m.opponent_logo || '',
         team1Name: (() => {
-            const isLegacyStrikers = !m.team1_id ||
-                m.team1_id === '00000000-0000-0000-0000-000000000000' ||
-                m.team1_id === 'IND_STRIKERS';
+            const isLegacyStrikers = !team1Id ||
+                team1Id === '00000000-0000-0000-0000-000000000000' ||
+                team1Id === 'IND_STRIKERS';
             if (isLegacyStrikers && (!m.team1_name || m.team1_name === 'Team 1')) return 'INDIAN STRIKERS';
             return (m.team1_name || 'Team 1').toUpperCase();
         })(),
         team1Logo: (() => {
-            const isLegacyStrikers = !m.team1_id ||
-                m.team1_id === '00000000-0000-0000-0000-000000000000' ||
-                m.team1_id === 'IND_STRIKERS';
+            const isLegacyStrikers = !team1Id ||
+                team1Id === '00000000-0000-0000-0000-000000000000' ||
+                team1Id === 'IND_STRIKERS';
             if (isLegacyStrikers && (!m.team1_logo || m.team1_logo === '')) return '/INS LOGO.PNG';
             return m.team1_logo || '';
         })(),
@@ -409,12 +436,27 @@ const mapMatch = (m: any): ScheduledMatch => {
         tossWinnerId: m.toss_winner_id,
         tossChoice: m.toss_choice,
         tossDetails: m.toss_details,
-        team1Id: m.team1_id,
+        team1Id,
         isNeutral: !!m.is_neutral,
-        isTeam1BattingFirst: !!m.is_team1_batting_first,
+        isTeam1BattingFirst,
         isTest: !!m.is_test,
         lastUpdated: m.updated_at,
         matchResult: m.result_note || m.result_summary || null,
+        targetScore: m.target_score || undefined,
+        performers: Array.isArray(m.performers) ? m.performers : [],
+        // Extras per innings (mapped from flat DB columns)
+        innings1Extras: {
+            wides: m.innings1_wides || 0,
+            noBalls: m.innings1_no_balls || 0,
+            byes: m.innings1_byes || 0,
+            legByes: m.innings1_leg_byes || 0,
+        },
+        innings2Extras: {
+            wides: m.innings2_wides || 0,
+            noBalls: m.innings2_no_balls || 0,
+            byes: m.innings2_byes || 0,
+            legByes: m.innings2_leg_byes || 0,
+        },
     };
 };
 
@@ -435,43 +477,65 @@ const translateToDB = (match: Partial<ScheduledMatch>) => {
   const dbMatch: any = {};
   if (match.id !== undefined) dbMatch.id = match.id;
   if (match.date !== undefined) dbMatch.date = match.date;
-  // Symmetrical → DB column mapping
-  if (match.team2Id !== undefined) dbMatch.team2_id = match.team2Id;
+
+  // --- Core match fields ---
+  if (match.team2Id !== undefined) dbMatch.opponent_id = match.team2Id;       // DB: opponent_id
   if (match.groundId !== undefined) dbMatch.ground_id = match.groundId;
   if (match.tournament !== undefined) dbMatch.tournament = match.tournament;
   if (match.tournamentId !== undefined) dbMatch.tournament_id = match.tournamentId;
   if (match.matchFormat !== undefined) dbMatch.match_format = match.matchFormat;
   if (match.status !== undefined) dbMatch.status = match.status;
   if (match.maxOvers !== undefined) dbMatch.max_overs = match.maxOvers;
-  if (match.team1XI !== undefined) dbMatch.team1_xi = match.team1XI;
-  if (match.team2XI !== undefined) dbMatch.team2_xi = match.team2XI;
+  if (match.stage !== undefined) dbMatch.stage = match.stage;
+  if (match.venue !== undefined) dbMatch.venue = match.venue;
+  if (match.isNeutral !== undefined) dbMatch.is_neutral = match.isNeutral;
+  if (match.isTest !== undefined) dbMatch.is_test = match.isTest;
+
+  // --- Playing XI: DB uses home_team_xi / opponent_team_xi ---
+  if (match.team1XI !== undefined) dbMatch.home_team_xi = match.team1XI;          // DB: home_team_xi
+  if (match.team2XI !== undefined) dbMatch.opponent_team_xi = match.team2XI;      // DB: opponent_team_xi
+
+  // --- Team identity: DB uses home_team_id ---
+  if (match.team1Id !== undefined) dbMatch.home_team_id = match.team1Id;          // DB: home_team_id
+  // team1_name / team1_logo / team2_name / team2_logo don't exist as columns;
+  // backend resolves via JOIN with opponents table. Store in scorecard metadata only.
+
+  // --- Batting order: DB uses is_home_batting_first ---
+  if (match.isTeam1BattingFirst !== undefined) dbMatch.is_home_batting_first = match.isTeam1BattingFirst; // DB: is_home_batting_first
+
+  // --- Flags ---
   if (match.isLocked !== undefined) dbMatch.is_locked = match.isLocked;
   if (match.isCareerSynced !== undefined) dbMatch.is_career_synced = match.isCareerSynced;
   if (match.isLiveScored !== undefined) dbMatch.is_live_scored = match.isLiveScored;
-  if (match.isTeam1BattingFirst !== undefined) dbMatch.is_team1_batting_first = match.isTeam1BattingFirst;
-  if (match.team1Id !== undefined) dbMatch.team1_id = match.team1Id;
-  if (match.team1Name !== undefined) dbMatch.team1_name = match.team1Name;
-  if (match.team1Logo !== undefined) dbMatch.team1_logo = match.team1Logo;
-  if (match.isNeutral !== undefined) dbMatch.is_neutral = match.isNeutral;
-  if (match.isTest !== undefined) dbMatch.is_test = match.isTest;
+
+  // --- Toss ---
   if (match.tossWinnerId !== undefined) dbMatch.toss_winner_id = match.tossWinnerId;
   if (match.tossChoice !== undefined) dbMatch.toss_choice = match.tossChoice;
   if (match.tossDetails !== undefined) dbMatch.toss_details = match.tossDetails;
+
+  // --- Results ---
   if (match.resultNote !== undefined) dbMatch.result_note = match.resultNote;
   if (match.resultSummary !== undefined) dbMatch.result_summary = match.resultSummary;
   if (match.resultType !== undefined) dbMatch.result_type = match.resultType;
+
+  // --- Scores: DB uses final_score_home / final_score_away (INTEGER runs only) ---
+  // Also write full scorecard JSONB for rich data
+  if (match.team1Score !== undefined) dbMatch.final_score_home = match.team1Score.runs ?? 0; // DB: final_score_home (INTEGER)
+  if (match.team2Score !== undefined) dbMatch.final_score_away = match.team2Score.runs ?? 0; // DB: final_score_away (INTEGER)
+  if (match.scorecard !== undefined) dbMatch.scorecard = match.scorecard;                    // DB: scorecard (JSONB)
+  if (match.targetScore !== undefined) dbMatch.target_score = match.targetScore;
+
+  // --- Live data ---
   if (match.liveData !== undefined) dbMatch.live_data = match.liveData;
   if (match.liveState !== undefined) dbMatch.live_state = match.liveState;
+
+  // --- Performers (JSONB) ---
+  if (match.performers !== undefined) dbMatch.performers = match.performers;
+
+  // --- Metadata ---
   if (match.lastUpdated !== undefined) dbMatch.updated_at = match.lastUpdated;
   if (match.forceUpsert !== undefined) dbMatch.force_upsert = match.forceUpsert;
-  if (match.venue !== undefined) dbMatch.venue = match.venue;
-  if (match.stage !== undefined) dbMatch.stage = match.stage;
-  if (match.team1Score !== undefined) dbMatch.team1_score = match.team1Score;
-  if (match.team2Score !== undefined) dbMatch.team2_score = match.team2Score;
-  if (match.team2Name !== undefined) dbMatch.team2_name = match.team2Name;
-  if (match.team2Logo !== undefined) dbMatch.team2_logo = match.team2Logo;
-  if (match.targetScore !== undefined) dbMatch.target_score = match.targetScore;
-  
+
   return dbMatch;
 };
 
