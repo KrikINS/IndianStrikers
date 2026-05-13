@@ -498,7 +498,17 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const ld = matchMeta.liveData as any;
       const localIsEmpty = !store.innings1;
 
-      if (!localIsEmpty) return; // If local state exists, we assume master role immediately
+      // RACE CONDITION GUARD: Never overwrite local innings that are ahead of or equal to cloud.
+      // This prevents syncWithCloud() (called after every ball) from refreshing matchMeta
+      // and triggering this effect with old completed-match data (isFinished:true).
+      const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
+      const cloudBalls = (ld?.innings1?.totalBalls || 0) + (ld?.innings2?.totalBalls || 0);
+
+      if (!localIsEmpty && localBalls >= cloudBalls) {
+        // Local is authoritative — do not clobber
+        hasInitialRehydrated.current = true;
+        return;
+      }
 
       if (ld && ld.innings1) {
         console.log("[Scorer] Sync-on-Mount Rehydration: Loading initial state from Cloud...");
@@ -534,6 +544,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     matchMeta?.id,
     matchMeta?.status
   ]);
+
 
   // Real-Time Polling: Check for cloud updates every 30 seconds for seamless handover
   useEffect(() => {
@@ -664,7 +675,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       (store.currentInnings === 2 && currentInnings.totalRuns > (store.innings1?.totalRuns || 0))
     ))
   );
-  const isMatchComplete = store.isFinished;
+  // HARDENED: isMatchComplete requires BOTH isFinished flag AND actual recorded balls.
+  // This prevents stale localStorage isFinished:true or async-fetch race conditions
+  // from spuriously showing the PERFORMER SPOTLIGHT after ball 1 (or at match start).
+  const totalRecordedBalls = (store.innings1?.history?.length || 0) + (store.innings2?.history?.length || 0);
+  const isMatchComplete = store.isFinished && totalRecordedBalls > 0;
   const isInningsBreak = store.currentInnings === 1 && isBattingFinishing && !store.isFinished;
 
 
