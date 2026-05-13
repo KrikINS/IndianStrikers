@@ -6,7 +6,7 @@ import { useOpponentStore } from './opponentStore';
 import { useTournamentStore } from './tournamentStore';
 
 // Define the shape of our unified store state
-import { UnifiedMatchStore } from './matchStore';
+import { UnifiedMatchStore } from '../types';
 
 import { OpponentStore } from './opponentStore';
 import { TournamentStore } from './tournamentStore';

@@ -11,7 +11,7 @@ import {
   Users,
   User
 } from 'lucide-react';
-import { Player, ScheduledMatch } from '../types';
+import { Player, ScheduledMatch, MatchSetupData } from '../types';
 import { toast } from 'react-hot-toast';
 
 // --- Styled Components (Migrated from ScorerDashboard) ---
@@ -305,18 +305,7 @@ const CoinFace = styled.div<{ $side: 'front' | 'back' }>`
   transform: ${props => props.$side === 'back' ? 'rotateY(180deg)' : 'none'};
 `;
 
-// --- Interfaces ---
-
-export interface MatchSetupData {
-  tossWinner: 'HOME' | 'AWAY';
-  tossChoice: 'Bat' | 'Bowl';
-  maxOvers: number;
-  team1XI: string[];
-  team2XI: string[];
-  strikerId: string;
-  nonStrikerId: string;
-  bowlerId: string;
-}
+// MatchSetupData is defined in ../types.ts (single source of truth)
 
 interface MatchSetupModalProps {
   team1Id: string;

@@ -485,3 +485,166 @@ export interface LeagueStanding {
   tournament_id: string;
   group_id?: string;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MATCH SETUP
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface MatchSetupData {
+  tossWinner: 'HOME' | 'AWAY';
+  tossChoice: 'Bat' | 'Bowl';
+  maxOvers: number;
+  team1XI: string[];
+  team2XI: string[];
+  strikerId: string;
+  nonStrikerId: string;
+  bowlerId: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIVE SCORER STATE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface LivePlayer {
+  id: string;
+  name: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  status: 'batting' | 'out' | 'dnb' | 'retired_hurt';
+  outHow?: string;
+  index?: number;
+  fifty_notified?: boolean;
+  hundred_notified?: boolean;
+}
+
+export interface LiveBowler {
+  id: string;
+  name: string;
+  overs: number;
+  maidens: number;
+  runs: number;
+  wickets: number;
+  index?: number;
+}
+
+export interface InningsState {
+  battingTeamId: string;
+  bowlingTeamId: string;
+  totalRuns: number;
+  wickets: number;
+  totalBalls: number;
+  extras: {
+    wides: number;
+    noBalls: number;
+    byes: number;
+    legByes: number;
+    penalty: number;
+  };
+  battingStats: Record<string, LivePlayer>;
+  bowlingStats: Record<string, LiveBowler>;
+  fallOfWickets: string[];
+  history: BallRecord[];
+  isDeclared?: boolean;
+  isQuickFinished?: boolean;
+}
+
+export interface MatchScorerState {
+  matchId: string | null;
+  matchType: 'T20' | 'One Day';
+  tournament: string;
+  ground: string;
+  team2Name: string;
+  team1Name: string | null;
+  maxOvers: number;
+  toss: {
+    winnerId: string | null;
+    choice: 'Bat' | 'Bowl' | null;
+  };
+  innings1: InningsState | null;
+  innings2: InningsState | null;
+  currentInnings: 1 | 2;
+  strikerId: string | null;
+  nonStrikerId: string | null;
+  currentBowlerId: string | null;
+  isFreeHit: boolean;
+  isFinished: boolean;
+  team1XI: string[];
+  team2XI: string[];
+  team1Logo?: string;
+  team2Logo?: string;
+  historyStack: any[];
+  manOfTheMatch: string | null;
+  targetScore?: number;
+  useWagonWheel: boolean;
+  isWaitingForBowler: boolean;
+  wagonWheelQuickSave: boolean;
+  pendingMilestone: { type: string; player: string; subText?: string } | null;
+  partnershipNotified: number[];
+  pendingIntroduction: string | null;
+  offlineQueue: BallRecord[];
+  systemCommentary: SystemCommentary[];
+  currentUser: AppUser | null;
+  squadPlayers: Player[];
+  opponentPlayers: Player[];
+  loading: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export interface UnifiedMatchStore extends MatchScorerState {
+  // Match Management State
+  matches: ScheduledMatch[];
+
+  // Match Management Actions
+  setMatches: (matches: ScheduledMatch[]) => void;
+  addMatch: (match: Omit<ScheduledMatch, 'id'>) => Promise<string>;
+  updateMatch: (id: string, updates: Partial<ScheduledMatch>) => Promise<void>;
+  deleteMatch: (id: string) => Promise<void>;
+  setPlayingXI: (id: string, teamType: 'team1' | 'team2', playerIds: string[]) => Promise<void>;
+  updateMatchXI: (id: string, teamType: 'team1' | 'team2', playerIds: string[]) => Promise<void>;
+  updateMatchStatus: (id: string, status: MatchStatus) => Promise<void>;
+  finalizeMatch: (id: string, matchData: any, updatedPlayers: any[]) => Promise<void>;
+  syncWithCloud: () => Promise<void>;
+  getSortedMatches: () => ScheduledMatch[];
+  resetZombieMatches: () => void;
+  purgeTestData: () => Promise<void>;
+  wipeLocalMatches: () => void;
+
+  // Live Scorer Actions
+  initializeMatch: (data: any) => void;
+  updateMatchSettings: (data: Partial<MatchScorerState>) => void;
+  setToss: (winnerId: string | null, choice: 'Bat' | 'Bowl' | null) => void;
+  startInnings: (num: 1 | 2, batId: string, bowlId: string, strId: string, nStrId: string, bwlId: string) => void;
+  recordBall: (payload: any) => Promise<void>;
+  recordPenalty: (team: 'batting' | 'bowling', runs: number) => void;
+  undoLastBall: () => void;
+  switchStriker: () => void;
+  setNewBowler: (id: string, name?: string) => void;
+  changeBowler: (id: string) => void;
+  retireBatter: (id: string) => void;
+  updateTargetScore: (score: number) => void;
+  resetMatch: (id: string) => Promise<void>;
+  clearInnings: () => void;
+  declareInnings: () => void;
+  quickFinishInnings: (runs: number, wickets: number, overs: number) => void;
+  hardReset: () => void;
+  resetStore: () => void;
+  getOvers: (balls: number) => string;
+  syncOfflineQueue: () => Promise<void>;
+  enqueueOfflineBall: (payload: any) => void;
+  clearOfflineQueue: () => void;
+  setMilestoneNotified: (batterId: string, type: 'fifty' | 'hundred') => void;
+  prepareSyncPayload: () => any;
+  syncToDatabase: () => Promise<void>;
+  addSystemCommentary: (text: string) => void;
+
+  // Player Management Actions
+  fetchPlayers: () => Promise<void>;
+  addPlayer: (player: Player) => Promise<void>;
+  updatePlayer: (player: Player) => Promise<void>;
+  deletePlayer: (id: string) => Promise<void>;
+  handleToggleLock: (matchId: string, currentStatus: boolean) => Promise<void>;
+  setCurrentUser: (user: AppUser | null) => void;
+}

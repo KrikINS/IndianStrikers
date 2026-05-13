@@ -55,12 +55,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { UniversalScorecard } from './UniversalScorecard';
 import _ from 'lodash';
 import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
-import { Player, ScheduledMatch, Ball, CommentaryTemplate, CommentaryEventType, MatchStatus } from '../types';
+import { Player, ScheduledMatch, Ball, CommentaryTemplate, CommentaryEventType, MatchStatus, MatchSetupData } from '../types';
 import { toast } from 'react-hot-toast';
 import { toPng, toBlob } from 'html-to-image';
 import { useCommentaryStore } from '../store/commentaryStore';
 import { SyncStatus } from './common/SyncStatus';
-import { MatchSetupModal, MatchSetupData } from './MatchSetupModal';
+import { MatchSetupModal } from './MatchSetupModal';
 import { WagonWheelModal } from './WagonWheelModal';
 
 const DashboardContainer = styled.div`
