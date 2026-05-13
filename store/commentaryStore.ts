@@ -1,6 +1,16 @@
 import { create } from 'zustand';
 import { CommentaryTemplate, CommentaryEventType } from '../types';
 
+// Translate raw snake_case API response to camelCase CommentaryTemplate
+const mapTemplate = (raw: any): CommentaryTemplate => ({
+    id: raw.id,
+    eventType: raw.event_type ?? raw.eventType,
+    text: raw.text,
+    wagonWheelZone: raw.wagon_wheel_zone ?? raw.wagonWheelZone,
+    isActive: raw.is_active ?? raw.isActive ?? true,
+    createdAt: raw.created_at ?? raw.createdAt,
+});
+
 interface CommentaryStore {
     templates: CommentaryTemplate[];
     lastUsedIds: Record<string, string>; // category -> template ID
@@ -17,8 +27,9 @@ export const useCommentaryStore = create<CommentaryStore>((set, get) => ({
             const res = await fetch(`${apiUrl}/commentary/templates`);
             if (res.ok) {
                 const data = await res.json();
-                // Filter only active templates
-                set({ templates: data.filter((t: CommentaryTemplate) => t.is_active) });
+                // Map snake_case DB response → camelCase, then filter only active templates
+                const mapped: CommentaryTemplate[] = (data || []).map(mapTemplate);
+                set({ templates: mapped.filter(t => t.isActive) });
             }
         } catch (error) {
             console.error("Failed to fetch commentary templates:", error);
@@ -28,7 +39,7 @@ export const useCommentaryStore = create<CommentaryStore>((set, get) => ({
         const { templates, lastUsedIds } = get();
         
         // Find templates for the specific category
-        let available = templates.filter(t => t.event_type === category);
+        let available = templates.filter(t => t.eventType === category);
         
         if (available.length === 0) {
             return ""; // Fallback
@@ -53,3 +64,4 @@ export const useCommentaryStore = create<CommentaryStore>((set, get) => ({
         return picked.text;
     }
 }));
+
