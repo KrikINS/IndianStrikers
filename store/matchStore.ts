@@ -755,7 +755,8 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     updateTargetScore: (score) => set({ targetScore: score }),
     resetMatch: async (id) => {
         const state = get();
-        // Reset local state but keep essential match metadata
+
+        // 1. Reset Zustand in-memory scoring state (keep match metadata so Setup modal has context)
         set({
             ...INITIAL_SCORER_STATE,
             matchId: id,
@@ -774,16 +775,12 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             currentUser: state.currentUser
         });
 
-        // Update match status to scheduled in DB
-        await get().updateMatchStatus(id, 'upcoming');
+        // 2. Single atomic call: NULLs scorecard + score cols + extras, zeros toss/result,
+        //    AND deletes player_match_stats rows (prevents double-counting on re-finalize)
+        await api.resetMatchOnServer(id);
 
-        // Prepare and sync a blank payload to the database
-        const updatedState = get();
-        await api.updateMatch(id, {
-            liveData: updatedState.prepareSyncPayload(),
-            lastUpdated: new Date().toISOString(),
-            forceUpsert: true
-        });
+        // 3. Refresh the local matches[] list so MatchCenterTile shows clean state immediately
+        await get().syncWithCloud();
     },
     clearInnings: () => set(INITIAL_SCORER_STATE),
     declareInnings: () => {

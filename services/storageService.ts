@@ -576,6 +576,14 @@ export const deleteMatch = async (id: string) => {
   return handleResponse(res);
 };
 
+export const resetMatchOnServer = async (id: string) => {
+  const res = await fetch(`${API_URL}/matches/${id}/reset`, {
+    method: 'POST',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+};
+
 
 // OPPONENTS
 export const getOpponents = async (): Promise<OpponentTeam[]> => {

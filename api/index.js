@@ -743,6 +743,60 @@ app.delete('/api/matches/:matchId/stats', authGuard(['admin', 'member']), async 
   res.json({ ok: true });
 });
 
+// RESET MATCH — atomically wipes all scoring/result data and reverts to 'upcoming'
+app.post('/api/matches/:id/reset', authGuard(['admin', 'member']), async (req, res) => {
+  const { id } = req.params;
+  console.log(`[POST /api/matches/${id}/reset] Initiating full match reset by ${req.user?.username}`);
+  try {
+    // 1. Check lock — a locked match cannot be reset unless explicitly unlocked first
+    const { data: match } = await db.getOne('SELECT is_locked FROM matches WHERE id = $1', [id]);
+    if (match?.is_locked) {
+      return res.status(403).json({ error: 'This match is LOCKED. Unlock it before resetting.' });
+    }
+
+    // 2. Atomically zero / NULL all scoring, result, and toss data
+    const { error: resetError } = await db.query(`
+      UPDATE matches SET
+        status              = 'upcoming',
+        scorecard           = NULL,
+        live_data           = NULL,
+        live_state          = NULL,
+        final_score_home    = NULL,
+        final_score_away    = NULL,
+        total_runs          = NULL,
+        total_wickets       = NULL,
+        total_balls         = NULL,
+        innings1_wides      = 0,
+        innings1_no_balls   = 0,
+        innings1_byes       = 0,
+        innings1_leg_byes   = 0,
+        innings2_wides      = 0,
+        innings2_no_balls   = 0,
+        innings2_byes       = 0,
+        innings2_leg_byes   = 0,
+        toss_winner_id      = NULL,
+        toss_choice         = NULL,
+        result_summary      = NULL,
+        result_note         = NULL,
+        result_type         = NULL,
+        is_career_synced    = FALSE,
+        updated_at          = NOW()
+      WHERE id = $1
+    `, [id]);
+    if (resetError) throw resetError;
+
+    // 3. Delete per-match player stats to prevent double-counting on re-finalization
+    await db.query('DELETE FROM player_match_stats WHERE match_id = $1', [id]);
+
+    console.log(`[POST /api/matches/${id}/reset] ✅ Match reset complete. player_match_stats cleared.`);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(`[POST /api/matches/${id}/reset] ❌ Error:`, e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 // FINALIZE MATCH (Update results and player stats)
 app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req, res) => {
   const { id } = req.params;

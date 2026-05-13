@@ -1381,15 +1381,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   };
 
   const handleResetMatch = async () => {
-    if (window.confirm("CRITICAL: Are you SURE you want to completely reset this match? All live data, innings, and scores will be permanently deleted.")) {
+    if (window.confirm("CRITICAL: Are you SURE you want to completely reset this match? All live data, innings, scores, and finalized stats will be permanently deleted.")) {
       if (activeMatchId) {
         try {
+          // store.resetMatch() handles all 3 steps atomically:
+          // 1) Clears Zustand state  2) POSTs /reset on server (NULLs scorecard + score cols,
+          //    deletes player_match_stats)  3) syncWithCloud() to refresh match list
           await store.resetMatch(activeMatchId);
           toast.success("Match reset successfully");
           setShowSettingsDrawer(false);
           setShowSetupModal(true);
-          // Set step back to toss for a fresh start
-          // MatchSetupModal will pick this up on its next render
         } catch (err) {
           console.error("[Scorer] Reset failed:", err);
           toast.error("Failed to reset match");
