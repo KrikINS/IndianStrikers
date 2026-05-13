@@ -1663,7 +1663,7 @@ app.get('/api/players/:id/stats', async (req, res) => {
                 pms.wides, pms.no_balls
              FROM matches m
              LEFT JOIN tournaments t ON m.tournament_id = t.id
-             LEFT JOIN opponents o ON m.opponent_id = o.id
+             LEFT JOIN opponents o ON m.team2_id = o.id
              LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1::BIGINT)
              WHERE (
                 pms.player_id = $1::BIGINT
