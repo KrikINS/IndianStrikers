@@ -399,8 +399,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     const initFromMeta = (meta: any) => {
       if (!meta) return;
 
-      const isActuallyLive = meta.status === 'live';
-      console.log(`[Scorer] Sync Check: Cloud Total Balls: ${(meta.liveData?.innings1?.totalBalls || 0) + (meta.liveData?.innings2?.totalBalls || 0)} | Local Total Balls: ${(store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)}`);
+      // RACE CONDITION GUARD: If the local store is already actively scoring
+      // (innings started, balls recorded), do NOT overwrite it with cloud data.
+      // This prevents the async deep-fetch from clobbering a freshly started innings
+      // with the old completed liveData blob (which contains isFinished: true).
+      const localBalls = (store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0);
+      const cloudBalls = (meta.liveData?.innings1?.totalBalls || 0) + (meta.liveData?.innings2?.totalBalls || 0);
+      console.log(`[Scorer] Sync Check — Cloud Balls: ${cloudBalls} | Local Balls: ${localBalls}`);
+
+      if (localBalls > 0 && cloudBalls <= localBalls) {
+        // Local is equal or ahead of cloud: already scoring, skip clobber
+        console.log('[Scorer] Local innings active and ahead — skipping cloud overwrite.');
+        return;
+      }
 
       // PERMANENT V5 ABSOLUTE RESOLUTION: Use the Failsafe Helpers
       const resolvedTournament = resolveTournament(meta.tournamentId, meta.tournament);
@@ -426,8 +437,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
       // AUTO-SETUP: For upcoming matches (fresh or reset), open the setup modal
       // immediately instead of waiting for the 4-second timeout spinner.
+      // Guard: only open if we haven't already started scoring locally.
       const hasLiveInnings = meta.liveData?.innings1;
-      if ((meta.status === 'upcoming' || (!hasLiveInnings && meta.status !== 'completed')) && !meta.isLocked) {
+      if (
+        (meta.status === 'upcoming' || (!hasLiveInnings && meta.status !== 'completed')) &&
+        !meta.isLocked &&
+        localBalls === 0
+      ) {
         console.log(`[Scorer] Upcoming/fresh match detected — auto-opening setup modal.`);
         setShowSetupModal(true);
       }
@@ -444,6 +460,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       }).catch(console.error);
     });
   }, [activeMatchId, grounds, teamLogo]);
+
 
   // Trigger Milestone Splash Screen based on store events
   useEffect(() => {
