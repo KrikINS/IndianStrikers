@@ -917,7 +917,7 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
     const { error: matchError } = await db.query(
       `INSERT INTO matches (
         id, status, is_career_synced, updated_at, 
-        scorecard, final_score_team1, final_score_team2, 
+        scorecard, team1_score, team2_score, 
         total_runs, total_wickets, total_balls,
         result_summary, result_note, toss_winner_id, toss_choice, max_overs,
         innings1_wides, innings1_no_balls, innings1_byes, innings1_leg_byes,
@@ -929,8 +929,8 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
          is_career_synced=EXCLUDED.is_career_synced, 
          updated_at=EXCLUDED.updated_at,
          scorecard=EXCLUDED.scorecard,
-         final_score_team1=EXCLUDED.final_score_team1,
-         final_score_team2=EXCLUDED.final_score_team2,
+         team1_score=EXCLUDED.team1_score,
+         team2_score=EXCLUDED.team2_score,
          total_runs=EXCLUDED.total_runs,
          total_wickets=EXCLUDED.total_wickets,
          total_balls=EXCLUDED.total_balls,

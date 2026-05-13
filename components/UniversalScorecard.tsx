@@ -187,8 +187,9 @@ const ScrollContent = styled.div`
 
 const MatchHeaderCard = styled.div`
   padding: 8px 10px;
-  background-image: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)), url('/assets/cricket_ground_bg.png');
-  background-size: cover;
+  background-image: linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9)), url('/assets/SACF_Logo_new.PNG');
+  background-size: contain;
+  background-repeat: no-repeat;
   background-position: center;
   backdrop-filter: blur(10px);
   border-radius: 12px;
@@ -1471,13 +1472,14 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     const hId = String(normalizedMatch.team1Id);
     const oId = String(normalizedMatch.team2Id);
     const targetId = String(teamId);
+    const lowerTargetId = targetId.toLowerCase();
 
     if (targetId === hId) return normalizedMatch.team1Name;
     if (targetId === oId) return normalizedMatch.team2Name;
 
     // Fallback for special identifiers
-    if (targetId === 'team1' || targetId === 'home' || targetId === '00000000-0000-0000-0000-000000000000') return normalizedMatch.team1Name;
-    if (targetId === 'away' || targetId === 'opponent') return normalizedMatch.team2Name;
+    if (lowerTargetId === 'team1' || lowerTargetId === 'home' || targetId === '00000000-0000-0000-0000-000000000000') return normalizedMatch.team1Name;
+    if (lowerTargetId === 'away' || lowerTargetId === 'opponent') return normalizedMatch.team2Name;
 
     return normalizedMatch.team2Name; // Default to team2 if no match
   };
@@ -1486,6 +1488,20 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     const targetId = String(teamId);
     if (targetId === String(normalizedMatch.team1Id)) return normalizedMatch.team1Logo;
     return normalizedMatch.team2Logo;
+  };
+
+  const isTeam1 = (teamId: string | undefined | null) => {
+    if (!teamId) return false;
+    const targetId = String(teamId);
+    const lowerTargetId = targetId.toLowerCase();
+    return targetId === String(normalizedMatch.team1Id) || lowerTargetId === 'team1' || lowerTargetId === 'home' || targetId === '00000000-0000-0000-0000-000000000000';
+  };
+
+  const isTeam2 = (teamId: string | undefined | null) => {
+    if (!teamId) return false;
+    const targetId = String(teamId);
+    const lowerTargetId = targetId.toLowerCase();
+    return targetId === String(normalizedMatch.team2Id) || lowerTargetId === 'away' || lowerTargetId === 'opponent';
   };
 
   const renderMatchInfo = () => {
@@ -1997,24 +2013,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
         <ScrollContent ref={scrollContentRef}>
           <MatchHeaderCard>
             <div style={{ textAlign: 'center', marginBottom: 12 }}>
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                color: '#10B981',
-                padding: '4px 12px',
-                borderRadius: '20px',
-                fontSize: '0.6rem',
-                fontWeight: 900,
-                textTransform: 'uppercase',
-                letterSpacing: 1.5,
-                marginBottom: 12
-              }}>
-                <CheckCircle2 size={10} />
-                System Sync: Active
-              </div>
+
               <TournamentLabel>{initialMatch.tournament || 'Match Details'}</TournamentLabel>
               <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 2 }}>
                 {initialMatch.stage ? `${initialMatch.stage} MATCH` : 'MATCH DETAILS'}
@@ -2033,7 +2032,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 <TeamInfo>
                   <TeamNameLabel>{normalizedMatch.team1Name}</TeamNameLabel>
                   <ScoreValue>
-                    {normalizedData.innings1?.battingTeamId === normalizedMatch.team1Id ? (
+                    {isTeam1(normalizedData.innings1?.battingTeamId) ? (
                       <>
                         {normalizedData.innings1?.totalRuns}
                         <span>/{normalizedData.innings1?.wickets}</span>
@@ -2041,7 +2040,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           ({formatOvers(normalizedData.innings1?.totalBalls || 0)})
                         </div>
                       </>
-                    ) : normalizedData.innings2?.battingTeamId === normalizedMatch.team1Id ? (
+                    ) : isTeam1(normalizedData.innings2?.battingTeamId) ? (
                       <>
                         {normalizedData.innings2?.totalRuns}
                         <span>/{normalizedData.innings2?.wickets}</span>
@@ -2067,7 +2066,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                 <TeamInfo $align="right">
                   <TeamNameLabel>{normalizedMatch.team2Name}</TeamNameLabel>
                   <ScoreValue>
-                    {normalizedData.innings1?.battingTeamId === normalizedMatch.team2Id ? (
+                    {isTeam2(normalizedData.innings1?.battingTeamId) ? (
                       <>
                         {normalizedData.innings1?.totalRuns}
                         <span>/{normalizedData.innings1?.wickets}</span>
@@ -2075,7 +2074,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
                           ({formatOvers(normalizedData.innings1?.totalBalls || 0)})
                         </div>
                       </>
-                    ) : normalizedData.innings2?.battingTeamId === normalizedMatch.team2Id ? (
+                    ) : isTeam2(normalizedData.innings2?.battingTeamId) ? (
                       <>
                         {normalizedData.innings2?.totalRuns}
                         <span>/{normalizedData.innings2?.wickets}</span>
