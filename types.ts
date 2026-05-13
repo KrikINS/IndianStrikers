@@ -276,6 +276,7 @@ export interface ScheduledMatch {
   matchResult?: string | null;
   forceUpsert?: boolean;
   systemCommentary?: SystemCommentary[];
+  targetScore?: number;
 
   // Legacy Properties (Deprecated)
   homeTeamId?: string | null;
