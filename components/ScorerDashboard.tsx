@@ -423,6 +423,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         team2Logo: resolvedTeam2Logo,
         liveData: meta.liveData
       });
+
+      // AUTO-SETUP: For upcoming matches (fresh or reset), open the setup modal
+      // immediately instead of waiting for the 4-second timeout spinner.
+      const hasLiveInnings = meta.liveData?.innings1;
+      if ((meta.status === 'upcoming' || (!hasLiveInnings && meta.status !== 'completed')) && !meta.isLocked) {
+        console.log(`[Scorer] Upcoming/fresh match detected — auto-opening setup modal.`);
+        setShowSetupModal(true);
+      }
     };
 
     // ALWAYS Deep Fetch on mount/activeMatchId change to ensure we have the liveData blob
@@ -1536,23 +1544,28 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       // 1st Innings: Based on toss
       const isTeam1Batting = (data.tossWinner === 'HOME' && data.tossChoice === 'Bat') || 
                              (data.tossWinner === 'AWAY' && data.tossChoice === 'Bowl');
-      batId = isTeam1Batting ? matchMeta?.team1Id : matchMeta?.team2Id;
-      bowlId = isTeam1Batting ? matchMeta?.team2Id : matchMeta?.team1Id;
+      // Multi-source fallback: matchMeta IDs → 'HOME'/'AWAY' semantic fallback
+      // This ensures startInnings is never blocked by a momentarily undefined matchMeta
+      batId = isTeam1Batting
+        ? (matchMeta?.team1Id || 'HOME')
+        : (matchMeta?.team2Id || matchMeta?.opponentId || 'AWAY');
+      bowlId = isTeam1Batting
+        ? (matchMeta?.team2Id || matchMeta?.opponentId || 'AWAY')
+        : (matchMeta?.team1Id || 'HOME');
     }
     
-    if (batId && bowlId) {
-      store.startInnings(
-        store.currentInnings === null ? 1 : 2,
-        batId,
-        bowlId,
-        data.strikerId,
-        data.nonStrikerId,
-        data.bowlerId
-      );
-      // LOOP BREAKER RESET: Now that the store has advanced to innings 2,
-      // disarm the guard so the innings-finish effect can run normally for innings 2.
-      isTransitioningToSecondInnings.current = false;
-    }
+    // batId and bowlId are always defined now (at minimum 'HOME'/'AWAY')
+    store.startInnings(
+      store.currentInnings === null ? 1 : 2,
+      batId,
+      bowlId,
+      data.strikerId,
+      data.nonStrikerId,
+      data.bowlerId
+    );
+    // LOOP BREAKER RESET: Now that the store has advanced to innings 2,
+    // disarm the guard so the innings-finish effect can run normally for innings 2.
+    isTransitioningToSecondInnings.current = false;
     
     setShowSetupModal(false);
   };
