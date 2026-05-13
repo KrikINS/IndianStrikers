@@ -232,8 +232,8 @@ export interface OpponentTeam {
 export interface ScheduledMatch {
   id: string;
   isNeutral?: boolean;
-  team1Id?: string | null;    // formerly homeTeamId
-  team2Id: string | null;     // formerly opponentId
+  team1Id?: string | null;    // Slot 1
+  team2Id: string | null;     // Slot 2
   date: string;
   groundId: string | null;
   tournament: string;
@@ -262,10 +262,10 @@ export interface ScheduledMatch {
   isCareerSynced?: boolean;
   isTest?: boolean;
   matchFormat?: 'T20' | 'One Day';
-  team2Name?: string;            // formerly opponentName
-  team1Name?: string;            // formerly homeTeamName
-  team1Logo?: string;            // formerly homeLogo
-  team2Logo?: string;            // formerly opponentLogo
+  team2Name?: string;
+  team1Name?: string;
+  team1Logo?: string;
+  team2Logo?: string;
   performers?: Performer[];
   title?: string;
   time?: string;
@@ -281,18 +281,7 @@ export interface ScheduledMatch {
   innings1Extras?: { wides: number; noBalls: number; byes: number; legByes: number };
   innings2Extras?: { wides: number; noBalls: number; byes: number; legByes: number };
 
-  // Legacy Properties (Deprecated)
-  homeTeamId?: string | null;
-  opponentId?: string | null;
-  homeTeamXI?: string[];
-  opponentTeamXI?: string[];
-  finalScoreHome?: { runs: number; wickets: number; overs: number };
-  finalScoreAway?: { runs: number; wickets: number; overs: number };
-  opponentName?: string;
-  homeTeamName?: string;
-  homeLogo?: string;
-  opponentLogo?: string;
-  isHomeBattingFirst?: boolean;
+
 }
 
 export interface FieldPosition {
@@ -371,7 +360,7 @@ export interface TMTournament {
   name: string;
   format: string; // T20, One Day, etc.
   type: 'League' | 'Groups';
-  is_home_away: boolean;
+  is_double_round_robin: boolean;
   status: 'upcoming' | 'active' | 'completed';
   created_at?: string;
   updated_at?: string;
@@ -432,7 +421,7 @@ export interface LeagueTournament {
   year: number;
   format: 'T20' | 'One Day' | 'T10';
   type: 'League' | 'Groups';
-  is_home_away: boolean;
+  is_double_round_robin: boolean;
   status: 'upcoming' | 'ongoing' | 'completed';
   logo_url?: string;
   created_at?: string;
@@ -491,7 +480,7 @@ export interface LeagueStanding {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface MatchSetupData {
-  tossWinner: 'HOME' | 'AWAY';
+  tossWinner: 'TEAM1' | 'TEAM2';
   tossChoice: 'Bat' | 'Bowl';
   maxOvers: number;
   team1XI: string[];

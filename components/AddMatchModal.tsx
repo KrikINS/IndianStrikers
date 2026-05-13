@@ -32,7 +32,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         status: 'upcoming' as MatchStatus,
         matchFormat: 'T20' as 'T20' | 'One Day',
         isFriendly: false,
-        homeTeamId: '00000000-0000-0000-0000-000000000000',
+        team1Id: '00000000-0000-0000-0000-000000000000',
     });
     const [isSaving, setIsSaving] = useState(false);
 
@@ -41,13 +41,13 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         setIsSaving(true);
         
         try {
-            const selectedHome = opponents.find(o => o.id === formData.homeTeamId);
-            const selectedOpponent = opponents.find(o => o.id === formData.opponentId);
+            const selectedTeam1 = opponents.find(o => o.id === formData.team1Id);
+            const selectedTeam2 = opponents.find(o => o.id === formData.opponentId);
             
-            const homeTeamName = formData.homeTeamId === '00000000-0000-0000-0000-000000000000' ? 'Indian Strikers' : (selectedHome?.name || 'Team A');
-            const homeLogo = formData.homeTeamId === '00000000-0000-0000-0000-000000000000' ? '/INS%20LOGO.PNG' : (selectedHome?.logoUrl || '');
-            const opponentName = selectedOpponent?.name || 'Opponent';
-            const opponentLogo = selectedOpponent?.logoUrl || '';
+            const team1Name = formData.team1Id === '00000000-0000-0000-0000-000000000000' ? 'Indian Strikers' : (selectedTeam1?.name || 'Team 1');
+            const team1Logo = formData.team1Id === '00000000-0000-0000-0000-000000000000' ? '/INS%20LOGO.PNG' : (selectedTeam1?.logoUrl || '');
+            const team2Name = selectedTeam2?.name || 'Team 2';
+            const team2Logo = selectedTeam2?.logoUrl || '';
             
             const selectedTournament = formData.isFriendly 
                 ? 'Friendly Match' 
@@ -55,13 +55,13 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
             const selectedVenue = grounds.find(g => g.id === formData.groundId)?.name || 'Local Ground';
 
             const newMatch: Omit<ScheduledMatch, 'id'> = {
-                isNeutral: formData.homeTeamId !== '00000000-0000-0000-0000-000000000000' && formData.opponentId !== '00000000-0000-0000-0000-000000000000',
-                team1Id: formData.homeTeamId,
-                team1Name: homeTeamName,
-                team1Logo: homeLogo,
+                isNeutral: formData.team1Id !== '00000000-0000-0000-0000-000000000000' && formData.opponentId !== '00000000-0000-0000-0000-000000000000',
+                team1Id: formData.team1Id,
+                team1Name: team1Name,
+                team1Logo: team1Logo,
                 team2Id: formData.opponentId || null,
-                team2Name: opponentName,
-                team2Logo: opponentLogo,
+                team2Name: team2Name,
+                team2Logo: team2Logo,
                 date: (formData.date && !isNaN(new Date(formData.date).getTime())) 
                     ? new Date(formData.date).toISOString() 
                     : new Date().toISOString(),
@@ -129,19 +129,19 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Team A Selection */}
+                        {/* Team 1 Selection */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">
-                                Team A (Slot 1)
+                                Team 1 (Slot 1)
                             </label>
                             <div className="relative">
                                 <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                                 <select 
                                     required
-                                    value={formData.homeTeamId}
-                                    onChange={(e) => setFormData({...formData, homeTeamId: e.target.value})}
+                                    value={formData.team1Id}
+                                    onChange={(e) => setFormData({...formData, team1Id: e.target.value})}
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
-                                    title="Select Team A"
+                                    title="Select Team 1"
                                 >
                                     <option value="00000000-0000-0000-0000-000000000000">Indian Strikers</option>
                                     {opponents.map(opp => (
@@ -151,10 +151,10 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                             </div>
                         </div>
 
-                        {/* Team B Selection */}
+                        {/* Team 2 Selection */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">
-                                Team B (Slot 2)
+                                Team 2 (Slot 2)
                             </label>
                             <div className="relative">
                                 <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
@@ -163,11 +163,11 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                                     value={formData.opponentId}
                                     onChange={(e) => setFormData({...formData, opponentId: e.target.value})}
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
-                                    title="Select Team B"
+                                    title="Select Team 2"
                                 >
-                                    <option value="">Select Team B...</option>
+                                    <option value="">Select Team 2...</option>
                                     <option value="00000000-0000-0000-0000-000000000000">Indian Strikers</option>
-                                    {opponents.filter(o => o.id !== formData.homeTeamId).map(opp => (
+                                    {opponents.filter(o => o.id !== formData.team1Id).map(opp => (
                                         <option key={opp.id} value={opp.id}>{opp.name}</option>
                                     ))}
                                 </select>

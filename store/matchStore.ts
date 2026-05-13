@@ -62,7 +62,8 @@ const getScoringResetState = (state: UnifiedMatchStore) => ({
     matchType: 'T20' as const,
     tournament: '',
     ground: '',
-    opponentName: '',
+    team2Name: '',
+    team1Name: null,
     maxOvers: 20,
     toss: { winnerId: null, choice: null },
     innings1: null,
@@ -73,10 +74,10 @@ const getScoringResetState = (state: UnifiedMatchStore) => ({
     currentBowlerId: null,
     isFreeHit: false,
     isFinished: false,
-    homeXI: [],
-    awayXI: [],
-    homeLogo: '',
-    awayLogo: '',
+    team1XI: [],
+    team2XI: [],
+    team1Logo: '',
+    team2Logo: '',
     historyStack: [],
     manOfTheMatch: null,
     targetScore: 0,
@@ -290,7 +291,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
     purgeTestData: async () => {
         try {
             const testMatches = get().matches.filter(m =>
-                m.isTest || m.opponentName === 'Sandbox XI' || (m.opponentId && String(m.opponentId).includes('sandbox'))
+                m.isTest || m.team2Name === 'Sandbox XI' || (m.team2Id && String(m.team2Id).includes('sandbox'))
             );
             if (testMatches.length === 0) return;
             for (const m of testMatches) {
@@ -333,21 +334,27 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
                 try { parsedData = JSON.parse(data.liveData); } catch (e) { }
             }
             if (parsedData.innings1) {
+                // STALE-STATE GUARD: If the cloud liveData claims isFinished:true but innings2
+                // has no recorded balls, it's stale data from a previously completed match that
+                // was reset. Force isFinished to false so scoring starts clean.
+                const innings2HasBalls = (parsedData.innings2?.history?.length || 0) > 0;
+                const safeIsFinished = parsedData.isFinished === true ? innings2HasBalls : (parsedData.isFinished || false);
+
                 set({
                     ...getScoringResetState(current),
                     ...parsedData,
+                    isFinished: safeIsFinished,
                     matchId: ensureId(data.matchId),
                     matchType: data.matchType || parsedData.matchType,
                     tournament: data.tournament || parsedData.tournament,
                     ground: data.ground || parsedData.ground,
-                    // Support both old (homeXI/awayXI) and new (team1XI/team2XI) payload keys
-                    team2Name: data.team2Name || parsedData.team2Name || data.opponentName || parsedData.opponentName || '',
-                    team1Name: data.team1Name || parsedData.team1Name || data.homeTeamName || parsedData.homeTeamName || null,
+                    team2Name: data.team2Name || parsedData.team2Name || '',
+                    team1Name: data.team1Name || parsedData.team1Name || null,
                     maxOvers: data.maxOvers || parsedData.maxOvers,
-                    team1XI: data.team1XI || parsedData.team1XI || data.homeXI || parsedData.homeXI || [],
-                    team2XI: data.team2XI || parsedData.team2XI || data.awayXI || parsedData.awayXI || [],
-                    team1Logo: data.team1Logo || parsedData.team1Logo || data.homeLogo || parsedData.homeLogo || '',
-                    team2Logo: data.team2Logo || parsedData.team2Logo || data.awayLogo || parsedData.awayLogo || '',
+                    team1XI: data.team1XI || parsedData.team1XI || [],
+                    team2XI: data.team2XI || parsedData.team2XI || [],
+                    team1Logo: data.team1Logo || parsedData.team1Logo || '',
+                    team2Logo: data.team2Logo || parsedData.team2Logo || '',
                     strikerId: ensureId(parsedData.strikerId),
                     nonStrikerId: ensureId(parsedData.nonStrikerId),
                     currentBowlerId: ensureId(parsedData.currentBowlerId)
@@ -362,13 +369,13 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
             matchType: data.matchType,
             tournament: data.tournament,
             ground: data.ground,
-            team2Name: data.team2Name || data.opponentName || '',
-            team1Name: data.team1Name || data.homeTeamName || null,
+            team2Name: data.team2Name || '',
+            team1Name: data.team1Name || null,
             maxOvers: data.maxOvers,
-            team1XI: data.team1XI || data.homeXI || [],
-            team2XI: data.team2XI || data.awayXI || [],
-            team1Logo: data.team1Logo || data.homeLogo || '',
-            team2Logo: data.team2Logo || data.awayLogo || ''
+            team1XI: data.team1XI || [],
+            team2XI: data.team2XI || [],
+            team1Logo: data.team1Logo || '',
+            team2Logo: data.team2Logo || ''
         });
     },
 
@@ -423,7 +430,9 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         const getPlayerName = (id: string) => state.squadPlayers.find(p => p.id === id)?.name || state.opponentPlayers.find(p => p.id === id)?.name || 'Unknown Player';
 
         if (num === 1 && state.systemCommentary?.length === 0) {
-            const tossWinnerName = state.toss.winnerId === 'HOME' ? (state.team1Name || 'Home Team') : (state.toss.winnerId === 'AWAY' ? state.team2Name : 'Toss Winner');
+            const tossWinnerName = state.toss.winnerId === 'TEAM1' 
+                ? (state.team1Name || 'Team 1') 
+                : (state.toss.winnerId === 'TEAM2' ? state.team2Name : 'Toss Winner');
             get().addSystemCommentary(`🏏 Toss Update: ${tossWinnerName} has won the toss and elected to ${state.toss.choice?.toLowerCase() || 'bat'} first.`);
 
             const team1XINames = (state.team1XI || []).map(id => getPlayerName(id)).join(', ');
@@ -936,7 +945,7 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         try {
             if (targetStatus) {
                 // LOCKING: Extract primitive values to match database schema
-                const score = match.team1Score || match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 };
+                const score = match.team1Score || { runs: 0, wickets: 0, overs: 0 };
 
                 // Convert overs (e.g. 18.2) to total balls
                 const overs = Number(score.overs || 0);
@@ -944,15 +953,12 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
                 const balls = (parseInt(overParts[0]) * 6) + (parseInt(overParts[1]) || 0);
 
                 await api.updateMatch(matchId, {
-                    final_score_home: score.runs,
-                    total_runs: score.runs,
-                    total_wickets: score.wickets,
-                    total_balls: balls,
-                    is_locked: true
+                    team1Score: score,
+                    isLocked: true
                 } as any);
             } else {
                 // UNLOCKING
-                await api.updateMatch(matchId, { is_locked: false } as any);
+                await api.updateMatch(matchId, { isLocked: false } as any);
             }
 
             set((state) => ({

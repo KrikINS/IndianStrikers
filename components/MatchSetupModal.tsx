@@ -348,8 +348,8 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
   onCancel,
   onOpenSettings
 }) => {
-  const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_home' | 'squad_away' | 'openers_bat' | 'openers_bowl'>(innings1 ? 'openers_bat' : 'preview');
-  const [tossWinner, setTossWinner] = useState<'home' | 'away' | null>(null);
+  const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_team1' | 'squad_team2' | 'openers_bat' | 'openers_bowl'>(innings1 ? 'openers_bat' : 'preview');
+  const [tossWinner, setTossWinner] = useState<'TEAM1' | 'TEAM2' | null>(null);
   const [tossChoice, setTossChoice] = useState<'Bat' | 'Bowl' | null>(null);
   const [tempMaxOvers, setTempMaxOvers] = useState(matchMeta?.maxOvers || 20);
   
@@ -391,7 +391,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
       return;
     }
     onSetupComplete({
-      tossWinner: innings1 ? (matchMeta?.toss?.winner === team1Id ? 'HOME' : 'AWAY') : (tossWinner === 'home' ? 'HOME' : 'AWAY'),
+      tossWinner: innings1 ? (matchMeta?.toss?.winner === team1Id ? 'TEAM1' : 'TEAM2') : tossWinner!,
       tossChoice: innings1 ? (matchMeta?.toss?.choice === 'Field' ? 'Bowl' : (matchMeta?.toss?.choice || 'Bat')) : tossChoice!,
       maxOvers: tempMaxOvers,
       // For 2nd innings, pass back the original XIs (already locked in innings 1).
@@ -428,7 +428,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
             {(() => {
               const displayTournament = resolveTournament(matchMeta?.tournamentId ?? undefined, matchMeta?.tournament ?? undefined);
               const displayGround = resolveGroundName(matchMeta?.groundId ?? undefined, undefined);
-              const opponentMeta = (allOpponents || []).find(o => String(o.id) === String(matchMeta?.opponentId));
+              const opponentMeta = (allOpponents || []).find(o => String(o.id) === String(matchMeta?.team2Id));
               const displayTeam2Name = team2Name || opponentMeta?.name || 'OPPONENT';
               const displayTeam2Logo = team2Logo || opponentMeta?.logoUrl || '';
 
@@ -489,10 +489,10 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
 
             <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 12 }}>Who won the toss?</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-              <TossOption $selected={tossWinner === 'home'} onClick={() => setTossWinner('home')}>
+              <TossOption $selected={tossWinner === 'TEAM1'} onClick={() => setTossWinner('TEAM1')}>
                 {team1Name}
               </TossOption>
-              <TossOption $selected={tossWinner === 'away'} onClick={() => setTossWinner('away')}>
+              <TossOption $selected={tossWinner === 'TEAM2'} onClick={() => setTossWinner('TEAM2')}>
                 {team2Name}
               </TossOption>
             </div>
@@ -529,22 +529,22 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
 
             <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
               <ActionButton onClick={() => setSetupStep('preview')}>Back</ActionButton>
-              <ActionButton $variant="primary" disabled={!tossWinner || !tossChoice} onClick={() => setSetupStep('squad_home')}>
+              <ActionButton $variant="primary" disabled={!tossWinner || !tossChoice} onClick={() => setSetupStep('squad_team1')}>
                 Select Squads
               </ActionButton>
             </div>
           </>
-        ) : setupStep === 'squad_home' || setupStep === 'squad_away' ? (
+        ) : setupStep === 'squad_team1' || setupStep === 'squad_team2' ? (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {setupStep === 'squad_home' ? <Shield size={20} color="#FAB005" /> : <Users size={20} color="#FAB005" />}
+                {setupStep === 'squad_team1' ? <Shield size={20} color="#FAB005" /> : <Users size={20} color="#FAB005" />}
                 <h3 style={{ margin: 0, fontWeight: 900 }}>
-                  {setupStep === 'squad_home' ? `${team1Name.toUpperCase()} ROSTER` : `${team2Name.toUpperCase()} ROSTER`}
+                  {setupStep === 'squad_team1' ? `${team1Name.toUpperCase()} ROSTER` : `${team2Name.toUpperCase()} ROSTER`}
                 </h3>
               </div>
               <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#FAB005' }}>
-                {setupStep === 'squad_home' ? localTeam1XI.length : localTeam2XI.length} / 11
+                {setupStep === 'squad_team1' ? localTeam1XI.length : localTeam2XI.length} / 11
               </div>
             </div>
 
@@ -561,14 +561,14 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
             </div>
 
             <SelectionGrid>
-              {(setupStep === 'squad_home' ? players : opponentPlayers)
+              {(setupStep === 'squad_team1' ? players : opponentPlayers)
                 .filter((p: any) => {
                   const matchesRole = roleFilter === 'All' || p.role === roleFilter;
-                  const isActuallyActive = setupStep === 'squad_away' || (p.isActive && p.status !== 'inactive');
+                  const isActuallyActive = setupStep === 'squad_team2' || (p.isActive && p.status !== 'inactive');
                   return matchesRole && isActuallyActive;
                 })
                 .map((p: any) => {
-                  const currentXI = setupStep === 'squad_home' ? localTeam1XI : localTeam2XI;
+                  const currentXI = setupStep === 'squad_team1' ? localTeam1XI : localTeam2XI;
                   const isSelected = currentXI.includes(p.id);
 
                   return (
@@ -583,7 +583,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
                           newSquad = [...currentXI, p.id];
                         } else return;
 
-                        if (setupStep === 'squad_home') setLocalTeam1XI(newSquad);
+                        if (setupStep === 'squad_team1') setLocalTeam1XI(newSquad);
                         else setLocalTeam2XI(newSquad);
                       }}
                     >
@@ -594,7 +594,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
                           <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>{p.role}</div>
                         </div>
                       </div>
-                      {setupStep === 'squad_home' && (
+                      {setupStep === 'squad_team1' && (
                         <StatRibbon>
                           <StatItem>
                             <StatLabel>Avg</StatLabel>
@@ -616,15 +616,15 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
             </SelectionGrid>
 
             <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
-              <ActionButton onClick={() => setSetupStep(setupStep === 'squad_home' ? 'toss' : 'squad_home')}>
+              <ActionButton onClick={() => setSetupStep(setupStep === 'squad_team1' ? 'toss' : 'squad_team1')}>
                 Back
               </ActionButton>
               <ActionButton
                 $variant="primary"
-                disabled={(setupStep === 'squad_home' ? localTeam1XI.length : localTeam2XI.length) < 11}
-                onClick={() => setSetupStep(setupStep === 'squad_home' ? 'squad_away' : 'openers_bat')}
+                disabled={(setupStep === 'squad_team1' ? localTeam1XI.length : localTeam2XI.length) < 11}
+                onClick={() => setSetupStep(setupStep === 'squad_team1' ? 'squad_team2' : 'openers_bat')}
               >
-                {setupStep === 'squad_home' ? 'Next Team' : 'Choose Openers'}
+                {setupStep === 'squad_team1' ? 'Next Team' : 'Choose Openers'}
               </ActionButton>
             </div>
           </>
@@ -641,17 +641,17 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
               const getInningsBattingTeam = () => {
                 if (innings1) {
                   // The 2nd innings batting team is whoever BOWLED in innings 1
-                  return innings1.bowlingTeamId === team1Id ? 'HOME' : 'AWAY';
+                  return innings1.bowlingTeamId === team1Id ? 'TEAM1' : 'TEAM2';
                 }
                 // 1st innings: derive from toss
-                const winnerId = tossWinner === 'home' ? 'HOME' : 'AWAY';
-                return ((winnerId === 'HOME' && tossChoice === 'Bat') || (winnerId === 'AWAY' && tossChoice === 'Bowl')) ? 'HOME' : 'AWAY';
+                const winnerId = tossWinner;
+                return ((winnerId === 'TEAM1' && tossChoice === 'Bat') || (winnerId === 'TEAM2' && tossChoice === 'Bowl')) ? 'TEAM1' : 'TEAM2';
               };
 
               const batTeamType = getInningsBattingTeam();
-              const batTeamName = batTeamType === 'HOME' ? team1Name : team2Name;
-              const batSquadIds = batTeamType === 'HOME' ? localTeam1XI : localTeam2XI;
-              const batPool = (batTeamType === 'HOME' ? players : opponentPlayers).filter(p => batSquadIds.includes(p.id));
+              const batTeamName = batTeamType === 'TEAM1' ? team1Name : team2Name;
+              const batSquadIds = batTeamType === 'TEAM1' ? localTeam1XI : localTeam2XI;
+              const batPool = (batTeamType === 'TEAM1' ? players : opponentPlayers).filter(p => batSquadIds.includes(p.id));
 
               return (
                 <>
@@ -690,7 +690,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
 
             <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
               {/* During 2nd innings, squad selection is already done — skip Back to squads */}
-              <ActionButton onClick={() => innings1 ? onCancel() : setSetupStep('squad_away')}>Back</ActionButton>
+              <ActionButton onClick={() => innings1 ? onCancel() : setSetupStep('squad_team2')}>Back</ActionButton>
               <ActionButton $variant="primary" disabled={!selStriker || !selNonStriker} onClick={() => setSetupStep('openers_bowl')}>
                 Choose Bowler
               </ActionButton>
@@ -708,18 +708,18 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
               const getInningsBowlingTeam = () => {
                 if (innings1) {
                   // The 2nd innings bowling team is whoever BATTED in innings 1
-                  return innings1.battingTeamId === team1Id ? 'HOME' : 'AWAY';
+                  return innings1.battingTeamId === team1Id ? 'TEAM1' : 'TEAM2';
                 }
                 // 1st innings: batting team's opposite
-                const winnerId = tossWinner === 'home' ? 'HOME' : 'AWAY';
-                const firstInningsBatTeamId = ((winnerId === 'HOME' && tossChoice === 'Bat') || (winnerId === 'AWAY' && tossChoice === 'Bowl')) ? 'HOME' : 'AWAY';
-                return firstInningsBatTeamId === 'HOME' ? 'AWAY' : 'HOME';
+                const winnerId = tossWinner;
+                const firstInningsBatTeamId = ((winnerId === 'TEAM1' && tossChoice === 'Bat') || (winnerId === 'TEAM2' && tossChoice === 'Bowl')) ? 'TEAM1' : 'TEAM2';
+                return firstInningsBatTeamId === 'TEAM1' ? 'TEAM2' : 'TEAM1';
               };
 
               const bowlTeamType = getInningsBowlingTeam();
-              const bowlTeamName = bowlTeamType === 'HOME' ? team1Name : team2Name;
-              const bowlSquadIds = bowlTeamType === 'HOME' ? localTeam1XI : localTeam2XI;
-              const bowlPool = (bowlTeamType === 'HOME' ? players : opponentPlayers).filter(p => bowlSquadIds.includes(p.id));
+              const bowlTeamName = bowlTeamType === 'TEAM1' ? team1Name : team2Name;
+              const bowlSquadIds = bowlTeamType === 'TEAM1' ? localTeam1XI : localTeam2XI;
+              const bowlPool = (bowlTeamType === 'TEAM1' ? players : opponentPlayers).filter(p => bowlSquadIds.includes(p.id));
 
               return (
                 <>

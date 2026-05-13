@@ -16,21 +16,21 @@ interface MatchScorecardEntryProps {
 
 export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit }: MatchScorecardEntryProps) {
   const { squadPlayers: masterHomePlayers, opponentPlayers: masterOpponentPlayers, opponents: allOpponentTeams } = useStore();
-  const homeTeamName = match.isNeutral 
-    ? (allOpponentTeams.opponents.find(o => o.id === match.homeTeamId)?.name || 'Home Team')
+  const team1NameLabel = match.isNeutral 
+    ? (allOpponentTeams.opponents.find(o => o.id === match.team1Id)?.name || 'Team 1')
     : 'Indian Strikers';
-  const opponentName = opponent?.name || match.opponentName || 'Opponent';
+  const team2NameLabel = opponent?.name || match.team2Name || 'Team 2';
 
   const RESULT_OPTIONS = [
     { value: '', label: 'Normal Result' },
     { value: 'Abandoned', label: 'Abandoned' },
     { value: 'Tie', label: 'Tie' },
-    { value: 'Forfeit-Home', label: `Forfeit (${homeTeamName})` },
-    { value: 'Forfeit-Away', label: `Forfeit (${opponentName})` },
+    { value: 'Forfeit-Team1', label: `Forfeit (${team1NameLabel})` },
+    { value: 'Forfeit-Team2', label: `Forfeit (${team2NameLabel})` },
   ];
 
-  const HOME_TEAM_ID = match.isNeutral ? (match.homeTeamId || 'HOME') : '00000000-0000-0000-0000-000000000000';
-  const [tossWinner, setTossWinner] = useState<string>(match.toss?.winner || homeTeamName);
+  const TEAM1_ID = match.isNeutral ? (match.team1Id || 'TEAM1') : '00000000-0000-0000-0000-000000000000';
+  const [tossWinner, setTossWinner] = useState<string>(match.toss?.winner || team1NameLabel);
   const [tossChoice, setTossChoice] = useState<'Bat' | 'Field'>(match.toss?.choice as any || 'Bat');
   const [maxOvers, setMaxOvers] = useState<number>(match.maxOvers || (match.matchFormat === 'One Day' ? 50 : 20));
   const [resultType, setResultType] = useState(match.resultType || '');
@@ -39,18 +39,18 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
   const [syncError, setSyncError] = useState<string | null>(null);
   const isLocked = !!(match.isLocked || (match as any).is_locked);
 
-  const innings1BattingTeam: 'home' | 'away' = useMemo(() => {
-    const homeWon = tossWinner === homeTeamName || tossWinner === HOME_TEAM_ID;
-    if ((homeWon && tossChoice === 'Bat') || (!homeWon && tossChoice === 'Field')) return 'home';
-    return 'away';
-  }, [tossWinner, tossChoice, homeTeamName, HOME_TEAM_ID]);
+  const innings1BattingTeam: 'team1' | 'team2' = useMemo(() => {
+    const team1Won = tossWinner === team1NameLabel || tossWinner === TEAM1_ID;
+    if ((team1Won && tossChoice === 'Bat') || (!team1Won && tossChoice === 'Field')) return 'team1';
+    return 'team2';
+  }, [tossWinner, tossChoice, team1NameLabel, TEAM1_ID]);
 
   const overOptions = match.matchFormat === 'One Day'
     ? [50, 40, 35, 30, 25, 20]
     : [20, 15, 12, 10, 8, 5];
 
-  const [homeScore, setHomeScore] = useState(match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 });
-  const [awayScore, setAwayScore] = useState(match.finalScoreAway || { runs: 0, wickets: 0, overs: 0 });
+  const [team1Score, setTeam1Score] = useState(match.team1Score || match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 });
+  const [team2Score, setTeam2Score] = useState(match.team2Score || match.finalScoreAway || { runs: 0, wickets: 0, overs: 0 });
   const [activeInnings, setActiveInnings] = useState<1 | 2>(1);
 
   const initialInnings: InningsData = {
@@ -75,14 +75,14 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     
     // Fallback to summary scores if innings data is completely missing
     if (!raw.innings1) {
-       base.innings1.totalRuns = (innings1BattingTeam === 'home' ? match.finalScoreHome?.runs : match.finalScoreAway?.runs) || 0;
-       base.innings1.totalWickets = (innings1BattingTeam === 'home' ? match.finalScoreHome?.wickets : match.finalScoreAway?.wickets) || 0;
-       base.innings1.totalOvers = (innings1BattingTeam === 'home' ? match.finalScoreHome?.overs : match.finalScoreAway?.overs) || 0;
+       base.innings1.totalRuns = (innings1BattingTeam === 'team1' ? team1Score.runs : team2Score.runs) || 0;
+       base.innings1.totalWickets = (innings1BattingTeam === 'team1' ? team1Score.wickets : team2Score.wickets) || 0;
+       base.innings1.totalOvers = (innings1BattingTeam === 'team1' ? team1Score.overs : team2Score.overs) || 0;
     }
     if (!raw.innings2) {
-       base.innings2.totalRuns = (innings1BattingTeam === 'home' ? match.finalScoreAway?.runs : match.finalScoreHome?.runs) || 0;
-       base.innings2.totalWickets = (innings1BattingTeam === 'home' ? match.finalScoreAway?.wickets : match.finalScoreHome?.wickets) || 0;
-       base.innings2.totalOvers = (innings1BattingTeam === 'home' ? match.finalScoreAway?.overs : match.finalScoreHome?.overs) || 0;
+       base.innings2.totalRuns = (innings1BattingTeam === 'team1' ? team2Score.runs : team1Score.runs) || 0;
+       base.innings2.totalWickets = (innings1BattingTeam === 'team1' ? team2Score.wickets : team1Score.wickets) || 0;
+       base.innings2.totalOvers = (innings1BattingTeam === 'team1' ? team2Score.overs : team1Score.overs) || 0;
     }
 
     // Ensure extras exists and has all properties for internal state stability
@@ -155,40 +155,33 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     return battingRuns + extrasTotal;
   };
 
-  const homeSquad = useMemo(() => {
-    // If neutral, home team is an opponent team
-    if (match.isNeutral && match.homeTeamId) {
-        // If they have a specific XI, use it
-        if (Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0) {
-            return masterOpponentPlayers.filter(p => match.homeTeamXI!.includes(p.id));
+  const team1Squad = useMemo(() => {
+    if (match.isNeutral && match.team1Id) {
+        if (Array.isArray(match.team1XI) && match.team1XI.length > 0) {
+            return masterOpponentPlayers.filter(p => match.team1XI!.includes(p.id));
         }
-        return masterOpponentPlayers.filter(p => p.teamId === match.homeTeamId);
+        return masterOpponentPlayers.filter(p => p.teamId === match.team1Id);
     }
-
-    // 1. Strict Filter: Only show players assigned to the Match Day XI if it exists
-    if (Array.isArray(match.homeTeamXI) && match.homeTeamXI.length > 0) {
-      return masterHomePlayers.filter(p => match.homeTeamXI!.includes(p.id));
+    if (Array.isArray(match.team1XI) && match.team1XI.length > 0) {
+      return masterHomePlayers.filter(p => match.team1XI!.includes(p.id));
     }
-    // 2. Fallback: Show all club players (Case-insensitive check)
     return masterHomePlayers.filter(p => p.teamId?.toUpperCase() === 'IND_STRIKERS');
-  }, [masterHomePlayers, masterOpponentPlayers, match.homeTeamXI, match.isNeutral, match.homeTeamId]);
+  }, [masterHomePlayers, masterOpponentPlayers, match.team1XI, match.isNeutral, match.team1Id]);
 
-  const awaySquad = useMemo(() => {
-    // 1. Strict Filter: Only show players assigned to the Match Day XI if it exists
-    if (Array.isArray(match.opponentTeamXI) && match.opponentTeamXI.length > 0) {
-        return masterOpponentPlayers.filter(p => match.opponentTeamXI!.includes(p.id));
+  const team2Squad = useMemo(() => {
+    if (Array.isArray(match.team2XI) && match.team2XI.length > 0) {
+        return masterOpponentPlayers.filter(p => match.team2XI!.includes(p.id));
     }
-    // 2. Fallback: Show players assigned to this specific opponent
-    return masterOpponentPlayers.filter(p => p.teamId === match.opponentId);
-  }, [masterOpponentPlayers, match.opponentTeamXI, match.opponentId]);
+    return masterOpponentPlayers.filter(p => p.teamId === match.team2Id);
+  }, [masterOpponentPlayers, match.team2XI, match.team2Id]);
 
   const battingSquad = activeInnings === 1
-    ? (innings1BattingTeam === 'home' ? homeSquad : awaySquad)
-    : (innings1BattingTeam === 'home' ? awaySquad : homeSquad);
+    ? (innings1BattingTeam === 'team1' ? team1Squad : team2Squad)
+    : (innings1BattingTeam === 'team1' ? team2Squad : team1Squad);
 
   const bowlingSquad = activeInnings === 1
-    ? (innings1BattingTeam === 'home' ? awaySquad : homeSquad)
-    : (innings1BattingTeam === 'home' ? homeSquad : awaySquad);
+    ? (innings1BattingTeam === 'team1' ? team2Squad : team1Squad)
+    : (innings1BattingTeam === 'team1' ? team1Squad : team2Squad);
 
   React.useEffect(() => {
     const rehydrate = async () => {
@@ -328,7 +321,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     const buildBowling = (inn: 1 | 2) => bowlingRows[inn]
       .filter(r => r.playerId)
       .map(r => {
-        const p = [...homeSquad, ...awaySquad].find(p => p.id === r.playerId);
+        const p = [...team1Squad, ...team2Squad].find(p => p.id === r.playerId);
         return {
           playerId: r.playerId,
           name: p?.name || '',
@@ -371,14 +364,10 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
       },
     };
 
-    const fScoreHome = innings1BattingTeam === 'home' ? { runs: inn1Runs, wickets: inn1Wickets, overs: inn1Overs } : { runs: inn2Runs, wickets: inn2Wickets, overs: inn2Overs };
-    const fScoreAway = innings1BattingTeam === 'home' ? { runs: inn2Runs, wickets: inn2Wickets, overs: inn2Overs } : { runs: inn1Runs, wickets: inn1Wickets, overs: inn1Overs };
+    const team1InningsKey = innings1BattingTeam === 'team1' ? 'innings1' : 'innings2';
+    const team1BowlingKey = innings1BattingTeam === 'team1' ? 'innings2' : 'innings1';
 
-    const performerMap = new Map<string, any>();
-    const homeInningsKey = innings1BattingTeam === 'home' ? 'innings1' : 'innings2';
-    const homeBowlingKey = innings1BattingTeam === 'home' ? 'innings2' : 'innings1';
-
-    finalScorecard[homeInningsKey].batting.forEach(b => {
+    finalScorecard[team1InningsKey].batting.forEach(b => {
       // Database Sync: Do not create a performer row for DNB players
       if (b.outHow === 'Did Not Bat' && (b.balls || 0) === 0) return;
       
@@ -400,7 +389,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
         noBalls: 0 
       });
     });
-    finalScorecard[homeBowlingKey].bowling.forEach(b => {
+    finalScorecard[team1BowlingKey].bowling.forEach(b => {
       // Skip if they didn't actually bowl any balls
       if ((b.overs || 0) === 0) return;
       
@@ -417,19 +406,18 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
       });
     });
 
-    const diff = Math.abs(fScoreHome.runs - fScoreAway.runs);
     const resultSummary = resultType === 'Abandoned' ? 'Match Abandoned'
       : resultType === 'Tie' ? 'Match Tied'
-        : resultType === 'Forfeit-Home' ? `${opponentName} won (${homeTeamName} Forfeit)`
-          : resultType === 'Forfeit-Away' ? `${homeTeamName} won (${opponentName} Forfeit)`
-            : fScoreHome.runs > fScoreAway.runs ? `${homeTeamName} won by ${diff} runs`
-              : fScoreAway.runs > fScoreHome.runs ? `${opponentName} won by ${diff} runs`
+        : resultType === 'Forfeit-Team1' ? `${team2NameLabel} won (${team1NameLabel} Forfeit)`
+          : resultType === 'Forfeit-Team2' ? `${team1NameLabel} won (${team2NameLabel} Forfeit)`
+            : team1Score.runs > team2Score.runs ? `${team1NameLabel} won by ${Math.abs(team1Score.runs - team2Score.runs)} runs`
+              : team2Score.runs > team1Score.runs ? `${team2NameLabel} won by ${Math.abs(team1Score.runs - team2Score.runs)} runs`
                 : 'Match Tied';
 
     try {
       await onSubmit({
-        finalScoreHome: fScoreHome,
-        finalScoreAway: fScoreAway,
+        team1Score: team1Score,
+        team2Score: team2Score,
         resultNote: resultSummary,
         resultSummary,
         scorecard: finalScorecard,
@@ -452,9 +440,9 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     }
   };
 
-  const inn1BatLabel = innings1BattingTeam === 'home' ? homeTeamName : opponentName;
-  const inn2BatLabel = innings1BattingTeam === 'home' ? opponentName : homeTeamName;
-  const homeTeamBattingInnings = innings1BattingTeam === 'home' ? 1 : 2;
+  const inn1BatLabel = innings1BattingTeam === 'team1' ? team1NameLabel : team2NameLabel;
+  const inn2BatLabel = innings1BattingTeam === 'team1' ? team2NameLabel : team1NameLabel;
+  const team1BattingInnings = innings1BattingTeam === 'team1' ? 1 : 2;
   const currentBatLabel = activeInnings === 1 ? inn1BatLabel : inn2BatLabel;
   const currentBowlLabel = activeInnings === 1 ? inn2BatLabel : inn1BatLabel;
 
@@ -473,7 +461,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
             <h2 className="text-lg font-black text-white flex items-center gap-2">
               <Award className="text-sky-400" size={18} /> {isLocked ? 'VIEW LOCKED SCORECARD' : 'Match Scorecard Entry'}
             </h2>
-            <p className="text-slate-400 text-[11px]">vs {opponentName} · {match.matchFormat || 'T20'} · Max {maxOvers} overs</p>
+            <p className="text-slate-400 text-[11px]">vs {team2NameLabel} · {match.matchFormat || 'T20'} · Max {maxOvers} overs</p>
           </div>
           <button onClick={onClose} title="Close" className="p-1.5 hover:bg-white/5 rounded-full text-slate-400 transition-colors">
             <X size={18} />
@@ -501,7 +489,7 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
             <div>
               <label className="text-[10px] font-black text-slate-500 uppercase">Toss Won By</label>
               <div className="flex gap-2 mt-1">
-                {[homeTeamName, opponentName].map(team => (
+                {[team1NameLabel, team2NameLabel].map(team => (
                   <button key={team} type="button" onClick={() => !isLocked && setTossWinner(team)}
                     className={`flex-1 py-1 px-3 rounded-lg text-[11px] font-black border ${tossWinner === team ? 'bg-sky-500/20 border-sky-500/50 text-sky-300' : 'bg-white/[0.02] border-white/10 text-white'} ${isLocked ? 'cursor-default opacity-80' : ''}`}
                   >{team}</button>

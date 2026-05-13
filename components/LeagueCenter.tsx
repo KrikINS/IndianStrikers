@@ -70,11 +70,11 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
   const [scheduleGroupTab, setScheduleGroupTab] = useState<string>('all');
   const [koCrossoverTarget, setKoCrossoverTarget] = useState<string>('');
   const [fixtureSearchQuery, setFixtureSearchQuery] = useState('');
-  const [scoreForm, setScoreForm] = useState({ home_runs: '', home_wickets: '', home_overs: '', away_runs: '', away_wickets: '', away_overs: '', result_type: 'normal' as 'normal' | 'tie' | 'abandoned' });
+  const [scoreForm, setScoreForm] = useState({ team1_runs: '', team1_wickets: '', team1_overs: '', team2_runs: '', team2_wickets: '', team2_overs: '', result_type: 'normal' as 'normal' | 'tie' | 'abandoned' });
   const [knockoutMatches, setKnockoutMatches] = useState<any[]>([]);
   const [scoringKnockout, setScoringKnockout] = useState<any | null>(null);
   const [editingKnockout, setEditingKnockout] = useState<any | null>(null);
-  const [knockoutScoreForm, setKnockoutScoreForm] = useState({ home_runs: '', home_wickets: '', home_overs: '', away_runs: '', away_wickets: '', away_overs: '' });
+  const [knockoutScoreForm, setKnockoutScoreForm] = useState({ team1_runs: '', team1_wickets: '', team1_overs: '', team2_runs: '', team2_wickets: '', team2_overs: '' });
 
   // Form states for setup
   const [isSettingUp, setIsSettingUp] = useState(false);
@@ -83,7 +83,7 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
     year: new Date().getFullYear(),
     format: 'T20',
     type: 'League',
-    is_home_away: false,
+    is_double_round_robin: false,
     status: 'upcoming'
   });
 
@@ -324,23 +324,23 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
 
   const handleSubmitResult = async () => {
     if (!scoringFixture) return;
-    const { home_runs, home_wickets, home_overs, away_runs, away_wickets, away_overs, result_type } = scoreForm;
-    if (!home_runs || !home_overs || !away_runs || !away_overs) {
+    const { team1_runs, team1_wickets, team1_overs, team2_runs, team2_wickets, team2_overs, result_type } = scoreForm;
+    if (!team1_runs || !team1_overs || !team2_runs || !team2_overs) {
       toast.error('Please fill in all scores and overs');
       return;
     }
     try {
       await submitLeagueResult(scoringFixture.id, {
-        home_runs: parseFloat(home_runs),
-        home_wickets: home_wickets ? parseInt(home_wickets) : 0,
-        home_overs: parseFloat(home_overs),
-        away_runs: parseFloat(away_runs),
-        away_wickets: away_wickets ? parseInt(away_wickets) : 0,
-        away_overs: parseFloat(away_overs),
+        team1_runs: parseFloat(team1_runs),
+        team1_wickets: team1_wickets ? parseInt(team1_wickets) : 0,
+        team1_overs: parseFloat(team1_overs),
+        team2_runs: parseFloat(team2_runs),
+        team2_wickets: team2_wickets ? parseInt(team2_wickets) : 0,
+        team2_overs: parseFloat(team2_overs),
         result_type
       });
       setScoringFixture(null);
-      setScoreForm({ home_runs: '', home_wickets: '', home_overs: '', away_runs: '', away_wickets: '', away_overs: '', result_type: 'normal' });
+      setScoreForm({ team1_runs: '', team1_wickets: '', team1_overs: '', team2_runs: '', team2_wickets: '', team2_overs: '', result_type: 'normal' });
       loadTournamentData(selectedTournament!.id);
       toast.success('Result saved — points table updated!');
     } catch (e) {
@@ -376,8 +376,8 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
     }
 
     try {
-      const homeTeam = teams.find(t => t.id === newFixture.team1_id);
-      const awayTeam = teams.find(t => t.id === newFixture.team2_id);
+      const team1 = teams.find(t => t.id === newFixture.team1_id);
+      const team2 = teams.find(t => t.id === newFixture.team2_id);
       const group = groups.find(g => g.id === newFixture.group_id);
 
       const fixtureData: Partial<LeagueFixture> = {
@@ -385,10 +385,10 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
         group_id: newFixture.group_id || undefined,
         team1_id: newFixture.team1_id,
         team2_id: newFixture.team2_id,
-        team1_name: homeTeam?.team_name || '',
-        team2_name: awayTeam?.team_name || '',
-        team1_logo: homeTeam?.logo_url,
-        team2_logo: awayTeam?.logo_url,
+        team1_name: team1?.team_name || '',
+        team2_name: team2?.team_name || '',
+        team1_logo: team1?.logo_url,
+        team2_logo: team2?.logo_url,
         date: newFixture.date,
         venue: newFixture.venue || 'TBA',
         group_name: group?.name || ''
@@ -434,12 +434,12 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
 
   const handleSubmitKnockoutResult = async () => {
     if (!scoringKnockout) return;
-    const { home_runs, home_wickets, home_overs, away_runs, away_wickets, away_overs } = knockoutScoreForm;
-    if (!home_runs || !home_overs || !away_runs || !away_overs) {
+    const { team1_runs, team1_wickets, team1_overs, team2_runs, team2_wickets, team2_overs } = knockoutScoreForm;
+    if (!team1_runs || !team1_overs || !team2_runs || !team2_overs) {
       toast.error('Please enter all scores and overs');
       return;
     }
-    if (parseFloat(home_runs) === parseFloat(away_runs)) {
+    if (parseFloat(team1_runs) === parseFloat(team2_runs)) {
       toast.error('Knockout matches must have a winner — scores cannot be equal');
       return;
     }
@@ -456,15 +456,15 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
       }
 
       await submitKnockoutResult(scoringKnockout.id, {
-        home_runs: parseFloat(home_runs),
-        home_wickets: home_wickets ? parseInt(home_wickets) : 0,
-        home_overs: parseFloat(home_overs),
-        away_runs: parseFloat(away_runs),
-        away_wickets: away_wickets ? parseInt(away_wickets) : 0,
-        away_overs: parseFloat(away_overs)
+        team1_runs: parseFloat(team1_runs),
+        team1_wickets: team1_wickets ? parseInt(team1_wickets) : 0,
+        team1_overs: parseFloat(team1_overs),
+        team2_runs: parseFloat(team2_runs),
+        team2_wickets: team2_wickets ? parseInt(team2_wickets) : 0,
+        team2_overs: parseFloat(team2_overs)
       });
       setScoringKnockout(null);
-      setKnockoutScoreForm({ home_runs: '', home_wickets: '', home_overs: '', away_runs: '', away_wickets: '', away_overs: '' });
+      setKnockoutScoreForm({ team1_runs: '', team1_wickets: '', team1_overs: '', team2_runs: '', team2_wickets: '', team2_overs: '' });
       loadTournamentData(selectedTournament!.id);
       toast.success('Result saved!');
     } catch (e) {
@@ -740,16 +740,16 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                                <motion.div key={f.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 + i * 0.07 }} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
                                  <div className={`flex-1 text-right`}>
                                    <p className={`text-[10px] font-black uppercase ${hw ? 'text-emerald-600' : 'text-slate-500'}`}>{f.team1_name}</p>
-                                   <p className="text-lg font-black text-slate-900 leading-none">{(f as any).home_team_runs}</p>
-                                   <p className="text-[8px] text-slate-400 font-bold">{(f as any).home_team_overs} ov</p>
+                                   <p className="text-lg font-black text-slate-900 leading-none">{(f as any).team1_runs}</p>
+                                   <p className="text-[8px] text-slate-400 font-bold">{(f as any).team1_overs} ov</p>
                                  </div>
                                  <div className="flex flex-col items-center gap-0.5 px-2">
                                    <span className="text-[8px] font-black text-slate-300 uppercase">vs</span>
                                  </div>
                                  <div className="flex-1">
                                    <p className={`text-[10px] font-black uppercase ${aw ? 'text-emerald-600' : 'text-slate-500'}`}>{f.team2_name}</p>
-                                   <p className="text-lg font-black text-slate-900 leading-none">{(f as any).away_team_runs}</p>
-                                   <p className="text-[8px] text-slate-400 font-bold">{(f as any).away_team_overs} ov</p>
+                                   <p className="text-lg font-black text-slate-900 leading-none">{(f as any).team2_runs}</p>
+                                   <p className="text-[8px] text-slate-400 font-bold">{(f as any).team2_overs} ov</p>
                                  </div>
                                </motion.div>
                              );
@@ -872,10 +872,10 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                            })
                            .map(f => {
                              const isCompleted = f.status === 'completed';
-                             const homeRuns = (f as any).home_team_runs;
-                             const awayRuns = (f as any).away_team_runs;
-                             const homeOvers = (f as any).home_team_overs;
-                             const awayOvers = (f as any).away_team_overs;
+                             const t1Runs = (f as any).team1_runs;
+                             const t2Runs = (f as any).team2_runs;
+                             const t1Overs = (f as any).team1_overs;
+                             const t2Overs = (f as any).team2_overs;
                              const winnerId = (f as any).winner_id;
                              return (
                                <tr key={f.id} className="hover:bg-slate-50/70 transition-colors group">
@@ -892,20 +892,20 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                                    <div className="flex items-center justify-center gap-3">
                                      <div className="text-right">
                                        <p className={`text-xs font-black uppercase italic truncate max-w-[110px] ${isCompleted && winnerId === f.team1_id ? 'text-emerald-600' : 'text-slate-800'}`}>{f.team1_name}</p>
-                                       {isCompleted && homeRuns != null && (
+                                       {isCompleted && t1Runs != null && (
                                           <p className="text-sm font-black text-slate-900">
-                                            {homeRuns}/{(f as any).home_team_wickets ?? 0}
-                                            <span className="text-[9px] text-slate-400 ml-1">({parseFloat(homeOvers).toString()} overs)</span>
+                                            {t1Runs}/{(f as any).team1_wickets ?? 0}
+                                            <span className="text-[9px] text-slate-400 ml-1">({parseFloat(t1Overs).toString()} overs)</span>
                                           </p>
                                         )}
                                      </div>
                                      <span className="text-[9px] font-black text-slate-300 italic">VS</span>
                                      <div className="text-left">
                                        <p className={`text-xs font-black uppercase italic truncate max-w-[110px] ${isCompleted && winnerId === f.team2_id ? 'text-emerald-600' : 'text-slate-800'}`}>{f.team2_name}</p>
-                                       {isCompleted && awayRuns != null && (
+                                       {isCompleted && t2Runs != null && (
                                           <p className="text-sm font-black text-slate-900">
-                                            {awayRuns}/{(f as any).away_team_wickets ?? 0}
-                                            <span className="text-[9px] text-slate-400 ml-1">({parseFloat(awayOvers).toString()} overs)</span>
+                                            {t2Runs}/{(f as any).team2_wickets ?? 0}
+                                            <span className="text-[9px] text-slate-400 ml-1">({parseFloat(t2Overs).toString()} overs)</span>
                                           </p>
                                         )}
                                      </div>
@@ -929,12 +929,12 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                                        <button
                                          onClick={() => { setScoringFixture(f); 
                                             setScoreForm({ 
-                                              home_runs: String((f as any).home_team_runs ?? ''), 
-                                              home_wickets: String((f as any).home_team_wickets ?? ''), 
-                                              home_overs: String((f as any).home_team_overs ?? ''), 
-                                              away_runs: String((f as any).away_team_runs ?? ''), 
-                                              away_wickets: String((f as any).away_team_wickets ?? ''), 
-                                              away_overs: String((f as any).away_team_overs ?? ''), 
+                                              team1_runs: String((f as any).team1_runs ?? ''), 
+                                              team1_wickets: String((f as any).team1_wickets ?? ''), 
+                                              team1_overs: String((f as any).team1_overs ?? ''), 
+                                              team2_runs: String((f as any).team2_runs ?? ''), 
+                                              team2_wickets: String((f as any).team2_wickets ?? ''), 
+                                              team2_overs: String((f as any).team2_overs ?? ''), 
                                               result_type: 'normal' 
                                             }); }}
                                          title="Enter Score"
@@ -1017,12 +1017,12 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                    onScore={(m) => { 
                      setScoringKnockout(m); 
                      setKnockoutScoreForm({ 
-                       home_runs: '', 
-                       home_wickets: '', 
-                       home_overs: '', 
-                       away_runs: '', 
-                       away_wickets: '', 
-                       away_overs: '' 
+                       team1_runs: '', 
+                       team1_wickets: '', 
+                       team1_overs: '', 
+                       team2_runs: '', 
+                       team2_wickets: '', 
+                       team2_overs: '' 
                      }); 
                    }}
                    onEdit={(m) => setEditingKnockout({ ...m })}
@@ -1131,28 +1131,28 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
               <div className="p-10 space-y-6">
                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Home Team</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Team 1</label>
                        <select 
-                         title="Select Home Team"
+                         title="Select Team 1"
                          value={newFixture.team1_id}
                          onChange={e => setNewFixture({...newFixture, team1_id: e.target.value})}
                          className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                        >
-                         <option value="">Select Home Team</option>
+                         <option value="">Select Team 1</option>
                          {teams.map(t => (
                            <option key={t.id} value={t.id}>{t.team_name}</option>
                          ))}
                       </select>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Away Team</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Team 2</label>
                        <select 
-                         title="Select Away Team"
+                         title="Select Team 2"
                          value={newFixture.team2_id}
                          onChange={e => setNewFixture({...newFixture, team2_id: e.target.value})}
                          className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                        >
-                         <option value="">Select Away Team</option>
+                         <option value="">Select Team 2</option>
                          {teams.map(t => (
                            <option key={t.id} value={t.id}>{t.team_name}</option>
                          ))}
@@ -1325,15 +1325,15 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Runs</label>
-                      <input type="number" placeholder="e.g. 145" value={scoreForm.home_runs} onChange={e => setScoreForm({...scoreForm, home_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                      <input type="number" placeholder="e.g. 145" value={scoreForm.team1_runs} onChange={e => setScoreForm({...scoreForm, team1_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
                     </div>
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Wickets</label>
-                      <input type="number" max="10" placeholder="e.g. 10" value={scoreForm.home_wickets} onChange={e => setScoreForm({...scoreForm, home_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                      <input type="number" max="10" placeholder="e.g. 10" value={scoreForm.team1_wickets} onChange={e => setScoreForm({...scoreForm, team1_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
                     </div>
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Overs</label>
-                      <input type="number" step="0.1" placeholder="e.g. 20.0" value={scoreForm.home_overs} onChange={e => setScoreForm({...scoreForm, home_overs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                      <input type="number" step="0.1" placeholder="e.g. 20.0" value={scoreForm.team1_overs} onChange={e => setScoreForm({...scoreForm, team1_overs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
                     </div>
                   </div>
                 </div>
@@ -1342,15 +1342,15 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Runs</label>
-                      <input type="number" placeholder="e.g. 138" value={scoreForm.away_runs} onChange={e => setScoreForm({...scoreForm, away_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                      <input type="number" placeholder="e.g. 138" value={scoreForm.team2_runs} onChange={e => setScoreForm({...scoreForm, team2_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
                     </div>
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Wickets</label>
-                      <input type="number" max="10" placeholder="e.g. 10" value={scoreForm.away_wickets} onChange={e => setScoreForm({...scoreForm, away_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                      <input type="number" max="10" placeholder="e.g. 10" value={scoreForm.team2_wickets} onChange={e => setScoreForm({...scoreForm, team2_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
                     </div>
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Overs</label>
-                      <input type="number" step="0.1" placeholder="e.g. 20.0" value={scoreForm.away_overs} onChange={e => setScoreForm({...scoreForm, away_overs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
+                      <input type="number" step="0.1" placeholder="e.g. 20.0" value={scoreForm.team2_overs} onChange={e => setScoreForm({...scoreForm, team2_overs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" />
                     </div>
                   </div>
                 </div>
@@ -1389,17 +1389,17 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">{scoringKnockout.team1_name}</label>
                     <div className="space-y-2">
-                      <input title="Home Runs" type="number" placeholder="Runs" value={knockoutScoreForm.home_runs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, home_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
-                      <input title="Home Wickets" type="number" max="10" placeholder="Wickets" value={knockoutScoreForm.home_wickets} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, home_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
-                      <input title="Home Overs" type="number" placeholder="Overs" value={knockoutScoreForm.home_overs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, home_overs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      <input title="Team 1 Runs" type="number" placeholder="Runs" value={knockoutScoreForm.team1_runs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, team1_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      <input title="Team 1 Wickets" type="number" max="10" placeholder="Wickets" value={knockoutScoreForm.team1_wickets} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, team1_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      <input title="Team 1 Overs" type="number" placeholder="Overs" value={knockoutScoreForm.team1_overs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, team1_overs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
                     </div>
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">{scoringKnockout.team2_name}</label>
                     <div className="space-y-2">
-                      <input title="Away Runs" type="number" placeholder="Runs" value={knockoutScoreForm.away_runs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, away_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
-                      <input title="Away Wickets" type="number" max="10" placeholder="Wickets" value={knockoutScoreForm.away_wickets} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, away_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
-                      <input title="Away Overs" type="number" placeholder="Overs" value={knockoutScoreForm.away_overs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, away_overs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      <input title="Team 2 Runs" type="number" placeholder="Runs" value={knockoutScoreForm.team2_runs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, team2_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      <input title="Team 2 Wickets" type="number" max="10" placeholder="Wickets" value={knockoutScoreForm.team2_wickets} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, team2_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
+                      <input title="Team 2 Overs" type="number" placeholder="Overs" value={knockoutScoreForm.team2_overs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, team2_overs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
                     </div>
                   </div>
                 </div>
@@ -1427,15 +1427,15 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
               <div className="p-10 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Home Team</label>
-                    <select title="Select Home Team" value={editingKnockout.team1_id || ''} onChange={e => { const t = teams.find(t => t.id === e.target.value); setEditingKnockout({...editingKnockout, team1_id: e.target.value, team1_name: t?.team_name || '', team1_logo: t?.logo_url || ''}); }} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Team 1</label>
+                    <select title="Select Team 1" value={editingKnockout.team1_id || ''} onChange={e => { const t = teams.find(t => t.id === e.target.value); setEditingKnockout({...editingKnockout, team1_id: e.target.value, team1_name: t?.team_name || '', team1_logo: t?.logo_url || ''}); }} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20">
                       <option value="">-- Select Team --</option>
                       {teams.map(t => <option key={t.id} value={t.id}>{t.team_name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Away Team</label>
-                    <select title="Select Away Team" value={editingKnockout.team2_id || ''} onChange={e => { const t = teams.find(t => t.id === e.target.value); setEditingKnockout({...editingKnockout, team2_id: e.target.value, team2_name: t?.team_name || '', team2_logo: t?.logo_url || ''}); }} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Team 2</label>
+                    <select title="Select Team 2" value={editingKnockout.team2_id || ''} onChange={e => { const t = teams.find(t => t.id === e.target.value); setEditingKnockout({...editingKnockout, team2_id: e.target.value, team2_name: t?.team_name || '', team2_logo: t?.logo_url || ''}); }} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20">
                       <option value="">-- Select Team --</option>
                       {teams.map(t => <option key={t.id} value={t.id}>{t.team_name}</option>)}
                     </select>
@@ -1619,10 +1619,10 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                                   <button
                                     onClick={() => {
                                       const crossovers = [
-                                        { slot_number: 1, home_seed: `${groupA}1`, away_seed: `${target}2` },
-                                        ...(groupC && groupD ? [{ slot_number: 2, home_seed: `${groupC}1`, away_seed: `${groupD}2` }] : []),
-                                        ...(groupC && groupD ? [{ slot_number: 3, home_seed: `${groupD}1`, away_seed: `${groupC}2` }] : []),
-                                        { slot_number: groupC && groupD ? 4 : 2, home_seed: `${target}1`, away_seed: `${groupA}2` },
+                                        { slot_number: 1, team1_seed: `${groupA}1`, team2_seed: `${target}2` },
+                                        ...(groupC && groupD ? [{ slot_number: 2, team1_seed: `${groupC}1`, team2_seed: `${groupD}2` }] : []),
+                                        ...(groupC && groupD ? [{ slot_number: 3, team1_seed: `${groupD}1`, team2_seed: `${groupC}2` }] : []),
+                                        { slot_number: groupC && groupD ? 4 : 2, team1_seed: `${target}1`, team2_seed: `${groupA}2` },
                                       ];
                                       handleSetupKnockout(['QF', 'SF', 'Final'], crossovers);
                                       setShowSetupDrawer(false);
@@ -1739,27 +1739,27 @@ const KOMatchCard: React.FC<{ m: any; barClass: string; isAdmin?: boolean; onSco
   const done = m.status === 'completed';
 
   let hName = m.team1_name, hLogo = m.team1_logo, hId = m.team1_id;
-  if (!hId && m.home_seed && resolveSeed) {
-    const r = resolveSeed(m.home_seed);
+  if (!hId && m.team1_seed && resolveSeed) {
+    const r = resolveSeed(m.team1_seed);
     if (r) { hName = r.team_name; hLogo = r.logo_url; hId = r.team_id; }
-    else { hName = m.home_seed; }
+    else { hName = m.team1_seed; }
   }
 
   let aName = m.team2_name, aLogo = m.team2_logo, aId = m.team2_id;
-  if (!aId && m.away_seed && resolveSeed) {
-    const r = resolveSeed(m.away_seed);
+  if (!aId && m.team2_seed && resolveSeed) {
+    const r = resolveSeed(m.team2_seed);
     if (r) { aName = r.team_name; aLogo = r.logo_url; aId = r.team_id; }
-    else { aName = m.away_seed; }
+    else { aName = m.team2_seed; }
   }
 
   const hw = done && m.winner_id === hId;
   const aw = done && m.winner_id === aId;
   // It's ready to score if both teams are resolved to actual team names (not seeds)
-  const ready = hName && aName && hName !== m.home_seed && aName !== m.away_seed;
+  const ready = hName && aName && hName !== m.team1_seed && aName !== m.team2_seed;
 
   const sides = [
-    { name: hName as string, logo: hLogo as string, runs: m.home_runs, wickets: m.home_team_wickets, overs: m.home_overs, won: hw },
-    { name: aName as string, logo: aLogo as string, runs: m.away_runs, wickets: m.away_team_wickets, overs: m.away_overs, won: aw }
+    { name: hName as string, logo: hLogo as string, runs: m.team1_runs, wickets: m.team1_wickets, overs: m.team1_overs, won: hw },
+    { name: aName as string, logo: aLogo as string, runs: m.team2_runs, wickets: m.team2_wickets, overs: m.team2_overs, won: aw }
   ];
 
   const handleScoreClick = () => {
@@ -1789,7 +1789,7 @@ const KOMatchCard: React.FC<{ m: any; barClass: string; isAdmin?: boolean; onSco
             )}
           </div>
         ))}
-        {done && m.home_overs && <p className="text-[8px] text-white/20 font-bold uppercase text-center pt-1 italic tracking-widest opacity-50">Match Completed</p>}
+        {done && m.team1_overs && <p className="text-[8px] text-white/20 font-bold uppercase text-center pt-1 italic tracking-widest opacity-50">Match Completed</p>}
         {m.date && <p className="text-[8px] text-white/40 font-bold text-center">{new Date(m.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</p>}
       </div>
       <div className="px-4 pb-3 flex gap-1 justify-end border-t border-white/5 pt-2">

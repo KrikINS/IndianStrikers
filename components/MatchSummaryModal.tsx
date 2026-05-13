@@ -13,16 +13,16 @@ interface MatchSummaryModalProps {
 
 export default function MatchSummaryModal({ match, team1Name, team2Name, onSave, onClose, isAdmin }: MatchSummaryModalProps) {
   // Resolve team IDs with legacy field fallbacks
-  const team1Id = match.team1Id || (match as any).homeTeamId || 'team1';
-  const team2Id = match.team2Id || (match as any).opponentId || 'team2';
+  const team1Id = match.team1Id || (match as any).team1_id || 'team1';
+  const team2Id = match.team2Id || (match as any).team2_id || 'team2';
 
   const [summary, setSummary] = useState({
     tossWinner: match.tossWinnerId || (match as any).toss_winner_id || team1Id || '',
     tossChoice: match.tossChoice || match.toss?.choice || 'Bat',
     maxOvers: match.maxOvers || 20,
     resultType: (match as any).resultType || 'Normal Result',
-    homeScore: match.team1Score || { runs: 0, wickets: 0, overs: 0 },
-    awayScore: match.team2Score || { runs: 0, wickets: 0, overs: 0 },
+    team1Score: match.team1Score || { runs: 0, wickets: 0, overs: 0 },
+    team2Score: match.team2Score || { runs: 0, wickets: 0, overs: 0 },
   });
 
   const [initialSummary] = useState(summary);
@@ -236,7 +236,7 @@ export default function MatchSummaryModal({ match, team1Name, team2Name, onSave,
 
         {/* 1. Score Entry Grid */}
         <div className="grid grid-cols-2 gap-6 mb-8">
-          {/* Home Team Inputs */}
+          {/* Team 1 Inputs */}
           <div className="bg-slate-800/40 p-5 rounded-2xl border border-slate-700/50">
             <span className="team-label text-center mb-4 text-blue-400">{team1Name}</span>
             <div className="space-y-4">
@@ -244,43 +244,43 @@ export default function MatchSummaryModal({ match, team1Name, team2Name, onSave,
                 <div className="text-center w-20">
                   <label className="text-[10px] text-slate-500 font-black block mb-1">TOTAL RUNS</label>
                   <input 
-                    id="home-runs"
+                    id="team1-runs"
                     title={`${team1Name} Runs`}
                     type="number" 
                     className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-black text-xl focus:border-blue-500 outline-none"
-                    value={summary.homeScore.runs}
-                    onChange={(e) => setSummary({...summary, homeScore: {...summary.homeScore, runs: parseInt(e.target.value) || 0}})}
+                    value={summary.team1Score.runs}
+                    onChange={(e) => setSummary({...summary, team1Score: {...summary.team1Score, runs: parseInt(e.target.value) || 0}})}
                   />
                 </div>
                 <span className="text-2xl text-slate-600 font-black pb-1">/</span>
                 <div className="text-center w-16">
                   <label className="text-[10px] text-slate-500 font-black block mb-1">WKTS</label>
                   <input 
-                    id="home-wickets"
+                    id="team1-wickets"
                     title={`${team1Name} Wickets`}
                     type="number" 
                     className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-black text-xl focus:border-blue-500 outline-none"
-                    value={summary.homeScore.wickets}
-                    onChange={(e) => setSummary({...summary, homeScore: {...summary.homeScore, wickets: parseInt(e.target.value) || 0}})}
+                    value={summary.team1Score.wickets}
+                    onChange={(e) => setSummary({...summary, team1Score: {...summary.team1Score, wickets: parseInt(e.target.value) || 0}})}
                   />
                 </div>
               </div>
               <div className="text-center">
                 <label className="text-[10px] text-slate-500 font-black block mb-1">OVERS COMPLETED</label>
                 <input 
-                  id="home-overs"
+                  id="team1-overs"
                   title={`${team1Name} Overs`}
                   type="number"
                   step="0.1"
                   className="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg text-center font-bold text-base focus:border-blue-500 outline-none max-w-[120px] mx-auto block"
-                  value={summary.homeScore.overs}
-                  onChange={(e) => setSummary({...summary, homeScore: {...summary.homeScore, overs: parseFloat(e.target.value) || 0}})}
+                  value={summary.team1Score.overs}
+                  onChange={(e) => setSummary({...summary, team1Score: {...summary.team1Score, overs: parseFloat(e.target.value) || 0}})}
                 />
               </div>
             </div>
           </div>
 
-          {/* Away Team Inputs */}
+          {/* Team 2 Inputs */}
           <div className="bg-emerald-900/10 p-5 rounded-2xl border border-emerald-900/20">
             <span className="team-label text-center mb-4 text-emerald-400">{team2Name}</span>
             <div className="space-y-4">
@@ -288,37 +288,37 @@ export default function MatchSummaryModal({ match, team1Name, team2Name, onSave,
                 <div className="text-center w-20">
                   <label className="text-[10px] text-emerald-900/50 font-black block mb-1">TOTAL RUNS</label>
                   <input 
-                    id="away-runs"
+                    id="team2-runs"
                     title={`${team2Name} Runs`}
                     type="number" 
                     className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-black text-xl focus:border-emerald-500 outline-none"
-                    value={summary.awayScore.runs}
-                    onChange={(e) => setSummary({...summary, awayScore: {...summary.awayScore, runs: parseInt(e.target.value) || 0}})}
+                    value={summary.team2Score.runs}
+                    onChange={(e) => setSummary({...summary, team2Score: {...summary.team2Score, runs: parseInt(e.target.value) || 0}})}
                   />
                 </div>
                 <span className="text-2xl text-emerald-900/30 font-black pb-1">/</span>
                 <div className="text-center w-16">
                   <label className="text-[10px] text-emerald-900/50 font-black block mb-1">WKTS</label>
                   <input 
-                    id="away-wickets"
+                    id="team2-wickets"
                     title={`${team2Name} Wickets`}
                     type="number" 
                     className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-black text-xl focus:border-emerald-500 outline-none"
-                    value={summary.awayScore.wickets}
-                    onChange={(e) => setSummary({...summary, awayScore: {...summary.awayScore, wickets: parseInt(e.target.value) || 0}})}
+                    value={summary.team2Score.wickets}
+                    onChange={(e) => setSummary({...summary, team2Score: {...summary.team2Score, wickets: parseInt(e.target.value) || 0}})}
                   />
                 </div>
               </div>
               <div className="text-center">
                 <label className="text-[10px] text-emerald-900/50 font-black block mb-1">OVERS COMPLETED</label>
                 <input 
-                  id="away-overs"
+                  id="team2-overs"
                   title={`${team2Name} Overs`}
                   type="number"
                   step="0.1"
                   className="w-full bg-slate-900 border border-emerald-900/30 text-white p-2 rounded-lg text-center font-bold text-base focus:border-emerald-500 outline-none max-w-[120px] mx-auto block"
-                  value={summary.awayScore.overs}
-                  onChange={(e) => setSummary({...summary, awayScore: {...summary.awayScore, overs: parseFloat(e.target.value) || 0}})}
+                  value={summary.team2Score.overs}
+                  onChange={(e) => setSummary({...summary, team2Score: {...summary.team2Score, overs: parseFloat(e.target.value) || 0}})}
                 />
               </div>
             </div>

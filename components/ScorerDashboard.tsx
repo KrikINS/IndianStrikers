@@ -140,10 +140,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     const searchId = (typeof id === 'object' && id !== null) ? (id.id || id.name || String(id)) : String(id);
     if (searchId === '[object Object]') return 'Unknown Player';
 
-    const homePlayer = players.find((p: Player) => String(p.id) === searchId);
-    if (homePlayer) return homePlayer.name;
-    const awayPlayer = opponentPlayers.find(p => String(p.id) === searchId);
-    if (awayPlayer) return awayPlayer.name;
+    const team1Player = players.find((p: Player) => String(p.id) === searchId);
+    if (team1Player) return team1Player.name;
+    const team2Player = opponentPlayers.find(p => String(p.id) === searchId);
+    if (team2Player) return team2Player.name;
     // team2XI may store names directly for opponent teams without registered IDs
     return searchId;
   };
@@ -467,7 +467,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     if (store.pendingMilestone && milestoneRef.current) {
       const { type, player, subText } = store.pendingMilestone;
 
-      // STRICT FIX: Only trigger milestone celebrations for home team (Indian Strikers) players.
+      // STRICT FIX: Only trigger milestone celebrations for Team 1 (Indian Strikers) players.
       // We check if the player involved is part of the players store and marked as a club player.
       const isClubPlayer = players.some((p: Player) => p.name === player && !!p.isClubPlayer);
 
@@ -587,7 +587,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   // Fetch opponent players when we know the opponent ID
   useEffect(() => {
     // Try opponentId first, then fall back to team2Id (some matches use team2Id directly)
-    const opponentId = matchMeta?.opponentId || matchMeta?.team2Id;
+    const opponentId = matchMeta?.team2Id;
     if (!opponentId) return;
     import('../services/storageService').then(({ getOpponents }) => {
       getOpponents().then(teams => {
@@ -597,7 +597,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         }
       }).catch(console.error);
     });
-  }, [matchMeta?.opponentId, matchMeta?.team2Id]);
+  }, [matchMeta?.team2Id]);
 
   const handleUpdateMatchStatus = async (status: MatchStatus) => {
     if (activeMatchId) {
@@ -675,11 +675,14 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       (store.currentInnings === 2 && currentInnings.totalRuns > (store.innings1?.totalRuns || 0))
     ))
   );
-  // HARDENED: isMatchComplete requires BOTH isFinished flag AND actual recorded balls.
-  // This prevents stale localStorage isFinished:true or async-fetch race conditions
-  // from spuriously showing the PERFORMER SPOTLIGHT after ball 1 (or at match start).
-  const totalRecordedBalls = (store.innings1?.history?.length || 0) + (store.innings2?.history?.length || 0);
-  const isMatchComplete = store.isFinished && totalRecordedBalls > 0;
+  // HARDENED v2: isMatchComplete requires BOTH innings2 to have actual recorded ball
+  // history AND the isFinished flag. This prevents stale cloud liveData (isFinished:true
+  // from a previously completed innings) from spuriously triggering the PERFORMER SPOTLIGHT
+  // after just ball 1 of innings 1 in a freshly reset match.
+  // A match can only genuinely finish during innings 2, so innings2 must have balls.
+  const innings2Balls = store.innings2?.history?.length || 0;
+  const totalRecordedBalls = (store.innings1?.history?.length || 0) + innings2Balls;
+  const isMatchComplete = store.isFinished && innings2Balls > 0;
   const isInningsBreak = store.currentInnings === 1 && isBattingFinishing && !store.isFinished;
 
 
@@ -904,16 +907,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <div style={{ textAlign: 'left', flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {m.team1Logo || m.homeLogo ? (
-                        <img src={m.team1Logo || m.homeLogo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt="T1" />
+                      {m.team1Logo ? (
+                        <img src={m.team1Logo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt="T1" />
                       ) : <Shield size={16} color="#001F3F" opacity={0.3} />}
                       <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#001F3F' }}>{m.team1Name || 'INS'}</span>
                     </div>
                     <span style={{ fontSize: '0.7rem', fontWeight: 900, opacity: 0.2 }}>VS</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#001F3F' }}>{m.team2Name || 'OPP'}</span>
-                      {m.team2Logo || m.opponentLogo ? (
-                        <img src={m.team2Logo || m.opponentLogo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt="T2" />
+                      {m.team2Logo ? (
+                        <img src={m.team2Logo} style={{ width: 24, height: 24, objectFit: 'contain' }} alt="T2" />
                       ) : <Shield size={16} color="#001F3F" opacity={0.3} />}
                     </div>
                     {m.status === 'live' && (
@@ -1355,12 +1358,12 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           innings2: store.innings2
         };
 
-        const inn2BatName = store.innings2?.battingTeamId === 'HOME'
+        const inn2BatName = store.innings2?.battingTeamId === 'TEAM1'
           ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1')
-          : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
-        const inn1BatName = store.innings1?.battingTeamId === 'HOME'
+          : (store.team2Name || matchMeta?.team2Name || 'TEAM 2');
+        const inn1BatName = store.innings1?.battingTeamId === 'TEAM1'
           ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1')
-          : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
+          : (store.team2Name || matchMeta?.team2Name || 'TEAM 2');
 
         let resultMessage = '';
         if (totalScore >= target) {
@@ -1574,19 +1577,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       bowlId = store.innings1.battingTeamId;
     } else {
       // 1st Innings: Based on toss
-      const isTeam1Batting = (data.tossWinner === 'HOME' && data.tossChoice === 'Bat') || 
-                             (data.tossWinner === 'AWAY' && data.tossChoice === 'Bowl');
-      // Multi-source fallback: matchMeta IDs → 'HOME'/'AWAY' semantic fallback
+      const isTeam1Batting = (data.tossWinner === 'TEAM1' && data.tossChoice === 'Bat') || 
+                             (data.tossWinner === 'TEAM2' && data.tossChoice === 'Bowl');
+      // Multi-source fallback: matchMeta IDs → 'TEAM1'/'TEAM2' semantic fallback
       // This ensures startInnings is never blocked by a momentarily undefined matchMeta
       batId = isTeam1Batting
-        ? (matchMeta?.team1Id || 'HOME')
-        : (matchMeta?.team2Id || matchMeta?.opponentId || 'AWAY');
+        ? (matchMeta?.team1Id || 'TEAM1')
+        : (matchMeta?.team2Id || 'TEAM2');
       bowlId = isTeam1Batting
-        ? (matchMeta?.team2Id || matchMeta?.opponentId || 'AWAY')
-        : (matchMeta?.team1Id || 'HOME');
+        ? (matchMeta?.team2Id || 'TEAM2')
+        : (matchMeta?.team1Id || 'TEAM1');
     }
     
-    // batId and bowlId are always defined now (at minimum 'HOME'/'AWAY')
+    // batId and bowlId are always defined now (at minimum 'TEAM1'/'TEAM2')
     store.startInnings(
       store.currentInnings === null ? 1 : 2,
       batId,
@@ -1950,8 +1953,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           {/* ── MatchSetupModal: Toss → Squad → Openers → Bowler ── */}
           {showSetupModal && (
             <MatchSetupModal
-              team1Id={matchMeta?.team1Id || 'HOME'}
-              team2Id={matchMeta?.team2Id || matchMeta?.opponentId || 'AWAY'}
+              team1Id={matchMeta?.team1Id || 'TEAM1'}
+              team2Id={matchMeta?.team2Id || 'TEAM2'}
               team1Name={store.team1Name || matchMeta?.team1Name || 'INDIAN STRIKERS'}
               team2Name={store.team2Name || matchMeta?.team2Name || 'OPPONENT'}
               team1Logo={store.team1Logo || matchMeta?.team1Logo || teamLogo || '/INS%20LOGO.PNG'}

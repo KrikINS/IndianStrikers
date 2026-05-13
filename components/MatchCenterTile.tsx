@@ -161,7 +161,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
 
             {/* MAIN SCORE SECTION — Vertical team layout */}
             <div className="vs-container-revised">
-                {/* Slot 1 (Home) */}
+                {/* Slot 1 (Team 1) */}
                 <div className="team-vertical">
                     <div className="logo-wrapper">
                         {team1Logo ? (
@@ -208,7 +208,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     <div className="vs-line"></div>
                 </div>
 
-                {/* Slot 2 (Away) */}
+                {/* Slot 2 (Team 2) */}
                 <div className="team-vertical">
                     <div className="logo-wrapper">
                         {opponentLogo ? (
@@ -257,13 +257,13 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                         (match.resultNote?.toLowerCase().includes('won') || match.resultSummary?.toLowerCase().includes('won') || 
                          (match.team1Score && match.team2Score && (match.team1Score.runs ?? 0) !== (match.team2Score.runs ?? 0)))
                             ? (() => {
-                                const homeWin = (match.team1Score?.runs ?? 0) > (match.team2Score?.runs ?? 0);
-                                const awayWin = (match.team1Score?.runs ?? 0) < (match.team2Score?.runs ?? 0);
-                                const isInsHome = match.team1Id === '00000000-0000-0000-0000-000000000000' || match.team1Id === 'IND_STRIKERS';
-                                const isInsAway = match.team2Id === '00000000-0000-0000-0000-000000000000' || match.team2Id === 'IND_STRIKERS';
+                                const team1Win = (match.team1Score?.runs ?? 0) > (match.team2Score?.runs ?? 0);
+                                const team2Win = (match.team1Score?.runs ?? 0) < (match.team2Score?.runs ?? 0);
+                                const isInsTeam1 = match.team1Id === '00000000-0000-0000-0000-000000000000' || match.team1Id === 'IND_STRIKERS';
+                                const isInsTeam2 = match.team2Id === '00000000-0000-0000-0000-000000000000' || match.team2Id === 'IND_STRIKERS';
                                 
-                                if ((isInsHome && homeWin) || (isInsAway && awayWin)) return 'result-won';
-                                if ((isInsHome && awayWin) || (isInsAway && homeWin)) return 'result-lost';
+                                if ((isInsTeam1 && team1Win) || (isInsTeam2 && team2Win)) return 'result-won';
+                                if ((isInsTeam1 && team2Win) || (isInsTeam2 && team1Win)) return 'result-lost';
                                 return 'result-neutral'; // Neutral match win
                             })()
                             : ''
@@ -271,13 +271,13 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                     style={{ 
                         backgroundColor: isLive ? 'rgba(8, 51, 68, 0.6)' : 
                                        (() => {
-                                            const homeWin = (match.team1Score?.runs ?? 0) > (match.team2Score?.runs ?? 0);
-                                            const awayWin = (match.team1Score?.runs ?? 0) < (match.team2Score?.runs ?? 0);
-                                            const isInsHome = match.team1Id === '00000000-0000-0000-0000-000000000000' || match.team1Id === 'IND_STRIKERS';
-                                            const isInsAway = match.team2Id === '00000000-0000-0000-0000-000000000000' || match.team2Id === 'IND_STRIKERS';
+                                            const team1Win = (match.team1Score?.runs ?? 0) > (match.team2Score?.runs ?? 0);
+                                            const team2Win = (match.team1Score?.runs ?? 0) < (match.team2Score?.runs ?? 0);
+                                            const isInsTeam1 = match.team1Id === '00000000-0000-0000-0000-000000000000' || match.team1Id === 'IND_STRIKERS';
+                                            const isInsTeam2 = match.team2Id === '00000000-0000-0000-0000-000000000000' || match.team2Id === 'IND_STRIKERS';
                                             
-                                            if ((isInsHome && homeWin) || (isInsAway && awayWin)) return 'rgba(16, 185, 129, 0.9)'; // Green
-                                            if ((isInsHome && awayWin) || (isInsAway && homeWin)) return 'rgba(244, 63, 94, 0.9)'; // Red
+                                            if ((isInsTeam1 && team1Win) || (isInsTeam2 && team2Win)) return 'rgba(16, 185, 129, 0.9)'; // Green
+                                            if ((isInsTeam1 && team2Win) || (isInsTeam2 && team1Win)) return 'rgba(244, 63, 94, 0.9)'; // Red
                                             return 'rgba(56, 189, 248, 0.8)'; // Blue for neutral results
                                        })()
                     }}

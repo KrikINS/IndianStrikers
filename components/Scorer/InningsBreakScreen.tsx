@@ -33,8 +33,8 @@ export const InningsBreakScreen: React.FC<InningsBreakScreenProps> = ({
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 24, marginBottom: 24 }}>
                     <img src={store.team1Logo || teamLogo || '/INS%20LOGO.PNG'} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="H" />
                     <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'rgba(0,0,0,0.1)' }}>VS</span>
-                    {store.team2Logo || matchMeta?.opponentLogo ? (
-                      <img src={store.team2Logo || matchMeta?.opponentLogo} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="A" />
+                    {store.team2Logo || matchMeta?.team2Logo ? (
+                      <img src={store.team2Logo || matchMeta?.team2Logo} style={{ width: 60, height: 60, objectFit: 'contain' }} alt="A" />
                     ) : <Shield size={40} color="rgba(0,0,0,0.1)" />}
                   </div>
                   <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#001F3F', margin: 0 }}>INNINGS BREAK</h1>

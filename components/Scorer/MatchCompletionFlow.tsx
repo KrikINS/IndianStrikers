@@ -107,9 +107,9 @@ export const MatchCompletionFlow: React.FC<MatchCompletionFlowProps> = ({
                     const i1 = store.innings1?.totalRuns || 0;
                     const i2 = store.innings2?.totalRuns || 0;
                     if (i2 > i1) {
-                      return `${store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.team2Name || 'Away')} WON BY ${10 - (store.innings2?.wickets || 0)} WICKETS`;
+                      return `${store.innings2?.battingTeamId === 'TEAM1' ? (store.team1Name || 'INDIAN STRIKERS') : (matchMeta?.team2Name || 'OPPONENT')} WON BY ${10 - (store.innings2?.wickets || 0)} WICKETS`;
                     } else if (i1 > i2) {
-                      return `${store.innings1?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.team2Name || 'Away')} WON BY ${i1 - i2} RUNS`;
+                      return `${store.innings1?.battingTeamId === 'TEAM1' ? (store.team1Name || 'INDIAN STRIKERS') : (matchMeta?.team2Name || 'OPPONENT')} WON BY ${i1 - i2} RUNS`;
                     }
                     return "MATCH TIED";
                   })()}

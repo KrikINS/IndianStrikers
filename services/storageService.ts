@@ -367,16 +367,16 @@ const mapMatch = (m: any): ScheduledMatch => {
         };
     };
 
-    // DB uses legacy column names: home_team_xi / opponent_team_xi / home_team_id / is_home_batting_first
-    // The backend may also alias new names via joins — support both for resilience.
-    const team1XI = Array.isArray(m.home_team_xi) ? m.home_team_xi
-        : Array.isArray(m.team1_xi) ? m.team1_xi : [];
-    const team2XI = Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi
-        : Array.isArray(m.team2_xi) ? m.team2_xi : [];
-    const team1Id = m.home_team_id || m.team1_id || null;
-    const isTeam1BattingFirst = m.is_home_batting_first !== undefined
-        ? !!m.is_home_batting_first
-        : !!m.is_team1_batting_first;
+    // DB uses new standardized names: team1_xi / team2_xi / team1_id / is_team1_batting_first
+    // Supports legacy fallbacks for old cached data or raw DB fields.
+    const team1XI = Array.isArray(m.team1_xi) ? m.team1_xi
+        : Array.isArray(m.home_team_xi) ? m.home_team_xi : [];
+    const team2XI = Array.isArray(m.team2_xi) ? m.team2_xi
+        : Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : [];
+    const team1Id = m.team1_id || m.home_team_id || null;
+    const isTeam1BattingFirst = m.is_team1_batting_first !== undefined
+        ? !!m.is_team1_batting_first
+        : !!m.is_home_batting_first;
 
     // Score: DB stores final_score_home / final_score_away as INTEGER
     // Prefer rich JSONB from scorecard innings over raw integers
@@ -389,13 +389,13 @@ const mapMatch = (m: any): ScheduledMatch => {
         isTeam1BattingFirst ? rawScorecard?.innings2 : rawScorecard?.innings1
     );
     // Backfill runs from legacy integer columns if scorecard not available
-    if (!team1Score.runs && m.final_score_home) team1Score.runs = Number(m.final_score_home);
-    if (!team2Score.runs && m.final_score_away) team2Score.runs = Number(m.final_score_away);
+    if (!team1Score.runs && (m.team1_score || m.final_score_home)) team1Score.runs = Number(m.team1_score || m.final_score_home);
+    if (!team2Score.runs && (m.team2_score || m.final_score_away)) team2Score.runs = Number(m.team2_score || m.final_score_away);
 
     return {
         id: m.id,
         date: m.date,
-        team2Id: m.opponent_id,
+        team2Id: m.team2_id || m.opponent_id,
         groundId: m.ground_id,
         tournament: m.tournament,
         tournamentId: m.tournament_id,
@@ -479,7 +479,7 @@ const translateToDB = (match: Partial<ScheduledMatch>) => {
   if (match.date !== undefined) dbMatch.date = match.date;
 
   // --- Core match fields ---
-  if (match.team2Id !== undefined) dbMatch.opponent_id = match.team2Id;       // DB: opponent_id
+  if (match.team2Id !== undefined) dbMatch.team2_id = match.team2Id;       // DB: team2_id
   if (match.groundId !== undefined) dbMatch.ground_id = match.groundId;
   if (match.tournament !== undefined) dbMatch.tournament = match.tournament;
   if (match.tournamentId !== undefined) dbMatch.tournament_id = match.tournamentId;
@@ -491,17 +491,17 @@ const translateToDB = (match: Partial<ScheduledMatch>) => {
   if (match.isNeutral !== undefined) dbMatch.is_neutral = match.isNeutral;
   if (match.isTest !== undefined) dbMatch.is_test = match.isTest;
 
-  // --- Playing XI: DB uses home_team_xi / opponent_team_xi ---
-  if (match.team1XI !== undefined) dbMatch.home_team_xi = match.team1XI;          // DB: home_team_xi
-  if (match.team2XI !== undefined) dbMatch.opponent_team_xi = match.team2XI;      // DB: opponent_team_xi
+  // --- Playing XI: DB uses team1_xi / team2_xi ---
+  if (match.team1XI !== undefined) dbMatch.team1_xi = match.team1XI;          // DB: team1_xi
+  if (match.team2XI !== undefined) dbMatch.team2_xi = match.team2XI;      // DB: team2_xi
 
-  // --- Team identity: DB uses home_team_id ---
-  if (match.team1Id !== undefined) dbMatch.home_team_id = match.team1Id;          // DB: home_team_id
+  // --- Team identity: DB uses team1_id ---
+  if (match.team1Id !== undefined) dbMatch.team1_id = match.team1Id;          // DB: team1_id
   // team1_name / team1_logo / team2_name / team2_logo don't exist as columns;
   // backend resolves via JOIN with opponents table. Store in scorecard metadata only.
 
-  // --- Batting order: DB uses is_home_batting_first ---
-  if (match.isTeam1BattingFirst !== undefined) dbMatch.is_home_batting_first = match.isTeam1BattingFirst; // DB: is_home_batting_first
+  // --- Batting order: DB uses is_team1_batting_first ---
+  if (match.isTeam1BattingFirst !== undefined) dbMatch.is_team1_batting_first = match.isTeam1BattingFirst; // DB: is_team1_batting_first
 
   // --- Flags ---
   if (match.isLocked !== undefined) dbMatch.is_locked = match.isLocked;
@@ -518,10 +518,9 @@ const translateToDB = (match: Partial<ScheduledMatch>) => {
   if (match.resultSummary !== undefined) dbMatch.result_summary = match.resultSummary;
   if (match.resultType !== undefined) dbMatch.result_type = match.resultType;
 
-  // --- Scores: DB uses final_score_home / final_score_away (INTEGER runs only) ---
-  // Also write full scorecard JSONB for rich data
-  if (match.team1Score !== undefined) dbMatch.final_score_home = match.team1Score.runs ?? 0; // DB: final_score_home (INTEGER)
-  if (match.team2Score !== undefined) dbMatch.final_score_away = match.team2Score.runs ?? 0; // DB: final_score_away (INTEGER)
+  // --- Scores: Passing as objects allows backend to extract runs/wickets/overs ---
+  if (match.team1Score !== undefined) dbMatch.team1Score = match.team1Score;
+  if (match.team2Score !== undefined) dbMatch.team2Score = match.team2Score;
   if (match.scorecard !== undefined) dbMatch.scorecard = match.scorecard;                    // DB: scorecard (JSONB)
   if (match.targetScore !== undefined) dbMatch.target_score = match.targetScore;
 
@@ -1121,7 +1120,7 @@ export const updateLeagueFixture = async (id: string, f: Partial<LeagueFixture>)
 
 export const submitLeagueResult = async (
   id: string,
-  result: { home_runs: number; home_wickets: number; home_overs: number; away_runs: number; away_wickets: number; away_overs: number; result_type: 'normal' | 'tie' | 'abandoned' }
+  result: { team1_runs: number; team1_wickets: number; team1_overs: number; team2_runs: number; team2_wickets: number; team2_overs: number; result_type: 'normal' | 'tie' | 'abandoned' }
 ) => {
   const res = await fetch(`${API_URL}/league/fixtures/${id}/result`, {
     method: 'POST',
@@ -1180,7 +1179,10 @@ export const updateKnockoutMatch = async (id: string, data: Record<string, unkno
   return handleResponse(res);
 };
 
-export const submitKnockoutResult = async (id: string, result: { home_runs: number; home_wickets: number; home_overs: number; away_runs: number; away_wickets: number; away_overs: number }) => {
+export const submitKnockoutResult = async (
+  id: string, 
+  result: { team1_runs: number; team1_wickets: number; team1_overs: number; team2_runs: number; team2_wickets: number; team2_overs: number }
+) => {
   const res = await fetch(`${API_URL}/league/knockout/${id}/result`, {
     method: 'POST',
     headers: getHeaders(),

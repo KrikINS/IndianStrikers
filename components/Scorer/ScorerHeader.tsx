@@ -41,7 +41,7 @@ export const ScorerHeader: React.FC<ScorerHeaderProps> = ({
                 <img
                   src={store.team1Logo || teamLogo || '/INS%20LOGO.PNG'}
                   style={{ width: 30, height: 30, objectFit: 'contain' }}
-                  alt="HOME"
+                  alt="TEAM1"
                 />
                 <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
                   {(store.team1Name || 'INDIAN STRIKERS').toUpperCase()}
@@ -54,18 +54,18 @@ export const ScorerHeader: React.FC<ScorerHeaderProps> = ({
                   <img
                     src={store.team2Logo || matchMeta?.opponentLogo}
                     style={{ width: 30, height: 30, objectFit: 'contain' }}
-                    alt="AWAY"
+                    alt="TEAM2"
                   />
                 ) : <Shield size={24} color="rgba(255,255,255,0.2)" />}
               </div>
               <div style={{ fontSize: '7.5px', fontWeight: 900, opacity: 0.9, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2 }}>
                 {store.toss.winnerId && (
                   <div style={{ color: '#FAB005' }}>
-                    {store.toss.winnerId === 'HOME' ? 'Indian Strikers' : (store.team2Name || 'OPPONENT')} won toss & elected to {store.toss.choice}
+                    {store.toss.winnerId === 'TEAM1' ? (store.team1Name || 'Indian Strikers') : (store.team2Name || 'OPPONENT')} won toss & elected to {store.toss.choice}
                   </div>
                 )}
                 <div style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  {`${(store.currentInnings === 1 ? (store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.team2Name || 'OPPONENT')) : (store.toss.choice === 'Bat' ? (store.team2Name || 'OPPONENT') : 'Indian Strikers')) : (store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.team2Name || 'OPPONENT') : 'Indian Strikers') : (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.team2Name || 'OPPONENT'))))}  •  ${store.maxOvers || 20} Overs`}
+                  {`${(store.currentInnings === 1 ? (store.toss.winnerId === 'TEAM1' ? (store.toss.choice === 'Bat' ? (store.team1Name || 'Indian Strikers') : (store.team2Name || 'OPPONENT')) : (store.toss.choice === 'Bat' ? (store.team2Name || 'OPPONENT') : (store.team1Name || 'Indian Strikers'))) : (store.toss.winnerId === 'TEAM1' ? (store.toss.choice === 'Bat' ? (store.team2Name || 'OPPONENT') : (store.team1Name || 'Indian Strikers')) : (store.toss.choice === 'Bat' ? (store.team1Name || 'Indian Strikers') : (store.team2Name || 'OPPONENT'))))}  •  ${store.maxOvers || 20} Overs`}
                 </div>
               </div>
             </div>

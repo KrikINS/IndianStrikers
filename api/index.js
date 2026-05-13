@@ -67,6 +67,40 @@ async function runMigrations() {
       AND (avatar_history IS NULL OR jsonb_array_length(avatar_history) = 0);
     `);
     
+    // 3. Rename home/away columns to team1/team2 (Symmetry Update)
+    const tablesToMigrate = [
+      { table: 'matches', map: { 'home_team_id': 'team1_id', 'opponent_id': 'team2_id', 'home_team_xi': 'team1_xi', 'opponent_team_xi': 'team2_xi', 'is_home_batting_first': 'is_team1_batting_first', 'final_score_home': 'team1_score', 'final_score_away': 'team2_score' } },
+      { table: 'league_fixtures', map: { 
+          'home_team_id': 'team1_id', 'away_team_id': 'team2_id',
+          'home_team_runs': 'team1_runs', 'home_team_overs': 'team1_overs', 'home_team_wickets': 'team1_wickets',
+          'away_team_runs': 'team2_runs', 'away_team_overs': 'team2_overs', 'away_team_wickets': 'team2_wickets',
+          'home_nrr_overs': 'team1_nrr_overs', 'away_nrr_overs': 'team2_nrr_overs'
+      } },
+      { table: 'league_knockout_matches', map: { 
+          'home_team_id': 'team1_id', 'away_team_id': 'team2_id',
+          'home_runs': 'team1_runs', 'home_overs': 'team1_overs', 'home_wickets': 'team1_wickets',
+          'away_runs': 'team2_runs', 'away_overs': 'team2_overs', 'away_wickets': 'team2_wickets',
+          'home_seed': 'team1_seed', 'away_seed': 'team2_seed',
+          'home_team_name': 'team1_name', 'away_team_name': 'team2_name',
+          'home_team_logo': 'team1_logo', 'away_team_logo': 'team2_logo'
+      } }
+    ];
+
+    for (const entry of tablesToMigrate) {
+      for (const [oldCol, newCol] of Object.entries(entry.map)) {
+        // Check if old column exists before renaming
+        const { data: cols } = await db.query(`
+          SELECT column_name FROM information_schema.columns 
+          WHERE table_name = $1 AND column_name = $2
+        `, [entry.table, oldCol]);
+        
+        if (cols && cols.length > 0) {
+          console.log(`[Migration] Renaming ${entry.table}.${oldCol} to ${newCol}...`);
+          await db.query(`ALTER TABLE ${entry.table} RENAME COLUMN ${oldCol} TO ${newCol}`);
+        }
+      }
+    }
+    
     console.log('[Migration] Database schema is up to date.');
   } catch (err) {
     console.error('[Migration] Failed to run database migrations:', err.message);
@@ -438,33 +472,33 @@ const mapMatchToDB = (m) => {
   // Property mapping: camelCase -> snake_case
   const keyMap = {
     // New symmetrical field names (primary)
-    'team1Id': 'home_team_id',
-    'team2Id': 'opponent_id',
-    'team1XI': 'home_team_xi',
-    'team2XI': 'opponent_team_xi',
-    'isTeam1BattingFirst': 'is_home_batting_first',
-    'team1Score': 'final_score_home',
-    'team2Score': 'final_score_away',
-    'team1Name': 'home_team_name',
-    'team1Logo': 'home_logo',
-    'team2Name': 'opponent_name',
-    'team2Logo': 'opponent_logo',
-    // Legacy field names (kept for backward compatibility with any raw callers)
-    'opponentId': 'opponent_id',
+    'team1Id': 'team1_id',
+    'team2Id': 'team2_id',
+    'team1XI': 'team1_xi',
+    'team2XI': 'team2_xi',
+    'isTeam1BattingFirst': 'is_team1_batting_first',
+    'team1Score': 'team1_score',
+    'team2Score': 'team2_score',
+    'team1Name': 'team1_name',
+    'team1Logo': 'team1_logo',
+    'team2Name': 'team2_name',
+    'team2Logo': 'team2_logo',
+    // Legacy field names (mapped to new columns for backward compatibility)
+    'opponentId': 'team2_id',
     'groundId': 'ground_id',
-    'homeTeamXI': 'home_team_xi',
-    'opponentTeamXI': 'opponent_team_xi',
+    'homeTeamXI': 'team1_xi',
+    'opponentTeamXI': 'team2_xi',
     'isLiveScored': 'is_live_scored',
     'isLocked': 'is_locked',
-    'isHomeBattingFirst': 'is_home_batting_first',
+    'isHomeBattingFirst': 'is_team1_batting_first',
     'matchFormat': 'match_format',
     'is_test': 'is_test',
     'isTest': 'is_test',
     'tournamentId': 'tournament_id',
     'isNeutral': 'is_neutral',
-    'homeTeamId': 'home_team_id',
-    'homeTeamName': 'home_team_name',
-    'homeLogo': 'home_logo',
+    'homeTeamId': 'team1_id',
+    'homeTeamName': 'team1_name',
+    'homeLogo': 'team1_logo',
     'liveData': 'live_data',
     'liveState': 'live_state',
     'lastUpdated': 'updated_at',
@@ -476,8 +510,8 @@ const mapMatchToDB = (m) => {
     'resultSummary': 'result_summary',
     'resultNote': 'result_note',
     'resultType': 'result_type',
-    'finalScoreHome': 'final_score_home',
-    'finalScoreAway': 'final_score_away',
+    'finalScoreHome': 'team1_score',
+    'finalScoreAway': 'team2_score',
     'isCareerSynced': 'is_career_synced',
     'targetScore': 'target_score'
   };
@@ -486,13 +520,13 @@ const mapMatchToDB = (m) => {
   
   // List of all valid columns in 'matches' table
   const validColumns = [
-    'id', 'date', 'opponent_id', 'ground_id', 'tournament', 'stage', 
-    'status', 'match_format', 'home_team_xi', 'opponent_team_xi', 
+    'id', 'date', 'team2_id', 'ground_id', 'tournament', 'stage', 
+    'status', 'match_format', 'team1_xi', 'team2_xi', 
     'is_locked', 'toss_winner_id', 'toss_choice', 'toss_details', 
     'max_overs', 'result_summary', 'result_note', 'result_type', 
-    'final_score_home', 'final_score_away', 'is_live_scored', 
-    'is_home_batting_first', 'tournament_id', 'is_neutral', 'home_team_id', 
-    'home_team_name', 'home_logo', 'performers', 'scorecard', 'is_career_synced', 'is_test',
+    'team1_score', 'team2_score', 'is_live_scored', 
+    'is_team1_batting_first', 'tournament_id', 'is_neutral', 'team1_id', 
+    'team1_name', 'team1_logo', 'performers', 'scorecard', 'is_career_synced', 'is_test',
     'live_data', 'target_score', 'live_state', 'total_runs', 'total_wickets', 'total_balls',
     'innings1_wides', 'innings1_no_balls', 'innings1_byes', 'innings1_leg_byes',
     'innings2_wides', 'innings2_no_balls', 'innings2_byes', 'innings2_leg_byes'
@@ -525,16 +559,16 @@ const mapMatchToDB = (m) => {
 
   // 4. Final cleaning: keep ONLY valid columns and remove null IDs
   const final = {};
-  const jsonColumns = ['home_team_xi', 'opponent_team_xi', 'performers', 'scorecard', 'live_data'];
+  const jsonColumns = ['team1_xi', 'team2_xi', 'performers', 'scorecard', 'live_data'];
   
   // Extra: If score objects are present, extract runs to integer columns.
   // Supports both new (team1Score/team2Score) and legacy (finalScoreHome/Away) keys.
-  const scoreHome = mapped.team1Score || mapped.finalScoreHome || mapped.final_score_home;
-  const scoreAway = mapped.team2Score || mapped.finalScoreAway || mapped.final_score_away;
+  const scoreHome = mapped.team1Score || mapped.finalScoreHome || mapped.team1_score;
+  const scoreAway = mapped.team2Score || mapped.finalScoreAway || mapped.team2_score;
 
   if (scoreHome && typeof scoreHome === 'object') {
-    dbReady.final_score_home = scoreHome.runs;
-    // total_runs/wickets columns are typically for the main result (usually home team in this schema)
+    dbReady.team1_score = scoreHome.runs;
+    // total_runs/wickets columns are typically for the main result (usually team1 in this schema)
     dbReady.total_runs = scoreHome.runs;
     dbReady.total_wickets = scoreHome.wickets;
     
@@ -546,9 +580,9 @@ const mapMatchToDB = (m) => {
   }
 
   if (scoreAway && typeof scoreAway === 'object') {
-    dbReady.final_score_away = scoreAway.runs;
+    dbReady.team2_score = scoreAway.runs;
     // If it's a scheduled match and we are editing, we might want to ensure 
-    // total_runs is consistent if home team isn't set
+    // total_runs is consistent if team1 isn't set
     if (dbReady.total_runs === undefined && scoreAway.runs) {
         dbReady.total_runs = scoreAway.runs;
     }
@@ -563,7 +597,7 @@ const mapMatchToDB = (m) => {
       }
       
       // Safety: Ensure integer columns don't receive objects
-      const integerColumns = ['final_score_home', 'final_score_away', 'total_runs', 'total_wickets', 'total_balls', 'target_score', 'max_overs'];
+      const integerColumns = ['team1_score', 'team2_score', 'total_runs', 'total_wickets', 'total_balls', 'target_score', 'max_overs'];
       if (integerColumns.includes(col) && typeof val === 'object' && val !== null) {
         val = val.runs ?? val.value ?? 0;
       }
@@ -573,7 +607,7 @@ const mapMatchToDB = (m) => {
   });
   
   // Architect Fix: Ensure UUID columns never receive empty strings (Postgres strictly requires valid UUID or NULL)
-  const uuidColumns = ['opponent_id', 'ground_id', 'tournament_id', 'toss_winner_id', 'home_team_id'];
+  const uuidColumns = ['team2_id', 'ground_id', 'tournament_id', 'toss_winner_id', 'team1_id'];
   uuidColumns.forEach(col => {
     if (final[col] === '') final[col] = null;
   });
@@ -591,14 +625,14 @@ app.get('/api/matches', async (_req, res) => {
   const { data, error } = await db.query(`
     SELECT 
       m.*,
-      o1.name AS opponent_name,
-      o1.logo_url AS opponent_logo,
-      COALESCE(o2.name, 'Team 1') AS home_team_name,
-      COALESCE(o2.logo_url, '') AS home_logo,
+      o1.name AS team2_name,
+      o1.logo_url AS team2_logo,
+      COALESCE(o2.name, 'Team 1') AS team1_name,
+      COALESCE(o2.logo_url, '') AS team1_logo,
       g.name AS ground_name
     FROM matches m
-    LEFT JOIN opponents o1 ON o1.id = m.opponent_id
-    LEFT JOIN opponents o2 ON o2.id = m.home_team_id
+    LEFT JOIN opponents o1 ON o1.id = m.team2_id
+    LEFT JOIN opponents o2 ON o2.id = m.team1_id
     LEFT JOIN grounds g ON g.id = m.ground_id
     ORDER BY m.date DESC
   `);
@@ -607,9 +641,9 @@ app.get('/api/matches', async (_req, res) => {
   const filtered = (data || []).filter(m => m.id !== '00000000-0000-0000-0000-000000000001')
     .map(m => {
       const sc = typeof m.scorecard === 'string' ? JSON.parse(m.scorecard) : m.scorecard;
-      const isHomeFirst = m.is_home_batting_first;
-      const homeInn = isHomeFirst ? sc?.innings1 : sc?.innings2;
-      const awayInn = isHomeFirst ? sc?.innings2 : sc?.innings1;
+      const isTeam1First = m.is_team1_batting_first;
+      const team1Inn = isTeam1First ? sc?.innings1 : sc?.innings2;
+      const team2Inn = isTeam1First ? sc?.innings2 : sc?.innings1;
       
       const getOversNum = (balls) => {
         if (!balls) return 0;
@@ -619,16 +653,16 @@ app.get('/api/matches', async (_req, res) => {
       return {
         ...m,
         isNeutral: m.is_neutral,
-        homeTeamId: m.home_team_id,
-        finalScoreHome: (m.final_score_home !== null || homeInn) ? { 
-          runs: m.final_score_home ?? homeInn?.totalRuns ?? 0, 
-          wickets: homeInn?.wickets ?? m.total_wickets ?? 0, 
-          overs: getOversNum(homeInn?.totalBalls ?? m.total_balls ?? 0)
+        team1Id: m.team1_id,
+        team1Score: (m.team1_score !== null || team1Inn) ? { 
+          runs: m.team1_score ?? team1Inn?.totalRuns ?? 0, 
+          wickets: team1Inn?.wickets ?? m.total_wickets ?? 0, 
+          overs: getOversNum(team1Inn?.totalBalls ?? m.total_balls ?? 0)
         } : null,
-        finalScoreAway: (m.final_score_away !== null || awayInn) ? { 
-          runs: m.final_score_away ?? awayInn?.totalRuns ?? 0, 
-          wickets: awayInn?.wickets ?? 0, 
-          overs: getOversNum(awayInn?.totalBalls ?? 0)
+        team2Score: (m.team2_score !== null || team2Inn) ? { 
+          runs: m.team2_score ?? team2Inn?.totalRuns ?? 0, 
+          wickets: team2Inn?.wickets ?? 0, 
+          overs: getOversNum(team2Inn?.totalBalls ?? 0)
         } : null
       };
     });
@@ -639,14 +673,14 @@ app.get('/api/matches/:id', async (req, res) => {
   const { data, error } = await db.getOne(`
     SELECT 
       m.*,
-      o1.name AS opponent_name,
-      o1.logo_url AS opponent_logo,
-      COALESCE(o2.name, 'Team 1') AS home_team_name,
-      COALESCE(o2.logo_url, '') AS home_logo,
+      o1.name AS team2_name,
+      o1.logo_url AS team2_logo,
+      COALESCE(o2.name, 'Team 1') AS team1_name,
+      COALESCE(o2.logo_url, '') AS team1_logo,
       g.name AS ground_name
     FROM matches m
-    LEFT JOIN opponents o1 ON o1.id = m.opponent_id
-    LEFT JOIN opponents o2 ON o2.id = m.home_team_id
+    LEFT JOIN opponents o1 ON o1.id = m.team2_id
+    LEFT JOIN opponents o2 ON o2.id = m.team1_id
     LEFT JOIN grounds g ON g.id = m.ground_id
     WHERE m.id = $1
   `, [req.params.id]);
@@ -654,9 +688,9 @@ app.get('/api/matches/:id', async (req, res) => {
   if (!data) return res.status(404).json({ error: "Match not found" });
   
   const sc = typeof data.scorecard === 'string' ? JSON.parse(data.scorecard) : data.scorecard;
-  const isHomeFirst = data.is_home_batting_first;
-  const homeInn = isHomeFirst ? sc?.innings1 : sc?.innings2;
-  const awayInn = isHomeFirst ? sc?.innings2 : sc?.innings1;
+  const isTeam1First = data.is_team1_batting_first;
+  const team1Inn = isTeam1First ? sc?.innings1 : sc?.innings2;
+  const team2Inn = isTeam1First ? sc?.innings2 : sc?.innings1;
   
   const getOversNum = (balls) => {
     if (!balls) return 0;
@@ -666,16 +700,16 @@ app.get('/api/matches/:id', async (req, res) => {
   const formatted = {
     ...data,
     isNeutral: data.is_neutral,
-    homeTeamId: data.home_team_id,
-    finalScoreHome: (data.final_score_home !== null || homeInn) ? { 
-      runs: data.final_score_home ?? homeInn?.totalRuns ?? 0, 
-      wickets: homeInn?.wickets ?? data.total_wickets ?? 0, 
-      overs: getOversNum(homeInn?.totalBalls ?? data.total_balls ?? 0)
+    team1Id: data.team1_id,
+    team1Score: (data.team1_score !== null || team1Inn) ? { 
+      runs: data.team1_score ?? team1Inn?.totalRuns ?? 0, 
+      wickets: team1Inn?.wickets ?? data.total_wickets ?? 0, 
+      overs: getOversNum(team1Inn?.totalBalls ?? data.total_balls ?? 0)
     } : null,
-    finalScoreAway: (data.final_score_away !== null || awayInn) ? { 
-      runs: data.final_score_away ?? awayInn?.totalRuns ?? 0, 
-      wickets: awayInn?.wickets ?? 0, 
-      overs: getOversNum(awayInn?.totalBalls ?? 0)
+    team2Score: (data.team2_score !== null || team2Inn) ? { 
+      runs: data.team2_score ?? team2Inn?.totalRuns ?? 0, 
+      wickets: team2Inn?.wickets ?? 0, 
+      overs: getOversNum(team2Inn?.totalBalls ?? 0)
     } : null
   };
   
@@ -761,8 +795,8 @@ app.post('/api/matches/:id/reset', authGuard(['admin', 'member']), async (req, r
         scorecard           = NULL,
         live_data           = NULL,
         live_state          = NULL,
-        final_score_home    = NULL,
-        final_score_away    = NULL,
+        team1_score         = NULL,
+        team2_score         = NULL,
         total_runs          = NULL,
         total_wickets       = NULL,
         total_balls         = NULL,
@@ -857,22 +891,22 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
     // If the matchData provides a winner name, match it against team1 (home) or team2 (away)
     // by checking against the stored opponent_id.
     if (!tossWinnerId && matchData.toss?.winner) {
-      const { data: m } = await db.getOne('SELECT opponent_id, home_team_id FROM matches WHERE id = $1', [id]);
+      const { data: m } = await db.getOne('SELECT team2_id, team1_id FROM matches WHERE id = $1', [id]);
       const winnerName = String(matchData.toss.winner).toLowerCase();
-      // If the winner name matches the stored team2 name pattern, use opponent_id
-      const awayId = m?.opponent_id;
-      const homeId = m?.home_team_id;
+      // If the winner name matches the stored team2 name pattern, use team2_id
+      const team2Id = m?.team2_id;
+      const team1Id = m?.team1_id;
       // Try to match against the stored team names via opponents table
       const { data: teams } = await db.query(
         'SELECT id, name FROM opponents WHERE id = ANY($1::uuid[])',
-        [[awayId, homeId].filter(Boolean)]
+        [[team2Id, team1Id].filter(Boolean)]
       );
       const matched = (teams || []).find(t => t.name?.toLowerCase().includes(winnerName) || winnerName.includes(t.name?.toLowerCase()));
       if (matched) {
         tossWinnerId = matched.id;
       } else {
-        // Last fallback: if winner string contains 'home' or is unknown, use homeId
-        tossWinnerId = winnerName.includes('home') ? homeId : awayId;
+        // Last fallback: if winner string contains 'team1' or is unknown, use team1Id
+        tossWinnerId = winnerName.includes('team1') ? team1Id : team2Id;
       }
     }
 
@@ -883,7 +917,7 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
     const { error: matchError } = await db.query(
       `INSERT INTO matches (
         id, status, is_career_synced, updated_at, 
-        scorecard, final_score_home, final_score_away, 
+        scorecard, final_score_team1, final_score_team2, 
         total_runs, total_wickets, total_balls,
         result_summary, result_note, toss_winner_id, toss_choice, max_overs,
         innings1_wides, innings1_no_balls, innings1_byes, innings1_leg_byes,
@@ -895,8 +929,8 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
          is_career_synced=EXCLUDED.is_career_synced, 
          updated_at=EXCLUDED.updated_at,
          scorecard=EXCLUDED.scorecard,
-         final_score_home=EXCLUDED.final_score_home,
-         final_score_away=EXCLUDED.final_score_away,
+         final_score_team1=EXCLUDED.final_score_team1,
+         final_score_team2=EXCLUDED.final_score_team2,
          total_runs=EXCLUDED.total_runs,
          total_wickets=EXCLUDED.total_wickets,
          total_balls=EXCLUDED.total_balls,
@@ -1049,9 +1083,9 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
 
     // 3. Final Recalculation for ALL Players in the XI (Ensures MAT count updates even for DNB/DNBowl)
     try {
-        const { data: matchXI } = await db.getOne('SELECT home_team_xi, opponent_team_xi FROM matches WHERE id = $1', [id]);
+        const { data: matchXI } = await db.getOne('SELECT team1_xi, team2_xi FROM matches WHERE id = $1', [id]);
         if (matchXI) {
-            const allXI = [...(matchXI.home_team_xi || []), ...(matchXI.opponent_team_xi || [])];
+            const allXI = [...(matchXI.team1_xi || []), ...(matchXI.team2_xi || [])];
             console.log(`[Sync] Triggering final career sync for ${allXI.length} XI members...`);
             for (const pId of allXI) {
                 if (!pId) continue;
@@ -1396,10 +1430,10 @@ async function recalculateCareerStats(playerId) {
          LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1::BIGINT)
          WHERE (
             pms.player_id IS NOT NULL 
-            OR m.home_team_xi @> jsonb_build_array($1::text)
-            OR m.home_team_xi @> jsonb_build_array($1::bigint)
-            OR m.opponent_team_xi @> jsonb_build_array($1::text)
-            OR m.opponent_team_xi @> jsonb_build_array($1::bigint)
+            OR m.team1_xi @> jsonb_build_array($1::text)
+            OR m.team1_xi @> jsonb_build_array($1::bigint)
+            OR m.team2_xi @> jsonb_build_array($1::text)
+            OR m.team2_xi @> jsonb_build_array($1::bigint)
          )
          AND (m.is_test IS NOT TRUE)
          AND (m.status != 'upcoming' AND m.status != 'Upcoming')`,
@@ -1633,10 +1667,10 @@ app.get('/api/players/:id/stats', async (req, res) => {
              LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND pms.player_id = $1::BIGINT)
              WHERE (
                 pms.player_id = $1::BIGINT
-                OR m.home_team_xi @> jsonb_build_array($1::text)
-                OR m.home_team_xi @> jsonb_build_array($1::bigint)
-                OR m.opponent_team_xi @> jsonb_build_array($1::text)
-                OR m.opponent_team_xi @> jsonb_build_array($1::bigint)
+                OR m.team1_xi @> jsonb_build_array($1::text)
+                OR m.team1_xi @> jsonb_build_array($1::bigint)
+                OR m.team2_xi @> jsonb_build_array($1::text)
+                OR m.team2_xi @> jsonb_build_array($1::bigint)
              )
              AND (m.is_test IS NOT TRUE)
              AND (m.status != 'upcoming' AND m.status != 'Upcoming')
@@ -2042,7 +2076,6 @@ app.put('/api/legacy-stats/:playerId', authGuard(['admin']), async (req, res) =>
 });
 
 // MEMORIES
-// MEMORIES
 app.get('/api/memories', async (_req, res) => {
   const { data, error } = await db.query('SELECT * FROM memories ORDER BY date DESC');
   if (error) return res.status(500).json({ error: error.message });
@@ -2112,7 +2145,7 @@ app.get('/api/tournament-performers', async (req, res) => {
     // Helper to fetch and filter Standout Performances
     const getPerformersForTournament = async (tId) => {
       let q = `
-        SELECT pms.*, m.id as m_id, m.date as m_date, m.status as m_status, m.tournament_id as m_t_id, m.ground_id as m_g_id, m.opponent_id as m_o_id,
+        SELECT pms.*, m.id as m_id, m.date as m_date, m.status as m_status, m.tournament_id as m_t_id, m.ground_id as m_g_id, m.team2_id as m_o_id,
                p.name as p_name, p.role as p_role, p.avatar_url as p_avatar_url, p.avatar_history as p_avatar_history
         FROM player_match_stats pms
         JOIN matches m ON pms.match_id = m.id
@@ -2338,12 +2371,12 @@ app.delete('/api/tm/teams/:id', authGuard(['admin']), async (req, res) => {
 app.get('/api/tm/fixtures', authGuard(), async (req, res) => {
   const { tournament_id } = req.query;
   const { data, error } = await db.query(
-    `SELECT f.*, t1.name as home_team_name, t1.logo_url as home_team_logo,
-            t2.name as away_team_name, t2.logo_url as away_team_logo,
+    `SELECT f.*, t1.name as team1_name, t1.logo_url as team1_logo,
+            t2.name as team2_name, t2.logo_url as team2_logo,
             g.name as group_name
      FROM tm_fixtures f
-     JOIN tm_teams t1 ON f.home_team_id = t1.id
-     JOIN tm_teams t2 ON f.away_team_id = t2.id
+     JOIN tm_teams t1 ON f.team1_id = t1.id
+     JOIN tm_teams t2 ON f.team2_id = t2.id
      LEFT JOIN tm_groups g ON f.group_id = g.id
      WHERE f.tournament_id = $1
      ORDER BY f.date ASC`,
@@ -2363,9 +2396,9 @@ app.post('/api/tm/fixtures/batch', authGuard(['admin']), async (req, res) => {
       await client.query('BEGIN');
       for (const f of fixtures) {
         await client.query(
-          `INSERT INTO tm_fixtures (tournament_id, group_id, home_team_id, away_team_id, date, venue, status) 
+          `INSERT INTO tm_fixtures (tournament_id, group_id, team1_id, team2_id, date, venue, status) 
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [f.tournament_id, f.group_id || null, f.home_team_id, f.away_team_id, f.date, f.venue || 'TBD', 'upcoming']
+          [f.tournament_id, f.group_id || null, f.team1_id, f.team2_id, f.date, f.venue || 'TBD', 'upcoming']
         );
       }
       await client.query('COMMIT');
@@ -2484,12 +2517,12 @@ app.get('/api/league/fixtures', async (req, res) => {
   const { tournament_id } = req.query;
   const { data, error } = await db.query(`
     SELECT f.*, 
-           h.team_name as home_team_name, h.logo_url as home_team_logo,
-           a.team_name as away_team_name, a.logo_url as away_team_logo,
+           h.team_name as team1_name, h.logo_url as team1_logo,
+           a.team_name as team2_name, a.logo_url as team2_logo,
            g.name as group_name
     FROM league_fixtures f
-    JOIN league_teams h ON f.home_team_id = h.id
-    JOIN league_teams a ON f.away_team_id = a.id
+    JOIN league_teams h ON f.team1_id = h.id
+    JOIN league_teams a ON f.team2_id = a.id
     LEFT JOIN league_groups g ON f.group_id = g.id
     WHERE f.tournament_id = $1 
     ORDER BY f.date ASC
@@ -2502,10 +2535,10 @@ app.post('/api/league/fixtures', authGuard(), async (req, res) => {
   const fixtures = req.body; // Array
   if (!fixtures || fixtures.length === 0) return res.json([]);
   
-  const values = fixtures.map(f => `('${f.tournament_id}', ${f.group_id ? `'${f.group_id}'` : 'NULL'}, '${f.home_team_id}', '${f.away_team_id}', '${f.date}', '${(f.venue || '').replace(/'/g, "''")}', 'scheduled')`).join(',');
+  const values = fixtures.map(f => `('${f.tournament_id}', ${f.group_id ? `'${f.group_id}'` : 'NULL'}, '${f.team1_id}', '${f.team2_id}', '${f.date}', '${(f.venue || '').replace(/'/g, "''")}', 'scheduled')`).join(',');
   
   const { data, error } = await db.query(
-    `INSERT INTO league_fixtures (tournament_id, group_id, home_team_id, away_team_id, date, venue, status) VALUES ${values} RETURNING *`
+    `INSERT INTO league_fixtures (tournament_id, group_id, team1_id, team2_id, date, venue, status) VALUES ${values} RETURNING *`
   );
   if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(data);
@@ -2523,18 +2556,18 @@ app.put('/api/league/fixtures/:id', authGuard(), async (req, res) => {
 
 // Submit match result — calculates winner and NRR-contributing data
 app.post('/api/league/fixtures/:id/result', authGuard(), async (req, res) => {
-  const { home_runs, home_overs, away_runs, away_overs, home_wickets = 0, away_wickets = 0, result_type } = req.body;
+  const { team1_runs, team1_overs, team2_runs, team2_overs, team1_wickets = 0, team2_wickets = 0, result_type } = req.body;
   const { id } = req.params;
 
   // Fetch fixture to know team ids and tournament format
   const { data: rows, error: fetchErr } = await db.query(
-    `SELECT f.home_team_id, f.away_team_id, t.format 
+    `SELECT f.team1_id, f.team2_id, t.format 
      FROM league_fixtures f 
      JOIN league_tournaments t ON f.tournament_id = t.id 
      WHERE f.id=$1`, [id]
   );
   if (fetchErr || !rows || rows.length === 0) return res.status(404).json({ error: 'Fixture not found' });
-  const { home_team_id, away_team_id, format } = rows[0];
+  const { team1_id, team2_id, format } = rows[0];
 
   let winner_id = null;
   let status = 'completed';
@@ -2546,8 +2579,8 @@ app.post('/api/league/fixtures/:id/result', authGuard(), async (req, res) => {
     winner_id = null; // tie — no winner_id → NR point awarded via view logic (winner_id IS NULL)
   } else {
     // Normal result — higher runs wins
-    if (home_runs > away_runs) winner_id = home_team_id;
-    else if (away_runs > home_runs) winner_id = away_team_id;
+    if (team1_runs > team2_runs) winner_id = team1_id;
+    else if (team2_runs > team1_runs) winner_id = team2_id;
     else winner_id = null; // tie by equal runs (super over edge case)
   }
 
@@ -2556,19 +2589,19 @@ app.post('/api/league/fixtures/:id/result', authGuard(), async (req, res) => {
   if (format === 'T10') max_overs = 10;
   else if (format === 'ODI') max_overs = 50;
 
-  let home_nrr_overs = home_overs;
-  if (home_wickets >= 10 && home_overs < max_overs) home_nrr_overs = max_overs;
+  let team1_nrr_overs = team1_overs;
+  if (team1_wickets >= 10 && team1_overs < max_overs) team1_nrr_overs = max_overs;
   
-  let away_nrr_overs = away_overs;
-  if (away_wickets >= 10 && away_overs < max_overs) away_nrr_overs = max_overs;
+  let team2_nrr_overs = team2_overs;
+  if (team2_wickets >= 10 && team2_overs < max_overs) team2_nrr_overs = max_overs;
 
   const { error } = await db.query(
     `UPDATE league_fixtures 
-     SET home_team_runs=$1, home_team_overs=$2, away_team_runs=$3, away_team_overs=$4, 
-         home_team_wickets=$5, away_team_wickets=$6, home_nrr_overs=$7, away_nrr_overs=$8, 
+     SET team1_runs=$1, team1_overs=$2, team2_runs=$3, team2_overs=$4, 
+         team1_wickets=$5, team2_wickets=$6, team1_nrr_overs=$7, team2_nrr_overs=$8, 
          winner_id=$9, status=$10
      WHERE id=$11`,
-    [home_runs, home_overs, away_runs, away_overs, home_wickets, away_wickets, home_nrr_overs, away_nrr_overs, winner_id, status, id]
+    [team1_runs, team1_overs, team2_runs, team2_overs, team1_wickets, team2_wickets, team1_nrr_overs, team2_nrr_overs, winner_id, status, id]
   );
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true, winner_id });
@@ -2599,16 +2632,16 @@ db.query(`
     tournament_id UUID REFERENCES league_tournaments(id) ON DELETE CASCADE,
     round VARCHAR(20) NOT NULL,
     slot_number INTEGER NOT NULL,
-    home_team_id UUID REFERENCES league_teams(id),
-    away_team_id UUID REFERENCES league_teams(id),
-    home_team_name VARCHAR(255),
-    away_team_name VARCHAR(255),
-    home_team_logo TEXT,
-    away_team_logo TEXT,
-    home_runs INTEGER,
-    home_overs NUMERIC(4,1),
-    away_runs INTEGER,
-    away_overs NUMERIC(4,1),
+    team1_id UUID REFERENCES league_teams(id),
+    team2_id UUID REFERENCES league_teams(id),
+    team1_name VARCHAR(255),
+    team2_name VARCHAR(255),
+    team1_logo TEXT,
+    team2_logo TEXT,
+    team1_runs INTEGER,
+    team1_overs NUMERIC(4,1),
+    team2_runs INTEGER,
+    team2_overs NUMERIC(4,1),
     winner_id UUID REFERENCES league_teams(id),
     winner_name VARCHAR(255),
     winner_logo TEXT,
@@ -2641,21 +2674,21 @@ app.post('/api/league/knockout/setup', authGuard(), async (req, res) => {
   for (const round of rounds) {
     const n = slotCounts[round] || 1;
     for (let i = 1; i <= n; i++) {
-      let home_seed = 'NULL', away_seed = 'NULL';
+      let team1_seed = 'NULL', team2_seed = 'NULL';
       if (round === 'QF' && crossovers && crossovers.length > 0) {
         const cross = crossovers.find(c => c.slot_number === i);
         if (cross) {
-          if (cross.home_seed) home_seed = `'${cross.home_seed}'`;
-          if (cross.away_seed) away_seed = `'${cross.away_seed}'`;
+          if (cross.team1_seed) team1_seed = `'${cross.team1_seed}'`;
+          if (cross.team2_seed) team2_seed = `'${cross.team2_seed}'`;
         }
       }
-      inserts.push(`('${tournament_id}', '${round}', ${i}, 'scheduled', ${home_seed}, ${away_seed})`);
+      inserts.push(`('${tournament_id}', '${round}', ${i}, 'scheduled', ${team1_seed}, ${team2_seed})`);
     }
   }
   // Clear existing slots first, then re-insert
   await db.query('DELETE FROM league_knockout_matches WHERE tournament_id=$1', [tournament_id]);
   const { data, error } = await db.query(
-    `INSERT INTO league_knockout_matches (tournament_id, round, slot_number, status, home_seed, away_seed) VALUES ${inserts.join(',')} RETURNING *`
+    `INSERT INTO league_knockout_matches (tournament_id, round, slot_number, status, team1_seed, team2_seed) VALUES ${inserts.join(',')} RETURNING *`
   );
   if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(data);
@@ -2663,12 +2696,12 @@ app.post('/api/league/knockout/setup', authGuard(), async (req, res) => {
 
 // Assign a team to a slot
 app.put('/api/league/knockout/:id', authGuard(), async (req, res) => {
-  const { home_team_id, home_team_name, home_team_logo, away_team_id, away_team_name, away_team_logo, date, venue, status } = req.body;
+  const { team1_id, team1_name, team1_logo, team2_id, team2_name, team2_logo, date, venue, status } = req.body;
   const { error } = await db.query(
-    `UPDATE league_knockout_matches SET home_team_id=$1, home_team_name=$2, home_team_logo=$3,
-     away_team_id=$4, away_team_name=$5, away_team_logo=$6, date=$7, venue=$8, status=$9 WHERE id=$10`,
-    [home_team_id || null, home_team_name || null, home_team_logo || null,
-     away_team_id || null, away_team_name || null, away_team_logo || null,
+    `UPDATE league_knockout_matches SET team1_id=$1, team1_name=$2, team1_logo=$3,
+     team2_id=$4, team2_name=$5, team2_logo=$6, date=$7, venue=$8, status=$9 WHERE id=$10`,
+    [team1_id || null, team1_name || null, team1_logo || null,
+     team2_id || null, team2_name || null, team2_logo || null,
      date || null, venue || null, status || 'scheduled', req.params.id]
   );
   if (error) return res.status(500).json({ error: error.message });
@@ -2677,22 +2710,22 @@ app.put('/api/league/knockout/:id', authGuard(), async (req, res) => {
 
 // Submit knockout result
 app.post('/api/league/knockout/:id/result', authGuard(), async (req, res) => {
-  const { home_runs, home_overs, away_runs, away_overs, home_wickets = 0, away_wickets = 0 } = req.body;
+  const { team1_runs, team1_overs, team2_runs, team2_overs, team1_wickets = 0, team2_wickets = 0 } = req.body;
   const { id } = req.params;
 
   const { data: rows, error: fetchErr } = await db.query(
-    'SELECT home_team_id, away_team_id, home_team_name, away_team_name, home_team_logo, away_team_logo FROM league_knockout_matches WHERE id=$1', [id]
+    'SELECT team1_id, team2_id, team1_name, team2_name, team1_logo, team2_logo FROM league_knockout_matches WHERE id=$1', [id]
   );
   if (fetchErr || !rows || !rows.length) return res.status(404).json({ error: 'Match not found' });
   const m = rows[0];
 
-  let winner_id = null, winner_name = null, winner_logo = null;
-  if (home_runs > away_runs) { winner_id = m.home_team_id; winner_name = m.home_team_name; winner_logo = m.home_team_logo; }
-  else if (away_runs > home_runs) { winner_id = m.away_team_id; winner_name = m.away_team_name; winner_logo = m.away_team_logo; }
+  let winner_id = null; let winner_name = null; let winner_logo = null;
+  if (team1_runs > team2_runs) { winner_id = m.team1_id; winner_name = m.team1_name; winner_logo = m.team1_logo; }
+  else if (team2_runs > team1_runs) { winner_id = m.team2_id; winner_name = m.team2_name; winner_logo = m.team2_logo; }
 
   const { error } = await db.query(
-    `UPDATE league_knockout_matches SET home_runs=$1, home_overs=$2, away_runs=$3, away_overs=$4, home_wickets=$5, away_wickets=$6, winner_id=$7, winner_name=$8, winner_logo=$9, status='completed' WHERE id=$10`,
-    [home_runs, home_overs, away_runs, away_overs, home_wickets, away_wickets, winner_id, winner_name, winner_logo, id]
+    `UPDATE league_knockout_matches SET team1_runs=$1, team1_overs=$2, team2_runs=$3, team2_overs=$4, team1_wickets=$5, team2_wickets=$6, winner_id=$7, winner_name=$8, winner_logo=$9, status='completed' WHERE id=$10`,
+    [team1_runs, team1_overs, team2_runs, team2_overs, team1_wickets, team2_wickets, winner_id, winner_name, winner_logo, id]
   );
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true, winner_id, winner_name });

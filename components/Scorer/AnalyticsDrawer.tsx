@@ -130,7 +130,7 @@ export const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
                             />
                             <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }} />
                             
-                            <Bar dataKey="runs1" name={(store.innings1?.battingTeamId === 'HOME' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()} fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={10}>
+                            <Bar dataKey="runs1" name={(store.innings1?.battingTeamId === 'TEAM1' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()} fill="#38BDF8" radius={[4, 4, 0, 0]} barSize={10}>
                               {manhattanData.map((entry, index) => (
                                 <Cell key={`cell1-${index}`} fill={entry.wickets1 > 0 ? '#ef4444' : '#38BDF8'} />
                               ))}
@@ -141,7 +141,7 @@ export const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
                               }} />
                             </Bar>
 
-                            <Bar dataKey="runs2" name={(store.innings2?.battingTeamId === 'HOME' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()} fill="#FAB005" radius={[4, 4, 0, 0]} barSize={10}>
+                            <Bar dataKey="runs2" name={(store.innings2?.battingTeamId === 'TEAM1' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()} fill="#FAB005" radius={[4, 4, 0, 0]} barSize={10}>
                               {manhattanData.map((entry, index) => (
                                 <Cell key={`cell2-${index}`} fill={entry.wickets2 > 0 ? '#ef4444' : '#FAB005'} />
                               ))}
@@ -175,7 +175,7 @@ export const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
                             {analyticsWormData.innings1.length > 0 && (
                               <Line
                                 data={analyticsWormData.innings1}
-                                name={(store.innings1?.battingTeamId === 'HOME' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()}
+                                name={(store.innings1?.battingTeamId === 'TEAM1' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()}
                                 type="monotone"
                                 dataKey="runs"
                                 stroke="#38BDF8"
@@ -190,7 +190,7 @@ export const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
                             {store.currentInnings === 2 && analyticsWormData.innings2.length > 0 && (
                               <Line
                                 data={analyticsWormData.innings2}
-                                name={(store.innings2?.battingTeamId === 'HOME' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()}
+                                name={(store.innings2?.battingTeamId === 'TEAM1' ? (store.team1Name || 'INDIAN STRIKERS') : (store.team2Name || 'OPPONENT')).toUpperCase()}
                                 type="monotone"
                                 dataKey="runs"
                                 stroke="#FAB005"

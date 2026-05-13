@@ -32,9 +32,9 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
     const opponentName = opponent?.name || match.team2Name || match.opponentName || 'Opponent';
     const opponentLogo = opponent?.logoUrl || match.team2Logo || match.opponentLogo;
     
-    const homeTeam = match.isNeutral ? opponents.find(o => o.id === (match.team1Id || match.homeTeamId)) : null;
-    const resolvedHomeName = match.isNeutral ? (homeTeam?.name || 'Team A') : team1Name;
-    const resolvedHomeLogo = match.isNeutral ? (homeTeam?.logoUrl || '') : team1Logo;
+    const team1Source = match.isNeutral ? opponents.find(o => o.id === (match.team1Id || match.homeTeamId)) : null;
+    const resolvedTeam1Name = match.isNeutral ? (team1Source?.name || 'Team 1') : team1Name;
+    const resolvedTeam1Logo = match.isNeutral ? (team1Source?.logoUrl || '') : team1Logo;
 
     const ground = grounds.find(g => g.id === match.groundId);
     
@@ -50,8 +50,8 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
         .filter((p): p is Player => !!p);
 
     // Active Team Metadata for the display
-    const activeTeamName = isTeam2 ? opponentName : resolvedHomeName;
-    const activeTeamLogo = isTeam2 ? opponentLogo : resolvedHomeLogo;
+    const activeTeamName = isTeam2 ? opponentName : resolvedTeam1Name;
+    const activeTeamLogo = isTeam2 ? opponentLogo : resolvedTeam1Logo;
 
     const matchDate = match.date ? new Date(match.date) : new Date();
     const dateFormatted = isNaN(matchDate.getTime()) 
@@ -105,13 +105,13 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
             <div className="relative flex items-center justify-between px-20 py-16 bg-white/5 border-y border-white/10 backdrop-blur-md">
                 <div className="flex flex-col items-center gap-6 flex-1">
                     <div className="w-48 h-48 rounded-[3rem] bg-[#0f172a] p-4 border-2 border-white/20 shadow-2xl overflow-hidden flex items-center justify-center">
-                        {resolvedHomeLogo ? (
-                            <img src={resolvedHomeLogo} className="w-full h-full object-contain" alt="Home" />
+                        {resolvedTeam1Logo ? (
+                            <img src={resolvedTeam1Logo} className="w-full h-full object-contain" alt="Team 1" />
                         ) : (
-                            <div className="text-6xl font-black text-white/20">{resolvedHomeName.substring(0,3).toUpperCase()}</div>
+                            <div className="text-6xl font-black text-white/20">{resolvedTeam1Name.substring(0,3).toUpperCase()}</div>
                         )}
                     </div>
-                    <div className="text-3xl font-black uppercase tracking-tight text-center">{resolvedHomeName}</div>
+                    <div className="text-3xl font-black uppercase tracking-tight text-center">{resolvedTeam1Name}</div>
                 </div>
 
                 <div className="flex flex-col items-center">
@@ -122,7 +122,7 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
                 <div className="flex flex-col items-center gap-6 flex-1">
                     <div className="w-48 h-48 rounded-[3rem] bg-[#0f172a] p-4 border-2 border-white/20 shadow-2xl overflow-hidden flex items-center justify-center">
                         {opponentLogo ? (
-                            <img src={opponentLogo} className="w-full h-full object-contain" alt="Away" />
+                            <img src={opponentLogo} className="w-full h-full object-contain" alt="Team 2" />
                         ) : (
                             <div className="text-6xl font-black text-white/20">{opponentName.substring(0,3).toUpperCase()}</div>
                         )}

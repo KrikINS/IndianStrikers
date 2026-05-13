@@ -126,14 +126,14 @@ const StatGrid = styled.div`
 
 interface MatchResultCardProps {
   match: any;
-  homeTeam: { name: string, score: number, wickets: number, overs: string };
-  awayTeam: { name: string, score: number, wickets: number, overs: string };
+  team1: { name: string, score: number, wickets: number, overs: string };
+  team2: { name: string, score: number, wickets: number, overs: string };
   result: string;
   topPerformer: { name: string, stat: string };
   allowDownload?: boolean;
 }
 
-export default function MatchResultCard({ match, homeTeam, awayTeam, result, topPerformer, allowDownload = true }: MatchResultCardProps) {
+export default function MatchResultCard({ match, team1, team2, result, topPerformer, allowDownload = true }: MatchResultCardProps) {
   const handleDownload = async () => {
     const element = document.getElementById('match-result-card');
     if (!element) return;
@@ -167,9 +167,9 @@ export default function MatchResultCard({ match, homeTeam, awayTeam, result, top
 
         <ScoresWrapper>
           <TeamScore $align="left">
-            <TeamName>{homeTeam.name}</TeamName>
-            <RunWkt>{homeTeam.score}/{homeTeam.wickets}</RunWkt>
-            <OversLabel>{homeTeam.overs} OV</OversLabel>
+            <TeamName>{team1.name}</TeamName>
+            <RunWkt>{team1.score}/{team1.wickets}</RunWkt>
+            <OversLabel>{team1.overs} OV</OversLabel>
           </TeamScore>
 
           <VsDivider>
@@ -177,9 +177,9 @@ export default function MatchResultCard({ match, homeTeam, awayTeam, result, top
           </VsDivider>
 
           <TeamScore $align="right">
-            <TeamName>{awayTeam.name}</TeamName>
-            <RunWkt>{awayTeam.score}/{awayTeam.wickets}</RunWkt>
-            <OversLabel>{awayTeam.overs} OV</OversLabel>
+            <TeamName>{team2.name}</TeamName>
+            <RunWkt>{team2.score}/{team2.wickets}</RunWkt>
+            <OversLabel>{team2.overs} OV</OversLabel>
           </TeamScore>
         </ScoresWrapper>
 

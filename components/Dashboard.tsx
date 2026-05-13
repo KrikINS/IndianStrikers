@@ -311,7 +311,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const enrichedPlayers = useMemo(() => {
     if (!squadPlayers) return [];
 
-    // STRICT FIX: Only Indian Strikers (Home Team) players should appear in Dashboard stats
+    // STRICT FIX: Only Indian Strikers (Team 1) players should appear in Dashboard stats
     // We now rely on the backend-calculated stats (p.battingStats / p.bowlingStats) 
     // which already aggregate Legacy + Match Ledger.
     return squadPlayers

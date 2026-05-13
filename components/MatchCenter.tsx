@@ -174,8 +174,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
             const finalScorecard = data.scorecard ||
                 (data.innings1 ? { innings1: data.innings1, innings2: data.innings2 } : null) ||
             {
-                innings1: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.team1Score?.runs || data.finalScoreHome?.runs || 0, totalWickets: data.team1Score?.wickets || data.finalScoreHome?.wickets || 0, totalOvers: data.team1Score?.overs || data.finalScoreHome?.overs || 0, history: [] },
-                innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.team2Score?.runs || data.finalScoreAway?.runs || 0, totalWickets: data.team2Score?.wickets || data.finalScoreAway?.wickets || 0, totalOvers: data.team2Score?.overs || data.finalScoreAway?.overs || 0, history: [] }
+                innings1: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.team1Score?.runs || 0, totalWickets: data.team1Score?.wickets || 0, totalOvers: data.team1Score?.overs || 0, history: [] },
+                innings2: { batting: [], bowling: [], extras: { wide: 0, no_ball: 0, legByes: 0, byes: 0 }, totalRuns: data.team2Score?.runs || 0, totalWickets: data.team2Score?.wickets || 0, totalOvers: data.team2Score?.overs || 0, history: [] }
             };
 
             // 2. Recalculate for absolute accuracy (Protection against stale UI totals)
@@ -250,7 +250,9 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
         const diff = Math.abs(summary.team1Score.runs - summary.team2Score.runs);
         const team1Name = match.team1Name || opponents.find(o => o.id === match.team1Id)?.name || 'Team 1';
-        const opponent = opponents.find(o => o.id === match.team2Id);
+        const team1Id = match.team1Id || (match as any).team1_id || 'team1';
+        const team2Id = match.team2Id || (match as any).team2_id || 'team2';
+        const opponent = opponents.find(o => o.id === team2Id);
         const team2Name = match.team2Name || opponent?.name || 'Team 2';
 
         const autoResult = summary.resultType === 'Abandoned' ? 'Match Abandoned'
@@ -438,7 +440,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         }
 
         if (match.team1XI.length !== 11) {
-            alert(`Please select exactly 11 players for ${match.team1Name || opponents.find(o => o.id === match.team1Id)?.name || 'Home Team'} before starting.`);
+            alert(`Please select exactly 11 players for ${match.team1Name || opponents.find(o => o.id === match.team1Id)?.name || 'Team 1'} before starting.`);
             handleSelectPlayingXI(matchId, 'team1');
             return;
         }

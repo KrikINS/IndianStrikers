@@ -455,17 +455,17 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   const [tab, setTab] = useState<'info' | 'scorecard' | 'commentary' | 'analytics'>('scorecard');
 
   const normalizedMatch = useMemo(() => {
-    const hId = initialMatch.team1Id || initialMatch.homeTeamId || initialMatch.team1_id || 'HOME';
-    const oId = initialMatch.team2Id || initialMatch.opponentId || initialMatch.team2_id || 'AWAY';
+    const t1Id = initialMatch.team1Id || initialMatch.homeTeamId || initialMatch.team1_id || 'TEAM1';
+    const t2Id = initialMatch.team2Id || initialMatch.opponentId || initialMatch.team2_id || 'TEAM2';
     return {
       ...initialMatch,
-      team1Id: hId,
-      team2Id: oId,
-      team1Name: initialMatch.team1Name || initialMatch.homeTeamName || initialMatch.team1_name || 'Home Team',
-      team2Name: initialMatch.team2Name || initialMatch.opponentName || initialMatch.team2_name || 'Opponent',
+      team1Id: t1Id,
+      team2Id: t2Id,
+      team1Name: initialMatch.team1Name || initialMatch.homeTeamName || initialMatch.team1_name || 'Team 1',
+      team2Name: initialMatch.team2Name || initialMatch.opponentName || initialMatch.team2_name || 'Team 2',
       team1Logo: initialMatch.team1Logo || initialMatch.homeTeamLogo || initialMatch.home_team_logo || initialMatch.homeLogo || '/assets/default_team.png',
       team2Logo: initialMatch.team2Logo || initialMatch.opponentLogo || initialMatch.team2_logo || '/assets/default_team.png',
-      isTeam1BattingFirst: initialMatch.isTeam1BattingFirst !== undefined ? initialMatch.isTeam1BattingFirst : initialMatch.isHomeBattingFirst !== undefined ? initialMatch.isHomeBattingFirst : initialMatch.is_home_batting_first,
+      isTeam1BattingFirst: initialMatch.isTeam1BattingFirst !== undefined ? initialMatch.isTeam1BattingFirst : initialMatch.isHomeBattingFirst !== undefined ? initialMatch.isHomeBattingFirst : initialMatch.is_team1_batting_first || initialMatch.is_home_batting_first,
       groundId: initialMatch.groundId || initialMatch.ground_id,
       tossWinnerId: initialMatch.tossWinnerId || initialMatch.toss_winner_id,
       tossChoice: initialMatch.tossChoice || initialMatch.toss_choice
@@ -551,10 +551,9 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
       recalculateInnings(finalState.innings1);
       recalculateInnings(finalState.innings2);
 
-      // --- VALIDATION: account for batting order when comparing to match summary ---
       // innings1 = team that batted FIRST (not necessarily team1)
-      const t1Summary = initialMatch.team1Score || initialMatch.finalScoreHome;
-      const t2Summary = initialMatch.team2Score || initialMatch.finalScoreAway;
+      const t1Summary = initialMatch.team1Score || initialMatch.team1_score || initialMatch.finalScoreHome;
+      const t2Summary = initialMatch.team2Score || initialMatch.team2_score || initialMatch.finalScoreAway;
       const isTeam1BF = normalizedMatch.isTeam1BattingFirst;
       // Correctly map: innings1 -> the team that batted first's summary score
       const summaryInn1Runs = (isTeam1BF ? t1Summary : t2Summary)?.runs ?? null;
@@ -660,8 +659,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
 
     const isTeam1Innings = (innNo === 1 && normalizedMatch.isTeam1BattingFirst) || (innNo === 2 && !normalizedMatch.isTeam1BattingFirst);
     // Support both old (homeTeamXI/opponentTeamXI) and new (team1XI/team2XI) payload keys for backward compat
-    const t1XI = initialMatch.team1XI || initialMatch.homeTeamXI || [];
-    const t2XI = initialMatch.team2XI || initialMatch.opponentTeamXI || [];
+    const t1XI = initialMatch.team1XI || initialMatch.team1_xi || initialMatch.homeTeamXI || [];
+    const t2XI = initialMatch.team2XI || initialMatch.team2_xi || initialMatch.opponentTeamXI || [];
     const battingSquadIds = isTeam1Innings ? t1XI : t2XI;
     const bowlingSquadIds = isTeam1Innings ? t2XI : t1XI;
 
@@ -1477,7 +1476,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     if (targetId === oId) return normalizedMatch.team2Name;
 
     // Fallback for special identifiers
-    if (targetId === 'home' || targetId === '00000000-0000-0000-0000-000000000000') return normalizedMatch.team1Name;
+    if (targetId === 'team1' || targetId === 'home' || targetId === '00000000-0000-0000-0000-000000000000') return normalizedMatch.team1Name;
     if (targetId === 'away' || targetId === 'opponent') return normalizedMatch.team2Name;
 
     return normalizedMatch.team2Name; // Default to team2 if no match

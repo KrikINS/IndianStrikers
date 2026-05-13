@@ -101,8 +101,8 @@ const BroadcastOverlay = () => {
   const currentInnings = currentInningsNum === 1 ? liveData.innings1 : liveData.innings2;
   const isTeam1Batting = currentInnings?.battingTeamId === liveData.innings1?.battingTeamId;
   // Determine team names from liveData (new model) with old-key fallback for legacy payloads
-  const team1Display = liveData.team1Name || liveData.homeTeamName || liveMatch?.team1Name || liveMatch?.team1Name || 'Team 1';
-  const team2Display = liveData.team2Name || liveData.opponentName || liveMatch?.team2Name || 'Team 2';
+  const team1Display = liveData.team1Name || liveMatch?.team1Name || 'Team 1';
+  const team2Display = liveData.team2Name || liveMatch?.team2Name || 'Team 2';
   const battingTeamName = isTeam1Batting ? team1Display : team2Display;
   
   const striker = liveData.strikerId ? getPlayerName(liveData.strikerId) : 'Waiting...';

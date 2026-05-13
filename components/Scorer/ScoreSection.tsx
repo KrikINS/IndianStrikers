@@ -94,7 +94,7 @@ export const ScoreSectionPanel: React.FC<ScoreSectionProps> = ({
                       const target = (store.innings1?.totalRuns || 0) + 1;
                       const runsNeeded = target - (store.innings2?.totalRuns || 0);
                       const ballsRemaining = (store.maxOvers || 20) * 6 - (store.innings2?.totalBalls || 0);
-                      const battingTeam = store.innings2?.battingTeamId === 'HOME' ? 'INDIAN STRIKERS' : (matchMeta?.team2Name || 'OPPONENT');
+                      const battingTeam = store.innings2?.battingTeamId === 'TEAM1' ? (store.team1Name || 'INDIAN STRIKERS') : (matchMeta?.team2Name || 'OPPONENT');
                       
                       if (runsNeeded <= 0) return `${battingTeam.toUpperCase()} WON`;
                       if (ballsRemaining <= 0) return 'INNINGS OVER';

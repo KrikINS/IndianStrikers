@@ -101,8 +101,8 @@ export const MatchModals: React.FC<MatchModalsProps> = (props) => {
                   <SelectionGrid style={{ maxHeight: '50vh' }}>
                     {(() => {
                       const fieldingTeamId = currentInnings.bowlingTeamId;
-                      const fieldingTeamXI = fieldingTeamId === 'HOME' ? team1XI : team2XI;
-                      const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
+                      const fieldingTeamXI = fieldingTeamId === 'TEAM1' ? team1XI : team2XI;
+                      const fieldingPool = fieldingTeamId === 'TEAM1' ? players : opponentPlayers;
                       const maxOversPerB = Math.ceil((store.maxOvers || 20) / 5);
                       return (fieldingPool || [])
                         .filter((p: any) => {
@@ -264,8 +264,8 @@ export const MatchModals: React.FC<MatchModalsProps> = (props) => {
                 <SelectionGrid style={{ maxHeight: '50vh' }}>
                   {(() => {
                     const fieldingTeamId = currentInnings.bowlingTeamId;
-                    const fieldingTeamXI = fieldingTeamId === 'HOME' ? team1XI : team2XI;
-                    const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
+                    const fieldingTeamXI = fieldingTeamId === 'TEAM1' ? team1XI : team2XI;
+                    const fieldingPool = fieldingTeamId === 'TEAM1' ? players : opponentPlayers;
                     return (fieldingPool || [])
                       .filter((p: any) => (fieldingTeamXI || []).includes(p.id))
                       .map((p: any) => (

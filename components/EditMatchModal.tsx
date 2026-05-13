@@ -108,18 +108,17 @@ const EditMatchModal: React.FC<EditMatchModalProps> = ({ match, allOpponents, is
 
                 <form onSubmit={handleSave} className="p-6 space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                        {/* Opponent Selection (Added) */}
                         <div className="space-y-1.5 col-span-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Opponent Team</label>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Team 2 (Slot 2)</label>
                             <div className="relative">
                                 <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                                 <select 
                                     value={formData.opponentId || ''}
                                     onChange={(e) => setFormData({...formData, opponentId: e.target.value})}
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-2.5 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
-                                    title="Select Opponent"
+                                    title="Select Team 2"
                                 >
-                                    <option value="">Select Opponent...</option>
+                                    <option value="">Select Team 2...</option>
                                     {allOpponents.map(opp => (
                                         <option key={opp.id} value={opp.id}>{opp.name}</option>
                                     ))}
