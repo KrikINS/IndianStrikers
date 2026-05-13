@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trophy, Star, TrendingUp, Download } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 
 const Card = styled.div`
   background: #1a1d21;
@@ -138,19 +138,14 @@ export default function MatchResultCard({ match, homeTeam, awayTeam, result, top
     const element = document.getElementById('match-result-card');
     if (!element) return;
     
-    // Temporarily hide the download button if it's inside the card
     const btn = element.querySelector('.download-btn') as HTMLElement;
     if (btn) btn.style.display = 'none';
 
     try {
-      const canvas = await html2canvas(element, {
-        backgroundColor: '#1a1d21', // Match card background
-        scale: 2, // Higher quality
-        logging: false,
-        useCORS: true
+      const dataUrl = await toPng(element, {
+        backgroundColor: '#1a1d21',
+        pixelRatio: 2,
       });
-      
-      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `Match_Result_${match.id || 'export'}.png`;
       link.href = dataUrl;
