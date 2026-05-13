@@ -10,7 +10,7 @@ import EditMatchModal from './EditMatchModal';
 import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import { UniversalScorecard } from './UniversalScorecard';
-import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Unlock, Download, Swords } from 'lucide-react';
+import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Unlock, Download, Swords, RotateCcw, Edit2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
 import { useMasterData } from '../store/tournamentStore';
@@ -20,6 +20,7 @@ import LeagueStandingsMirror from './LeagueStandingsMirror';
 import TournamentsManager from './TournamentsManager';
 import { syncAllPlayerStats } from '../services/storageService';
 import OpponentsTab from './OpponentsTab';
+import { toast } from 'react-hot-toast';
 
 
 // Responsive constants for Carousel handled inside component
@@ -98,6 +99,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
     const purgeTestData = useMatchCenter(state => state.purgeTestData);
     const wipeLocalMatches = useMatchCenter(state => state.wipeLocalMatches);
     const storeToggleLock = useMatchCenter(state => state.handleToggleLock);
+    const resetMatch = useMatchCenter(state => state.resetMatch);
 
     const grounds = useMasterData(state => state.grounds);
     const tournaments = useMasterData(state => state.tournaments);
@@ -1260,6 +1262,25 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                                                 isAdmin={isAdmin}
                                                                             />
                                                                             <button onClick={(e) => { e.stopPropagation(); setEditingMatch(m); }} className="p-1.5 text-slate-500 hover:text-blue-400 transition-colors" title="Edit Metadata"><Plus size={14} /></button>
+                                                                            <button onClick={(e) => { e.stopPropagation(); setManualScoreConfig({ matchId: m.id, showPlayers: false }); }} className="p-1.5 text-slate-500 hover:text-emerald-400 transition-colors" title="Edit Summary"><Edit2 size={14} /></button>
+                                                                            <button 
+                                                                                onClick={async (e) => { 
+                                                                                    e.stopPropagation(); 
+                                                                                    if (window.confirm("RESET MATCH? This will wipe all innings data. Continue?")) {
+                                                                                        try {
+                                                                                            await resetMatch(m.id);
+                                                                                            toast.success("Match reset successfully!");
+                                                                                            onRefresh?.();
+                                                                                        } catch (err) {
+                                                                                            toast.error("Reset failed");
+                                                                                        }
+                                                                                    }
+                                                                                }} 
+                                                                                className="p-1.5 text-slate-500 hover:text-orange-400 transition-colors" 
+                                                                                title="Reset Match"
+                                                                            >
+                                                                                <RotateCcw size={14} />
+                                                                            </button>
                                                                             <button onClick={(e) => { e.stopPropagation(); if (window.confirm("Delete Match?")) deleteMatch(m.id); }} className="p-1.5 text-slate-500 hover:text-red-400 transition-colors" title="Delete Match"><Trash2 size={14} /></button>
                                                                         </div>
                                                                     </td>
@@ -1358,6 +1379,16 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                 grounds={grounds}
                                 onToggleLock={handleToggleLock}
                                 tournaments={tournaments}
+                                onResetMatch={async (id) => {
+                                    try {
+                                        await resetMatch(id);
+                                        toast.success("Match reset successfully!");
+                                        onRefresh?.();
+                                    } catch (err) {
+                                        console.error("Reset failed:", err);
+                                        toast.error("Reset failed. Check console.");
+                                    }
+                                }}
                             />
                         </motion.div>
                     </motion.div>

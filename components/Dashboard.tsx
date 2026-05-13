@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Player, OpponentTeam, UserRole, ScheduledMatch, Ground, AppUser } from '../types';
 import { getOpponents, getTournamentPerformers, getMatches, getLegacyStats } from '../services/storageService';
-import { Trophy, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, MapPin, Loader2, RefreshCw, Share2, Medal, Bell, Shield } from 'lucide-react';
+import { Trophy, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, MapPin, Loader2, RefreshCw, Share2, Medal, Bell, Shield, Edit2, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { toPng, toBlob } from 'html-to-image';
@@ -244,7 +244,8 @@ function WeeklyPerformerCarousel({
 }
 
 // --- Modern Spotlight Carousel ---
-function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: ScheduledMatch[], opponents: any[], teamLogo: string, grounds: Ground[] }) {
+function MatchCarousel({ matches, opponents, teamLogo, grounds, userRole }: { matches: ScheduledMatch[], opponents: any[], teamLogo: string, grounds: Ground[], userRole: UserRole }) {
+  const { resetMatch, syncWithCloud } = useStore();
   const [index, setIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -350,6 +351,40 @@ function MatchCarousel({ matches, opponents, teamLogo, grounds }: { matches: Sch
                         <span className="text-[14px] font-black uppercase text-sky-400 tracking-[0.15em] truncate flex-1 mr-3">
                           {match.tournament || 'Exhibition'}
                         </span>
+                        {userRole === 'admin' && (
+                          <div className="flex items-center gap-2">
+                             <button
+                               onClick={(e) => {
+                                 e.preventDefault();
+                                 e.stopPropagation();
+                                 window.location.href = `#/match-center?id=${match.id}&action=edit`;
+                               }}
+                               className="p-1.5 bg-white/5 hover:bg-blue-600/20 rounded-lg text-blue-400 transition-all border border-white/10"
+                               title="Edit Summary"
+                             >
+                               <Edit2 size={12} />
+                             </button>
+                             <button
+                               onClick={async (e) => {
+                                 e.preventDefault();
+                                 e.stopPropagation();
+                                 if (window.confirm("RESET MATCH? This will wipe all innings data. Continue?")) {
+                                   try {
+                                     await resetMatch(match.id);
+                                     toast.success("Match reset successfully!");
+                                     syncWithCloud();
+                                   } catch (err) {
+                                     toast.error("Reset failed");
+                                   }
+                                 }
+                               }}
+                               className="p-1.5 bg-white/5 hover:bg-orange-600/20 rounded-lg text-orange-400 transition-all border border-white/10"
+                               title="Reset Match"
+                             >
+                               <RotateCcw size={12} />
+                             </button>
+                          </div>
+                        )}
                         {isLive ? (
                           <div className="flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full bg-[#FF0000] animate-pulse"></span>
@@ -944,6 +979,15 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             </Link>
           )}
         </div>
+      </div>
+      <div className="mt-8 mb-12">
+          <MatchCarousel 
+            matches={matches.filter(m => m.status === 'live' || m.status === 'upcoming' || m.status === 'completed').slice(0, 5)} 
+            opponents={opponents} 
+            teamLogo={teamLogo || ""} 
+            grounds={grounds} 
+            userRole={userRole}
+          />
       </div>
 
       {/* Performer Spotlight Section */}

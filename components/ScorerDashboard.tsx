@@ -61,6 +61,8 @@ import { toast } from 'react-hot-toast';
 import { toPng, toBlob } from 'html-to-image';
 import { useCommentaryStore } from '../store/commentaryStore';
 import { SyncStatus } from './common/SyncStatus';
+import { MatchSetupModal, MatchSetupData } from './MatchSetupModal';
+import { WagonWheelModal } from './WagonWheelModal';
 
 const DashboardContainer = styled.div`
   height: 100dvh;
@@ -1127,6 +1129,16 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   // Scorer Actions
   const store = useMatchCenter(); // Temporarily keeping for deep nested logic, but usage is now more stable
   const isOfflineStore = useTournamentStore(state => state.isOffline);
+  const { squadPlayers: players } = useStore();
+  const [tempMaxOvers, setTempMaxOvers] = useState<number>(20);
+
+  const resolveGroundName = (gid: string | undefined, gname: string | undefined) => {
+    if (gid && gid !== 'null' && gid !== 'default') {
+      const g = grounds?.find((gr: any) => String(gr.id) === String(gid));
+      if (g) return g.name;
+    }
+    return gname || 'Unknown Ground';
+  };
 
   // Master Data
   const grounds = useTournamentStore(state => state.grounds);
@@ -1137,21 +1149,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const updateMatchStatus = useMatchCenter(state => state.updateMatchStatus);
 
   const [extraSubType, setExtraSubType] = useState<'bat' | 'bye' | 'lb' | 'keeper'>('bat');
+  const [showSetupModal, setShowSetupModal] = useState(false);
   const [showWicketModal, setShowWicketModal] = useState(false);
   const [showBowlerModal, setShowBowlerModal] = useState(false);
-  const [setupStep, setSetupStep] = useState<'preview' | 'toss' | 'squad_home' | 'squad_away' | 'openers_bat' | 'openers_bowl' | null>(innings1 ? null : 'preview');
-  const [tossWinner, setTossWinner] = useState<'home' | 'away' | null>(toss.winnerId ? (toss.winnerId === 'HOME' ? 'home' : 'away') : null);
-  const [tossChoice, setTossChoice] = useState<'Bat' | 'Bowl' | null>(toss.choice || null);
-  const [tempMaxOvers, setTempMaxOvers] = useState(20);
-
-  // Derive players for convenience
-  const players = squadPlayers;
-
-  // team1XI and team2XI are now defined via selectors at the top
   const { matchId: storeMatchId } = store;
-  const [selStriker, setSelStriker] = useState<string | null>(null);
-  const [selNonStriker, setSelNonStriker] = useState<string | null>(null);
-  const [selBowler, setSelBowler] = useState<string | null>(null);
   const [showLineups, setShowLineups] = useState(false);
   const [showNBModal, setShowNBModal] = useState(false);
   const [showRunOutModal, setShowRunOutModal] = useState(false);
@@ -1175,6 +1176,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const [scorecardTab, setScorecardTab] = useState<'scorecard' | 'commentary'>('scorecard');
   const [showInningsReview, setShowInningsReview] = useState(false);
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
+  const [showQuickScoreModal, setShowQuickScoreModal] = useState(false);
+  const [quickRuns, setQuickRuns] = useState(0);
+  const [quickWickets, setQuickWickets] = useState(0);
+  const [quickOvers, setQuickOvers] = useState(0);
   const [showAnalyticsDrawer, setShowAnalyticsDrawer] = useState(false);
   const [activeChart, setActiveChart] = useState<'manhattan' | 'worm'>('manhattan');
   const [isFinalizingInnings, setIsFinalizingInnings] = useState(false);
@@ -1302,6 +1307,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   // One-shot rehydration guard: Ensure we only pull from cloud once on mount
   const hasInitialRehydrated = useRef(false);
 
+  // Transition guard: prevents the innings-finish useEffect from re-triggering
+  // the review modal immediately after the user confirms innings 1 and we close it.
+  const isTransitioningToSecondInnings = useRef(false);
+
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -1324,31 +1333,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     }
   }, []);
 
-  useEffect(() => {
-    if (store.toss.winnerId) {
-      setTossWinner(store.toss.winnerId === 'HOME' ? 'home' : 'away');
-      setTossChoice(store.toss.choice);
-    }
-  }, [store.toss]);
-
-  // Reset the player fetch guard if we enter the squad selection step
-  // This ensures that if the roster was empty due to a sync issue, it can be retried
-  useEffect(() => {
-    if (setupStep === 'squad_home') {
-      console.log("[Scorer] Entering squad selection. Resetting fetch guard...");
-      hasFetchedPlayersRef.current = false;
-    }
-  }, [setupStep]);
-
   // Auto-trigger bowler selection modal at end of over
   useEffect(() => {
-    if (isWaitingForBowler && !showBowlerModal && !showInningsReview && !showMatchSummaryModal) {
+    // INNINGS-BREAK GUARD: Never show the bowler modal during an innings break or when
+    // the setup modal is active. Both states manage their own bowler selection flow.
+    const isBreak = store.currentInnings === 1 && !store.innings2 && (store.innings1?.totalBalls || 0) >= (store.maxOvers || 20) * 6;
+    if (isWaitingForBowler && !showBowlerModal && !showInningsReview && !showMatchSummaryModal && !showSetupModal && !isBreak) {
       const timer = setTimeout(() => {
         setShowBowlerModal(true);
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [isWaitingForBowler, showInningsReview, showMatchSummaryModal, showBowlerModal]);
+  }, [isWaitingForBowler, showInningsReview, showMatchSummaryModal, showBowlerModal, showSetupModal, store.currentInnings, store.innings2, store.innings1?.totalBalls]);
+
 
   // Get metadata from MatchCenterStore
   const matches = useMatchCenter(state => state.matches);
@@ -1356,18 +1353,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   const finalizeMatch = useMatchCenter(state => state.finalizeMatch);
 
   const activeMatchId = id || propMatchId || matchId;
-
-  // Add robust guard for match_id validation
-  const isValidMatchId = (mid: any): mid is string => {
-    return mid && typeof mid === 'string' && mid.length > 10;
-  };
-
-  // ABSOLUTE METADATA LAW (V6): Strictly use Match Record and Master Data
-  const resolveGroundName = (gid: string | undefined, gname: string | undefined) => {
-    if (!gid) return gname || 'GROUND';
-    const fromMaster = (grounds || []).find(g => String(g.id) === String(gid))?.name;
-    return fromMaster || gname || 'GROUND';
-  };
 
   const resolveTournament = (tid: string | undefined, tname: string | undefined) => {
     const fromMaster = (tournaments || []).find((t: any) => tid && String(t.id) === String(tid))?.name;
@@ -1569,13 +1554,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Sync setupStep when store state changes (Rehydration check)
   useEffect(() => {
-    // Only auto-close setup if we are in initial preview and already have innings data
-    if (store.innings1 && setupStep === 'preview') {
-      setSetupStep(null); // Jump straight to scoring if we have innings data
-      return;
-    }
+    // Rehydration handled by MatchSetupModal visibility logic
+  }, []);
 
-    // --- RESUME LOGIC (Device B): Match is live in DB but local store is empty or behind ---
+  // --- RESUME LOGIC (Device B): Match is live in DB but local store is empty or behind ---
+  useEffect(() => {
     if (activeMatchId === store.matchId && matchMeta?.status === 'live' && matchMeta?.liveData) {
       if (hasInitialRehydrated.current) return;
 
@@ -1659,7 +1642,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Fetch opponent players when we know the opponent ID
   useEffect(() => {
-    const opponentId = matchMeta?.opponentId;
+    // Try opponentId first, then fall back to team2Id (some matches use team2Id directly)
+    const opponentId = matchMeta?.opponentId || matchMeta?.team2Id;
     if (!opponentId) return;
     import('../services/storageService').then(({ getOpponents }) => {
       getOpponents().then(teams => {
@@ -1669,7 +1653,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         }
       }).catch(console.error);
     });
-  }, [matchMeta?.opponentId]);
+  }, [matchMeta?.opponentId, matchMeta?.team2Id]);
 
   const handleUpdateMatchStatus = async (status: MatchStatus) => {
     if (activeMatchId) {
@@ -1739,10 +1723,13 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       });
     }
   }, [currentInnings?.history?.length]);
-  const isBattingFinishing = currentInnings && (currentInnings.totalBalls || 0) > 0 && (
-    currentInnings.wickets === 10 ||
-    (currentInnings.totalBalls >= (store.maxOvers || 20) * 6) ||
-    (store.currentInnings === 2 && currentInnings.totalRuns > (store.innings1?.totalRuns || 0))
+  const isBattingFinishing = currentInnings && (
+    currentInnings.isDeclared || 
+    ((currentInnings.totalBalls || 0) > 0 && (
+      currentInnings.wickets === 10 ||
+      (currentInnings.totalBalls >= (store.maxOvers || 20) * 6) ||
+      (store.currentInnings === 2 && currentInnings.totalRuns > (store.innings1?.totalRuns || 0))
+    ))
   );
   const isMatchComplete = store.isFinished;
   const isInningsBreak = store.currentInnings === 1 && isBattingFinishing && !store.isFinished;
@@ -1751,22 +1738,32 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   // Trigger Review Modal when innings condition is met
   useEffect(() => {
     // V5 ROBUST GUARD: Only trigger review if we have actually recorded balls in the current innings
-    // and we are not in the middle of a setup or sync.
-    const hasMeaningfulInningsStarted = currentInnings && (currentInnings.totalBalls > 0 || currentInnings.wickets > 0);
+    // or if the innings has been explicitly declared/quick-finished.
+    const hasMeaningfulInningsStarted = currentInnings && (
+      currentInnings.totalBalls > 0 || 
+      currentInnings.wickets > 0 || 
+      currentInnings.isDeclared
+    );
+
+    // LOOP BREAKER: If we are in the middle of transitioning to 2nd innings, do NOT
+    // re-trigger the review modal. The confirmation handler will manage the next step.
+    if (isTransitioningToSecondInnings.current) return;
     
-    if (hasMeaningfulInningsStarted && isBattingFinishing && !showInningsReview && !store.isFinished && !isFinalizingInnings && setupStep === null) {
+    if (hasMeaningfulInningsStarted && isBattingFinishing && !showInningsReview && !store.isFinished && !isFinalizingInnings) {
       console.log("[Scorer] Innings finish detected. Triggering review modal...");
       setShowInningsReview(true);
     }
-  }, [isBattingFinishing, store.isFinished, isFinalizingInnings, setupStep, showInningsReview, currentInnings?.totalBalls]);
+  }, [isBattingFinishing, store.isFinished, isFinalizingInnings, showInningsReview, currentInnings?.totalBalls, currentInnings?.isDeclared]);
 
   // Trigger Bowler Selection at start of innings or if bowler missing
   React.useEffect(() => {
     if (currentInnings && !store.currentBowlerId && !showBowlerModal) {
-      // Check if match is not finished
       const totalBalls = currentInnings.totalBalls || 0;
       const maxBalls = (store.maxOvers || 20) * 6;
-      if (totalBalls < maxBalls) {
+      // ZERO-BALL GUARD: Only trigger if balls have actually been bowled.
+      // Without this, the bowler modal fires immediately at the start of innings 2
+      // before the MatchSetupModal has a chance to collect the opening bowler.
+      if (totalBalls > 0 && totalBalls < maxBalls) {
         setShowBowlerModal(true);
       }
     }
@@ -2006,493 +2003,6 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           L:{(store.innings1?.totalBalls || 0) + (store.innings2?.totalBalls || 0)} | C:{(matchMeta?.liveData?.innings1?.totalBalls || 0) + (matchMeta?.liveData?.innings2?.totalBalls || 0)}
         </SyncStatusPill>
       </DashboardContainer>
-    );
-  }
-
-  if (setupStep !== null) {
-    const isReadyToStart = tossWinner && tossChoice &&
-      (team1XI?.length || 0) === 11 &&
-      (team2XI?.length || 0) === 11 &&
-      selStriker && selNonStriker && selBowler;
-
-    const handleStartMatch = async () => {
-      if (!isReadyToStart) {
-        toast.error("Please complete all setup selections first.");
-        return;
-      }
-
-      if (!isValidMatchId(activeMatchId)) {
-        toast.error("Invalid Match ID. Cannot start scoring.");
-        console.error("[Scorer] Start match failed: activeMatchId is invalid", activeMatchId);
-        return;
-      }
-
-      const winnerId = tossWinner === 'home' ? 'HOME' : 'AWAY';
-      store.setToss(winnerId, tossChoice!);
-
-      const homeBatting = (winnerId === 'HOME' && tossChoice === 'Bat') || (winnerId === 'AWAY' && tossChoice === 'Bowl');
-      const startBatTeamId = homeBatting ? 'HOME' : 'AWAY';
-
-      // V5 SINGLE SOURCE OF TRUTH: Compute innings number ONCE before any store mutation
-      const isFirstInningsComplete = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
-      const inningsNum: 1 | 2 = isFirstInningsComplete ? 2 : 1;
-
-      // For innings 2, the batting team is the team that bowled in innings 1
-      const currentBatTeamId = isFirstInningsComplete
-        ? (startBatTeamId === 'HOME' ? 'AWAY' : 'HOME')
-        : startBatTeamId;
-      const currentBowlTeamId = currentBatTeamId === 'HOME' ? 'AWAY' : 'HOME';
-
-      store.updateMatchSettings({ maxOvers: tempMaxOvers });
-      store.startInnings(
-        inningsNum,
-        currentBatTeamId,
-        currentBowlTeamId,
-        selStriker!,
-        selNonStriker!,
-        selBowler!
-      );
-
-      // Force-close any lingering review modals before transitioning
-      setShowInningsReview(false);
-
-      // Persist the toss outcome and match status to the metadata store
-      if (activeMatchId) {
-        // Small delay to let Zustand commit the startInnings update
-        await new Promise(resolve => setTimeout(resolve, 50));
-        const freshStore = useMatchCenter.getState();
-
-        // V5 ROBUSTNESS: Clean the store state of functions before persisting
-        const cleanedStore = Object.fromEntries(
-          Object.entries(freshStore).filter(([_, value]) => typeof value !== 'function')
-        );
-
-        updateMatch(activeMatchId, {
-          isTeam1BattingFirst: startBatTeamId === 'HOME',
-          status: 'live',
-          team1XI: team1XI || [],
-          team2XI: team2XI || [],
-          liveData: {
-            ...cleanedStore,
-            strikerId: selStriker!,
-            nonStrikerId: selNonStriker!,
-            currentBowlerId: selBowler!,
-            currentInnings: inningsNum  // Use the pre-computed value, NOT freshStore
-          } as any
-        });
-      }
-
-      setSetupStep(null);
-    };
-
-    return (
-      <SetupContainer>
-        <Header>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button title="Back to Match Center" onClick={() => navigate('/match-center')} className="p-2 hover:bg-slate-100/10 rounded-xl transition-all text-white"><ChevronLeft /></button>
-            <span style={{ fontWeight: 900, fontSize: '14px', letterSpacing: '1px' }}>MATCH SETUP</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              title="Match Settings"
-              onClick={() => setShowSettingsDrawer(true)}
-              className="p-2 hover:bg-slate-100/10 rounded-full transition-all text-white"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Settings size={20} />
-            </button>
-
-          </div>
-        </Header>
-
-        <SetupCard>
-          {setupStep === 'preview' ? (
-            <>
-              {(() => {
-                // V5 ABSOLUTE RESOLUTION: Forced overrides for RCA match
-                const resolvedTournament = resolveTournament(matchMeta?.tournamentId || undefined, matchMeta?.tournament || store.tournament || undefined);
-                const displayTournament = resolvedTournament || 'PRINCE ABDULAZIZ BIN NASSER T20 TOURNAMENT';
-
-                const groundId = matchMeta?.groundId || store.ground;
-                const displayGround = resolveGroundName(groundId, store.ground);
-
-                const opponentMeta = (allOpponents || []).find(o => String(o.id) === String(matchMeta?.opponentId) || o.name === store.team2Name);
-                const displayTeam2Name = (opponentMeta?.name && opponentMeta.name !== 'OPPONENT') ? opponentMeta.name : (store.team2Name === 'OPPONENT' ? 'SAUDI KNIGHTS' : (store.team2Name || 'SAUDI KNIGHTS'));
-                const displayTeam2Logo = (store.team2Logo && !store.team2Logo.includes('null') && store.team2Logo.length > 5) ? store.team2Logo : (matchMeta?.opponentLogo || opponentMeta?.logoUrl || '');
-
-                return (
-                  <>
-                    <MatchTitle style={{ color: '#FFD700', textShadow: '0 0 10px rgba(255,215,0,0.3)' }}>{displayTournament.toUpperCase()}</MatchTitle>
-                    <GroundText>
-                      <MapPin size={14} /> {String(displayGround).toUpperCase()}
-                    </GroundText>
-
-                    <TeamRow>
-                      <TeamBlock>
-                        <TeamLogoCircle $active>
-                          <img src={store.team1Logo || teamLogo || '/INS%20LOGO.PNG'} alt="H" />
-                        </TeamLogoCircle>
-                        <span style={{ fontWeight: 800, fontSize: '0.9rem', textAlign: 'center' }}>{(store.team1Name || 'INDIAN STRIKERS').toUpperCase()}</span>
-                      </TeamBlock>
-                      <TeamBlock>
-                        <TeamLogoCircle>
-                          {displayTeam2Logo ? (
-                            <img src={displayTeam2Logo} alt="A" />
-                          ) : (
-                            <Shield size={40} color="rgba(255,255,255,0.3)" />
-                          )}
-                        </TeamLogoCircle>
-                        <span style={{ fontStyle: 'italic', fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: '#FAB005' }}>
-                          {displayTeam2Name.toUpperCase()}
-                        </span>
-                      </TeamBlock>
-                    </TeamRow>
-                  </>
-                );
-              })()}
-
-              <ActionButton $variant="primary" onClick={() => setSetupStep('toss')}>
-                Go to Toss
-              </ActionButton>
-            </>
-          ) : setupStep === 'toss' ? (
-            <>
-              <CoinWrapper>
-                <Coin3D
-                  animate={{
-                    rotateY: [0, 360],
-                    y: [0, -15, 0]
-                  }}
-                  transition={{
-                    rotateY: { duration: 3, repeat: Infinity, ease: "linear" },
-                    y: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
-                  }}
-                >
-                  <CoinFace $side="front" />
-                  <CoinFace $side="back" />
-                </Coin3D>
-              </CoinWrapper>
-
-              <h3 style={{ textAlign: 'center', marginBottom: 24, fontWeight: 900 }}>TOSS SELECTION</h3>
-
-              <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 12 }}>Who won the toss?</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-                <TossOption $selected={tossWinner === 'home'} onClick={() => setTossWinner('home')}>
-                  {store.team1Name || 'INDIAN STRIKERS'}
-                </TossOption>
-                <TossOption $selected={tossWinner === 'away'} onClick={() => setTossWinner('away')}>
-                  {store.team2Name || matchMeta?.team2Name || 'OPPONENT'}
-                </TossOption>
-              </div>
-
-              {tossWinner && (
-                <>
-                  <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 12 }}>What did they choose?</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 32 }}>
-                    <TossOption $selected={tossChoice === 'Bat'} onClick={() => setTossChoice('Bat')}>
-                      BATTING
-                    </TossOption>
-                    <TossOption $selected={tossChoice === 'Bowl'} onClick={() => setTossChoice('Bowl')}>
-                      BOWLING
-                    </TossOption>
-                  </div>
-                </>
-              )}
-
-              <SettingsSection>
-                <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 4, textAlign: 'center' }}>Match Adjustments</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: 12 }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Max Overs Per Side</span>
-                  <OversControl>
-                    <ControlBtn onClick={() => setTempMaxOvers(Math.max(1, tempMaxOvers - 1))}>
-                      <Minus size={16} />
-                    </ControlBtn>
-                    <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 900, fontSize: '1.1rem', color: '#FAB005' }}>{tempMaxOvers}</span>
-                    <ControlBtn onClick={() => setTempMaxOvers(tempMaxOvers + 1)}>
-                      <Plus size={16} />
-                    </ControlBtn>
-                  </OversControl>
-                </div>
-              </SettingsSection>
-
-              <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
-                <ActionButton onClick={() => setSetupStep('preview')}>Back</ActionButton>
-                <ActionButton $variant="primary" disabled={!tossWinner || !tossChoice} onClick={() => setSetupStep('squad_home')}>
-                  Select Squads
-                </ActionButton>
-              </div>
-            </>
-          ) : setupStep === 'squad_home' || setupStep === 'squad_away' ? (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  {setupStep === 'squad_home' ? <Shield size={20} color="#FAB005" /> : <Users size={20} color="#FAB005" />}
-                  <h3 style={{ margin: 0, fontWeight: 900 }}>
-                    {setupStep === 'squad_home' ? `${(store.team1Name || 'INDIAN STRIKERS').toUpperCase()} ROSTER` : `${(store.team2Name || 'OPPONENT').toUpperCase()} ROSTER`}
-                  </h3>
-                </div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#FAB005' }}>
-                  {setupStep === 'squad_home' ? team1XI.length : team2XI.length} / 11
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 8 }}>
-                {['All', 'Batsman', 'Bowler', 'All-Rounder', 'Wicket Keeper'].map(role => (
-                  <FilterChip
-                    key={role}
-                    $active={roleFilter === role}
-                    onClick={() => setRoleFilter(role)}
-                    aria-pressed={roleFilter === role ? "true" : "false"}
-                  >
-                    {role}
-                  </FilterChip>
-                ))}
-              </div>
-
-              <SelectionGrid>
-                {((setupStep === 'squad_home' ? (players || []) : (opponentPlayers || [])) as any[])
-                  .filter((p: any) => {
-                    const matchesRole = roleFilter === 'All' || p.role === roleFilter;
-                    // Only filter by isActive for the Home Team (Indian Strikers)
-                    const isActuallyActive = setupStep === 'squad_away' || (p.isActive && p.status !== 'inactive');
-                    return matchesRole && isActuallyActive;
-                  })
-                  .map((p: any) => {
-                    const currentXI = setupStep === 'squad_home' ? team1XI : team2XI;
-                    const isSelected = (currentXI || []).includes(p.id);
-
-                    return (
-                      <PlayerCard
-                        key={p.id}
-                        $selected={isSelected}
-                        onClick={() => {
-                          const isAlreadySel = (currentXI || []).includes(p.id);
-                          let newSquad;
-                          if (isAlreadySel) {
-                            newSquad = (currentXI || []).filter(id => id !== p.id);
-                          } else if (currentXI.length < 11) {
-                            newSquad = [...currentXI, p.id];
-                          } else {
-                            return;
-                          }
-                          store.updateMatchSettings({
-                            [setupStep === 'squad_home' ? 'team1XI' : 'team2XI']: newSquad
-                          });
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-                          <User size={14} />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                            <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>{p.role}</div>
-                          </div>
-                        </div>
-                        {setupStep === 'squad_home' && (
-                          <StatRibbon>
-                            <StatItem>
-                              <StatLabel>Avg</StatLabel>
-                              <StatVal>{(p as any).battingStats?.average || (p as any).average || '0.0'}</StatVal>
-                            </StatItem>
-                            <StatItem>
-                              <StatLabel>SR</StatLabel>
-                              <StatVal>{(p as any).battingStats?.strikeRate || '0'}</StatVal>
-                            </StatItem>
-                            <StatItem>
-                              <StatLabel>Wkt</StatLabel>
-                              <StatVal>{(p as any).bowlingStats?.wickets || (p as any).wicketsTaken || '0'}</StatVal>
-                            </StatItem>
-                          </StatRibbon>
-                        )}
-                      </PlayerCard>
-                    );
-                  })}
-              </SelectionGrid>
-
-              <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
-                <ActionButton onClick={() => setSetupStep(setupStep === 'squad_home' ? 'toss' : 'squad_home')}>
-                  Back
-                </ActionButton>
-                <ActionButton
-                  $variant="primary"
-                  disabled={(setupStep === 'squad_home' ? team1XI.length : team2XI.length) < 11}
-                  onClick={() => setSetupStep(setupStep === 'squad_home' ? 'squad_away' : 'openers_bat')}
-                >
-                  {setupStep === 'squad_home' ? 'Next Team' : 'Choose Openers'}
-                </ActionButton>
-              </div>
-
-              <button
-                onClick={() => {
-                  const pool = setupStep === 'squad_home'
-                    ? (players || []).filter((p: any) => p.isActive && p.status !== 'inactive')
-                    : (opponentPlayers || []);
-                  const selectedIds = pool.slice(0, 11).map((p: any) => p.id);
-                  store.updateMatchSettings({
-                    [setupStep === 'squad_home' ? 'team1XI' : 'team2XI']: selectedIds
-                  });
-                }}
-                style={{ background: 'none', border: 'none', color: '#FAB005', fontSize: '0.7rem', marginTop: 12, cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                Auto-Fill 11 Players
-              </button>
-            </>
-          ) : setupStep === 'openers_bat' ? (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <Users size={20} color="#FAB005" />
-                <h3 style={{ margin: 0, fontWeight: 900 }}>CHOOSE OPENING BATSMEN</h3>
-              </div>
-
-              {(() => {
-                // V5 ROBUST DERIVATION: Determine who bats now based on toss and innings
-                const getInningsBattingTeam = () => {
-                  const winnerId = tossWinner === 'home' ? 'HOME' : 'AWAY';
-                  const firstInningsBatTeamId = ((winnerId === 'HOME' && tossChoice === 'Bat') || (winnerId === 'AWAY' && tossChoice === 'Bowl')) ? 'HOME' : 'AWAY';
-
-                  // Only flip if innings1 is truly active/completed
-                  const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
-                  if (isFirstInningsDone) {
-                    return firstInningsBatTeamId === 'HOME' ? 'AWAY' : 'HOME';
-                  }
-                  return firstInningsBatTeamId;
-                };
-
-                const batTeamType = getInningsBattingTeam();
-                const batTeamId = batTeamType === 'HOME' ? (matchMeta?.team1Id || 'HOME') : (matchMeta?.team2Id || 'AWAY');
-                const batTeamName = batTeamType === 'HOME' ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1') : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
-                
-                const batSquadIds = batTeamType === 'HOME' ? team1XI : team2XI;
-                const batPool = batTeamType === 'HOME'
-                  ? (players || []).filter((p: any) => (batSquadIds || []).includes(p.id))
-                  : (opponentPlayers || []).filter((p: any) => (batSquadIds || []).includes(p.id));
-
-                return (
-                  <>
-                    <div style={{ background: 'rgba(250, 176, 5, 0.1)', border: '1px solid rgba(250, 176, 5, 0.2)', padding: '10px 16px', borderRadius: 12, marginBottom: 20 }}>
-                      <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', opacity: 0.8, textTransform: 'uppercase' }}>Current Batting Team</p>
-                      <p style={{ margin: '4px 0 0', fontSize: '1rem', fontWeight: 900, color: '#FFF' }}>{batTeamName}</p>
-                    </div>
-                    <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 12 }}>Select Striker & Non-Striker</p>
-                    <SelectionGrid>
-                      {batPool.map((p: any) => (
-                        <PlayerCard
-                          key={p.id}
-                          $selected={selStriker === p.id || selNonStriker === p.id}
-                          onClick={() => {
-                            if (selStriker === p.id) setSelStriker(null);
-                            else if (selNonStriker === p.id) setSelNonStriker(null);
-                            else if (!selStriker) setSelStriker(p.id);
-                            else if (!selNonStriker) setSelNonStriker(p.id);
-                          }}
-                        >
-                          <User size={16} />
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>{p.name}</div>
-                            <div style={{ fontSize: '0.6rem', opacity: 0.6 }}>{p.role}</div>
-                          </div>
-                          {(selStriker === p.id || selNonStriker === p.id) && (
-                            <div style={{ marginLeft: 'auto', background: '#FAB005', color: '#111', fontSize: '8px', fontWeight: 900, padding: '2px 4px', borderRadius: 4 }}>
-                              {selStriker === p.id ? 'STRIKER' : 'NON-STRIKER'}
-                            </div>
-                          )}
-                        </PlayerCard>
-                      ))}
-                    </SelectionGrid>
-                  </>
-                );
-              })()}
-
-              <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
-                <ActionButton onClick={() => setSetupStep('squad_away')}>Back</ActionButton>
-                <ActionButton $variant="primary" disabled={!selStriker || !selNonStriker} onClick={() => setSetupStep('openers_bowl')}>
-                  Choose Bowler
-                </ActionButton>
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <Users size={20} color="#FAB005" />
-                <h3 style={{ margin: 0, fontWeight: 900 }}>CHOOSE OPENING BOWLER</h3>
-              </div>
-
-              {(() => {
-                const getInningsBowlingTeam = () => {
-                  const winnerId = tossWinner === 'home' ? 'HOME' : 'AWAY';
-                  const firstInningsBatTeamId = ((winnerId === 'HOME' && tossChoice === 'Bat') || (winnerId === 'AWAY' && tossChoice === 'Bowl')) ? 'HOME' : 'AWAY';
-
-                  const isFirstInningsDone = store.innings1 && (store.innings1.totalBalls > 0 || store.innings1.wickets > 0);
-                  const batTeamType = isFirstInningsDone ? (firstInningsBatTeamId === 'HOME' ? 'AWAY' : 'HOME') : firstInningsBatTeamId;
-                  return batTeamType === 'HOME' ? 'AWAY' : 'HOME';
-                };
-
-                const bowlTeamType = getInningsBowlingTeam();
-                const bowlTeamId = bowlTeamType === 'HOME' ? (matchMeta?.team1Id || 'HOME') : (matchMeta?.team2Id || 'AWAY');
-                const bowlTeamName = bowlTeamType === 'HOME' ? (store.team1Name || matchMeta?.team1Name || 'TEAM 1') : (store.team2Name || matchMeta?.team2Name || 'OPPONENT');
-                
-                const bowlSquadIds = bowlTeamType === 'HOME' ? team1XI : team2XI;
-                const bowlPool = bowlTeamType === 'HOME'
-                  ? (players || []).filter((p: any) => (bowlSquadIds || []).includes(p.id))
-                  : (opponentPlayers || []).filter((p: any) => (bowlSquadIds || []).includes(p.id));
-
-                return (
-                  <>
-                    <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.2)', padding: '10px 16px', borderRadius: 12, marginBottom: 20 }}>
-                      <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 900, color: '#38BDF8', opacity: 0.8, textTransform: 'uppercase' }}>Current Bowling Team</p>
-                      <p style={{ margin: '4px 0 0', fontSize: '1rem', fontWeight: 900, color: '#FFF' }}>{bowlTeamName}</p>
-                    </div>
-                    <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 12 }}>Select Opening Bowler</p>
-                    <SelectionGrid>
-                      {bowlPool.map((p: any) => (
-                        <PlayerCard
-                          key={p.id}
-                          $selected={selBowler === p.id}
-                          onClick={() => setSelBowler(selBowler === p.id ? null : p.id)}
-                        >
-                          <User size={16} />
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>{p.name}</div>
-                            <div style={{ fontSize: '0.6rem', opacity: 0.6 }}>{p.role}</div>
-                          </div>
-                          {selBowler === p.id && (
-                            <div style={{ marginLeft: 'auto', background: '#FAB005', color: '#111', fontSize: '8px', fontWeight: 900, padding: '2px 4px', borderRadius: 4 }}>
-                              BOWLER
-                            </div>
-                          )}
-                        </PlayerCard>
-                      ))}
-                    </SelectionGrid>
-                  </>
-                );
-              })()}
-
-              <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
-                <ActionButton onClick={() => setSetupStep('openers_bat')}>Back to Batsmen</ActionButton>
-                <ActionButton $variant="primary" disabled={!isReadyToStart} onClick={handleStartMatch}>
-                  {store.innings1 ? `Start ${(store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.team2Name || 'Opponent') : 'Indian Strikers') : (store.toss.choice === 'Bat' ? 'Indian Strikers' : (store.team2Name || 'Opponent')))} Innings` : 'Start Match'}
-                </ActionButton>
-              </div>
-            </>
-          )}
-        </SetupCard>
-
-        <button
-          onClick={() => navigate('/match-center')}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'rgba(255,255,255,0.4)',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            marginTop: 24,
-            cursor: 'pointer',
-            textDecoration: 'underline',
-            alignSelf: 'center'
-          }}
-        >
-          Cancel and Return to Match Center
-        </button>
-      </SetupContainer>
     );
   }
 
@@ -2795,8 +2305,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const exportableStore = store.prepareSyncPayload();
 
       const updatePayload: any = {
-        tournament_id: matchMeta?.tournamentId,
-        is_neutral: matchMeta?.isNeutral,
+        tournamentId: matchMeta?.tournamentId,
+        isNeutral: matchMeta?.isNeutral,
         liveData: exportableStore
       };
 
@@ -2873,8 +2383,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       });
 
       if (store.currentInnings === 1) {
-        updatePayload.innings_1_score = totalScore;
-        updatePayload.innings_1_wickets = totalWickets;
+        updatePayload.team1Score = { 
+          runs: totalScore, 
+          wickets: totalWickets, 
+          overs: store.getOvers(currentInnings.totalBalls) 
+        };
         updatePayload.targetScore = target;
       } else {
         updatePayload.status = 'completed';
@@ -2921,19 +2434,29 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       }
       setSyncStatus('success');
 
+      if (store.currentInnings === 1) {
+        // LOOP BREAKER: Immediately arm the guard so the innings-finish useEffect
+        // cannot re-open the review modal while we are mid-transition.
+        isTransitioningToSecondInnings.current = true;
+      }
+
       setTimeout(() => {
         setShowInningsReview(false);
+        setShowBowlerModal(false); // Force-close stale end-of-over bowler modal from innings 1
         setSyncStatus('idle');
 
         if (store.currentInnings === 1) {
-          setSetupStep('openers_bat');
-          setSelStriker(null);
-          setSelNonStriker(null);
-          setSelBowler(null);
+          // Open the MatchSetupModal for 2nd innings openers/bowler selection.
+          // The guard ref will be reset once the store advances to innings 2
+          // inside handleSetupComplete → store.startInnings(2, ...).
+          setShowSetupModal(true);
         } else {
+          // Match is over — reset the guard and show summary.
+          isTransitioningToSecondInnings.current = false;
           setShowMatchSummaryModal(true);
         }
       }, 1500);
+
 
     } catch (err) {
       console.error("Failed to finalize innings:", err);
@@ -2946,6 +2469,24 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       store.declareInnings();
       setShowSettingsDrawer(false);
       setShowInningsReview(true);
+    }
+  };
+
+  const handleResetMatch = async () => {
+    if (window.confirm("CRITICAL: Are you SURE you want to completely reset this match? All live data, innings, and scores will be permanently deleted.")) {
+      if (activeMatchId) {
+        try {
+          await store.resetMatch(activeMatchId);
+          toast.success("Match reset successfully");
+          setShowSettingsDrawer(false);
+          setShowSetupModal(true);
+          // Set step back to toss for a fresh start
+          // MatchSetupModal will pick this up on its next render
+        } catch (err) {
+          console.error("[Scorer] Reset failed:", err);
+          toast.error("Failed to reset match");
+        }
+      }
     }
   };
 
@@ -3065,10 +2606,74 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   const isLocked = (matches || []).find(m => m.id === activeMatchId)?.isLocked;
 
+  const handleSetupComplete = (data: MatchSetupData) => {
+    store.setToss(data.tossWinner, data.tossChoice);
+    store.updateMatchSettings({
+      maxOvers: data.maxOvers !== store.maxOvers ? data.maxOvers : store.maxOvers,
+      team1XI: data.team1XI,
+      team2XI: data.team2XI
+    });
+    
+    // Determine batting/bowling team
+    let batId;
+    let bowlId;
+    
+    if (store.currentInnings === 1 && store.innings1) {
+      // 2nd Innings: Reverse teams
+      batId = store.innings1.bowlingTeamId;
+      bowlId = store.innings1.battingTeamId;
+    } else {
+      // 1st Innings: Based on toss
+      const isTeam1Batting = (data.tossWinner === 'HOME' && data.tossChoice === 'Bat') || 
+                             (data.tossWinner === 'AWAY' && data.tossChoice === 'Bowl');
+      batId = isTeam1Batting ? matchMeta?.team1Id : matchMeta?.team2Id;
+      bowlId = isTeam1Batting ? matchMeta?.team2Id : matchMeta?.team1Id;
+    }
+    
+    if (batId && bowlId) {
+      store.startInnings(
+        store.currentInnings === null ? 1 : 2,
+        batId,
+        bowlId,
+        data.strikerId,
+        data.nonStrikerId,
+        data.bowlerId
+      );
+      // LOOP BREAKER RESET: Now that the store has advanced to innings 2,
+      // disarm the guard so the innings-finish effect can run normally for innings 2.
+      isTransitioningToSecondInnings.current = false;
+    }
+    
+    setShowSetupModal(false);
+  };
+
+  const handleWagonWheelZoneSelected = (zoneName: string) => {
+    const p = showWagonWheelModal;
+    if (!p) return;
+    
+    const strikerN = getPlayerName(store.strikerId);
+    const finalComm = p.commentary.replace(/\{batsman\}/g, strikerN)
+      .replace(/\{striker\}/g, strikerN)
+      .replace(/\{bowler\}/g, getPlayerName(store.currentBowlerId))
+      .replace(/\{zone\}/g, zoneName);
+      
+    hapticFeedback(p.score >= 4 ? 'heavy' : 'light');
+    handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zoneName, finalComm);
+    setShowWagonWheelModal(null);
+  };
+
+  const handleWagonWheelSkip = () => {
+    const p = showWagonWheelModal;
+    if (!p) return;
+    
+    handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, 'Unknown', p.commentary);
+    setShowWagonWheelModal(null);
+  };
+
   if (!currentInnings) {
     // If setup is active, let the setup UI render (return null here lets the outer
     // setup view take over — but only if setupStep is a real step, not 'preview').
-    if (setupStep !== null && setupStep !== 'preview') return null;
+
 
     // Timed-out: show actionable escape instead of infinite spinner
     if (syncTimedOut) {
@@ -3081,7 +2686,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             Start the innings setup to begin scoring.
           </p>
           <button
-            onClick={() => { setSyncTimedOut(false); setSetupStep('toss'); }}
+            onClick={() => { setSyncTimedOut(false); }}
             style={{ marginTop: 8, padding: '12px 32px', background: '#FAB005', color: '#001F3F', fontWeight: 900, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: '0.85rem', letterSpacing: 1, textTransform: 'uppercase' }}
           >
             Setup Innings →
@@ -3657,41 +3262,68 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>SELECT NEXT BOWLER</h2>
                 <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 20 }}>Choose the bowler for the next over</p>
 
-                <SelectionGrid style={{ maxHeight: '50vh' }}>
-                  {(() => {
-                    const fieldingTeamId = currentInnings.bowlingTeamId;
-                    const fieldingTeamXI = fieldingTeamId === 'HOME' ? team1XI : team2XI;
-                    const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
-                    const maxOversPerB = Math.ceil((store.maxOvers || 20) / 5);
-                    return (fieldingPool || [])
-                      .filter((p: any) => {
-                        const isInXI = (fieldingTeamXI || []).includes(p.id);
-                        const isPrevBowler = p.id === store.currentBowlerId;
-                        const stats = currentInnings.bowlingStats[p.id] || { overs: 0 };
-                        const hasReachedLimit = stats.overs >= maxOversPerB;
-                        return isInXI && !isPrevBowler && !hasReachedLimit;
-                      })
-                      .map((p: any) => {
-                        const bStats = currentInnings.bowlingStats[p.id] || { overs: 0, runs: 0, wickets: 0 };
-                        return (
-                          <PlayerCard
-                            key={p.id}
-                            onClick={() => {
-                              store.setNewBowler(p.id, p.name);
-                              setShowBowlerModal(false);
-                              setIsOverComplete(false);
-                            }}
-                          >
-                            <User size={16} />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
-                              <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{bStats.wickets}-{bStats.runs} ({bStats.overs})</div>
-                            </div>
-                          </PlayerCard>
-                        );
-                      });
-                  })()}
-                </SelectionGrid>
+                {/* INNINGS-BREAK ESCAPE HATCH: If innings 1 is complete but innings 2 hasn't
+                    started yet, the bowler modal has no players to show. Guide the user to setup. */}
+                {(isInningsBreak || (store.currentInnings === 1 && !store.innings2 && isBattingFinishing)) ? (
+                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: 12 }}>🏏</div>
+                    <p style={{ fontWeight: 700, color: '#FFF', marginBottom: 8 }}>2nd Innings Not Set Up Yet</p>
+                    <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: 24 }}>
+                      Select the opening batsmen and bowler to begin the 2nd innings.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setShowBowlerModal(false);
+                        setShowSetupModal(true);
+                      }}
+                      style={{
+                        background: '#FAB005', color: '#001F3F', border: 'none',
+                        padding: '14px 28px', borderRadius: 12, fontWeight: 900,
+                        fontSize: '0.9rem', cursor: 'pointer', width: '100%',
+                        letterSpacing: 0.5, textTransform: 'uppercase',
+                        boxShadow: '0 4px 20px rgba(250,176,5,0.4)'
+                      }}
+                    >
+                      Set Up 2nd Innings →
+                    </button>
+                  </div>
+                ) : (
+                  <SelectionGrid style={{ maxHeight: '50vh' }}>
+                    {(() => {
+                      const fieldingTeamId = currentInnings.bowlingTeamId;
+                      const fieldingTeamXI = fieldingTeamId === 'HOME' ? team1XI : team2XI;
+                      const fieldingPool = fieldingTeamId === 'HOME' ? players : opponentPlayers;
+                      const maxOversPerB = Math.ceil((store.maxOvers || 20) / 5);
+                      return (fieldingPool || [])
+                        .filter((p: any) => {
+                          const isInXI = (fieldingTeamXI || []).includes(p.id);
+                          const isPrevBowler = p.id === store.currentBowlerId;
+                          const stats = currentInnings.bowlingStats[p.id] || { overs: 0 };
+                          const hasReachedLimit = stats.overs >= maxOversPerB;
+                          return isInXI && !isPrevBowler && !hasReachedLimit;
+                        })
+                        .map((p: any) => {
+                          const bStats = currentInnings.bowlingStats[p.id] || { overs: 0, runs: 0, wickets: 0 };
+                          return (
+                            <PlayerCard
+                              key={p.id}
+                              onClick={() => {
+                                store.setNewBowler(p.id, p.name);
+                                setShowBowlerModal(false);
+                                setIsOverComplete(false);
+                              }}
+                            >
+                              <User size={16} />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
+                                <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{bStats.wickets}-{bStats.runs} ({bStats.overs})</div>
+                              </div>
+                            </PlayerCard>
+                          );
+                        });
+                    })()}
+                  </SelectionGrid>
+                )}
 
                 <button
                   onClick={() => setShowBowlerModal(false)}
@@ -3702,6 +3334,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </ModalContent>
             </ModalOverlay>
           )}
+
           {showNBModal && (
             <ModalOverlay onClick={() => setShowNBModal(false)}>
               <ModalContent onClick={e => e.stopPropagation()}>
@@ -4064,7 +3697,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               </ModalContent>
             </ModalOverlay>
           )}
-          {isInningsBreak && (
+          {isInningsBreak && !showSetupModal && (
             <InningsBreakModal>
               <div style={{ flex: 1, overflowY: 'auto', padding: '40px 20px' }}>
                 <div style={{ textAlign: 'center', marginBottom: 40 }}>
@@ -4129,10 +3762,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   $variant="primary"
                   style={{ background: '#001F3F', color: '#FFF', height: 64, borderRadius: 16 }}
                   onClick={() => {
-                    setSetupStep('openers_bat');
-                    setSelStriker(null);
-                    setSelNonStriker(null);
-                    setSelBowler(null);
+                    console.log('Start Button Clicked, showSetupModal set to true');
+                    setShowInningsReview(false);
+                    setShowSetupModal(true);
                   }}
                 >
                   START {(store.toss.winnerId === 'HOME' ? (store.toss.choice === 'Bat' ? (store.team2Name || 'OPPONENT') : 'INDIAN STRIKERS') : (store.toss.choice === 'Bat' ? 'INDIAN STRIKERS' : (store.team2Name || 'OPPONENT')))} INNINGS
@@ -4725,9 +4357,26 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
                   <SettingsGroup>
                     <GroupTitle>Administrative</GroupTitle>
-                    <ControlButton $variant="danger" onClick={handleDeclareInnings}>
-                      <span>Declare Innings</span>
-                      <Zap size={18} />
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <ControlButton $variant="danger" style={{ flex: 1 }} onClick={handleDeclareInnings}>
+                        <span>Declare</span>
+                        <Zap size={14} />
+                      </ControlButton>
+                      <ControlButton $variant="gold" style={{ flex: 1, borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.05)' }} onClick={() => {
+                        setShowSettingsDrawer(false);
+                        setShowQuickScoreModal(true);
+                      }}>
+                        <span>Quick Finish</span>
+                        <Star size={14} style={{ color: '#f59e0b' }} />
+                      </ControlButton>
+                    </div>
+                    <ControlButton 
+                      $variant="danger" 
+                      style={{ marginTop: 12, width: '100%', borderColor: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}
+                      onClick={handleResetMatch}
+                    >
+                      <RotateCcw size={16} />
+                      <span>Reset Match</span>
                     </ControlButton>
                   </SettingsGroup>
 
@@ -4849,107 +4498,140 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             )}
           </AnimatePresence>
 
-          <AnimatePresence>
-            {showWagonWheelModal && (
-              <ModalOverlay onClick={() => setShowWagonWheelModal(null)}>
-                <ModalContent onClick={e => e.stopPropagation()} style={{ background: '#081c15', maxWidth: 400 }}>
-                  <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#10b981', margin: 0 }}>SELECT SHOT ZONE</h2>
-                    <p style={{ fontSize: '0.7rem', opacity: 0.6 }}>Tap the field where the ball was hit</p>
-                    {(() => {
-                      const sId = store.strikerId;
-                      const striker = (players.find((p: Player) => p.id === sId) || opponentPlayers.find((p: any) => p.id === sId)) as any;
-                      const isLH = striker?.battingStyle === 'Left Handed';
-                      if (isLH) return <p style={{ fontSize: '0.6rem', color: '#FAB005', fontWeight: 900, marginTop: 4, letterSpacing: 1 }}>BATTING: LEFT-HANDED VIEW</p>;
-                      return null;
-                    })()}
+          {showQuickScoreModal && (
+            <ModalOverlay onClick={() => setShowQuickScoreModal(false)}>
+              <ModalContent onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8, color: '#FFF' }}>QUICK FINISH</h2>
+                <p style={{ fontSize: '0.8rem', opacity: 0.6, marginBottom: 24, color: '#FFF' }}>Enter final score for current innings</p>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 32 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', marginBottom: 8 }}>RUNS</label>
+                    <input 
+                      type="number" 
+                      value={quickRuns} 
+                      onChange={e => setQuickRuns(parseInt(e.target.value) || 0)}
+                      placeholder="Total Runs"
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: 12, borderRadius: 8, color: '#FFF', fontWeight: 700 }}
+                    />
                   </div>
-
-                  <div style={{ position: 'relative', width: '100%', aspectRatio: '1', background: '#1b4332', borderRadius: '50%', border: '4px solid #2d6a4f', overflow: 'hidden' }}>
-                    {/* 8 Zones with LH/RH Detection */}
-                    {(() => {
-                      const sId = store.strikerId;
-                      const striker = (players.find((p: Player) => p.id === sId) || opponentPlayers.find((p: any) => p.id === sId)) as any;
-                      const isLH = striker?.battingStyle === 'Left Handed';
-
-                      const zones = [
-                        { name: 'Third Man', top: '15%', left: isLH ? '85%' : '15%', color: '#94a3b8' },
-                        { name: 'Point', top: '50%', left: isLH ? '95%' : '5%', color: '#38bdf8' },
-                        { name: 'Cover', top: '80%', left: isLH ? '85%' : '15%', color: '#60a5fa' },
-                        { name: 'Mid Off', top: '92%', left: '50%', color: '#818cf8' },
-                        { name: 'Mid On', top: '80%', left: isLH ? '15%' : '85%', color: '#a78bfa' },
-                        { name: 'Mid Wicket', top: '50%', left: isLH ? '5%' : '95%', color: '#c084fc' },
-                        { name: 'Square Leg', top: '15%', left: isLH ? '15%' : '85%', color: '#f472b6' },
-                        { name: 'Fine Leg', top: '8%', left: '50%', color: '#fb7185' }
-                      ];
-
-                      return zones.map(zone => (
-                        <button
-                          key={zone.name}
-                          onClick={() => {
-                            const p = showWagonWheelModal;
-                            const strikerN = getPlayerName(store.strikerId);
-                            const finalComm = p.commentary.replace(/\{batsman\}/g, strikerN)
-                              .replace(/\{striker\}/g, strikerN)
-                              .replace(/\{bowler\}/g, getPlayerName(store.currentBowlerId))
-                              .replace(/\{zone\}/g, zone.name);
-                            hapticFeedback(p.score >= 4 ? 'heavy' : 'light');
-                            handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, zone.name, finalComm);
-                            setShowWagonWheelModal(null);
-                          }}
-                          style={{
-                            position: 'absolute', top: zone.top, left: zone.left, transform: 'translate(-50%, -50%)',
-                            background: 'rgba(15, 23, 42, 0.8)', border: `1px solid ${zone.color}44`,
-                            borderRadius: 20, padding: '4px 10px', color: zone.color, fontSize: '0.6rem', fontWeight: 900,
-                            cursor: 'pointer', whiteSpace: 'nowrap', zIndex: 10,
-                            boxShadow: `0 4px 12px ${zone.color}22`,
-                            transition: 'all 0.2s',
-                            backdropFilter: 'blur(4px)'
-                          }}
-                          onMouseEnter={(e: any) => e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.1)'}
-                          onMouseLeave={(e: any) => e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)'}
-                        >
-                          {zone.name}
-                        </button>
-                      ));
-                    })()}
-                    {/* Pitch */}
-                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '15%', height: '40%', background: '#b79d71', borderRadius: 4 }}></div>
-                    {/* Field Markings */}
-                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90%', height: '90%', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24 }}>
-                    <div
-                      onClick={() => store.updateMatchSettings({ wagonWheelQuickSave: !store.wagonWheelQuickSave })}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                        padding: '8px 16px', borderRadius: 20, background: store.wagonWheelQuickSave ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255,255,255,0.05)',
-                        border: `1px solid ${store.wagonWheelQuickSave ? '#38BDF8' : 'rgba(255,255,255,0.1)'}`,
-                        cursor: 'pointer', transition: 'all 0.2s'
-                      }}
-                    >
-                      <Zap size={14} color={store.wagonWheelQuickSave ? '#38BDF8' : '#FFF'} />
-                      <span style={{ fontSize: '0.75rem', fontWeight: 900, color: store.wagonWheelQuickSave ? '#38BDF8' : '#FFF' }}>
-                        {store.wagonWheelQuickSave ? 'QUICK SAVE ON' : 'QUICK SAVE OFF'}
-                      </span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', marginBottom: 8 }}>WICKETS</label>
+                      <input 
+                        type="number" 
+                        max={10}
+                        value={quickWickets} 
+                        onChange={e => setQuickWickets(parseInt(e.target.value) || 0)}
+                        placeholder="Wkts"
+                        style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: 12, borderRadius: 8, color: '#FFF', fontWeight: 700 }}
+                      />
                     </div>
-
-                    <button
-                      onClick={() => {
-                        const p = showWagonWheelModal;
-                        handleRecord(p.score, p.type, p.isWicket, p.wicketType, p.subType, p.outPlayerId, p.newBatterId, 'Unknown', p.commentary);
-                        setShowWagonWheelModal(null);
-                      }}
-                      style={{ width: '100%', padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: 'none', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      SKIP ZONE
-                    </button>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 900, color: '#FAB005', marginBottom: 8 }}>OVERS</label>
+                      <input 
+                        type="number" 
+                        step="0.1"
+                        value={quickOvers} 
+                        onChange={e => setQuickOvers(parseFloat(e.target.value) || 0)}
+                        placeholder="Overs"
+                        style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: 12, borderRadius: 8, color: '#FFF', fontWeight: 700 }}
+                      />
+                    </div>
                   </div>
-                </ModalContent>
-              </ModalOverlay>
-            )}
-          </AnimatePresence>
+                </div>
+
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button 
+                    onClick={() => setShowQuickScoreModal(false)}
+                    style={{ flex: 1, background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer' }}
+                  >
+                    CANCEL
+                  </button>
+                  <button 
+                    onClick={() => {
+                      store.quickFinishInnings(quickRuns, quickWickets, quickOvers);
+                      setShowQuickScoreModal(false);
+                      setShowInningsReview(true);
+                    }}
+                    style={{ flex: 2, background: '#FAB005', border: 'none', color: '#000', padding: '12px', borderRadius: 10, fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer' }}
+                  >
+                    FINISH INNINGS
+                  </button>
+                </div>
+              </ModalContent>
+            </ModalOverlay>
+          )}
+
+          {showSetupModal && (() => {
+            // PLAYER POOL RESOLUTION: Merge all available opponent player sources.
+            // Priority: local opponentPlayers state (fetched by team ID) → store.opponentPlayers
+            // (loaded via loadAllPlayers). Deduplicate by ID so there are no ghost entries.
+            const mergedOpponentPlayers = (() => {
+              const combined = [...(opponentPlayers || []), ...(store.opponentPlayers || [])];
+              const seen = new Set<string>();
+              return combined.filter(p => {
+                if (seen.has(String(p.id))) return false;
+                seen.add(String(p.id));
+                return true;
+              });
+            })();
+
+            // XI RESOLUTION: Derive the squad from innings1 batting/bowling stats if the store XI is empty.
+            // The players who actually played in innings 1 are guaranteed to be in the match.
+            const inn1 = store.innings1;
+            const derivedTeam1XI = (() => {
+              const storeXI = store.team1XI?.length ? store.team1XI : (matchMeta?.team1XI || []);
+              if (storeXI.length) return storeXI;
+              // Fall back to players who appeared in innings 1
+              if (inn1) return [...Object.keys(inn1.battingStats || {}), ...Object.keys(inn1.bowlingStats || {})];
+              return [];
+            })();
+            const derivedTeam2XI = (() => {
+              const storeXI = store.team2XI?.length ? store.team2XI : (matchMeta?.team2XI || []);
+              if (storeXI.length) return storeXI;
+              if (inn1) return [...Object.keys(inn1.bowlingStats || {}), ...Object.keys(inn1.battingStats || {})];
+              return [];
+            })();
+
+            return (
+              <MatchSetupModal
+                team1Id={matchMeta?.team1Id || 'HOME'}
+                team2Id={matchMeta?.team2Id || 'AWAY'}
+                team1Name={store.team1Name || 'HOME'}
+                team2Name={store.team2Name || 'AWAY'}
+                team1Logo={teamLogo}
+                team2Logo={matchMeta?.team2Logo || ''}
+                team1XI={derivedTeam1XI}
+                team2XI={derivedTeam2XI}
+                players={players || []}
+                opponentPlayers={mergedOpponentPlayers}
+                allOpponents={allOpponents || []}
+                grounds={grounds || []}
+                matchMeta={matchMeta}
+                innings1={store.innings1}
+                onSetupComplete={handleSetupComplete}
+                onCancel={() => setShowSetupModal(false)}
+                onOpenSettings={() => setShowSettingsDrawer(true)}
+              />
+            );
+          })()}
+
+
+          <WagonWheelModal
+            isOpen={!!showWagonWheelModal}
+            strikerName={getPlayerName(store.strikerId)}
+            isLeftHanded={(() => {
+              const sId = store.strikerId;
+              const striker = (players.find((p: Player) => p.id === sId) || opponentPlayers.find((p: any) => p.id === sId)) as any;
+              return striker?.battingStyle === 'Left Handed';
+            })()}
+            quickSaveEnabled={store.wagonWheelQuickSave}
+            onToggleQuickSave={() => store.updateMatchSettings({ wagonWheelQuickSave: !store.wagonWheelQuickSave })}
+            onZoneSelected={(zone) => handleWagonWheelZoneSelected(zone)}
+            onSkip={handleWagonWheelSkip}
+            onClose={() => setShowWagonWheelModal(null)}
+          />
 
           {showMatchSummaryModal && matchMeta && (
             <MatchSummaryModal

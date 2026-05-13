@@ -51,6 +51,8 @@ export interface InningsState {
     bowlingStats: Record<string, LiveBowler>;
     fallOfWickets: string[];
     history: BallRecord[];
+    isDeclared?: boolean;
+    isQuickFinished?: boolean;
 }
 
 export interface MatchScorerState {
@@ -132,9 +134,10 @@ export interface UnifiedMatchStore extends MatchScorerState {
     changeBowler: (id: string) => void;
     retireBatter: (id: string) => void;
     updateTargetScore: (score: number) => void;
-    resetMatch: () => void;
+    resetMatch: (id: string) => Promise<void>;
     clearInnings: () => void;
     declareInnings: () => void;
+    quickFinishInnings: (runs: number, wickets: number, overs: number) => void;
     hardReset: () => void;
     resetStore: () => void;
     getOvers: (balls: number) => string;
@@ -896,11 +899,85 @@ export const useMatchCenter = create<UnifiedMatchStore>((set, get) => ({
         set({ [key]: nextInnings, strikerId: state.strikerId === id ? null : state.strikerId, nonStrikerId: state.nonStrikerId === id ? null : state.nonStrikerId });
     },
     updateTargetScore: (score) => set({ targetScore: score }),
-    resetMatch: () => set(INITIAL_SCORER_STATE),
+    resetMatch: async (id) => {
+        const state = get();
+        // Reset local state but keep essential match metadata
+        set({
+            ...INITIAL_SCORER_STATE,
+            matchId: id,
+            matchType: state.matchType,
+            tournament: state.tournament,
+            ground: state.ground,
+            team1Name: state.team1Name,
+            team2Name: state.team2Name,
+            team1Logo: state.team1Logo,
+            team2Logo: state.team2Logo,
+            team1XI: [],
+            team2XI: [],
+            maxOvers: state.maxOvers || 20,
+            squadPlayers: state.squadPlayers,
+            opponentPlayers: state.opponentPlayers,
+            currentUser: state.currentUser
+        });
+
+        // Update match status to scheduled in DB
+        await get().updateMatchStatus(id, 'upcoming');
+
+        // Prepare and sync a blank payload to the database
+        const updatedState = get();
+        await api.updateMatch(id, {
+            liveData: updatedState.prepareSyncPayload(),
+            lastUpdated: new Date().toISOString(),
+            forceUpsert: true
+        });
+    },
     clearInnings: () => set(INITIAL_SCORER_STATE),
     declareInnings: () => {
         const state = get();
-        set({ isFinished: state.currentInnings === 2, isWaitingForBowler: false });
+        const key = state.currentInnings === 1 ? 'innings1' : 'innings2';
+        const nextInnings = JSON.parse(JSON.stringify(state[key]));
+        nextInnings.isDeclared = true;
+        set({ 
+            [key]: nextInnings,
+            isFinished: state.currentInnings === 2, 
+            isWaitingForBowler: false 
+        });
+    },
+    quickFinishInnings: (runs, wickets, overs) => {
+        const state = get();
+        const key = state.currentInnings === 1 ? 'innings1' : 'innings2';
+        const nextInnings = JSON.parse(JSON.stringify(state[key]));
+        
+        nextInnings.totalRuns = runs;
+        nextInnings.wickets = wickets;
+        nextInnings.totalBalls = Math.floor(overs) * 6 + Math.round((overs % 1) * 10);
+        nextInnings.isQuickFinished = true;
+        nextInnings.isDeclared = true;
+
+        // Add a summary ball to history to prevent timeline/chart crashes
+        const summaryBall: BallRecord = {
+            runs: runs,
+            extraRuns: 0,
+            type: 'legal',
+            isWicket: wickets > 0,
+            wicketType: wickets > 0 ? 'Bowled' : undefined,
+            overNumber: Math.floor(overs),
+            ballNumber: Math.round((overs % 1) * 10) || 6,
+            ballIndex: nextInnings.totalBalls,
+            isLegal: true,
+            timestamp: new Date().toISOString(),
+            commentary: `Quick Finish: Innings completed with ${runs}/${wickets} in ${overs} overs.`
+        };
+        nextInnings.history.push(summaryBall);
+
+        set({ 
+            [key]: nextInnings,
+            isFinished: state.currentInnings === 2,
+            isWaitingForBowler: false,
+            strikerId: null,
+            nonStrikerId: null,
+            currentBowlerId: null
+        });
     },
     getOvers: (balls) => `${Math.floor(balls / 6)}.${balls % 6}`,
     syncOfflineQueue: async () => { },

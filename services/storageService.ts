@@ -375,10 +375,10 @@ const mapMatch = (m: any): ScheduledMatch => {
         matchFormat: m.match_format,
         status: m.status,
         maxOvers: m.max_overs,
-        team1XI: Array.isArray(m.home_team_xi) ? m.home_team_xi : [],
-        team2XI: Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : [],
-        team1Score: normalizeScore(m.final_score_home, m.is_home_batting_first ? rawScorecard?.innings1 : rawScorecard?.innings2),
-        team2Score: normalizeScore(m.final_score_away, m.is_home_batting_first ? rawScorecard?.innings2 : rawScorecard?.innings1),
+        team1XI: Array.isArray(m.team1_xi) ? m.team1_xi : [],
+        team2XI: Array.isArray(m.team2_xi) ? m.team2_xi : [],
+        team1Score: normalizeScore(m.team1_score, m.is_team1_batting_first ? rawScorecard?.innings1 : rawScorecard?.innings2),
+        team2Score: normalizeScore(m.team2_score, m.is_team1_batting_first ? rawScorecard?.innings2 : rawScorecard?.innings1),
         scorecard: rawScorecard,
         resultNote: m.result_note,
         resultSummary: m.result_summary,
@@ -388,30 +388,30 @@ const mapMatch = (m: any): ScheduledMatch => {
         isLiveScored: !!m.is_live_scored,
         stage: m.stage || (m.tournament ? 'League' : 'League'),
         venue: m.venue || m.ground_name || '',
-        team2Name: (m.opponent_name || 'OPPONENT').toUpperCase(),
-        team2Logo: m.opponent_logo || '',
+        team2Name: (m.team2_name || m.opponent_name || 'OPPONENT').toUpperCase(),
+        team2Logo: m.team2_logo || m.opponent_logo || '',
         team1Name: (() => {
-            const isLegacyStrikers = !m.home_team_id ||
-                m.home_team_id === '00000000-0000-0000-0000-000000000000' ||
-                m.home_team_id === 'IND_STRIKERS';
-            if (isLegacyStrikers && (!m.home_team_name || m.home_team_name === 'Team 1')) return 'INDIAN STRIKERS';
-            return (m.home_team_name || 'Team 1').toUpperCase();
+            const isLegacyStrikers = !m.team1_id ||
+                m.team1_id === '00000000-0000-0000-0000-000000000000' ||
+                m.team1_id === 'IND_STRIKERS';
+            if (isLegacyStrikers && (!m.team1_name || m.team1_name === 'Team 1')) return 'INDIAN STRIKERS';
+            return (m.team1_name || 'Team 1').toUpperCase();
         })(),
         team1Logo: (() => {
-            const isLegacyStrikers = !m.home_team_id ||
-                m.home_team_id === '00000000-0000-0000-0000-000000000000' ||
-                m.home_team_id === 'IND_STRIKERS';
-            if (isLegacyStrikers && (!m.home_logo || m.home_logo === '')) return '/INS LOGO.PNG';
-            return m.home_logo || '';
+            const isLegacyStrikers = !m.team1_id ||
+                m.team1_id === '00000000-0000-0000-0000-000000000000' ||
+                m.team1_id === 'IND_STRIKERS';
+            if (isLegacyStrikers && (!m.team1_logo || m.team1_logo === '')) return '/INS LOGO.PNG';
+            return m.team1_logo || '';
         })(),
         liveData: m.live_data,
         liveState: m.live_state,
         tossWinnerId: m.toss_winner_id,
         tossChoice: m.toss_choice,
         tossDetails: m.toss_details,
-        team1Id: m.home_team_id,
+        team1Id: m.team1_id,
         isNeutral: !!m.is_neutral,
-        isTeam1BattingFirst: !!m.is_home_batting_first,
+        isTeam1BattingFirst: !!m.is_team1_batting_first,
         isTest: !!m.is_test,
         lastUpdated: m.updated_at,
         matchResult: m.result_note || m.result_summary || null,
@@ -436,22 +436,22 @@ const translateToDB = (match: Partial<ScheduledMatch>) => {
   if (match.id !== undefined) dbMatch.id = match.id;
   if (match.date !== undefined) dbMatch.date = match.date;
   // Symmetrical → DB column mapping
-  if (match.team2Id !== undefined) dbMatch.opponent_id = match.team2Id;
+  if (match.team2Id !== undefined) dbMatch.team2_id = match.team2Id;
   if (match.groundId !== undefined) dbMatch.ground_id = match.groundId;
   if (match.tournament !== undefined) dbMatch.tournament = match.tournament;
   if (match.tournamentId !== undefined) dbMatch.tournament_id = match.tournamentId;
   if (match.matchFormat !== undefined) dbMatch.match_format = match.matchFormat;
   if (match.status !== undefined) dbMatch.status = match.status;
   if (match.maxOvers !== undefined) dbMatch.max_overs = match.maxOvers;
-  if (match.team1XI !== undefined) dbMatch.home_team_xi = match.team1XI;
-  if (match.team2XI !== undefined) dbMatch.opponent_team_xi = match.team2XI;
+  if (match.team1XI !== undefined) dbMatch.team1_xi = match.team1XI;
+  if (match.team2XI !== undefined) dbMatch.team2_xi = match.team2XI;
   if (match.isLocked !== undefined) dbMatch.is_locked = match.isLocked;
   if (match.isCareerSynced !== undefined) dbMatch.is_career_synced = match.isCareerSynced;
   if (match.isLiveScored !== undefined) dbMatch.is_live_scored = match.isLiveScored;
-  if (match.isTeam1BattingFirst !== undefined) dbMatch.is_home_batting_first = match.isTeam1BattingFirst;
-  if (match.team1Id !== undefined) dbMatch.home_team_id = match.team1Id;
-  if (match.team1Name !== undefined) dbMatch.home_team_name = match.team1Name;
-  if (match.team1Logo !== undefined) dbMatch.home_logo = match.team1Logo;
+  if (match.isTeam1BattingFirst !== undefined) dbMatch.is_team1_batting_first = match.isTeam1BattingFirst;
+  if (match.team1Id !== undefined) dbMatch.team1_id = match.team1Id;
+  if (match.team1Name !== undefined) dbMatch.team1_name = match.team1Name;
+  if (match.team1Logo !== undefined) dbMatch.team1_logo = match.team1Logo;
   if (match.isNeutral !== undefined) dbMatch.is_neutral = match.isNeutral;
   if (match.isTest !== undefined) dbMatch.is_test = match.isTest;
   if (match.tossWinnerId !== undefined) dbMatch.toss_winner_id = match.tossWinnerId;
@@ -466,8 +466,11 @@ const translateToDB = (match: Partial<ScheduledMatch>) => {
   if (match.forceUpsert !== undefined) dbMatch.force_upsert = match.forceUpsert;
   if (match.venue !== undefined) dbMatch.venue = match.venue;
   if (match.stage !== undefined) dbMatch.stage = match.stage;
-  if (match.team1Score !== undefined) dbMatch.final_score_home = match.team1Score;
-  if (match.team2Score !== undefined) dbMatch.final_score_away = match.team2Score;
+  if (match.team1Score !== undefined) dbMatch.team1_score = match.team1Score;
+  if (match.team2Score !== undefined) dbMatch.team2_score = match.team2Score;
+  if (match.team2Name !== undefined) dbMatch.team2_name = match.team2Name;
+  if (match.team2Logo !== undefined) dbMatch.team2_logo = match.team2Logo;
+  if (match.targetScore !== undefined) dbMatch.target_score = match.targetScore;
   
   return dbMatch;
 };

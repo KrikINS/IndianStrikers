@@ -88,8 +88,8 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
   });
 
   const [newFixture, setNewFixture] = useState<Partial<LeagueFixture>>({
-    home_team_id: '',
-    away_team_id: '',
+    team1_id: '',
+    team2_id: '',
     date: new Date().toISOString().split('T')[0],
     venue: '',
     group_id: ''
@@ -183,7 +183,7 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
     // Helper to get max possible points for a team
     const getMaxPoints = (teamId: string, currentPts: number) => {
       const remaining = groupFixtures.filter(f => 
-        (f.home_team_id === teamId || f.away_team_id === teamId) && f.status !== 'completed'
+        (f.team1_id === teamId || f.team2_id === teamId) && f.status !== 'completed'
       ).length;
       return currentPts + (remaining * 2);
     };
@@ -275,12 +275,12 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
               newFixtures.push({
                 tournament_id: selectedTournament.id,
                 group_id: group.id,
-                home_team_id: groupTeams[i].id,
-                away_team_id: groupTeams[j].id,
-                home_team_name: groupTeams[i].team_name,
-                away_team_name: groupTeams[j].team_name,
-                home_team_logo: groupTeams[i].logo_url,
-                away_team_logo: groupTeams[j].logo_url,
+                team1_id: groupTeams[i].id,
+                team2_id: groupTeams[j].id,
+                team1_name: groupTeams[i].team_name,
+                team2_name: groupTeams[j].team_name,
+                team1_logo: groupTeams[i].logo_url,
+                team2_logo: groupTeams[j].logo_url,
                 date: defaultDate,
                 venue: defaultVenue,
                 status: 'scheduled',
@@ -295,12 +295,12 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
           for (let j = i + 1; j < teams.length; j++) {
             newFixtures.push({
               tournament_id: selectedTournament.id,
-              home_team_id: teams[i].id,
-              away_team_id: teams[j].id,
-              home_team_name: teams[i].team_name,
-              away_team_name: teams[j].team_name,
-              home_team_logo: teams[i].logo_url,
-              away_team_logo: teams[j].logo_url,
+              team1_id: teams[i].id,
+              team2_id: teams[j].id,
+              team1_name: teams[i].team_name,
+              team2_name: teams[j].team_name,
+              team1_logo: teams[i].logo_url,
+              team2_logo: teams[j].logo_url,
               date: defaultDate,
               venue: defaultVenue,
               status: 'scheduled'
@@ -366,29 +366,29 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
 
   const handleAddFixture = async () => {
     if (!selectedTournament) return;
-    if (!newFixture.home_team_id || !newFixture.away_team_id || !newFixture.date) {
+    if (!newFixture.team1_id || !newFixture.team2_id || !newFixture.date) {
       toast.error('Teams and Date are required');
       return;
     }
-    if (newFixture.home_team_id === newFixture.away_team_id) {
+    if (newFixture.team1_id === newFixture.team2_id) {
       toast.error('Teams must be different');
       return;
     }
 
     try {
-      const homeTeam = teams.find(t => t.id === newFixture.home_team_id);
-      const awayTeam = teams.find(t => t.id === newFixture.away_team_id);
+      const homeTeam = teams.find(t => t.id === newFixture.team1_id);
+      const awayTeam = teams.find(t => t.id === newFixture.team2_id);
       const group = groups.find(g => g.id === newFixture.group_id);
 
       const fixtureData: Partial<LeagueFixture> = {
         tournament_id: selectedTournament.id,
         group_id: newFixture.group_id || undefined,
-        home_team_id: newFixture.home_team_id,
-        away_team_id: newFixture.away_team_id,
-        home_team_name: homeTeam?.team_name || '',
-        away_team_name: awayTeam?.team_name || '',
-        home_team_logo: homeTeam?.logo_url,
-        away_team_logo: awayTeam?.logo_url,
+        team1_id: newFixture.team1_id,
+        team2_id: newFixture.team2_id,
+        team1_name: homeTeam?.team_name || '',
+        team2_name: awayTeam?.team_name || '',
+        team1_logo: homeTeam?.logo_url,
+        team2_logo: awayTeam?.logo_url,
         date: newFixture.date,
         venue: newFixture.venue || 'TBA',
         group_name: group?.name || ''
@@ -397,8 +397,8 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
       await batchAddLeagueFixtures([fixtureData]);
       setShowAddFixtureModal(false);
       setNewFixture({
-        home_team_id: '',
-        away_team_id: '',
+        team1_id: '',
+        team2_id: '',
         date: new Date().toISOString().split('T')[0],
         venue: '',
         group_id: ''
@@ -444,14 +444,14 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
       return;
     }
     try {
-      if (scoringKnockout.home_team_id && !scoringKnockout.status?.includes('completed')) {
+      if (scoringKnockout.team1_id && !scoringKnockout.status?.includes('completed')) {
         await updateKnockoutMatch(scoringKnockout.id, {
-          home_team_id: scoringKnockout.home_team_id,
-          home_team_name: scoringKnockout.home_team_name,
-          home_team_logo: scoringKnockout.home_team_logo,
-          away_team_id: scoringKnockout.away_team_id,
-          away_team_name: scoringKnockout.away_team_name,
-          away_team_logo: scoringKnockout.away_team_logo,
+          team1_id: scoringKnockout.team1_id,
+          team1_name: scoringKnockout.team1_name,
+          team1_logo: scoringKnockout.team1_logo,
+          team2_id: scoringKnockout.team2_id,
+          team2_name: scoringKnockout.team2_name,
+          team2_logo: scoringKnockout.team2_logo,
         });
       }
 
@@ -476,12 +476,12 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
     if (!editingKnockout) return;
     try {
       await updateKnockoutMatch(editingKnockout.id, {
-        home_team_id: editingKnockout.home_team_id || null,
-        home_team_name: editingKnockout.home_team_name || null,
-        home_team_logo: editingKnockout.home_team_logo || null,
-        away_team_id: editingKnockout.away_team_id || null,
-        away_team_name: editingKnockout.away_team_name || null,
-        away_team_logo: editingKnockout.away_team_logo || null,
+        team1_id: editingKnockout.team1_id || null,
+        team1_name: editingKnockout.team1_name || null,
+        team1_logo: editingKnockout.team1_logo || null,
+        team2_id: editingKnockout.team2_id || null,
+        team2_name: editingKnockout.team2_name || null,
+        team2_logo: editingKnockout.team2_logo || null,
         date: editingKnockout.date || null,
         venue: editingKnockout.venue || null,
         status: editingKnockout.status || 'scheduled'
@@ -734,12 +734,12 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                        ) : (
                          <div className="space-y-3">
                            {recentResults.map((f, i) => {
-                             const hw = (f as any).winner_id === f.home_team_id;
-                             const aw = (f as any).winner_id === f.away_team_id;
+                             const hw = (f as any).winner_id === f.team1_id;
+                             const aw = (f as any).winner_id === f.team2_id;
                              return (
                                <motion.div key={f.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 + i * 0.07 }} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
                                  <div className={`flex-1 text-right`}>
-                                   <p className={`text-[10px] font-black uppercase ${hw ? 'text-emerald-600' : 'text-slate-500'}`}>{f.home_team_name}</p>
+                                   <p className={`text-[10px] font-black uppercase ${hw ? 'text-emerald-600' : 'text-slate-500'}`}>{f.team1_name}</p>
                                    <p className="text-lg font-black text-slate-900 leading-none">{(f as any).home_team_runs}</p>
                                    <p className="text-[8px] text-slate-400 font-bold">{(f as any).home_team_overs} ov</p>
                                  </div>
@@ -747,7 +747,7 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                                    <span className="text-[8px] font-black text-slate-300 uppercase">vs</span>
                                  </div>
                                  <div className="flex-1">
-                                   <p className={`text-[10px] font-black uppercase ${aw ? 'text-emerald-600' : 'text-slate-500'}`}>{f.away_team_name}</p>
+                                   <p className={`text-[10px] font-black uppercase ${aw ? 'text-emerald-600' : 'text-slate-500'}`}>{f.team2_name}</p>
                                    <p className="text-lg font-black text-slate-900 leading-none">{(f as any).away_team_runs}</p>
                                    <p className="text-[8px] text-slate-400 font-bold">{(f as any).away_team_overs} ov</p>
                                  </div>
@@ -866,8 +866,8 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                            .filter(f => {
                              const matchesGroup = scheduleGroupTab === 'all' || f.group_id === scheduleGroupTab;
                              const matchesSearch = !fixtureSearchQuery || 
-                               f.home_team_name.toLowerCase().includes(fixtureSearchQuery.toLowerCase()) ||
-                               f.away_team_name.toLowerCase().includes(fixtureSearchQuery.toLowerCase());
+                               f.team1_name.toLowerCase().includes(fixtureSearchQuery.toLowerCase()) ||
+                               f.team2_name.toLowerCase().includes(fixtureSearchQuery.toLowerCase());
                              return matchesGroup && matchesSearch;
                            })
                            .map(f => {
@@ -891,7 +891,7 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                                  <td className="px-8 py-5">
                                    <div className="flex items-center justify-center gap-3">
                                      <div className="text-right">
-                                       <p className={`text-xs font-black uppercase italic truncate max-w-[110px] ${isCompleted && winnerId === f.home_team_id ? 'text-emerald-600' : 'text-slate-800'}`}>{f.home_team_name}</p>
+                                       <p className={`text-xs font-black uppercase italic truncate max-w-[110px] ${isCompleted && winnerId === f.team1_id ? 'text-emerald-600' : 'text-slate-800'}`}>{f.team1_name}</p>
                                        {isCompleted && homeRuns != null && (
                                           <p className="text-sm font-black text-slate-900">
                                             {homeRuns}/{(f as any).home_team_wickets ?? 0}
@@ -901,7 +901,7 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                                      </div>
                                      <span className="text-[9px] font-black text-slate-300 italic">VS</span>
                                      <div className="text-left">
-                                       <p className={`text-xs font-black uppercase italic truncate max-w-[110px] ${isCompleted && winnerId === f.away_team_id ? 'text-emerald-600' : 'text-slate-800'}`}>{f.away_team_name}</p>
+                                       <p className={`text-xs font-black uppercase italic truncate max-w-[110px] ${isCompleted && winnerId === f.team2_id ? 'text-emerald-600' : 'text-slate-800'}`}>{f.team2_name}</p>
                                        {isCompleted && awayRuns != null && (
                                           <p className="text-sm font-black text-slate-900">
                                             {awayRuns}/{(f as any).away_team_wickets ?? 0}
@@ -910,7 +910,7 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                                         )}
                                      </div>
                                    </div>
-                                   {isCompleted && <p className="text-center text-[9px] font-black uppercase mt-1 text-slate-400">{winnerId ? (winnerId === f.home_team_id ? f.home_team_name + ' Won' : f.away_team_name + ' Won') : 'Tie / NR'}</p>}
+                                   {isCompleted && <p className="text-center text-[9px] font-black uppercase mt-1 text-slate-400">{winnerId ? (winnerId === f.team1_id ? f.team1_name + ' Won' : f.team2_name + ' Won') : 'Tie / NR'}</p>}
                                  </td>
                                  <td className="px-8 py-5">
                                    <p className="text-xs font-bold text-slate-500">{f.venue}</p>
@@ -959,8 +959,8 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                      {fixtures.filter(f => {
                        const matchesGroup = scheduleGroupTab === 'all' || f.group_id === scheduleGroupTab;
                        const matchesSearch = !fixtureSearchQuery || 
-                         f.home_team_name.toLowerCase().includes(fixtureSearchQuery.toLowerCase()) ||
-                         f.away_team_name.toLowerCase().includes(fixtureSearchQuery.toLowerCase());
+                         f.team1_name.toLowerCase().includes(fixtureSearchQuery.toLowerCase()) ||
+                         f.team2_name.toLowerCase().includes(fixtureSearchQuery.toLowerCase());
                        return matchesGroup && matchesSearch;
                      }).length === 0 && (
                        <div className="py-16 text-center">
@@ -1134,8 +1134,8 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Home Team</label>
                        <select 
                          title="Select Home Team"
-                         value={newFixture.home_team_id}
-                         onChange={e => setNewFixture({...newFixture, home_team_id: e.target.value})}
+                         value={newFixture.team1_id}
+                         onChange={e => setNewFixture({...newFixture, team1_id: e.target.value})}
                          className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                        >
                          <option value="">Select Home Team</option>
@@ -1148,8 +1148,8 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Away Team</label>
                        <select 
                          title="Select Away Team"
-                         value={newFixture.away_team_id}
-                         onChange={e => setNewFixture({...newFixture, away_team_id: e.target.value})}
+                         value={newFixture.team2_id}
+                         onChange={e => setNewFixture({...newFixture, team2_id: e.target.value})}
                          className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
                        >
                          <option value="">Select Away Team</option>
@@ -1235,9 +1235,9 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -mr-32 -mt-32 blur-3xl" />
                  <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-2">Edit Match</h2>
                  <div className="flex items-center gap-2 mt-4">
-                    <span className="text-xs font-black text-white/60 uppercase">{editingFixture.home_team_name}</span>
+                    <span className="text-xs font-black text-white/60 uppercase">{editingFixture.team1_name}</span>
                     <span className="text-[10px] text-white/20 uppercase font-black">VS</span>
-                    <span className="text-xs font-black text-white/60 uppercase">{editingFixture.away_team_name}</span>
+                    <span className="text-xs font-black text-white/60 uppercase">{editingFixture.team2_name}</span>
                  </div>
               </div>
               <div className="p-10 space-y-6">
@@ -1314,14 +1314,14 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                 <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-1">Enter Match Result</h2>
                 <p className="text-emerald-300/60 text-[11px] font-bold uppercase tracking-widest">Win = 2 pts · Tie = 1 pt · Loss = 0 pts</p>
                 <div className="flex items-center gap-2 mt-5">
-                  <span className="text-sm font-black text-white uppercase">{scoringFixture.home_team_name}</span>
+                  <span className="text-sm font-black text-white uppercase">{scoringFixture.team1_name}</span>
                   <span className="text-[10px] text-white/20 font-black">VS</span>
-                  <span className="text-sm font-black text-white uppercase">{scoringFixture.away_team_name}</span>
+                  <span className="text-sm font-black text-white uppercase">{scoringFixture.team2_name}</span>
                 </div>
               </div>
               <div className="p-8 space-y-5">
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">{scoringFixture.home_team_name}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">{scoringFixture.team1_name}</p>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Runs</label>
@@ -1338,7 +1338,7 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                   </div>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">{scoringFixture.away_team_name}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">{scoringFixture.team2_name}</p>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block px-2">Runs</label>
@@ -1382,12 +1382,12 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
               <div className="bg-amber-950 p-10 text-white relative">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full -mr-32 -mt-32 blur-3xl" />
                 <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-1">Knockout Score</h2>
-                <p className="text-amber-300/60 text-[11px] font-bold uppercase tracking-widest">{scoringKnockout.round} · {scoringKnockout.home_team_name} vs {scoringKnockout.away_team_name}</p>
+                <p className="text-amber-300/60 text-[11px] font-bold uppercase tracking-widest">{scoringKnockout.round} · {scoringKnockout.team1_name} vs {scoringKnockout.team2_name}</p>
               </div>
               <div className="p-10 space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">{scoringKnockout.home_team_name}</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">{scoringKnockout.team1_name}</label>
                     <div className="space-y-2">
                       <input title="Home Runs" type="number" placeholder="Runs" value={knockoutScoreForm.home_runs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, home_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
                       <input title="Home Wickets" type="number" max="10" placeholder="Wickets" value={knockoutScoreForm.home_wickets} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, home_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
@@ -1395,7 +1395,7 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">{scoringKnockout.away_team_name}</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">{scoringKnockout.team2_name}</label>
                     <div className="space-y-2">
                       <input title="Away Runs" type="number" placeholder="Runs" value={knockoutScoreForm.away_runs} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, away_runs: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
                       <input title="Away Wickets" type="number" max="10" placeholder="Wickets" value={knockoutScoreForm.away_wickets} onChange={e => setKnockoutScoreForm({...knockoutScoreForm, away_wickets: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20" />
@@ -1428,14 +1428,14 @@ const LeagueCenter: React.FC<{ userRole?: string }> = ({ userRole = 'guest' }) =
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Home Team</label>
-                    <select title="Select Home Team" value={editingKnockout.home_team_id || ''} onChange={e => { const t = teams.find(t => t.id === e.target.value); setEditingKnockout({...editingKnockout, home_team_id: e.target.value, home_team_name: t?.team_name || '', home_team_logo: t?.logo_url || ''}); }} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20">
+                    <select title="Select Home Team" value={editingKnockout.team1_id || ''} onChange={e => { const t = teams.find(t => t.id === e.target.value); setEditingKnockout({...editingKnockout, team1_id: e.target.value, team1_name: t?.team_name || '', team1_logo: t?.logo_url || ''}); }} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20">
                       <option value="">-- Select Team --</option>
                       {teams.map(t => <option key={t.id} value={t.id}>{t.team_name}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-2">Away Team</label>
-                    <select title="Select Away Team" value={editingKnockout.away_team_id || ''} onChange={e => { const t = teams.find(t => t.id === e.target.value); setEditingKnockout({...editingKnockout, away_team_id: e.target.value, away_team_name: t?.team_name || '', away_team_logo: t?.logo_url || ''}); }} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20">
+                    <select title="Select Away Team" value={editingKnockout.team2_id || ''} onChange={e => { const t = teams.find(t => t.id === e.target.value); setEditingKnockout({...editingKnockout, team2_id: e.target.value, team2_name: t?.team_name || '', team2_logo: t?.logo_url || ''}); }} className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-4 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20">
                       <option value="">-- Select Team --</option>
                       {teams.map(t => <option key={t.id} value={t.id}>{t.team_name}</option>)}
                     </select>
@@ -1738,14 +1738,14 @@ interface KOProps {
 const KOMatchCard: React.FC<{ m: any; barClass: string; isAdmin?: boolean; onScore: (m: any) => void; onEdit: (m: any) => void; resolveSeed?: (s: string) => any }> = ({ m, barClass, isAdmin, onScore, onEdit, resolveSeed }) => {
   const done = m.status === 'completed';
 
-  let hName = m.home_team_name, hLogo = m.home_team_logo, hId = m.home_team_id;
+  let hName = m.team1_name, hLogo = m.team1_logo, hId = m.team1_id;
   if (!hId && m.home_seed && resolveSeed) {
     const r = resolveSeed(m.home_seed);
     if (r) { hName = r.team_name; hLogo = r.logo_url; hId = r.team_id; }
     else { hName = m.home_seed; }
   }
 
-  let aName = m.away_team_name, aLogo = m.away_team_logo, aId = m.away_team_id;
+  let aName = m.team2_name, aLogo = m.team2_logo, aId = m.team2_id;
   if (!aId && m.away_seed && resolveSeed) {
     const r = resolveSeed(m.away_seed);
     if (r) { aName = r.team_name; aLogo = r.logo_url; aId = r.team_id; }
@@ -1763,7 +1763,7 @@ const KOMatchCard: React.FC<{ m: any; barClass: string; isAdmin?: boolean; onSco
   ];
 
   const handleScoreClick = () => {
-    onScore({ ...m, home_team_id: hId, home_team_name: hName, home_team_logo: hLogo, away_team_id: aId, away_team_name: aName, away_team_logo: aLogo });
+    onScore({ ...m, team1_id: hId, team1_name: hName, team1_logo: hLogo, team2_id: aId, team2_name: aName, team2_logo: aLogo });
   };
 
   return (

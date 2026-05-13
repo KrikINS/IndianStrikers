@@ -394,16 +394,16 @@ export interface TMFixture {
   id: string;
   tournament_id: string;
   group_id?: string;
-  home_team_id: string;
-  away_team_id: string;
+  team1_id: string;
+  team2_id: string;
   date: string;
   venue: string;
   status: 'upcoming' | 'live' | 'completed';
   result?: any;
-  home_team_name?: string;
-  home_team_logo?: string;
-  away_team_name?: string;
-  away_team_logo?: string;
+  team1_name?: string;
+  team1_logo?: string;
+  team2_name?: string;
+  team2_logo?: string;
   group_name?: string;
 }
 
@@ -455,12 +455,12 @@ export interface LeagueFixture {
   id: string;
   tournament_id: string;
   group_id?: string;
-  home_team_id: string;
-  away_team_id: string;
-  home_team_name: string;
-  away_team_name: string;
-  home_team_logo?: string;
-  away_team_logo?: string;
+  team1_id: string;
+  team2_id: string;
+  team1_name: string;
+  team2_name: string;
+  team1_logo?: string;
+  team2_logo?: string;
   date: string;
   venue: string;
   status: 'scheduled' | 'live' | 'completed' | 'abandoned';

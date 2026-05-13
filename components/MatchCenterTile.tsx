@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw, Camera, Download, Zap, X, Eye } from 'lucide-react';
+import { Calendar, MapPin, Radio, Edit2, Trash2, Users, Share2, Lock as LockIcon, Unlock, RefreshCcw, Camera, Download, Zap, X, Eye, RotateCcw } from 'lucide-react';
 import { ScheduledMatch, OpponentTeam, Ground, UserRole } from '../types';
 
 interface MatchCenterTileProps {
@@ -23,6 +23,7 @@ interface MatchCenterTileProps {
     isCarouselActive?: boolean;
     isGraphic?: boolean;
     onShareSummary?: (matchId: string) => void;
+    onResetMatch?: (matchId: string) => void;
     tournaments?: any[];
 }
 
@@ -46,6 +47,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     isCarouselActive,
     isGraphic = false,
     onShareSummary,
+    onResetMatch,
     tournaments = []
 }) => {
     const [showActions, setShowActions] = useState(false);
@@ -372,7 +374,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                         </button>
 
                                         {/* 2. Admin Actions: Manual Updates (Strictly Admin) */}
-                                        {isAdmin && !match.isLocked && (
+                                        {isAdmin && (
                                             <>
                                                 <button 
                                                     onClick={() => { setShowActions(false); onUpdateManualScore(match.id, 'summary'); }} 
@@ -385,6 +387,12 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
                                                     className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-emerald-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
                                                 >
                                                     <RefreshCcw size={14} className="text-emerald-500" /> UPDATE SCORECARD
+                                                </button>
+                                                <button 
+                                                    onClick={() => { setShowActions(false); if (window.confirm("RESET MATCH? This will wipe all innings data but keep the schedule. Continue?")) onResetMatch?.(match.id); }} 
+                                                    className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-orange-600/20 flex items-center gap-3 border-b border-white/5 transition-colors uppercase tracking-widest"
+                                                >
+                                                    <RotateCcw size={14} className="text-orange-500" /> RESET MATCH
                                                 </button>
                                             </>
                                         )}

@@ -455,16 +455,16 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   const [tab, setTab] = useState<'info' | 'scorecard' | 'commentary' | 'analytics'>('scorecard');
 
   const normalizedMatch = useMemo(() => {
-    const hId = initialMatch.team1Id || initialMatch.homeTeamId || initialMatch.home_team_id || 'HOME';
-    const oId = initialMatch.team2Id || initialMatch.opponentId || initialMatch.opponent_id || 'AWAY';
+    const hId = initialMatch.team1Id || initialMatch.homeTeamId || initialMatch.team1_id || 'HOME';
+    const oId = initialMatch.team2Id || initialMatch.opponentId || initialMatch.team2_id || 'AWAY';
     return {
       ...initialMatch,
       team1Id: hId,
       team2Id: oId,
-      team1Name: initialMatch.team1Name || initialMatch.homeTeamName || initialMatch.home_team_name || 'Home Team',
-      team2Name: initialMatch.team2Name || initialMatch.opponentName || initialMatch.opponent_name || 'Opponent',
+      team1Name: initialMatch.team1Name || initialMatch.homeTeamName || initialMatch.team1_name || 'Home Team',
+      team2Name: initialMatch.team2Name || initialMatch.opponentName || initialMatch.team2_name || 'Opponent',
       team1Logo: initialMatch.team1Logo || initialMatch.homeTeamLogo || initialMatch.home_team_logo || initialMatch.homeLogo || '/assets/default_team.png',
-      team2Logo: initialMatch.team2Logo || initialMatch.opponentLogo || initialMatch.opponent_logo || '/assets/default_team.png',
+      team2Logo: initialMatch.team2Logo || initialMatch.opponentLogo || initialMatch.team2_logo || '/assets/default_team.png',
       isTeam1BattingFirst: initialMatch.isTeam1BattingFirst !== undefined ? initialMatch.isTeam1BattingFirst : initialMatch.isHomeBattingFirst !== undefined ? initialMatch.isHomeBattingFirst : initialMatch.is_home_batting_first,
       groundId: initialMatch.groundId || initialMatch.ground_id,
       tossWinnerId: initialMatch.tossWinnerId || initialMatch.toss_winner_id,
