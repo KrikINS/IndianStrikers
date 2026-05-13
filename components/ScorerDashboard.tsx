@@ -45,7 +45,6 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ReferenceLine,
   LabelList
 } from 'recharts';
 import { useStore } from '../store/StoreProvider';
@@ -56,7 +55,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { UniversalScorecard } from './UniversalScorecard';
 import _ from 'lodash';
 import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
-import { Player, ScheduledMatch, Ball, CommentaryTemplate, BallRecord, CommentaryEventType, MatchStatus } from '../types';
+import { Player, ScheduledMatch, Ball, CommentaryTemplate, CommentaryEventType, MatchStatus } from '../types';
 import { toast } from 'react-hot-toast';
 import { toPng, toBlob } from 'html-to-image';
 import { useCommentaryStore } from '../store/commentaryStore';

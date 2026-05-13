@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Player, OpponentTeam, UserRole, ScheduledMatch, Ground, AppUser } from '../types';
+import { Player, OpponentTeam, UserRole, Ground, AppUser } from '../types';
 import { getOpponents, getTournamentPerformers, getMatches, getLegacyStats } from '../services/storageService';
-import { Trophy, Star, Flame, Crown, Zap, Award, Target, Calendar, X, Download, Activity, ChevronLeft, ChevronRight, MapPin, Loader2, RefreshCw, Share2, Medal, Bell, Shield, Edit2, RotateCcw } from 'lucide-react';
+import { Trophy, Star, Flame, Crown, Zap, Award, Target, X, Download, Activity, ChevronLeft, ChevronRight, MapPin, Loader2, RefreshCw, Share2, Medal, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { toPng, toBlob } from 'html-to-image';
+import { toBlob } from 'html-to-image';
 import { toast } from 'react-hot-toast';
 import { useMasterData } from '../store/tournamentStore';
 import { useStore } from '../store/StoreProvider';

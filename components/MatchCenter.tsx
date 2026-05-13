@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Player, OpponentTeam, UserRole, ScheduledMatch, AppUser } from '../types';
 import { useMatchCenter } from '../store/matchStore';
@@ -10,11 +10,11 @@ import EditMatchModal from './EditMatchModal';
 import AddMatchModal from './AddMatchModal';
 import MatchSummaryModal from './MatchSummaryModal';
 import { UniversalScorecard } from './UniversalScorecard';
-import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Trophy, MapPin, Hash, Trash2, RefreshCcw, Lock as LockIcon, Unlock, Download, Swords, RotateCcw, Edit2 } from 'lucide-react';
+import { Calendar, Shield, Plus, X, Cloud, RefreshCw, Loader2, AlertCircle, List, Layout as LayoutIcon, TableProperties, Check, CheckCircle2, ChevronLeft, ChevronRight, Activity, Trophy, MapPin, Trash2, RefreshCcw, Lock as LockIcon, Unlock, Download, Swords, RotateCcw, Edit2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { updateBattingCareerStats, updateBowlingCareerStats } from '../services/statsEngine';
+
 import { useMasterData } from '../store/tournamentStore';
-import { BattingStats, BowlingStats, Performer, MatchStatus, MatchStage } from '../types';
+
 import { useCricketScorer } from '../store/matchStore';
 import LeagueStandingsMirror from './LeagueStandingsMirror';
 import TournamentsManager from './TournamentsManager';

@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { Player, PlayerRole, BattingStyle, BowlingStyle, OpponentTeam, FieldingStrategy, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats, TMTournament, TMGroup, TMTeam, TMFixture, TMStanding, LeagueTournament, LeagueGroup, LeagueTeam, LeagueFixture, LeagueStanding } from '../types';
+import { Player, OpponentTeam, FieldingStrategy, AppUser, MembershipRequest, Ground, Tournament, ScheduledMatch, PlayerLegacyStats, BattingStats, BowlingStats, TMTournament, TMGroup, TMTeam, TMFixture, TMStanding, LeagueTournament, LeagueGroup, LeagueTeam, LeagueFixture, LeagueStanding } from '../types';
 
 // const API_URL = 'https://strikers-app-227875153596.us-central1.run.app/api';
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
