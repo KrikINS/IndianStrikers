@@ -200,9 +200,9 @@ const TournamentsManager: React.FC<TournamentsManagerProps> = ({ isAdmin = false
                       ) : (
                         <div className="grid gap-3">
                           {tourneyMatches.map(match => {
-                            const opp = opponents.find(o => o.id === match.opponentId);
-                            const oppLogo = opp?.logoUrl || match.opponentLogo;
-                            const oppName = opp?.name || match.opponentName || 'Opponent';
+                            const opp = opponents.find(o => o.id === match.team2Id);
+                            const oppLogo = opp?.logoUrl || match.team2Logo;
+                            const oppName = opp?.name || match.team2Name || 'Opponent';
 
                             return (
                               <div key={match.id} className="bg-white p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-blue-200 transition-colors shadow-sm">

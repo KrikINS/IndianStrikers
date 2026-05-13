@@ -28,11 +28,11 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
     const isTeam2 = teamType === 'team2';
     
     // Symmetrical team resolution
-    const opponent = opponents.find(o => o.id === (match.team2Id || match.opponentId));
-    const opponentName = opponent?.name || match.team2Name || match.opponentName || 'Opponent';
-    const opponentLogo = opponent?.logoUrl || match.team2Logo || match.opponentLogo;
+    const opponent = opponents.find(o => o.id === (match.team2Id));
+    const opponentName = opponent?.name || match.team2Name || 'Opponent';
+    const opponentLogo = opponent?.logoUrl || match.team2Logo;
     
-    const team1Source = match.isNeutral ? opponents.find(o => o.id === (match.team1Id || match.homeTeamId)) : null;
+    const team1Source = match.isNeutral ? opponents.find(o => o.id === (match.team1Id)) : null;
     const resolvedTeam1Name = match.isNeutral ? (team1Source?.name || 'Team 1') : team1Name;
     const resolvedTeam1Logo = match.isNeutral ? (team1Source?.logoUrl || '') : team1Logo;
 
@@ -41,8 +41,8 @@ export const LineupGraphic: React.FC<LineupGraphicProps> = ({
     // Get target XI players based on teamType
     // Safety net: Use specific props first, then match fields, then fallback to empty array
     const targetXIIds = isTeam2 
-        ? (team2XI || match.team2XI || match.opponentTeamXI || [])
-        : (team1XI || match.team1XI || match.homeTeamXI || []);
+        ? (team2XI || match.team2XI || [])
+        : (team1XI || match.team1XI || []);
 
     // CRITICAL SAFETY NET: (targetXIIds || []).map pattern to prevent crash
     const displayXIPlayers = (targetXIIds || [])

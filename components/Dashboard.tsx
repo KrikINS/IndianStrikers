@@ -187,7 +187,7 @@ function WeeklyPerformerCarousel({
                         : `${player.runs} (${player.balls})`,
                       matchDate: player.matchDate,
                       matchTime: player.matchTime || (player.matchDate ? new Date(player.matchDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined),
-                      opponentName: opponents.find((o: any) => o.id === player.opponentId)?.name || player.opponentName || 'TEAM',
+                      opponentName: opponents.find((o: any) => o.id === player.team2Id)?.name || player.team2Name || 'TEAM',
                       groundName: player.groundName || grounds.find((g: any) => g.id === player.groundId)?.name || 'CRICKET GROUND',
                       fullStats: player,
                       isSuperStriker: player.isSuperStriker
@@ -206,7 +206,7 @@ function WeeklyPerformerCarousel({
                     </div>
                     <h4 className="font-black text-2xl uppercase tracking-[0.2rem] italic text-center mb-1 leading-none text-white">{player.name}</h4>
                     <p className="text-[10px] font-bold text-sky-400/60 uppercase tracking-[0.3em] mb-4 italic">
-                      vs {opponents.find((o: any) => String(o.id) === String(player.opponentId))?.name || player.opponentName || 'TEAM'}
+                      vs {opponents.find((o: any) => String(o.id) === String(player.team2Id))?.name || player.team2Name || 'TEAM'}
                     </p>
                     <div className="mb-6 text-center">
                       <p className="text-4xl font-black text-sky-400 italic">
@@ -301,10 +301,10 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
     if (!priorityMatch) return null;
 
-    const opponent = opponents.find(o => o.id === priorityMatch.opponentId);
+    const opponent = opponents.find(o => o.id === priorityMatch.team2Id);
     return {
       ...priorityMatch,
-      opponentName: priorityMatch.opponentName || (opponent ? opponent.name : 'Opponent')
+      opponentName: priorityMatch.team2Name || (opponent ? opponent.name : 'Opponent')
     };
   }, [matches, opponents]);
 
@@ -706,7 +706,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                 return <div className="py-6"><p className="text-xs font-bold text-slate-400 italic">Exploring new seasons...</p></div>;
               }
 
-              const opponentLogo = displayMatch.opponentId ? (opponents.find(o => o.id === displayMatch.opponentId)?.logoUrl || displayMatch.opponentLogo) : displayMatch.opponentLogo;
+              const opponentLogo = displayMatch.team2Id ? (opponents.find(o => o.id === displayMatch.team2Id)?.logoUrl || displayMatch.team2Logo) : displayMatch.team2Logo;
 
               return (
                 <div className="space-y-4">
@@ -723,7 +723,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                       )}
                       <div className="flex flex-col">
                         <p className="font-black text-slate-700 text-2xl uppercase tracking-tighter italic leading-none">
-                          {liveMatch ? `${(liveMatch as any).teamA_short || 'IND'} ${(liveMatch as any).score || '0'}/${(liveMatch as any).wickets || '0'}` : `vs ${displayMatch.opponentName}`}
+                          {liveMatch ? `${(liveMatch as any).team1_short || 'IND'} ${(liveMatch as any).score || '0'}/${(liveMatch as any).wickets || '0'}` : `vs ${displayMatch.team2Name}`}
                         </p>
                         {displayMatch.status === 'live' && displayMatch.liveData && (
                           <div className="text-[13px] font-bold text-slate-400 mt-1 uppercase tracking-widest italic">

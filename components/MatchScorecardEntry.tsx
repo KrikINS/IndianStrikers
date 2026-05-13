@@ -49,8 +49,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
     ? [50, 40, 35, 30, 25, 20]
     : [20, 15, 12, 10, 8, 5];
 
-  const [team1Score, setTeam1Score] = useState(match.team1Score || match.finalScoreHome || { runs: 0, wickets: 0, overs: 0 });
-  const [team2Score, setTeam2Score] = useState(match.team2Score || match.finalScoreAway || { runs: 0, wickets: 0, overs: 0 });
+  const [team1Score, setTeam1Score] = useState(match.team1Score || { runs: 0, wickets: 0, overs: 0 });
+  const [team2Score, setTeam2Score] = useState(match.team2Score || { runs: 0, wickets: 0, overs: 0 });
   const [activeInnings, setActiveInnings] = useState<1 | 2>(1);
 
   const initialInnings: InningsData = {
@@ -366,6 +366,8 @@ export default function MatchScorecardEntry({ match, opponent, onClose, onSubmit
 
     const team1InningsKey = innings1BattingTeam === 'team1' ? 'innings1' : 'innings2';
     const team1BowlingKey = innings1BattingTeam === 'team1' ? 'innings2' : 'innings1';
+
+    const performerMap = new Map<string, any>();
 
     finalScorecard[team1InningsKey].batting.forEach(b => {
       // Database Sync: Do not create a performer row for DNB players

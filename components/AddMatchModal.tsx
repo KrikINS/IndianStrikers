@@ -24,7 +24,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
     };
 
     const [formData, setFormData] = useState({
-        opponentId: '',
+        team2Id: '',
         date: getInitialDate(),
         groundId: '',
         tournamentId: '',
@@ -42,7 +42,7 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
         
         try {
             const selectedTeam1 = opponents.find(o => o.id === formData.team1Id);
-            const selectedTeam2 = opponents.find(o => o.id === formData.opponentId);
+            const selectedTeam2 = opponents.find(o => o.id === formData.team2Id);
             
             const team1Name = formData.team1Id === '00000000-0000-0000-0000-000000000000' ? 'Indian Strikers' : (selectedTeam1?.name || 'Team 1');
             const team1Logo = formData.team1Id === '00000000-0000-0000-0000-000000000000' ? '/INS%20LOGO.PNG' : (selectedTeam1?.logoUrl || '');
@@ -55,11 +55,11 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
             const selectedVenue = grounds.find(g => g.id === formData.groundId)?.name || 'Local Ground';
 
             const newMatch: Omit<ScheduledMatch, 'id'> = {
-                isNeutral: formData.team1Id !== '00000000-0000-0000-0000-000000000000' && formData.opponentId !== '00000000-0000-0000-0000-000000000000',
+                isNeutral: formData.team1Id !== '00000000-0000-0000-0000-000000000000' && formData.team2Id !== '00000000-0000-0000-0000-000000000000',
                 team1Id: formData.team1Id,
                 team1Name: team1Name,
                 team1Logo: team1Logo,
-                team2Id: formData.opponentId || null,
+                team2Id: formData.team2Id || null,
                 team2Name: team2Name,
                 team2Logo: team2Logo,
                 date: (formData.date && !isNaN(new Date(formData.date).getTime())) 
@@ -160,8 +160,8 @@ const AddMatchModal: React.FC<AddMatchModalProps> = ({ onClose, opponents }) => 
                                 <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                                 <select 
                                     required
-                                    value={formData.opponentId}
-                                    onChange={(e) => setFormData({...formData, opponentId: e.target.value})}
+                                    value={formData.team2Id}
+                                    onChange={(e) => setFormData({...formData, team2Id: e.target.value})}
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all appearance-none"
                                     title="Select Team 2"
                                 >

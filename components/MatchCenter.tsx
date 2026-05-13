@@ -268,7 +268,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
         // Determine which innings corresponds to which team.
         // innings1 = team that batted FIRST; innings2 = team that batted SECOND.
         // isTeam1BattingFirst tells us if team1 batted first.
-        const isTeam1BattingFirst = match.isTeam1BattingFirst ?? (match as any).is_home_batting_first ?? true;
+        const isTeam1BattingFirst = match.isTeam1BattingFirst ?? true;
         const team1InningsKey = isTeam1BattingFirst ? 'innings1' : 'innings2';
         const team2InningsKey = isTeam1BattingFirst ? 'innings2' : 'innings1';
 
@@ -599,7 +599,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
     const filteredMatches = useMemo(() => {
         return getSortedMatches().filter(m => {
-            const opp = opponents.find(o => o.id === m.opponentId);
+            const opp = opponents.find(o => o.id === m.team2Id);
             const matchesSearch = searchQuery === '' ||
                 (opp?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (m.tournament || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -1166,7 +1166,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
                                                 </thead>
                                                 <tbody>
                                                     {filteredMatches?.map(m => {
-                                                        const opp = opponents.find(o => o.id === m.opponentId);
+                                                        const opp = opponents.find(o => o.id === m.team2Id);
                                                         return (
                                                             <tr key={m.id} onClick={() => setSelectedCardMatch(m)}>
                                                                 <td>

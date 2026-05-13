@@ -50,9 +50,9 @@ export const ScorerHeader: React.FC<ScorerHeaderProps> = ({
                 <span style={{ fontSize: '13px', fontStyle: 'italic', fontWeight: 900, color: '#FFF', letterSpacing: '0.5px' }}>
                   {(store.team2Name || matchMeta?.team2Name || 'OPPONENT').toUpperCase()}
                 </span>
-                {store.team2Logo || matchMeta?.opponentLogo ? (
+                {store.team2Logo || matchMeta?.team2Logo ? (
                   <img
-                    src={store.team2Logo || matchMeta?.opponentLogo}
+                    src={store.team2Logo || matchMeta?.team2Logo}
                     style={{ width: 30, height: 30, objectFit: 'contain' }}
                     alt="TEAM2"
                   />

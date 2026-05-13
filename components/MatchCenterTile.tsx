@@ -80,7 +80,7 @@ const MatchCenterTile: React.FC<MatchCenterTileProps> = ({
     const team1Name = match.team1Name || defaultTeam1Name;
     const team1Logo = match.team1Logo || defaultTeam1Logo || '/INS LOGO.PNG';
 
-    const opponentName = match.team2Name || match.opponentName || 'Opponent';
+    const opponentName = match.team2Name || 'Opponent';
     const opponentLogo = match.team2Logo;
 
     return (

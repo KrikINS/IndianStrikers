@@ -368,15 +368,10 @@ const mapMatch = (m: any): ScheduledMatch => {
     };
 
     // DB uses new standardized names: team1_xi / team2_xi / team1_id / is_team1_batting_first
-    // Supports legacy fallbacks for old cached data or raw DB fields.
-    const team1XI = Array.isArray(m.team1_xi) ? m.team1_xi
-        : Array.isArray(m.home_team_xi) ? m.home_team_xi : [];
-    const team2XI = Array.isArray(m.team2_xi) ? m.team2_xi
-        : Array.isArray(m.opponent_team_xi) ? m.opponent_team_xi : [];
-    const team1Id = m.team1_id || m.home_team_id || null;
-    const isTeam1BattingFirst = m.is_team1_batting_first !== undefined
-        ? !!m.is_team1_batting_first
-        : !!m.is_home_batting_first;
+    const team1XI = Array.isArray(m.team1_xi) ? m.team1_xi : [];
+    const team2XI = Array.isArray(m.team2_xi) ? m.team2_xi : [];
+    const team1Id = m.team1_id || null;
+    const isTeam1BattingFirst = !!m.is_team1_batting_first;
 
     // Score: DB stores final_score_home / final_score_away as INTEGER
     // Prefer rich JSONB from scorecard innings over raw integers
@@ -388,14 +383,14 @@ const mapMatch = (m: any): ScheduledMatch => {
         m.team2_score,
         isTeam1BattingFirst ? rawScorecard?.innings2 : rawScorecard?.innings1
     );
-    // Backfill runs from legacy integer columns if scorecard not available
-    if (!team1Score.runs && (m.team1_score || m.final_score_home)) team1Score.runs = Number(m.team1_score || m.final_score_home);
-    if (!team2Score.runs && (m.team2_score || m.final_score_away)) team2Score.runs = Number(m.team2_score || m.final_score_away);
+    // Backfill runs from integer columns if scorecard not available
+    if (!team1Score.runs && m.team1_score) team1Score.runs = Number(m.team1_score);
+    if (!team2Score.runs && m.team2_score) team2Score.runs = Number(m.team2_score);
 
     return {
         id: m.id,
         date: m.date,
-        team2Id: m.team2_id || m.opponent_id,
+        team2Id: m.team2_id,
         groundId: m.ground_id,
         tournament: m.tournament,
         tournamentId: m.tournament_id,
@@ -415,8 +410,8 @@ const mapMatch = (m: any): ScheduledMatch => {
         isLiveScored: !!m.is_live_scored,
         stage: m.stage || 'League',
         venue: m.venue || m.ground_name || '',
-        team2Name: (m.team2_name || m.opponent_name || 'OPPONENT').toUpperCase(),
-        team2Logo: m.team2_logo || m.opponent_logo || '',
+        team2Name: (m.team2_name || 'TEAM 2').toUpperCase(),
+        team2Logo: m.team2_logo || '',
         team1Name: (() => {
             const isLegacyStrikers = !team1Id ||
                 team1Id === '00000000-0000-0000-0000-000000000000' ||
@@ -518,9 +513,16 @@ const translateToDB = (match: Partial<ScheduledMatch>) => {
   if (match.resultSummary !== undefined) dbMatch.result_summary = match.resultSummary;
   if (match.resultType !== undefined) dbMatch.result_type = match.resultType;
 
-  // --- Scores: Passing as objects allows backend to extract runs/wickets/overs ---
-  if (match.team1Score !== undefined) dbMatch.team1Score = match.team1Score;
-  if (match.team2Score !== undefined) dbMatch.team2Score = match.team2Score;
+  // --- Scores ---
+  if (match.team1Score !== undefined) {
+    dbMatch.team1_score = match.team1Score.runs;
+    // We also pass the full object for rich updates if needed by the backend
+    dbMatch.team1Score = match.team1Score;
+  }
+  if (match.team2Score !== undefined) {
+    dbMatch.team2_score = match.team2Score.runs;
+    dbMatch.team2Score = match.team2Score;
+  }
   if (match.scorecard !== undefined) dbMatch.scorecard = match.scorecard;                    // DB: scorecard (JSONB)
   if (match.targetScore !== undefined) dbMatch.target_score = match.targetScore;
 
