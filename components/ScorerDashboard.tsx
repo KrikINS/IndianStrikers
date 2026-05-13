@@ -1914,6 +1914,85 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             onChartChange={setActiveChart}
             getPlayerNameForChart={getPlayerNameForChart}
           />
+
+          {/* ── MatchSetupModal: Toss → Squad → Openers → Bowler ── */}
+          {showSetupModal && (
+            <MatchSetupModal
+              team1Id={matchMeta?.team1Id || 'HOME'}
+              team2Id={matchMeta?.team2Id || matchMeta?.opponentId || 'AWAY'}
+              team1Name={store.team1Name || matchMeta?.team1Name || 'INDIAN STRIKERS'}
+              team2Name={store.team2Name || matchMeta?.team2Name || 'OPPONENT'}
+              team1Logo={store.team1Logo || matchMeta?.team1Logo || teamLogo || '/INS%20LOGO.PNG'}
+              team2Logo={store.team2Logo || matchMeta?.team2Logo || ''}
+              team1XI={store.team1XI || matchMeta?.team1XI || []}
+              team2XI={store.team2XI || matchMeta?.team2XI || []}
+              players={players}
+              opponentPlayers={opponentPlayers}
+              allOpponents={allOpponents}
+              grounds={grounds || []}
+              matchMeta={matchMeta}
+              innings1={store.innings1}
+              onSetupComplete={handleSetupComplete}
+              onCancel={() => setShowSetupModal(false)}
+              onOpenSettings={() => setShowSettingsDrawer(true)}
+            />
+          )}
+
+          {/* ── SettingsDrawer: Slide-in panel ── */}
+          <SettingsDrawer
+            isOpen={showSettingsDrawer}
+            store={store}
+            matchMeta={matchMeta}
+            activeMatchId={activeMatchId || ''}
+            currentInnings={currentInnings ?? null}
+            syncStatus={syncStatus}
+            teamLogo={teamLogo}
+            getPlayerName={getPlayerName}
+            onClose={() => setShowSettingsDrawer(false)}
+            onChangeScorer={handleChangeScorer}
+            onDeclareInnings={handleDeclareInnings}
+            onResetMatch={handleResetMatch}
+            onOpenQuickScore={() => setShowQuickScoreModal(true)}
+            updateMatch={updateMatch}
+            syncWithCloud={syncWithCloud}
+          />
+
+          {/* ── WagonWheelModal: Zone picker for scoring shots ── */}
+          {showWagonWheelModal && (
+            <WagonWheelModal
+              isOpen={!!showWagonWheelModal}
+              strikerName={getPlayerName(store.strikerId)}
+              isLeftHanded={false}
+              onZoneSelected={handleWagonWheelZoneSelected}
+              onSkip={handleWagonWheelSkip}
+              onClose={handleWagonWheelSkip}
+            />
+          )}
+
+          {/* ── UniversalScorecard: Full scorecard modal ── */}
+          {showScorecardModal && matchMeta && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto', background: '#f8fafc' }}>
+              <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: '#001F3F', color: '#FFF' }}>
+                <button
+                  onClick={() => setShowScorecardModal(false)}
+                  style={{ background: 'transparent', border: 'none', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: '0.85rem' }}
+                >
+                  <ChevronLeft size={18} /> BACK TO SCORING
+                </button>
+              </div>
+              <UniversalScorecard
+                match={{
+                  ...matchMeta,
+                  scorecard: { innings1: store.innings1, innings2: store.innings2 },
+                  liveData: store.prepareSyncPayload ? store.prepareSyncPayload() : store,
+                }}
+                players={players}
+                opponents={allOpponents}
+                isLive={matchMeta?.status === 'live'}
+                onClose={() => setShowScorecardModal(false)}
+              />
+            </div>
+          )}
         </>
         <LandscapeLockOverlay>
           <RotateCcw size={48} style={{ marginBottom: 16, opacity: 0.5 }} />
