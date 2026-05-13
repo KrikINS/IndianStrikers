@@ -936,6 +936,10 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       if (!activeMatchId || isTest) return;
 
       const baseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api');
+      // Mirror storageService.ts getHeaders(): sessionStorage first, localStorage fallback
+      // Prevents silent 401s for returning users whose token persists in localStorage only
+      const authToken = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
+      const authHeaders = { 'Content-Type': 'application/json', 'Authorization': authToken ? `Bearer ${authToken}` : '' };
       const payload: any = {
         match_id: activeMatchId,
         striker_id: currentStrikerId,
@@ -983,7 +987,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
           for (const queuedBall of store.offlineQueue) {
             await fetch(`${baseUrl}/score/ball`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('authToken')}` },
+              headers: authHeaders,
               body: JSON.stringify(queuedBall)
             });
           }
@@ -993,10 +997,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
         const response = await fetch(`${baseUrl}/score/ball`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
-          },
+          headers: authHeaders,
           body: JSON.stringify(payload)
         });
 
@@ -1859,9 +1860,11 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
                   isNotOut: (store.innings1?.battingStats[pid] && store.innings1.battingStats[pid].status !== 'out') ||
                             (store.innings2?.battingStats[pid] && store.innings2.battingStats[pid].status !== 'out'),
                 }));
+                const finalizeToken = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
+                const finalizeHeaders = { 'Content-Type': 'application/json', 'Authorization': finalizeToken ? `Bearer ${finalizeToken}` : '' };
                 await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:4001/api' : '/api')}/matches/${activeMatchId}/finalize`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('authToken')}` },
+                  headers: finalizeHeaders,
                   body: JSON.stringify({ matchData: { ...summary, performers }, updatedPlayers: performers })
                 });
                 toast.success('Match Finalized & Career Stats Updated!');
