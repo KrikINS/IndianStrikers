@@ -21,7 +21,7 @@ The project is configured with `cloudbuild.yaml` for automated builds.
     gcloud builds submit --config cloudbuild.yaml
     ```
 2.  **Deployment:**
-    The `cloudbuild.yaml` automatically triggers a deployment to **Cloud Run** (`strikers-app`).
+    The `cloudbuild.yaml` automatically triggers a deployment to **Cloud Run** (`indian-strikers`).
 
 ### Environment Variables (Cloud Run)
 The following variables must be configured in the Cloud Run service settings:

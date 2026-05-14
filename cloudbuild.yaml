@@ -13,9 +13,9 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'strikers-app'
+      - 'indian-strikers'
       - '--image=gcr.io/$PROJECT_ID/strikers-app'
-      - '--region=us-central1'
+      - '--region=asia-south1'
       - '--platform=managed'
       - '--allow-unauthenticated'
 
