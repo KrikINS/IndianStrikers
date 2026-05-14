@@ -376,13 +376,24 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
     return tname || 'Unknown Tournament';
   };
 
+  const isTeam1IndianStrikers = team1Id === '00000000-0000-0000-0000-000000000000' || team1Id === 'IND_STRIKERS';
+  const isTeam2IndianStrikers = team2Id === '00000000-0000-0000-0000-000000000000' || team2Id === 'IND_STRIKERS';
+  
+  // Assign the correct player pool based on which team is Indian Strikers
+  const team1Pool = isTeam1IndianStrikers ? players : opponentPlayers;
+  const team2Pool = isTeam2IndianStrikers ? players : opponentPlayers;
+
+  // For friendly matches, opponents might not have 11 players. Allow bypassing the 11-player rule for opponents.
+  const isTeam1Valid = isTeam1IndianStrikers ? localTeam1XI.length === 11 : localTeam1XI.length > 0;
+  const isTeam2Valid = isTeam2IndianStrikers ? localTeam2XI.length === 11 : localTeam2XI.length > 0;
+
   // For 2nd innings: squads are already set from innings 1, only need openers + bowler.
-  // For 1st innings: full validation (toss + 11 players each side + openers + bowler).
+  // For 1st innings: full validation (toss + players each side + openers + bowler).
   const isReadyToStart = innings1
     ? (selStriker && selNonStriker && selBowler)
     : ((tossWinner && tossChoice) &&
-       localTeam1XI.length === 11 &&
-       localTeam2XI.length === 11 &&
+       isTeam1Valid &&
+       isTeam2Valid &&
        selStriker && selNonStriker && selBowler);
 
   const handleFinish = () => {
@@ -529,8 +540,16 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
 
             <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
               <ActionButton onClick={() => setSetupStep('preview')}>Back</ActionButton>
-              <ActionButton $variant="primary" disabled={!tossWinner || !tossChoice} onClick={() => setSetupStep('squad_team1')}>
-                Select Squads
+              <ActionButton $variant="primary" disabled={!tossWinner || !tossChoice} onClick={() => {
+                if (isTeam1Valid && isTeam2Valid) {
+                  setSetupStep('openers_bat');
+                } else if (!isTeam1Valid) {
+                  setSetupStep('squad_team1');
+                } else {
+                  setSetupStep('squad_team2');
+                }
+              }}>
+                {(isTeam1Valid && isTeam2Valid) ? 'Choose Openers' : 'Select Squads'}
               </ActionButton>
             </div>
           </>
@@ -561,7 +580,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
             </div>
 
             <SelectionGrid>
-              {(setupStep === 'squad_team1' ? players : opponentPlayers)
+              {(setupStep === 'squad_team1' ? team1Pool : team2Pool)
                 .filter((p: any) => {
                   const matchesRole = roleFilter === 'All' || p.role === roleFilter;
                   const isActuallyActive = setupStep === 'squad_team2' || (p.isActive && p.status !== 'inactive');
@@ -616,15 +635,25 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
             </SelectionGrid>
 
             <div style={{ display: 'flex', gap: 12, marginTop: 40 }}>
-              <ActionButton onClick={() => setSetupStep(setupStep === 'squad_team1' ? 'toss' : 'squad_team1')}>
+              <ActionButton onClick={() => {
+                if (setupStep === 'squad_team1') {
+                  setSetupStep('toss');
+                } else {
+                  if (isTeam1Valid) {
+                    setSetupStep('squad_team1');
+                  } else {
+                    setSetupStep('toss');
+                  }
+                }
+              }}>
                 Back
               </ActionButton>
               <ActionButton
                 $variant="primary"
-                disabled={(setupStep === 'squad_team1' ? localTeam1XI.length : localTeam2XI.length) < 11}
-                onClick={() => setSetupStep(setupStep === 'squad_team1' ? 'squad_team2' : 'openers_bat')}
+                disabled={setupStep === 'squad_team1' ? !isTeam1Valid : !isTeam2Valid}
+                onClick={() => setSetupStep(setupStep === 'squad_team1' ? (isTeam2Valid ? 'openers_bat' : 'squad_team2') : 'openers_bat')}
               >
-                {setupStep === 'squad_team1' ? 'Next Team' : 'Choose Openers'}
+                {setupStep === 'squad_team1' && !isTeam2Valid ? 'Next Team' : 'Choose Openers'}
               </ActionButton>
             </div>
           </>
@@ -651,7 +680,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
               const batTeamType = getInningsBattingTeam();
               const batTeamName = batTeamType === 'TEAM1' ? team1Name : team2Name;
               const batSquadIds = batTeamType === 'TEAM1' ? localTeam1XI : localTeam2XI;
-              const batPool = (batTeamType === 'TEAM1' ? players : opponentPlayers).filter(p => batSquadIds.includes(p.id));
+              const batPool = (batTeamType === 'TEAM1' ? team1Pool : team2Pool).filter((p: any) => batSquadIds.includes(p.id));
 
               return (
                 <>
@@ -719,7 +748,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
               const bowlTeamType = getInningsBowlingTeam();
               const bowlTeamName = bowlTeamType === 'TEAM1' ? team1Name : team2Name;
               const bowlSquadIds = bowlTeamType === 'TEAM1' ? localTeam1XI : localTeam2XI;
-              const bowlPool = (bowlTeamType === 'TEAM1' ? players : opponentPlayers).filter(p => bowlSquadIds.includes(p.id));
+              const bowlPool = (bowlTeamType === 'TEAM1' ? team1Pool : team2Pool).filter((p: any) => bowlSquadIds.includes(p.id));
 
               return (
                 <>
