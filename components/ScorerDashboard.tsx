@@ -133,6 +133,9 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
 
   // Opponent players fetched separately from the opponents table
   const [opponentPlayers, setOpponentPlayers] = useState<{ id: string; name: string; role?: string }[]>([]);
+  
+  // Team 1 opponent players (if Team 1 is not Indian Strikers)
+  const [team1OpponentPlayers, setTeam1OpponentPlayers] = useState<{ id: string; name: string; role?: string }[]>([]);
 
   // Helper: resolve player name from either squad
   const getPlayerName = (id: any): string => {
@@ -589,16 +592,87 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
   useEffect(() => {
     // Try opponentId first, then fall back to team2Id (some matches use team2Id directly)
     const opponentId = matchMeta?.team2Id;
-    if (!opponentId) return;
+    if (!opponentId) {
+      setOpponentPlayers([]);
+      return;
+    }
+    
     import('../services/storageService').then(({ getOpponents }) => {
-      getOpponents().then(teams => {
-        const team = teams.find(t => String(t.id) === String(opponentId));
-        if (team && team.players && team.players.length > 0) {
+      getOpponents()
+        .then(teams => {
+          if (!teams || teams.length === 0) {
+            console.warn(`[Scorer] No opponent teams found in database for team2Id: ${opponentId}`);
+            setOpponentPlayers([]);
+            return;
+          }
+          
+          const team = teams.find(t => String(t.id) === String(opponentId));
+          if (!team) {
+            console.warn(`[Scorer] Opponent team not found. Searched for ID: ${opponentId}. Available IDs: ${teams.map(t => t.id).join(', ')}`);
+            setOpponentPlayers([]);
+            return;
+          }
+          
+          if (!team.players || team.players.length === 0) {
+            console.warn(`[Scorer] Opponent team "${team.name}" has no players registered`);
+            setOpponentPlayers([]);
+            return;
+          }
+          
+          console.log(`[Scorer] Loaded ${team.players.length} players for opponent: ${team.name}`);
           setOpponentPlayers(team.players.map(p => ({ id: p.id, name: p.name, role: p.role })));
-        }
-      }).catch(console.error);
+        })
+        .catch(err => {
+          console.error('[Scorer] Failed to load opponent players:', err);
+          setOpponentPlayers([]);
+        });
     });
   }, [matchMeta?.team2Id]);
+
+  // Fetch Team 1 players if Team 1 is an opponent team (not Indian Strikers)
+  useEffect(() => {
+    const team1Id = matchMeta?.team1Id;
+    const isTeam1IndianStrikers = team1Id === '00000000-0000-0000-0000-000000000000' || team1Id === 'IND_STRIKERS';
+    
+    // Only fetch if Team 1 is NOT Indian Strikers
+    if (!team1Id || isTeam1IndianStrikers) {
+      setTeam1OpponentPlayers([]);
+      return;
+    }
+    
+    console.log(`[Scorer] Team 1 is an opponent team (${matchMeta?.team1Name}), fetching its players...`);
+    
+    import('../services/storageService').then(({ getOpponents }) => {
+      getOpponents()
+        .then(teams => {
+          if (!teams || teams.length === 0) {
+            console.warn(`[Scorer] No opponent teams found for Team1Id: ${team1Id}`);
+            setTeam1OpponentPlayers([]);
+            return;
+          }
+          
+          const team = teams.find(t => String(t.id) === String(team1Id));
+          if (!team) {
+            console.warn(`[Scorer] Team 1 opponent not found. Searched for ID: ${team1Id}`);
+            setTeam1OpponentPlayers([]);
+            return;
+          }
+          
+          if (!team.players || team.players.length === 0) {
+            console.warn(`[Scorer] Team 1 opponent "${team.name}" has no players registered`);
+            setTeam1OpponentPlayers([]);
+            return;
+          }
+          
+          console.log(`[Scorer] Loaded ${team.players.length} players for Team 1 opponent: ${team.name}`);
+          setTeam1OpponentPlayers(team.players.map(p => ({ id: p.id, name: p.name, role: p.role })));
+        })
+        .catch(err => {
+          console.error('[Scorer] Failed to load Team 1 opponent players:', err);
+          setTeam1OpponentPlayers([]);
+        });
+    });
+  }, [matchMeta?.team1Id, matchMeta?.team1Name]);
 
   const handleUpdateMatchStatus = async (status: MatchStatus) => {
     if (activeMatchId) {
@@ -1965,6 +2039,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
               team1XI={store.team1XI || matchMeta?.team1XI || []}
               team2XI={store.team2XI || matchMeta?.team2XI || []}
               players={players}
+              team1OpponentPlayers={team1OpponentPlayers}
               opponentPlayers={opponentPlayers}
               allOpponents={allOpponents}
               grounds={grounds || []}

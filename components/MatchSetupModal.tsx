@@ -316,7 +316,8 @@ interface MatchSetupModalProps {
   team2Logo?: string;
   team1XI: string[];
   team2XI: string[];
-  players: Player[]; // Team 1 Pool
+  players: Player[]; // Team 1 Pool (when Team 1 = Indian Strikers)
+  team1OpponentPlayers?: any[]; // Team 1 Pool (when Team 1 = Opponent team)
   opponentPlayers: any[]; // Team 2 Pool
   allOpponents: any[];
   grounds: any[];
@@ -339,6 +340,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
   team1XI: initialTeam1XI,
   team2XI: initialTeam2XI,
   players,
+  team1OpponentPlayers,
   opponentPlayers,
   allOpponents,
   grounds,
@@ -352,18 +354,32 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
   const [tossWinner, setTossWinner] = useState<'TEAM1' | 'TEAM2' | null>(null);
   const [tossChoice, setTossChoice] = useState<'Bat' | 'Bowl' | null>(null);
   const [tempMaxOvers, setTempMaxOvers] = useState(matchMeta?.maxOvers || 20);
-  
+
   const [localTeam1XI, setLocalTeam1XI] = useState<string[]>(initialTeam1XI || []);
   const [localTeam2XI, setLocalTeam2XI] = useState<string[]>(initialTeam2XI || []);
-  
+
   const [selStriker, setSelStriker] = useState<string | null>(null);
   const [selNonStriker, setSelNonStriker] = useState<string | null>(null);
   const [selBowler, setSelBowler] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string>('All');
 
+  // Initial mount logging
+  React.useEffect(() => {
+    console.log(`[MatchSetupModal] Component Mounted`);
+    console.log(`[MatchSetupModal] Props:`, {
+      team1Id, team2Id, team1Name, team2Name,
+      team1OpponentPlayersCount: team1OpponentPlayers?.length,
+      opponentPlayersCount: opponentPlayers?.length,
+      allOpponentsCount: allOpponents?.length,
+      initialTeam1XI: initialTeam1XI?.length,
+      initialTeam2XI: initialTeam2XI?.length,
+      matchMeta: matchMeta?.id
+    });
+  }, []);
+
   // Helpers
   const isValidMatchId = (mid: any): mid is string => mid && typeof mid === 'string';
-  
+
   const resolveGroundName = (gid: string | undefined, gname: string | undefined) => {
     if (gid && gid !== 'null' && gid !== 'default') {
       const g = grounds?.find(gr => String(gr.id) === String(gid));
@@ -378,30 +394,59 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
 
   const isTeam1IndianStrikers = team1Id === '00000000-0000-0000-0000-000000000000' || team1Id === 'IND_STRIKERS';
   const isTeam2IndianStrikers = team2Id === '00000000-0000-0000-0000-000000000000' || team2Id === 'IND_STRIKERS';
-  
+
   // Assign the correct player pool based on which team is Indian Strikers
-  // Fallback: If non-INS team has INS players already selected (legacy bug), append them to the pool so they don't disappear from the UI
+  // If Team 1 is an opponent, use team1OpponentPlayers; otherwise use players (Indian Strikers squad)
   const team1Pool = isTeam1IndianStrikers ? players : [
-      ...opponentPlayers,
-      ...players.filter(p => localTeam1XI.includes(p.id) && !opponentPlayers.find((op: any) => op.id === p.id))
+    ...(team1OpponentPlayers || []),
+    ...players.filter(p => localTeam1XI.includes(p.id) && !(team1OpponentPlayers || []).find((op: any) => op.id === p.id))
   ];
+
+  // Additional fix: Include any selected players from team2XI that might be missing from opponentPlayers
+  // This ensures previously-selected lineups remain visible even if the opponent roster wasn't fully loaded
+  const missingTeam2Players = players.filter(p =>
+    localTeam2XI.includes(p.id) &&
+    !opponentPlayers.find((op: any) => op.id === p.id)
+  );
+
   const team2Pool = isTeam2IndianStrikers ? players : [
-      ...opponentPlayers,
-      ...players.filter(p => localTeam2XI.includes(p.id) && !opponentPlayers.find((op: any) => op.id === p.id))
+    ...opponentPlayers,
+    ...missingTeam2Players
   ];
 
   // For friendly matches, opponents might not have 11 players. Allow bypassing the 11-player rule for opponents.
   const isTeam1Valid = isTeam1IndianStrikers ? localTeam1XI.length === 11 : localTeam1XI.length > 0;
   const isTeam2Valid = isTeam2IndianStrikers ? localTeam2XI.length === 11 : localTeam2XI.length > 0;
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log(`[MatchSetupModal] Team1 Pool: ${team1Pool.length} players | Team1 XI: ${localTeam1XI.length} selected`);
+    console.log(`[MatchSetupModal] Team2 Pool: ${team2Pool.length} players | Team2 XI: ${localTeam2XI.length} selected`);
+    console.log(`[MatchSetupModal] Team1 Opponent Players loaded: ${team1OpponentPlayers?.length || 0}`);
+    console.log(`[MatchSetupModal] Opponent Players (Team 2) loaded: ${opponentPlayers.length}`);
+    if (team1OpponentPlayers && team1OpponentPlayers.length > 0) {
+      console.log(`[MatchSetupModal] Team1 Opponent Player List:`, team1OpponentPlayers.map((p: any) => `${p.name} (${p.id})`).join(', '));
+    }
+    if (opponentPlayers.length > 0) {
+      console.log(`[MatchSetupModal] Team2 Opponent Player List:`, opponentPlayers.map((p: any) => `${p.name} (${p.id})`).join(', '));
+    }
+    console.log(`[MatchSetupModal] Team Assignments - Team1: ${team1Name} (${isTeam1IndianStrikers ? 'INS' : 'Opponent'}), Team2: ${team2Name} (${isTeam2IndianStrikers ? 'INS' : 'Opponent'})`);
+    if (team1Pool.length === 0 && localTeam1XI.length > 0) {
+      console.warn(`[MatchSetupModal] WARNING: Team1 has ${localTeam1XI.length} selected players but pool is empty!`);
+    }
+    if (team2Pool.length === 0 && localTeam2XI.length > 0) {
+      console.warn(`[MatchSetupModal] WARNING: Team2 has ${localTeam2XI.length} selected players but pool is empty!`);
+    }
+  }, [team1Pool.length, team2Pool.length, localTeam1XI, localTeam2XI, team1OpponentPlayers?.length, opponentPlayers.length, team1Name, team2Name, isTeam1IndianStrikers, isTeam2IndianStrikers]);
+
   // For 2nd innings: squads are already set from innings 1, only need openers + bowler.
   // For 1st innings: full validation (toss + players each side + openers + bowler).
   const isReadyToStart = innings1
     ? (selStriker && selNonStriker && selBowler)
     : ((tossWinner && tossChoice) &&
-       isTeam1Valid &&
-       isTeam2Valid &&
-       selStriker && selNonStriker && selBowler);
+      isTeam1Valid &&
+      isTeam2Valid &&
+      selStriker && selNonStriker && selBowler);
 
   const handleFinish = () => {
     if (!isReadyToStart) {
@@ -590,8 +635,15 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
               {(setupStep === 'squad_team1' ? team1Pool : team2Pool)
                 .filter((p: any) => {
                   const matchesRole = roleFilter === 'All' || p.role === roleFilter;
-                  const isActuallyActive = setupStep === 'squad_team2' || (p.isActive && p.status !== 'inactive');
-                  return matchesRole && isActuallyActive;
+                  const isActuallyActive = p.isActive === false || p.status === 'inactive' ? false : true;
+                  const passes = matchesRole && isActuallyActive;
+
+                  // Debug logging for team2 squad selection
+                  if (setupStep === 'squad_team2' && !passes) {
+                    console.log(`[Squad Filter] Filtered out ${p.name}: matchesRole=${matchesRole}, isActuallyActive=${isActuallyActive}, role=${p.role}, isActive=${p.isActive}, status=${p.status}`);
+                  }
+
+                  return passes;
                 })
                 .map((p: any) => {
                   const currentXI = setupStep === 'squad_team1' ? localTeam1XI : localTeam2XI;
