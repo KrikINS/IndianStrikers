@@ -724,7 +724,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
               const batTeamType = getInningsBattingTeam();
               const batTeamName = batTeamType === 'TEAM1' ? team1Name : team2Name;
               const batSquadIds = batTeamType === 'TEAM1' ? localTeam1XI : localTeam2XI;
-              const allAvailablePlayers = [...players, ...opponentPlayers];
+              const allAvailablePlayers = [...players, ...opponentPlayers, ...(team1OpponentPlayers || [])];
               const batPool = batSquadIds.map(id => allAvailablePlayers.find(p => p.id === id)).filter(Boolean);
 
               return (
@@ -793,7 +793,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
               const bowlTeamType = getInningsBowlingTeam();
               const bowlTeamName = bowlTeamType === 'TEAM1' ? team1Name : team2Name;
               const bowlSquadIds = bowlTeamType === 'TEAM1' ? localTeam1XI : localTeam2XI;
-              const allAvailablePlayers = [...players, ...opponentPlayers];
+              const allAvailablePlayers = [...players, ...opponentPlayers, ...(team1OpponentPlayers || [])];
               const bowlPool = bowlSquadIds.map(id => allAvailablePlayers.find(p => p.id === id)).filter(Boolean);
 
               return (
