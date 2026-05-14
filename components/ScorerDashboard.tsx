@@ -21,6 +21,7 @@ import { useOpponentStore } from '../store/opponentStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { UniversalScorecard } from './UniversalScorecard';
 import _ from 'lodash';
+import { addCricketOvers } from '../services/statsEngine';
 import { MilestoneOverlay, MilestoneOverlayRef } from './MilestoneOverlay';
 import { Player, ScheduledMatch, Ball, CommentaryTemplate, CommentaryEventType, MatchStatus, MatchSetupData } from '../types';
 import { toast } from 'react-hot-toast';
@@ -1266,6 +1267,8 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       const team1XI = store.team1XI || [];
 
       team1XI.forEach(pid => {
+        const playerId = (typeof pid === 'object' && pid !== null) ? (pid as any).id : pid;
+
         let runs = 0;
         let balls = 0;
         let fours = 0;
@@ -1285,7 +1288,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
         [store.innings1, store.innings2].forEach((inn) => {
           if (!inn) return;
 
-          const bStat = inn.battingStats[pid];
+          const bStat = inn.battingStats[playerId];
           if (bStat) {
             lastBStat = bStat;
             runs += (bStat.runs || 0);
@@ -1297,19 +1300,19 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
             if ((bStat.balls || 0) > 0 || bStat.status !== 'dnb') playedInnings = true;
           }
 
-          const bwStat = inn.bowlingStats[pid];
+          const bwStat = inn.bowlingStats[playerId];
           if (bwStat) {
             wickets += (bwStat.wickets || 0);
             bowlingRuns += (bwStat.runs || 0);
-            bowlingOvers += (bwStat.overs || 0);
+            bowlingOvers = addCricketOvers(bowlingOvers, Number(bwStat.overs || 0));
             maidens += (bwStat.maidens || 0);
 
             // Calculate extras from history
-            const bowlerEvents = (inn.history || []).filter(b => String(b.bowlerId) === String(pid));
+            const bowlerEvents = (inn.history || []).filter(b => String(b.bowlerId) === String(playerId));
             wides += bowlerEvents.filter(b => b.type === 'wide').length;
             noBalls += bowlerEvents.filter(b => b.type === 'no-ball').length;
 
-            if (bwStat.overs > 0) bowledInnings = true;
+            if (Number(bwStat.overs || 0) > 0) bowledInnings = true;
           }
         });
 

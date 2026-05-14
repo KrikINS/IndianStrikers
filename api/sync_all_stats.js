@@ -59,15 +59,23 @@ async function recalculateCareerStats(playerId) {
         return s + (status.startsWith('HISTORICAL:') ? (parseInt(status.split(':')[1]) || 1) : 1);
     }, 0) + (Number(l.matches) || 0);
 
+    const normalizeStatus = (rawStatus) => {
+        const status = String(rawStatus || '').trim().toLowerCase();
+        if (['did not bat', 'dnb', 'absent', 'absent hurt', 'substitute', 'yet to bat'].includes(status)) return 'dnb';
+        if (['not out', 'retired hurt'].includes(status)) return 'not out';
+        if (status === '') return 'unknown';
+        return 'out';
+    };
+
     const totalInnings = m.filter(row => {
-        const status = (row.status || '').toLowerCase();
+        const status = normalizeStatus(row.status);
         const balls = Number(row.balls) || 0;
-        const isDNB = !status || ['dnb', 'did not bat', 'absent', 'absent hurt'].includes(status);
+        const isDNB = status === 'dnb';
         if (isDNB && balls === 0) return false;
         return true;
     }).length + (Number(l.innings) || 0);
 
-    const totalNO = m.filter(row => row.is_not_out || row.status === 'Not Out' || row.status === 'not out').length + (Number(l.not_outs) || 0);
+    const totalNO = m.filter(row => normalizeStatus(row.status) === 'not out' || row.is_not_out).length + (Number(l.not_outs) || 0);
     const totalBalls = m.reduce((s, row) => s + (Number(row.balls) || 0), 0) + (Number(l.balls) || 0);
     const totalFours = m.reduce((s, row) => s + (Number(row.fours) || 0), 0) + (Number(l.fours) || 0);
     const totalSixes = m.reduce((s, row) => s + (Number(row.sixes) || 0), 0) + (Number(l.sixes) || 0);

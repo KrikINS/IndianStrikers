@@ -1018,6 +1018,22 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
       return res.json({ ok: true, message: "Match finalized (Sandbox Mode)" });
     }
 
+    const normalizeDismissal = (perf) => {
+      const statusRaw = String(perf.outHow || perf.status || '').trim().toLowerCase();
+      const isNotOut = perf.isNotOut === true || statusRaw === 'not out' || statusRaw === 'retired hurt';
+      const isDNB = ['did not bat', 'dnb', 'absent', 'absent hurt', 'substitute', 'yet to bat'].includes(statusRaw);
+
+      if (isDNB) {
+        return { status: 'DNB', isDuck: false };
+      }
+      if (isNotOut) {
+        return { status: 'Not Out', isDuck: false };
+      }
+
+      const isDuck = Number(perf.runs || 0) === 0 && !isNotOut;
+      return { status: 'Out', isDuck };
+    };
+
     // 2. Summation Logic (Source of Truth: player_match_stats)
     let performers = (updatedPlayers && updatedPlayers.length > 0) ? updatedPlayers : (matchData.performers || []);
     
@@ -1041,6 +1057,7 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
 
         const playerId = actualPlayer.id;
 
+        const { status, isDuck } = normalizeDismissal(perf);
         const { error: upsertErr } = await db.query(
           `INSERT INTO player_match_stats (
             match_id, player_id, runs, balls, fours, sixes, status, wickets, 
@@ -1056,10 +1073,10 @@ app.post('/api/matches/:id/finalize', authGuard(['admin', 'member']), async (req
             is_hero=EXCLUDED.is_hero, updated_at=EXCLUDED.updated_at, dismissal_type=EXCLUDED.dismissal_type`,
           [
             String(id), playerId, Number(perf.runs || 0), Number(perf.balls || 0), Number(perf.fours || 0), Number(perf.sixes || 0), 
-            perf.outHow || (perf.isNotOut ? 'Not Out' : 'Out'), Number(perf.wickets || 0), 
+            status, Number(perf.wickets || 0), 
             Number(perf.bowlingRuns || perf.runsConceded || 0), Number(perf.bowlingOvers || perf.overs_bowled || 0), Number(perf.maidens || 0), 
             Number(perf.runs) >= 100 ? 1 : 0, (Number(perf.runs) >= 50 && Number(perf.runs) < 100) ? 1 : 0,
-            (Number(perf.runs || 0) === 0 && (perf.outHow && !['not out', 'did not bat', 'dnb', 'retired hurt', 'absent'].includes(perf.outHow.toLowerCase()))) ? 1 : 0,
+            isDuck ? 1 : 0,
             Number(perf.wickets) === 4 ? 1 : 0, Number(perf.wickets) >= 5 ? 1 : 0, 
             Number(perf.wides || 0), Number(perf.no_balls || 0), perf.is_hero || false,
             perf.outHow || null

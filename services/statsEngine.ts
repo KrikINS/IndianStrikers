@@ -72,9 +72,12 @@ export const updateBattingCareerStats = (current: BattingStats, perf: Performer)
   // MAT always increments for all Playing XI members
   updated.matches = syncMatchValue(current.matches, 1);
 
-  // Only count as an innings if the player actually batted:
-  // Rule: INN ONLY if balls_faced > 0
-  const didBat = Number(perf.balls || 0) > 0;
+  // Only count as a batting innings if the player actually participated with the bat.
+  // This handles zero-ball not-outs and non-zero outs (e.g. run-outs without facing a legal delivery).
+  const didBat = Number(perf.balls || 0) > 0
+    || perf.isNotOut === true
+    || Number(perf.runs || 0) > 0
+    || (perf.outHow && !['dnb', 'did not bat', 'absent', 'absent hurt'].includes(String(perf.outHow).toLowerCase()));
 
   if (didBat) {
     const matchRuns = Number(perf.runs || 0);

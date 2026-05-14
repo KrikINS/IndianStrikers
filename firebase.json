@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "indian-strikers",
+          "region": "asia-south1"
+        }
+      }
+    ]
+  }
+}
+

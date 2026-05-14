@@ -501,28 +501,13 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
     }, 0);
     const overs = bowlingBalls > 0
       ? Math.floor(bowlingBalls / 6) + (bowlingBalls % 6) / 10
-      : (inn.totalOvers || 0);
+      : ((inn.totalBalls || 0) > 0 ? Math.floor((inn.totalBalls || 0) / 6) + ((inn.totalBalls || 0) % 6) / 10 : (inn.totalOvers || 0));
+
     return { runs: batRuns + (extraRuns as number), wickets: wkts, overs };
   };
 
-  const handleSave = async () => {
-    if (!onSave) return;
-    setSaveError(null);
-    setIsSaving(true);
-    try {
-      // Normalize editState to remove temporary IDs
-      const finalState = JSON.parse(JSON.stringify(editState));
-
-      const cleanBatting = (inn: any) => {
-        if (!inn || !inn.batting) return;
-        inn.batting = inn.batting.map((b: any) => ({
-          ...b,
-          playerId: (b.playerId && String(b.playerId).startsWith('new-')) ? undefined : b.playerId
-        }));
-      };
-
-      // Recalculate totals before saving to ensure consistency
-      const recalculateInnings = (inn: any) => {
+  // Recalculate totals before saving to ensure consistency
+  const recalculateInnings = (inn: any) => {
         if (!inn) return;
         const batRuns = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.runs) || 0), 0);
         const extraRuns = Object.values(inn.extras || {}).reduce((s: number, e: any) => s + (Number(e) || 0), 0);
@@ -538,8 +523,8 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
           return s + Math.floor(ov) * 6 + Math.round((ov % 1) * 10);
         }, 0);
         const batBalls = (inn.batting || []).reduce((s: number, b: any) => s + (Number(b.balls) || 0), 0);
-        // Use bowling balls for overs (correct), batting balls as fallback
-        const totalBalls = bowlingBalls > 0 ? bowlingBalls : batBalls;
+        // Use elapsed bowling balls for overs, fall back to existing totalBalls if present, then batting balls.
+        const totalBalls = bowlingBalls > 0 ? bowlingBalls : (inn.totalBalls || batBalls);
 
         inn.totalRuns = runs;
         inn.wickets = wickets;
@@ -547,6 +532,22 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
         inn.totalOvers = Math.floor(totalBalls / 6) + (totalBalls % 6) / 10;
       };
 
+  const cleanBatting = (inn: any) => {
+    if (!inn || !Array.isArray(inn.batting)) return;
+    inn.batting = inn.batting.filter((b: any) => b.playerId || Number(b.runs) || Number(b.balls) || Number(b.fours) || Number(b.sixes) || (b.outHow && String(b.outHow).trim().length > 0));
+  };
+
+  const handleSave = async () => {
+    if (!onSave) return;
+    if (!editState) {
+      setSaveError('No scorecard state available to save.');
+      return;
+    }
+    const finalState = editState;
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
       cleanBatting(finalState.innings1);
       cleanBatting(finalState.innings2);
       recalculateInnings(finalState.innings1);
