@@ -672,22 +672,7 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
                           <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>{p.role}</div>
                         </div>
                       </div>
-                      {setupStep === 'squad_team1' && (
-                        <StatRibbon>
-                          <StatItem>
-                            <StatLabel>Avg</StatLabel>
-                            <StatVal>{p.battingStats?.average || p.average || '0.0'}</StatVal>
-                          </StatItem>
-                          <StatItem>
-                            <StatLabel>SR</StatLabel>
-                            <StatVal>{p.battingStats?.strikeRate || '0'}</StatVal>
-                          </StatItem>
-                          <StatItem>
-                            <StatLabel>Wkt</StatLabel>
-                            <StatVal>{p.bowlingStats?.wickets || p.wicketsTaken || '0'}</StatVal>
-                          </StatItem>
-                        </StatRibbon>
-                      )}
+
                     </PlayerCard>
                   );
                 })}
