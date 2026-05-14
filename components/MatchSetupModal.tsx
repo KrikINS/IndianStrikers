@@ -380,8 +380,15 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
   const isTeam2IndianStrikers = team2Id === '00000000-0000-0000-0000-000000000000' || team2Id === 'IND_STRIKERS';
   
   // Assign the correct player pool based on which team is Indian Strikers
-  const team1Pool = isTeam1IndianStrikers ? players : opponentPlayers;
-  const team2Pool = isTeam2IndianStrikers ? players : opponentPlayers;
+  // Fallback: If non-INS team has INS players already selected (legacy bug), append them to the pool so they don't disappear from the UI
+  const team1Pool = isTeam1IndianStrikers ? players : [
+      ...opponentPlayers,
+      ...players.filter(p => localTeam1XI.includes(p.id) && !opponentPlayers.find((op: any) => op.id === p.id))
+  ];
+  const team2Pool = isTeam2IndianStrikers ? players : [
+      ...opponentPlayers,
+      ...players.filter(p => localTeam2XI.includes(p.id) && !opponentPlayers.find((op: any) => op.id === p.id))
+  ];
 
   // For friendly matches, opponents might not have 11 players. Allow bypassing the 11-player rule for opponents.
   const isTeam1Valid = isTeam1IndianStrikers ? localTeam1XI.length === 11 : localTeam1XI.length > 0;
