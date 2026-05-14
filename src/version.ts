@@ -19,4 +19,4 @@ const formatBuildDate = (isoString: string) => {
 
 const BUILD_SUFFIX = typeof __BUILD_TIME__ !== 'undefined' ? formatBuildDate(__BUILD_TIME__) : 'dev';
 
-export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : `v2.8.0-${BUILD_SUFFIX}`;
+export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : `v2.8.0-20260514-0303`;

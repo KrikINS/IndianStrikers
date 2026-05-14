@@ -2135,30 +2135,26 @@ app.post('/api/upload', authGuard(['admin', 'member']), upload.single('file'), a
 // TOURNAMENT PERFORMERS ENGINE (Hybrid Selection)
 app.get('/api/tournament-performers', async (req, res) => {
   try {
-    // 1. Get tournaments sorted by creation/date to find latest
-    const { data: tournaments, error: tErr } = await db.query('SELECT * FROM tournaments ORDER BY created_at DESC');
+    // 1. Get tournaments to find latest for labeling
+    const { data: tournaments } = await db.query('SELECT * FROM tournaments ORDER BY created_at DESC');
+    const latestTournament = (tournaments && tournaments.length > 0) ? tournaments[0] : { name: 'Recent Matches' };
 
-    if (tErr || !tournaments || tournaments.length === 0) return res.json({ performers: [], isSeasonOpener: true });
-
-    const latestTournament = tournaments[0];
-
-    // Helper to fetch and filter Standout Performances
-    const getPerformersForTournament = async (tId) => {
-      let q = `
+    // Helper to fetch and filter Standout Performances from LAST 3 MATCHES
+    const getSpotlightPerformers = async () => {
+      const q = `
         SELECT pms.*, m.id as m_id, m.date as m_date, m.status as m_status, m.tournament_id as m_t_id, m.ground_id as m_g_id, m.team2_id as m_o_id,
                p.name as p_name, p.role as p_role, p.avatar_url as p_avatar_url, p.avatar_history as p_avatar_history
         FROM player_match_stats pms
         JOIN matches m ON pms.match_id = m.id
         JOIN players p ON pms.player_id = p.id
-        WHERE m.is_test = false AND m.status = 'completed' AND p.is_club_player = true
+        WHERE m.id IN (
+          SELECT id FROM matches 
+          WHERE status = 'completed' AND is_test = false
+          ORDER BY date DESC LIMIT 3
+        ) AND p.is_club_player = true
       `;
-      let params = [];
-      if (tId) {
-        q += ' AND m.tournament_id = $1';
-        params.push(tId);
-      }
 
-      const { data, error } = await db.query(q, params);
+      const { data, error } = await db.query(q);
       if (error) return [];
 
       const rawData = data || [];
@@ -2220,23 +2216,12 @@ app.get('/api/tournament-performers', async (req, res) => {
       return results;
     };
 
-    let performers = await getPerformersForTournament(latestTournament.id);
-    let isSeasonOpener = false;
-
-    // Fallback: If no performers found in current tournament, pull from most recent match
-    if (performers.length === 0) {
-      const { data: recentMatch } = await db.getOne('SELECT id, tournament_id FROM matches WHERE status = \'completed\' ORDER BY date DESC LIMIT 1');
-
-      if (recentMatch) {
-         performers = await getPerformersForTournament(recentMatch.tournament_id);
-      }
-      isSeasonOpener = true;
-    }
+    const performers = await getSpotlightPerformers();
 
     res.json({
       tournamentName: latestTournament.name,
       performers,
-      isSeasonOpener
+      isSeasonOpener: false
     });
   } catch (e) {
     console.error('[GET /api/tournament-performers] Error:', e);

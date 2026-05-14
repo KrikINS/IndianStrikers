@@ -474,7 +474,7 @@ export const UniversalScorecard: React.FC<UniversalScorecardProps> = ({
   }, [initialMatch]);
 
   const [selectedInnings, setSelectedInnings] = useState<number>(activeInnings || 1);
-  const [openInnings, setOpenInnings] = useState<Set<number>>(new Set([1]));
+  const [openInnings, setOpenInnings] = useState<Set<number>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);

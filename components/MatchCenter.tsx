@@ -135,7 +135,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({ opponents, userRole, teamLogo
 
     // Auto-sync on mount: Using a ref to strictly ensure this only runs once
     const hasAutoSynced = useRef(false);
-    React.useEffect(() => {
+    useEffect(() => {
         if (hasAutoSynced.current) return;
 
         console.log("[MatchCenter] Initial Auto-sync triggered");
