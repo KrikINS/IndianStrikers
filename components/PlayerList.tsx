@@ -7,6 +7,8 @@ import * as api from '../services/storageService';
 import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUsers, getLegacyStats, forceRecalculatePlayer } from '../services/storageService';
 import { useStore } from '../store/StoreProvider';
 import { useOpponentStore } from '../store/opponentStore';
+import { InitialsAvatar } from './Scorer/ScorerStyles';
+import { getInitials } from './Scorer/scorerUtils';
 import styles from './PlayerList.module.css';
 
 interface PlayerListProps {
@@ -176,8 +178,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   const { opponents, fetchOpponents } = useOpponentStore();
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [viewingPlayer, setViewingPlayer] = useState<Player | null>(null);
-  const [rosterTab, setRosterTab] = useState<'active' | 'inactive' | 'others'>('active');
-  const [selectedOpponentId, setSelectedOpponentId] = useState<string>('all');
+  const [rosterTab, setRosterTab] = useState<'active' | 'inactive'>('active');
   const [activeStatTab, setActiveStatTab] = useState<'batting' | 'bowling'>('batting');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEditTab, setActiveEditTab] = useState<'general' | 'batting' | 'bowling'>('general');
@@ -240,8 +241,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
       }
     };
     fetchMasters();
-    fetchOpponents();
-  }, [fetchOpponents]);
+  }, []);
 
   const enrichedPlayers = useMemo(() => {
     if (!allPlayers) return [];
@@ -267,18 +267,16 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
       const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
 
-      // Use legacy stats as the baseline, falling back to player summary columns if legacy missing
-      const baseRuns = Number(legacyRow?.runs || p.runsScored || 0);
-      const baseWickets = Number(legacyRow?.wickets || p.wicketsTaken || 0);
-      const baseMatches = Number(legacyRow?.matches || p.matchesPlayed || 0);
-      const baseInnings = Number(legacyRow?.innings || p.battingStats?.innings || 0);
-      const baseBowlingInnings = Number(legacyRow?.bowling_innings || p.bowlingStats?.innings || 0);
-
+      // NOTE: We trust the backend-provided summary columns (p.runsScored, p.matchesPlayed, etc.)
+      // as the Authoritative Career Totals (Legacy + All Tournaments).
+      // We only use playerPerformances for visual milestones (highestScore, bestBowling).
+      
       const enrichedBatting = {
         ...(p.battingStats || {}),
-        matches: baseMatches + totalMatchMatches,
-        innings: baseInnings + totalMatchInnings,
-        runs: baseRuns + totalMatchRuns,
+        // Do NOT add totalMatchMatches here if the backend already included them in the summary column
+        matches: p.matchesPlayed || 0,
+        runs: p.runsScored || 0,
+        innings: p.battingStats?.innings || 0,
         highestScore: playerPerformances.reduce((max, perf) => {
           const runs = Number(perf.runs || 0);
           const currentMax = parseInt(max.toString().replace('*','')) || 0;
@@ -288,9 +286,8 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
 
       const enrichedBowling = {
         ...(p.bowlingStats || {}),
-        matches: baseMatches + totalMatchMatches,
-        innings: baseBowlingInnings + totalMatchBowlingInnings,
-        wickets: baseWickets + totalMatchWickets,
+        matches: p.matchesPlayed || 0,
+        wickets: p.wicketsTaken || 0,
         bestBowling: playerPerformances.reduce((best, perf) => {
           const wkts = Number(perf.wickets || 0);
           const runs = Number(perf.bowlingRuns || 0);
@@ -301,10 +298,12 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           return best;
         }, (legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0'))
       };
+
       return {
         ...p,
         battingStats: enrichedBatting as any,
         bowlingStats: enrichedBowling as any,
+        // Ensure these properties match the enriched objects exactly for consistency
         runsScored: enrichedBatting.runs,
         wicketsTaken: enrichedBowling.wickets,
         matchesPlayed: enrichedBatting.matches
@@ -421,35 +420,16 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Map of player IDs to their respective opponent teams for quick lookup
-  const opponentMap = useMemo(() => {
-    const map = new Map<string, { team: OpponentTeam }>();
-    (opponents || []).forEach(team => {
-      (team.players || []).forEach(p => {
-        map.set(String(p.id), { team });
-      });
-    });
-    return map;
-  }, [opponents]);
 
-  // Subscribe to the rosterTab for filtering (active vs inactive vs others)
+  // Subscribe to the rosterTab for filtering (active vs inactive)
   const displayedPlayers = useMemo(() => {
-    // 1. First partition by the "Strikers Lock"
-    const squad = enrichedPlayers.filter(p => p.teamId === 'IND_STRIKERS');
-    const opponents = enrichedPlayers.filter(p => p.teamId !== 'IND_STRIKERS');
+    // Strictly partition by the "Strikers Lock" (teamId === 'IND_STRIKERS')
+    // and filter by search query simultaneously
+    const squad = enrichedPlayers.filter(p => 
+      p.teamId === 'IND_STRIKERS' && 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-    if (rosterTab === 'others') {
-      // "Other Teams" tab strictly pulls from the opponent partition
-      if (selectedOpponentId !== 'all') {
-        return opponents.filter(p => {
-          const opponentData = opponentMap.get(String(p.id));
-          return opponentData?.team.id === selectedOpponentId;
-        });
-      }
-      return opponents;
-    }
-
-    // "Active" and "Inactive" tabs strictly pull from the squad partition
     const isActuallyActive = (p: Player) => p.isActive && p.status !== 'inactive';
 
     if (rosterTab === 'active') {
@@ -458,7 +438,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     
     // Inactive tab
     return squad.filter(p => !isActuallyActive(p));
-  }, [enrichedPlayers, rosterTab, opponentMap, selectedOpponentId]);
+  }, [enrichedPlayers, rosterTab, searchQuery]);
 
   // TEMP DEBUG: Log this to see if players exist but are filtered out
   console.log("[PlayerList] Total in Store:", allPlayers.length);
@@ -479,7 +459,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
       runsScored: 0,
       wicketsTaken: 0,
       average: 0,
-      avatarUrl: `https://picsum.photos/200/200?random=${Date.now()}`,
+      avatarUrl: '',
       dob: '',
       externalId: '',
       jerseyNumber: undefined,
@@ -596,10 +576,15 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const compressed = await compressImage(reader.result as string);
-        setFormData(prev => ({ 
-          ...prev, 
-          avatarUrl: compressed
-        }));
+        setFormData(prev => {
+          const newHistory = prev.avatarHistory || [];
+          return { 
+            ...prev, 
+            avatarUrl: compressed,
+            // Pre-emptively add to history in state so it shows in gallery if opened
+            avatarHistory: newHistory.includes(compressed) ? newHistory : [...newHistory, compressed]
+          };
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -613,11 +598,25 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         ? (newHistory.length > 0 ? newHistory[0] : '') 
         : prev.avatarUrl;
         
-      return {
+      const updated = {
         ...prev,
         avatarHistory: newHistory,
         avatarUrl: newAvatarUrl
       };
+
+      // PERSIST IMMEDIATELY IF EDITING: This fixes the "comes back after refresh" bug
+      if (editingPlayer) {
+        const fullPlayerData: Player = {
+          ...editingPlayer,
+          ...updated,
+          id: editingPlayer.id,
+          avatarHistory: newHistory,
+          avatarUrl: newAvatarUrl
+        };
+        onUpdatePlayer(fullPlayerData);
+      }
+
+      return updated;
     });
   };
 
@@ -649,7 +648,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
         isViceCaptain: !!formData.isViceCaptain,
         isActive: formData.isActive !== false,
         isAvailable: formData.isAvailable !== false,
-        avatarUrl: formData.avatarUrl || `https://picsum.photos/200/200?random=${Date.now()}`,
+        avatarUrl: formData.avatarUrl || '',
         dob: formData.dob,
         externalId: formData.externalId,
         jerseyNumber: (formData.jerseyNumber !== undefined && (formData.jerseyNumber as any) !== '' && formData.jerseyNumber !== null) ? Number(formData.jerseyNumber) : undefined,
@@ -748,56 +747,6 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     URL.revokeObjectURL(url);
   };
 
-  const renderPlayerRow = (player: Player) => {
-    const oppData = opponentMap.get(String(player.id));
-    
-    return (
-      <div 
-        key={player.id}
-        onClick={() => { setViewingPlayer(player); setActiveStatTab('batting'); }}
-        className="flex items-center gap-4 bg-white p-3 md:p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all cursor-pointer group"
-      >
-        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-slate-100 shrink-0">
-          <img src={player.avatarUrl} alt={player.name} className="w-full h-full object-cover" />
-        </div>
-        
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="text-[14px] font-bold text-slate-900 truncate">{player.name}</h4>
-            {player.jerseyNumber !== undefined && (
-              <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">#{player.jerseyNumber}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 md:gap-3 text-[11px] md:text-[12px] text-slate-500 mt-0.5">
-            <span className="flex items-center gap-1.5 shrink-0">
-              {getRoleIcon(player.role)} {player.role}
-            </span>
-            <span className="w-1 h-1 bg-slate-300 rounded-full shrink-0"></span>
-            <span className="truncate text-indigo-600 font-medium">{oppData?.team.name || (player as any).primaryTeamName || 'Other Team'}</span>
-          </div>
-        </div>
-
-        <div className="hidden sm:flex items-center gap-6 px-4 border-l border-slate-100">
-          <div className="text-center min-w-[40px]">
-            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Runs</p>
-            <p className="text-[13px] font-black text-slate-900">{player.battingStats?.runs || player.runsScored || 0}</p>
-          </div>
-          <div className="text-center min-w-[40px]">
-            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Wkts</p>
-            <p className="text-[13px] font-black text-slate-900">{player.bowlingStats?.wickets || player.wicketsTaken || 0}</p>
-          </div>
-          <div className="text-center min-w-[40px]">
-            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Mat</p>
-            <p className="text-[13px] font-black text-slate-700">{player.battingStats?.matches || player.matchesPlayed || 0}</p>
-          </div>
-        </div>
-
-        <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ArrowRight size={18} className="text-indigo-500" />
-        </div>
-      </div>
-    );
-  };
 
   const renderPlayerCard = (player: Player) => {
     return (
@@ -837,11 +786,17 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
       {/* Avatar */}
       <div className="absolute top-5 left-6 z-10 transition-transform duration-300 group-hover:scale-110">
         <div className="relative">
-          <img
-            src={player.avatarUrl}
-            alt={player.name}
-            className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl border-4 border-white object-cover shadow-md ${!player.isAvailable ? 'grayscale opacity-80' : ''}`}
-          />
+          {player.avatarUrl ? (
+            <img
+              src={player.avatarUrl}
+              alt={player.name}
+              className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl border-4 border-white object-cover shadow-md ${!player.isAvailable ? 'grayscale opacity-80' : ''}`}
+            />
+          ) : (
+            <InitialsAvatar size="64px" className={`border-4 border-white shadow-md ${!player.isAvailable ? 'grayscale opacity-80' : ''}`}>
+              {getInitials(player.name)}
+            </InitialsAvatar>
+          )}
           <div className={`absolute -bottom-1 -right-1 w-4 h-4 md:w-5 md:h-5 rounded-full border-2 border-white ${player.isAvailable ? 'bg-blue-500' : 'bg-red-500'}`} title={player.isAvailable ? 'Available' : 'Unavailable'}></div>
         </div>
       </div>
@@ -870,33 +825,25 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
             {getRoleIcon(player.role)}
             <span className="font-medium">{player.role}</span>
           </div>
-          {opponentMap.has(String(player.id)) && (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-orange-50/50 border border-orange-100 rounded-lg w-fit">
-              <Swords size={10} className="text-orange-500" />
-              <span className="text-[9px] font-black text-orange-600 uppercase tracking-tighter">
-                {opponentMap.get(String(player.id))?.team.name}
-              </span>
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
             <span className="text-slate-400 block uppercase text-[10px]">MTCH</span>
             <span className="font-bold text-slate-700 text-sm">
-              {player.battingStats?.matches || player.matchesPlayed || 0}
+              {player.matchesPlayed || 0}
             </span>
           </div>
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
             <span className="text-slate-400 block uppercase text-[10px]">Runs</span>
             <span className="font-bold text-slate-700 text-sm">
-              {player.battingStats?.runs || player.runsScored || 0}
+              {player.runsScored || 0}
             </span>
           </div>
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
             <span className="text-slate-400 block uppercase text-[10px]">Wkts</span>
             <span className="font-bold text-slate-700 text-sm">
-              {player.bowlingStats?.wickets || player.wicketsTaken || 0}
+              {player.wicketsTaken || 0}
             </span>
           </div>
         </div>
@@ -964,31 +911,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
           >
              <UserMinus size={14} /> Inactive
           </button>
-          <button
-            onClick={() => setRosterTab('others')}
-            className={`flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${rosterTab === 'others' ? 'bg-orange-600 text-white shadow-lg' : 'text-white hover:bg-orange-600/30 hover:text-white'}`}
-          >
-             <Swords size={14} /> Other Teams
-          </button>
         </div>
-
-        {/* Team Filter for Other Teams */}
-        {rosterTab === 'others' && (
-          <div className="relative w-full md:w-64">
-            <select
-              title="Filter by Team"
-              value={selectedOpponentId}
-              onChange={(e) => setSelectedOpponentId(e.target.value)}
-              className="w-full pl-4 pr-10 py-2.5 bg-slate-800/30 border border-slate-700/50 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 text-orange-200 text-xs font-bold uppercase tracking-widest appearance-none cursor-pointer"
-            >
-              <option value="all" className="bg-slate-900">All Other Teams</option>
-              {opponents.sort((a,b) => a.name.localeCompare(b.name)).map(team => (
-                <option key={team.id} value={team.id} className="bg-slate-900">{team.name}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-orange-400 pointer-events-none" />
-          </div>
-        )}
 
         {/* Search Bar - Integrated into the glass bar */}
         <div className="relative flex-1 w-full">
@@ -1027,7 +950,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
               </div>
             )}
           </section>
-        ) : rosterTab === 'inactive' ? (
+        ) : (
           /* Inactive Players Section */
           <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h3 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
@@ -1042,32 +965,6 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
             ) : (
               <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">
                 No inactive players found.
-              </div>
-            )}
-          </section>
-        ) : (
-          /* Other Teams Section */
-          <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-5">
-              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3">
-                <span className="w-1.5 h-6 bg-orange-600 rounded-full"></span>
-                Other Team Players
-                <span className="text-slate-400 text-sm font-normal bg-slate-100 px-2 py-0.5 rounded-full">{displayedPlayers.length}</span>
-              </h3>
-              {selectedOpponentId !== 'all' && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-bold ring-1 ring-orange-200">
-                  <Swords size={12} />
-                  Representing: {opponents.find(o => o.id === selectedOpponentId)?.name}
-                </div>
-              )}
-            </div>
-            {displayedPlayers.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {displayedPlayers?.map(renderPlayerRow)}
-              </div>
-            ) : (
-              <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold italic">
-                No players found for the selected team.
               </div>
             )}
           </section>
@@ -1507,91 +1404,100 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                   </div>
                 </div>
 
-                <div className="flex-1 bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-center overflow-hidden">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Activity className="text-blue-500" size={12} /> Recent Form
-                    </h3>
-                    <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">Last 5 Innings</p>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {/* Batting Row */}
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Batting Form</span>
-                      <div className="flex gap-2 items-center overflow-x-auto pb-1 scroller-hide">
-                        {recentInvolvement.length > 0 ? (
-                          recentInvolvement.map((perf, i) => {
-                            // Use the isDNB flag from the backend if available, otherwise fallback to status check
-                            const dnbTerms = ['did not bat', 'dnb', 'absent', 'absent hurt', 'substitute', 'yet to bat'];
-                            const outHowLower = (perf.outHow || perf.status || '').toLowerCase().trim();
-                            const didBat = perf.isDNB === false
-                              ? true // Explicitly marked as batted by backend
-                              : perf.isDNB === true
-                              ? false // Explicitly marked as DNB by backend
-                              : (Number(perf.balls || 0) > 0 || (!!outHowLower && !dnbTerms.includes(outHowLower)));
-                            const runs = Number(perf.runs || 0);
+                {viewingPlayer.teamId === 'IND_STRIKERS' ? (
+                  <div className="flex-1 bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-center overflow-hidden">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Activity className="text-blue-500" size={12} /> Recent Form
+                      </h3>
+                      <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">Last 5 Innings</p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {/* Batting Row */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Batting Form</span>
+                        <div className="flex gap-2 items-center overflow-x-auto pb-1 scroller-hide">
+                          {recentInvolvement.length > 0 ? (
+                            recentInvolvement.map((perf, i) => {
+                              const dnbTerms = ['did not bat', 'dnb', 'absent', 'absent hurt', 'substitute', 'yet to bat'];
+                              const outHowLower = (perf.outHow || perf.status || '').toLowerCase().trim();
+                              const didBat = perf.isDNB === false
+                                ? true 
+                                : perf.isDNB === true
+                                ? false 
+                                : (Number(perf.balls || 0) > 0 || (!!outHowLower && !dnbTerms.includes(outHowLower)));
+                              const runs = Number(perf.runs || 0);
 
-                            if (!didBat) return (
-                              <div key={i} className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-[9px] bg-slate-100 text-slate-400 border border-slate-200" title="Did Not Bat">DNB</div>
-                            );
+                              if (!didBat) return (
+                                <div key={i} className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-[9px] bg-slate-100 text-slate-400 border border-slate-200" title="Did Not Bat">DNB</div>
+                              );
 
-                            return (
-                              <div 
-                                key={i} 
-                                className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-[10px] shadow-sm transition-transform hover:scale-110 cursor-help ${
-                                  runs >= 50 ? 'bg-yellow-400 text-yellow-900 ring-1 ring-yellow-200' : 
-                                  runs >= 30 ? 'bg-sky-500 text-white' : 
-                                  runs === 0 && !perf.isNotOut ? 'bg-slate-800 text-white ring-1 ring-red-400' :
-                                  'bg-slate-50 text-slate-700 border border-slate-200'
-                                }`}
-                                title={perf.isNotOut ? `${runs}* (Not Out)` : `${runs} Runs`}
-                              >
-                                {runs}{perf.isNotOut ? '*' : ''}
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <span className="text-slate-300 italic text-[9px]">No recent scores</span>
-                        )}
+                              return (
+                                <div 
+                                  key={i} 
+                                  className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-[10px] shadow-sm transition-transform hover:scale-110 cursor-help ${
+                                    runs >= 50 ? 'bg-yellow-400 text-yellow-900 ring-1 ring-yellow-200' : 
+                                    runs >= 30 ? 'bg-sky-500 text-white' : 
+                                    runs === 0 && !perf.isNotOut ? 'bg-slate-800 text-white ring-1 ring-red-400' :
+                                    'bg-slate-50 text-slate-700 border border-slate-200'
+                                  }`}
+                                  title={perf.isNotOut ? `${runs}* (Not Out)` : `${runs} Runs`}
+                                >
+                                  {runs}{perf.isNotOut ? '*' : ''}
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <span className="text-slate-300 italic text-[9px]">No recent scores</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bowling Row */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bowling Form</span>
+                        <div className="flex gap-2 items-center overflow-x-auto pb-1 scroller-hide">
+                          {recentInvolvement.length > 0 ? (
+                            recentInvolvement.map((perf, i) => {
+                              const wkts = Number(perf.wickets || 0);
+                              const runs = Number(perf.bowlingRuns || 0);
+                              const didBowl = Number(perf.bowlingOvers || 0) > 0;
+
+                              if (!didBowl) return (
+                                <div key={i} className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-[9px] bg-slate-100 text-slate-400 border border-slate-200" title="Did Not Bowl">DNB</div>
+                              );
+
+                              return (
+                                <div 
+                                  key={i} 
+                                  className={`w-8 h-8 shrink-0 rounded-lg flex flex-col items-center justify-center font-black shadow-sm transition-transform hover:scale-110 cursor-help border ${
+                                    wkts >= 3 ? 'bg-emerald-600 text-white border-emerald-700' : 
+                                    wkts >= 1 ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
+                                    'bg-slate-50 text-slate-500 border-slate-200'
+                                  }`}
+                                  title={`${wkts}-${runs} in ${perf.bowlingOvers || 0} ov`}
+                                >
+                                  <span className="text-[9px] leading-none font-bold">{wkts}-{runs}</span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <span className="text-slate-300 italic text-[9px]">No recent figures</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-
-                    {/* Bowling Row */}
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bowling Form</span>
-                      <div className="flex gap-2 items-center overflow-x-auto pb-1 scroller-hide">
-                        {recentInvolvement.length > 0 ? (
-                          recentInvolvement.map((perf, i) => {
-                            const wkts = Number(perf.wickets || 0);
-                            const runs = Number(perf.bowlingRuns || 0);
-                            const didBowl = Number(perf.bowlingOvers || 0) > 0;
-
-                            if (!didBowl) return (
-                              <div key={i} className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-[9px] bg-slate-100 text-slate-400 border border-slate-200" title="Did Not Bowl">DNB</div>
-                            );
-
-                            return (
-                              <div 
-                                key={i} 
-                                className={`w-8 h-8 shrink-0 rounded-lg flex flex-col items-center justify-center font-black shadow-sm transition-transform hover:scale-110 cursor-help border ${
-                                  wkts >= 3 ? 'bg-emerald-600 text-white border-emerald-700' : 
-                                  wkts >= 1 ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
-                                  'bg-slate-50 text-slate-500 border-slate-200'
-                                }`}
-                                title={`${wkts}-${runs} in ${perf.bowlingOvers || 0} ov`}
-                              >
-                                <span className="text-[9px] leading-none font-bold">{wkts}-{runs}</span>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <span className="text-slate-300 italic text-[9px]">No recent figures</span>
-                        )}
-                      </div>
-                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex-1 bg-slate-100/50 p-6 rounded-xl border border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
+                    <Shield className="text-slate-300 mb-2" size={24} />
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">
+                      Opponent Data Restricted<br/>
+                      <span className="font-bold lowercase opacity-60">tracking career stats for squad only</span>
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Detailed Stats Section */}
@@ -1745,44 +1651,46 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
                               <tr><td colSpan={14} className="p-8 text-center text-slate-400 italic font-medium">No tournament records found for this player.</td></tr>
                             )}
                           </tbody>
-                          <tfoot className="sticky bottom-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
-                            <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
-                              <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30 flex items-center justify-between gap-2 min-h-[44px]">
-                                <span>Career Total</span>
-                                {userRole === 'admin' && viewingPlayer && (
-                                  <button
-                                    title="Force recalculate stats (flushes ghost innings counts)"
-                                    disabled={isRecalculating}
-                                    onClick={async () => {
-                                      setIsRecalculating(true);
-                                      try {
-                                        await forceRecalculatePlayer(String(viewingPlayer.id));
-                                        const fresh = await getPlayerDetailedStats(String(viewingPlayer.id));
-                                        setDetailedStats(fresh);
-                                      } catch(e) { console.error('Recalculate failed', e); }
-                                      finally { setIsRecalculating(false); }
-                                    }}
-                                    className="p-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/40 text-sky-400 transition-all shrink-0"
-                                  >
-                                    <RefreshCw size={12} className={isRecalculating ? 'animate-spin' : ''} />
-                                  </button>
-                                )}
-                              </td>
-                               <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.matches || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.innings || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.notOuts || '0'}</td>
-                              <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{detailedStats?.total?.batting.runs || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.balls || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.average || '0.00'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.strikeRate || '0.00'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.highestScore || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.hundreds || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.fifties || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.ducks || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.fours || '0'}</td>
-                              <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.sixes || '0'}</td>
-                            </tr>
-                          </tfoot>
+                          {viewingPlayer.teamId === 'IND_STRIKERS' && (
+                            <tfoot className="sticky bottom-0 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.1)]">
+                              <tr className="bg-slate-900 text-white font-black uppercase text-[10px] md:text-xs">
+                                <td className="p-2 md:p-3 sticky left-0 bg-slate-900 z-30 flex items-center justify-between gap-2 min-h-[44px]">
+                                  <span>Career Total</span>
+                                  {userRole === 'admin' && viewingPlayer && (
+                                    <button
+                                      title="Force recalculate stats (flushes ghost innings counts)"
+                                      disabled={isRecalculating}
+                                      onClick={async () => {
+                                        setIsRecalculating(true);
+                                        try {
+                                          await forceRecalculatePlayer(String(viewingPlayer.id));
+                                          const fresh = await getPlayerDetailedStats(String(viewingPlayer.id));
+                                          setDetailedStats(fresh);
+                                        } catch(e) { console.error('Recalculate failed', e); }
+                                        finally { setIsRecalculating(false); }
+                                      }}
+                                      className="p-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/40 text-sky-400 transition-all shrink-0"
+                                    >
+                                      <RefreshCw size={12} className={isRecalculating ? 'animate-spin' : ''} />
+                                    </button>
+                                  )}
+                                </td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.matches || '0'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.innings || '0'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.notOuts || '0'}</td>
+                                <td className="p-2 md:p-3 text-center font-black text-sky-400 bg-slate-800">{detailedStats?.total?.batting.runs || '0'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.balls || '0'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.average || '0.00'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.strikeRate || '0.00'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.highestScore || '0'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.hundreds || '0'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.fifties || '0'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.ducks || '0'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.fours || '0'}</td>
+                                <td className="p-2 md:p-3 text-center">{detailedStats?.total?.batting.sixes || '0'}</td>
+                              </tr>
+                            </tfoot>
+                          )}
                         </table>
                       </div>
                     ) : (

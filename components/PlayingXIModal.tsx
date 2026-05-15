@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Player, OpponentTeam } from '../types';
 import { X, Users, Check, Save, Plus, Loader2, Share2 } from 'lucide-react';
 import { useMatchCenter } from '../store/matchStore';
+import { InitialsAvatar } from './Scorer/ScorerStyles';
+import { getInitials } from './Scorer/scorerUtils';
 
 interface PlayingXIModalProps {
     matchId: string;
@@ -207,12 +209,10 @@ export const PlayingXIModal: React.FC<PlayingXIModalProps> = ({
                                         <div className={`w-8 h-8 rounded-full overflow-hidden border 
                                             ${isSelected ? 'border-emerald-500' : 'border-slate-700'}`}
                                         >
-                                            {playerImage ? (
-                                                <img src={playerImage} alt={player.name} className="w-full h-full object-cover" />
+                                            {player.avatarUrl || (player as any).photo ? (
+                                                <img src={player.avatarUrl || (player as any).photo} alt={player.name} className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
-                                                    <Users size={14} />
-                                                </div>
+                                                <InitialsAvatar size="32px">{getInitials(player.name)}</InitialsAvatar>
                                             )}
                                         </div>
                                     </div>

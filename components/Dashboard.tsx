@@ -8,6 +8,8 @@ import { toBlob } from 'html-to-image';
 import { toast } from 'react-hot-toast';
 import { useMasterData } from '../store/tournamentStore';
 import { useStore } from '../store/StoreProvider';
+import { InitialsAvatar } from './Scorer/ScorerStyles';
+import { getInitials } from './Scorer/scorerUtils';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -199,7 +201,13 @@ function WeeklyPerformerCarousel({
                   <div className="relative z-10 flex flex-col items-center">
                     <div className="relative mb-4">
                       <div className={`absolute inset-0 bg-sky-400 blur-[40px] ${isActive ? 'opacity-20' : 'opacity-10'} transition-opacityauto`}></div>
-                      <img src={player.avatarUrl} className="w-35 h-40 rounded-[1rem] object-cover border-2 border-white/20 shadow-2xl relative z-10" alt={player.name} />
+                      {player.avatarUrl ? (
+                        <img src={player.avatarUrl} className="w-35 h-40 rounded-[1rem] object-cover border-2 border-white/20 shadow-2xl relative z-10" alt={player.name} />
+                      ) : (
+                        <InitialsAvatar size="140px" style={{ height: '160px', borderRadius: '1rem', border: '2px solid rgba(255,255,255,0.2)', position: 'relative', zIndex: 10 }}>
+                          {getInitials(player.name)}
+                        </InitialsAvatar>
+                      )}
                       <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${player.isSuperStriker ? 'bg-orange-500 text-white' : 'bg-sky-400 text-slate-950'} text-[8px] font-black px-4 py-1 rounded-full border-[1px] border-slate-950 uppercase z-20 whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.3)]`}>
                         {player.isSuperStriker ? '🚀 Super' : (player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer')}
                       </div>
@@ -319,11 +327,11 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   }, [squadPlayers]);
 
   const topRunScorers = [...enrichedPlayers]
-    .sort((a, b) => (b.battingStats?.runs || 0) - (a.battingStats?.runs || 0))
+    .sort((a, b) => (b.runsScored || 0) - (a.runsScored || 0))
     .slice(0, 5);
 
   const topWicketTakers = [...enrichedPlayers]
-    .sort((a, b) => (b.bowlingStats?.wickets || 0) - (a.bowlingStats?.wickets || 0))
+    .sort((a, b) => (b.wicketsTaken || 0) - (a.wicketsTaken || 0))
     .slice(0, 5);
 
   const statsSyncHandler = async () => {
@@ -526,7 +534,13 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                     </div>
                   </div>
                   <div className="flex-1 flex flex-col items-center justify-center pt-16 px-6">
-                    <img src={selectedHero.player.avatarUrl} className="h-[320px] w-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)] mb-6" alt="Player" />
+                    {selectedHero.player.avatarUrl ? (
+                      <img src={selectedHero.player.avatarUrl} className="h-[320px] w-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)] mb-6" alt="Player" />
+                    ) : (
+                      <InitialsAvatar size="240px" style={{ marginBottom: '1.5rem', boxShadow: '0 20px 40px rgba(0,0,0,0.8)' }}>
+                        {getInitials(selectedHero.player.name)}
+                      </InitialsAvatar>
+                    )}
                     <h2 className="text-3xl font-black text-sky-400 uppercase italic tracking-tighter text-center leading-none mb-2">{selectedHero.player.name}</h2>
                     <div className="h-1 w-12 bg-white/20 rounded-full mb-4"></div>
                     <p className="text-white font-black text-lg uppercase italic tracking-widest">{selectedHero.statsValue}</p>
@@ -836,7 +850,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                           <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">AVG: {p.battingStats?.average}</span>
                         )}
                       </div>
-                      <span className="text-[11px] font-black text-blue-600 font-mono">{p.battingStats?.runs || p.runsScored || 0}</span>
+                      <span className="text-[11px] font-black text-blue-600 font-mono">{p.runsScored || 0}</span>
                     </div>
                   </div>
                 </div>
@@ -916,7 +930,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                           <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">ECON: {p.bowlingStats?.economy}</span>
                         )}
                       </div>
-                      <span className="text-[11px] font-black text-blue-600 font-mono">{p.bowlingStats?.wickets || p.wicketsTaken || 0}</span>
+                      <span className="text-[11px] font-black text-blue-600 font-mono">{p.wicketsTaken || 0}</span>
                     </div>
                   </div>
                 </div>

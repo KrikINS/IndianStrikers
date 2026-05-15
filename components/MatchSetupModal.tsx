@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { Player, ScheduledMatch, MatchSetupData } from '../types';
 import { toast } from 'react-hot-toast';
+import { InitialsAvatar } from './Scorer/ScorerStyles';
+import { getInitials } from './Scorer/scorerUtils';
 
 // --- Styled Components (Migrated from ScorerDashboard) ---
 
@@ -666,7 +668,12 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-                        <User size={14} />
+                        {p.avatarUrl ? (
+                          <img src={p.avatarUrl} alt={p.name} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          <InitialsAvatar size="28px">{getInitials(p.name)}</InitialsAvatar>
+                        )}
+
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
                           <div style={{ fontSize: '0.6rem', opacity: 0.5 }}>{p.role}</div>
@@ -745,7 +752,12 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
                           else if (!selNonStriker) setSelNonStriker(p.id);
                         }}
                       >
-                        <User size={16} />
+                        {p.avatarUrl ? (
+                          <img src={p.avatarUrl} alt={p.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          <InitialsAvatar size="32px">{getInitials(p.name)}</InitialsAvatar>
+                        )}
+
                         <div>
                           <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>{p.name}</div>
                           <div style={{ fontSize: '0.6rem', opacity: 0.6 }}>{p.role}</div>
@@ -809,7 +821,12 @@ export const MatchSetupModal: React.FC<MatchSetupModalProps> = ({
                         $selected={selBowler === p.id}
                         onClick={() => setSelBowler(selBowler === p.id ? null : p.id)}
                       >
-                        <User size={16} />
+                        {p.avatarUrl ? (
+                          <img src={p.avatarUrl} alt={p.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          <InitialsAvatar size="32px">{getInitials(p.name)}</InitialsAvatar>
+                        )}
+
                         <div>
                           <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>{p.name}</div>
                           <div style={{ fontSize: '0.6rem', opacity: 0.6 }}>{p.role}</div>

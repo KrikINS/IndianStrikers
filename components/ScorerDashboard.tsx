@@ -1644,20 +1644,23 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
       team2XI: data.team2XI
     });
     
-    // Determine batting/bowling team
+    // Determine target innings and teams
+    // ROBUST INNINGS DETECTION: If we have an innings1 already, we must be starting innings 2.
+    // Otherwise (fresh match or reset), we start innings 1.
+    const targetInnings = (store.currentInnings === 1 && store.innings1) ? 2 : store.currentInnings;
+    
     let batId;
     let bowlId;
     
-    if (store.currentInnings === 1 && store.innings1) {
-      // 2nd Innings: Reverse teams
+    if (targetInnings === 2 && store.innings1) {
+      // 2nd Innings: Reverse teams from the first innings
       batId = store.innings1.bowlingTeamId;
       bowlId = store.innings1.battingTeamId;
     } else {
-      // 1st Innings: Based on toss
+      // 1st Innings: Based on toss result
       const isTeam1Batting = (data.tossWinner === 'TEAM1' && data.tossChoice === 'Bat') || 
                              (data.tossWinner === 'TEAM2' && data.tossChoice === 'Bowl');
-      // Multi-source fallback: matchMeta IDs → 'TEAM1'/'TEAM2' semantic fallback
-      // This ensures startInnings is never blocked by a momentarily undefined matchMeta
+      
       batId = isTeam1Batting
         ? (matchMeta?.team1Id || 'TEAM1')
         : (matchMeta?.team2Id || 'TEAM2');
@@ -1668,7 +1671,7 @@ const ScorerDashboard: React.FC<{ matchId?: string, teamLogo?: string }> = ({ ma
     
     // batId and bowlId are always defined now (at minimum 'TEAM1'/'TEAM2')
     store.startInnings(
-      store.currentInnings === null ? 1 : 2,
+      targetInnings,
       batId,
       bowlId,
       data.strikerId,

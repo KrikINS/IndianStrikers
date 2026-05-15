@@ -257,6 +257,7 @@ export const addPlayer = async (player: Partial<Player>) => {
     status: player.status,
     is_club_player: player.isClubPlayer !== false,
     primary_team_id: player.primaryTeamId || null, team_id: player.teamId || (player.isClubPlayer !== false ? "IND_STRIKERS" : (player.primaryTeamId || "OTHER")),
+    avatar_history: player.avatarHistory || [],
     wides: player.wides || 0,
     no_balls: player.noBalls || 0
   };

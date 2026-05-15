@@ -2,8 +2,9 @@ import React from 'react';
 import { User } from 'lucide-react';
 import {
   ModalOverlay, ModalContent, SelectionGrid, PlayerCard,
-  ScoringBtn, ActionButton
+  ScoringBtn, ActionButton, InitialsAvatar
 } from './ScorerStyles';
+import { getInitials } from './scorerUtils';
 import { Player } from '../../types';
 import { InningsState, UnifiedMatchStore } from '../../types';
 
@@ -123,7 +124,12 @@ export const MatchModals: React.FC<MatchModalsProps> = (props) => {
                                 setIsOverComplete(false);
                               }}
                             >
-                              <User size={16} />
+                              {p.avatarUrl ? (
+                                <img src={p.avatarUrl} alt={p.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                              ) : (
+                                <InitialsAvatar size="32px">{getInitials(p.name)}</InitialsAvatar>
+                              )}
+
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
                                 <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{bStats.wickets}-{bStats.runs} ({bStats.overs})</div>
@@ -274,7 +280,12 @@ export const MatchModals: React.FC<MatchModalsProps> = (props) => {
                           setShowFielderModal(false);
                           triggerWicketSplash(pendingWicketType ?? '');
                         }}>
-                          <User size={16} />
+                          {p.avatarUrl ? (
+                            <img src={p.avatarUrl} alt={p.name} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            <InitialsAvatar size="32px">{getInitials(p.name)}</InitialsAvatar>
+                          )}
+
                           <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</div>
                         </PlayerCard>
                       ));

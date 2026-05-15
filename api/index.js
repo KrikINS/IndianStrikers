@@ -20,6 +20,8 @@ const PORT = process.env.PORT || 4001;
 
 const allowedOrigins = [
   process.env.FRONTEND_LOCAL || 'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
   'http://localhost:5173',
   process.env.FRONTEND_PROD || 'https://indianstrikers.club',
   'https://www.indianstrikers.club',
@@ -344,7 +346,7 @@ app.get('/api/players', async (_req, res) => {
 });
 app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
   console.log('[POST /api/players] Body:', JSON.stringify(req.body));
-  const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id, is_active, status } = req.body || {};
+  const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id, is_active, status, avatar_history } = req.body || {};
   const payload = {
     name, 
     role, 
@@ -366,11 +368,17 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
     jersey_number: (jersey_number === '' || jersey_number === undefined) ? null : Number(jersey_number), 
     dob: (dob === '' || !dob) ? null : dob, 
     external_id,
-    avatar_history: avatar_url ? [avatar_url] : []
+    avatar_history: Array.isArray(avatar_history) ? avatar_history : (avatar_url ? [avatar_url] : [])
   };
+  
+  // Ensure avatar_url is in history if present
+  if (payload.avatar_url && !payload.avatar_history.includes(payload.avatar_url)) {
+    payload.avatar_history.push(payload.avatar_url);
+  }
+
   console.log('[POST /api/players] Sanitized Payload:', JSON.stringify(payload));
 
-  const { error } = await db.query(
+  const { error, data } = await db.query(
     `INSERT INTO players (name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, wides, no_balls, linked_user_id, jersey_number, dob, external_id, is_active, status, is_club_player, primary_team_id, avatar_history) 
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25::jsonb) RETURNING *`,
     [
@@ -395,7 +403,7 @@ app.post('/api/players', authGuard(['admin', 'member']), async (req, res) => {
 
 app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => {
   console.log(`[PUT /players/${req.params.id}]`, req.body);
-  const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id, is_active, status } = req.body || {};
+  const { name, role, batting_style, bowling_style, avatar_url, matches_played, runs_scored, wickets_taken, average, is_captain, is_vice_captain, is_available, batting_stats, bowling_stats, linked_user_id, jersey_number, dob, external_id, is_active, status, avatar_history } = req.body || {};
   
   const payload = {
     name, 
@@ -417,7 +425,8 @@ app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => 
     linked_user_id: (linked_user_id === '' || !linked_user_id) ? null : linked_user_id, 
     jersey_number: (jersey_number === '' || jersey_number === undefined) ? null : Number(jersey_number), 
     dob: (dob === '' || !dob) ? null : dob, 
-    external_id
+    external_id,
+    avatar_history: Array.isArray(avatar_history) ? avatar_history : []
   };
 
   const { 
@@ -435,8 +444,8 @@ app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => 
       jersey_number=$18, dob=$19, external_id=$20, 
       is_active=$21, status=$22, is_club_player=$23, primary_team_id=$24,
       avatar_history = CASE 
-        WHEN $5::text IS NOT NULL AND NOT (avatar_history @> jsonb_build_array($5::text)) THEN avatar_history || jsonb_build_array($5::text)
-        ELSE avatar_history 
+        WHEN $5::text IS NOT NULL AND NOT ($26::jsonb @> jsonb_build_array($5::text)) THEN $26::jsonb || jsonb_build_array($5::text)
+        ELSE $26::jsonb 
       END,
       updated_at=NOW() 
      WHERE id=$25::bigint`,
@@ -449,7 +458,8 @@ app.put('/api/players/:id', authGuard(['admin', 'member']), async (req, res) => 
       Number(wides || 0), Number(no_balls || 0), payload.linked_user_id, 
       payload.jersey_number, payload.dob, payload.external_id,
       payload.is_active, payload.status, req.body.is_club_player !== false, req.body.primary_team_id || null, 
-      req.params.id
+      req.params.id,
+      JSON.stringify(payload.avatar_history)
     ]
   );
   if (error) {
@@ -1431,6 +1441,15 @@ app.get('/api/memories', async (_req, res) => {
  * (All records in player_match_stats) + (Baseline in player_legacy_stats)
  */
 async function recalculateCareerStats(playerId) {
+    // FEATURE TWEAK: One Team Priority
+    // Only calculate global stats for club players. 
+    // Opponents are kept for match integrity but skip career aggregation.
+    const { data: playerInfo } = await db.getOne('SELECT is_club_player FROM players WHERE id = $1', [playerId]);
+    if (playerInfo && playerInfo.is_club_player === false) {
+        console.log(`[SyncEngine] Skipping stats for Opponent Player ID: ${playerId}`);
+        return;
+    }
+
     console.log(`[SyncEngine] Recalculating career for Player ID: ${playerId}...`);
     
     // 1. Max-Inclusion Query: Find ALL matches via performance record OR squad participation
@@ -1485,113 +1504,89 @@ async function recalculateCareerStats(playerId) {
         return parseFloat(`${ov}.${rem}`);
     };
 
-    const totalRuns = m.reduce((s, row) => s + (Number(row.runs) || 0), 0) + (Number(l.runs) || 0);
-    const totalWickets = m.reduce((s, row) => s + (Number(row.wickets) || 0), 0) + (Number(l.wickets) || 0);
-    
-    // Match counting with HISTORICAL:N support
+    const stats = m.map(row => {
+        let runs = Number(row.runs) || 0;
+        let balls = Number(row.balls) || 0;
+        let fours = Number(row.fours) || 0;
+        let sixes = Number(row.sixes) || 0;
+        let pStatus = (row.pms_status || '').toLowerCase().trim();
+        let wickets = Number(row.wickets) || 0;
+        let runsConceded = Number(row.runs_conceded) || 0;
+        let oversBowled = Number(row.overs_bowled) || 0;
+        let maidens = Number(row.maidens) || 0;
+        let wides = Number(row.wides) || 0;
+        let noBalls = Number(row.no_balls) || 0;
+
+        if (row.scorecard) {
+            try {
+                const sc = typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard;
+                const bat = [...(sc.innings1?.batting || []), ...(sc.innings2?.batting || [])]
+                           .find(b => String(b.playerId) === String(playerId));
+                const bowl = [...(sc.innings1?.bowling || []), ...(sc.innings2?.bowling || [])]
+                            .find(b => String(b.playerId) === String(playerId));
+                
+                if (bat) {
+                    runs = Number(bat.runs) || 0;
+                    balls = Number(bat.balls) || 0;
+                    fours = Number(bat.fours) || 0;
+                    sixes = Number(bat.sixes) || 0;
+                    pStatus = (bat.outHow || (bat.isNotOut ? 'not out' : 'out')).toLowerCase().trim();
+                }
+                if (bowl) {
+                    wickets = Number(bowl.wickets) || 0;
+                    runsConceded = Number(bowl.runs || bowl.bowlingRuns || bowl.runsConceded) || 0;
+                    oversBowled = Number(bowl.overs || bowl.bowlingOvers) || 0;
+                    maidens = Number(bowl.maidens) || 0;
+                    wides = Number(bowl.wides) || 0;
+                    noBalls = Number(bowl.no_balls || bowl.noBalls) || 0;
+                }
+            } catch(e) {}
+        }
+
+        const isNotOut = pStatus === 'not out' || pStatus === 'retired hurt';
+        const isOut = pStatus !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(pStatus);
+        const batted = (isNotOut || isOut) && balls > 0;
+
+        return {
+            runs, balls, fours, sixes, pStatus, isNotOut, isOut, batted,
+            wickets, runsConceded, oversBowled, maidens, wides, noBalls,
+            hundred: runs >= 100 ? 1 : 0,
+            fifty: (runs >= 50 && runs < 100) ? 1 : 0,
+            duck: (runs === 0 && isOut) ? 1 : 0,
+            fourW: wickets === 4 ? 1 : 0,
+            fiveW: wickets >= 5 ? 1 : 0,
+            isHero: !!row.is_hero
+        };
+    });
+
     const totalMatches = m.reduce((s, row) => {
         const status = row.status?.toString() || '';
         return s + (status.startsWith('HISTORICAL:') ? (parseInt(status.split(':')[1]) || 1) : 1);
     }, 0) + (Number(l.matches) || 0);
 
-    // CRITICAL FIX: True Innings Logic
-    const totalInnings = m.filter(row => {
-        let pStatus = (row.pms_status || '').toLowerCase().trim();
-        let balls = Number(row.balls) || 0;
+    const totalRuns = stats.reduce((s, r) => s + r.runs, 0) + (Number(l.runs) || 0);
+    const totalWickets = stats.reduce((s, r) => s + r.wickets, 0) + (Number(l.wickets) || 0);
+    const totalBalls = stats.reduce((s, r) => s + r.balls, 0) + (Number(l.balls) || 0);
+    const totalFours = stats.reduce((s, r) => s + r.fours, 0) + (Number(l.fours) || 0);
+    const totalSixes = stats.reduce((s, r) => s + r.sixes, 0) + (Number(l.sixes) || 0);
+    const total100s = stats.reduce((s, r) => s + r.hundred, 0) + (Number(l.hundreds) || 0);
+    const total50s = stats.reduce((s, r) => s + r.fifty, 0) + (Number(l.fifties) || 0);
+    const totalDucks = stats.reduce((s, r) => s + r.duck, 0) + (Number(l.ducks) || 0);
+    const totalInnings = stats.filter(r => r.batted).length + (Number(l.innings) || 0);
+    const totalNO = stats.filter(r => r.batted && r.isNotOut).length + (Number(l.not_outs) || 0);
 
-        // Try to enrich from scorecard if available for accuracy
-        if (row.scorecard) {
-            try {
-                const sc = typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard;
-                const bat = [...(sc.innings1?.batting || []), ...(sc.innings2?.batting || [])]
-                           .find(b => String(b.playerId) === String(playerId));
-                if (bat) {
-                    pStatus = (bat.outHow || (bat.isNotOut ? 'not out' : 'out')).toLowerCase().trim();
-                    balls = Number(bat.balls) || 0;
-                }
-            } catch(e) {}
-        }
-
-        const hasPMSRecord = row.player_id !== null;
-        if (!hasPMSRecord && !row.scorecard) return false;
-
-        // TRUE INNINGS RULE: Out or Not Out AND balls_faced > 0
-        const isNotOut = pStatus === 'not out' || pStatus === 'retired hurt';
-        const isOut = pStatus !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(pStatus);
-        
-        return (isNotOut || isOut) && balls > 0;
-    }).length + (Number(l.innings) || 0);
-
-    // CRITICAL FIX: Not Out count matching the innings logic
-    const totalNO = m.filter(row => {
-        let pStatus = (row.pms_status || '').toLowerCase().trim();
-        let balls = Number(row.balls) || 0;
-        
-        if (row.scorecard) {
-            try {
-                const sc = typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard;
-                const bat = [...(sc.innings1?.batting || []), ...(sc.innings2?.batting || [])]
-                           .find(b => String(b.playerId) === String(playerId));
-                if (bat) {
-                    pStatus = (bat.outHow || (bat.isNotOut ? 'not out' : 'out')).toLowerCase().trim();
-                    balls = Number(bat.balls) || 0;
-                }
-            } catch(e) {}
-        }
-        
-        const isNotOut = pStatus === 'not out' || pStatus === 'retired hurt';
-        return isNotOut && balls > 0;
-    }).length + (Number(l.not_outs) || 0);
-    const totalBalls = m.reduce((s, row) => s + (Number(row.balls) || 0), 0) + (Number(l.balls) || 0);
-    const totalFours = m.reduce((s, row) => s + (Number(row.fours) || 0), 0) + (Number(l.fours) || 0);
-    const totalSixes = m.reduce((s, row) => s + (Number(row.sixes) || 0), 0) + (Number(l.sixes) || 0);
-    const total100s = m.reduce((s, row) => s + (Number(row.hundreds) || 0), 0) + (Number(l.hundreds) || 0);
-    const total50s = m.reduce((s, row) => s + (Number(row.fifties) || 0), 0) + (Number(l.fifties) || 0);
-    const totalDucks = m.reduce((s, row) => s + (Number(row.ducks) || 0), 0) + (Number(l.ducks) || 0);
-
-    const totalBowlRuns = m.reduce((s, row) => {
-        let r = Number(row.runs_conceded) || 0;
-        if (row.scorecard) {
-            try {
-                const sc = typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard;
-                const bowl = [...(sc.innings1?.bowling || []), ...(sc.innings2?.bowling || [])]
-                            .find(b => String(b.playerId) === String(playerId));
-                if (bowl) r = Number(bowl.runs) || Number(bowl.bowlingRuns) || Number(bowl.runsConceded) || 0;
-            } catch(e) {}
-        }
-        return s + r;
-    }, 0) + (Number(l.runs_conceded) || 0);
-    
-    // Proper Over Summation (Delta + Legacy)
-    const matchBallsBowled = m.reduce((s, row) => s + toBalls(row.overs_bowled), 0);
-    const legacyBallsBowled = toBalls(l.overs_bowled);
-    const totalBallsBowled = matchBallsBowled + legacyBallsBowled;
+    const totalBowlRuns = stats.reduce((s, r) => s + r.runsConceded, 0) + (Number(l.runs_conceded) || 0);
+    const matchBallsBowled = stats.reduce((s, r) => s + toBalls(r.oversBowled), 0);
+    const totalBallsBowled = matchBallsBowled + (toBalls(l.overs_bowled) || 0);
     const totalBowlOvers = fromBalls(totalBallsBowled);
+    const totalBowlInnings = stats.filter(r => r.oversBowled > 0).length + (Number(l.bowling_innings) || 0);
+    const totalMaidens = stats.reduce((s, r) => s + r.maidens, 0) + (Number(l.maidens) || 0);
+    const total4W = stats.reduce((s, r) => s + r.fourW, 0) + (Number(l.four_wickets) || 0);
+    const total5W = stats.reduce((s, r) => s + r.fiveW, 0) + (Number(l.five_wickets) || 0);
+    const totalWides = stats.reduce((s, r) => s + r.wides, 0) + (Number(l.wides) || 0);
+    const totalNoBalls = stats.reduce((s, r) => s + r.noBalls, 0) + (Number(l.no_balls) || 0);
 
-    const totalMaidens = m.reduce((s, row) => s + (Number(row.maidens) || 0), 0) + (Number(l.maidens) || 0);
-    const total4W = m.reduce((s, row) => s + (Number(row.four_wickets) || 0), 0) + (Number(l.four_wickets) || 0);
-    const total5W = m.reduce((s, row) => s + (Number(row.five_wickets) || 0), 0) + (Number(l.five_wickets) || 0);
-    const totalBowlInnings = m.filter(row => (Number(row.overs_bowled) > 0)).length + (Number(l.bowling_innings) || 0);
-    const totalWides = m.reduce((s, row) => s + (Number(row.wides) || 0), 0) + (Number(l.wides) || 0);
-    const totalNoBalls = m.reduce((s, row) => s + (Number(row.no_balls) || 0), 0) + (Number(l.no_balls) || 0);
-
-    // BBI Comparison logic (Derived from raw data)
-    const allBBI = m.map(row => {
-        let w = Number(row.wickets) || 0;
-        let r = Number(row.runs_conceded) || 0;
-        if (row.scorecard) {
-            try {
-                const sc = typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard;
-                const bowl = [...(sc.innings1?.bowling || []), ...(sc.innings2?.bowling || [])]
-                            .find(b => String(b.playerId) === String(playerId));
-                if (bowl) {
-                    w = Number(bowl.wickets) || 0;
-                    r = Number(bowl.runs) || Number(bowl.bowlingRuns) || Number(bowl.runsConceded) || 0;
-                }
-            } catch(e) {}
-        }
-        return (w > 0 || r > 0) ? `${w}/${r}` : null;
-    }).filter(Boolean);
+    const allBBI = stats.map(r => (r.wickets > 0 || r.runsConceded > 0) ? `${r.wickets}/${r.runsConceded}` : null).filter(Boolean);
     if (l.best_bowling && l.best_bowling !== '0/0') allBBI.push(l.best_bowling);
     let bestBBI = '0/0';
     if (allBBI.length > 0) {
@@ -1796,13 +1791,14 @@ app.get('/api/players/:id/stats', async (req, res) => {
             
             // TRUE INNINGS RULE (User Fix): 
             // A match counts as an innings ONLY if:
-            //   1. PMS/Scorecard record exists, AND
+            //   1. PMS OR Scorecard record exists, AND
             //   2. balls_faced > 0, AND
             //   3. Status is explicitly an "Out" or "Not Out" state.
+            const hasDataRecord = hasPMSRecord || !!row.scorecard;
             const isNotOutMatch = statusLower === 'not out' || statusLower === 'retired hurt' || !!row.is_not_out;
             const isOutMatch = statusLower !== '' && !['dnb', 'did not bat', 'absent', 'absent hurt', 'not out', 'retired hurt', 'batting'].includes(statusLower);
             
-            const battedInnings = hasPMSRecord && ballsCount > 0 && (isNotOutMatch || isOutMatch);
+            const battedInnings = hasDataRecord && ballsCount > 0 && (isNotOutMatch || isOutMatch);
             const dismissed = battedInnings && isOutMatch;
             
             if (battedInnings) {

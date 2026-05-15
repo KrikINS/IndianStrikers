@@ -1021,3 +1021,20 @@ export const FloatingAnalyticsButton = styled.button`
 
 // Types already imported at the top
 
+export const InitialsAvatar = styled.div<{ size?: string; $bg?: string }>`
+  width: ${props => props.size || '40px'};
+  height: ${props => props.size || '40px'};
+  border-radius: 50%;
+  background: ${props => props.$bg || 'linear-gradient(135deg, #001F3F 0%, #083358 100%)'};
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: calc(${props => props.size || '40px'} * 0.4);
+  text-transform: uppercase;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  user-select: none;
+`;

@@ -189,10 +189,10 @@ export interface Player {
   battingStyle: BattingStyle;
   bowlingStyle: BowlingStyle;
   teamId: string; // Mandatory: 'IND_STRIKERS' for our squad
-  matchesPlayed: number;
-  runsScored: number;
-  wicketsTaken: number;
-  average: number;
+  matchesPlayed: number; // Authoritative Career Total (Legacy + Tournaments)
+  runsScored: number;    // Authoritative Career Total (Legacy + Tournaments)
+  wicketsTaken: number;  // Authoritative Career Total (Legacy + Tournaments)
+  average: number;       // Batting Average (runs / outs)
   isCaptain?: boolean;
   isViceCaptain?: boolean;
   isAvailable?: boolean;
@@ -216,6 +216,8 @@ export interface OpponentPlayer {
   id: string;
   name: string;
   role?: string;
+  avatarUrl?: string;
+  photo?: string;
 }
 
 export interface OpponentTeam {
