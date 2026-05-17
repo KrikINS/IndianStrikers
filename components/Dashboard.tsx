@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Player, OpponentTeam, UserRole, Ground, AppUser } from '../types';
-import { getOpponents, getTournamentPerformers, getMatches, getLegacyStats } from '../services/storageService';
+import { getOpponents, getTournamentPerformers, getMatches, getLegacyStats, getAllClubPlayerMatchStats } from '../services/storageService';
 import { Trophy, Star, Flame, Crown, Zap, Award, Target, X, Download, Activity, ChevronLeft, ChevronRight, MapPin, Loader2, RefreshCw, Share2, Medal, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 import { useMasterData } from '../store/tournamentStore';
 import { useStore } from '../store/StoreProvider';
 import { InitialsAvatar } from './Scorer/ScorerStyles';
-import { getInitials } from './Scorer/scorerUtils';
+import { getInitials, calculateCareerTotals } from './Scorer/scorerUtils';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -269,19 +269,22 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const heroPosterRef = useRef<HTMLDivElement>(null);
   const [performerData, setPerformerData] = useState<{ tournamentName: string, performers: any[] }>({ tournamentName: '', performers: [] });
   const [legacyStats, setLegacyStats] = useState<any[]>([]);
+  const [allMatchStats, setAllMatchStats] = useState<any[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [opp, perf, legacy] = await Promise.all([
+        const [opp, perf, legacy, clubStats] = await Promise.all([
           getOpponents(),
           getTournamentPerformers(),
           getLegacyStats(),
+          getAllClubPlayerMatchStats(),
           fetchPlayers()
         ]);
         setOpponents(opp || []);
         setPerformerData(perf || { tournamentName: '', performers: [] });
         setLegacyStats(legacy || []);
+        setAllMatchStats(clubStats || []);
 
         // Initial match sync
         syncWithCloud().catch(console.error);
@@ -330,11 +333,57 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     if (!squadPlayers) return [];
 
     // STRICT FIX: Only Indian Strikers (Team 1) players should appear in Dashboard stats
-    // We now rely on the backend-calculated stats (p.battingStats / p.bowlingStats) 
-    // which already aggregate Legacy + Match Ledger.
-    return squadPlayers
-      .filter(p => p.teamId === 'IND_STRIKERS');
-  }, [squadPlayers]);
+    const strikers = squadPlayers.filter(p => p.teamId === 'IND_STRIKERS');
+    
+    return strikers.map(p => {
+      const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
+      const careerTotals = calculateCareerTotals(p, allMatchStats, legacyRow);
+      
+      const playerPerformances = allMatchStats.filter(perf => 
+        String(perf.playerId ?? perf.id) === String(p.id)
+      );
+
+      const enrichedBatting = {
+        ...(p.battingStats || {}),
+        matches: careerTotals.matches,
+        runs: careerTotals.runs,
+        innings: careerTotals.innings,
+        notOuts: careerTotals.notOuts,
+        average: careerTotals.average,
+        strikeRate: careerTotals.strikeRate,
+        highestScore: playerPerformances.reduce((max, perf) => {
+          const runs = Number(perf.runs ?? 0);
+          const currentMax = parseInt(max.toString().replace('*','')) || 0;
+          return runs > currentMax ? `${runs}${perf.isNotOut ? '*' : ''}` : max;
+        }, (legacyRow?.highest_score ?? p.battingStats?.highestScore ?? '0'))
+      };
+
+      const enrichedBowling = {
+        ...(p.bowlingStats || {}),
+        matches: careerTotals.matches,
+        wickets: careerTotals.wickets,
+        bestBowling: playerPerformances.reduce((best, perf) => {
+          const wkts = Number(perf.wickets ?? 0);
+          const runs = Number(perf.bowlingRuns ?? 0);
+          const [bestWkts, bestRuns] = best.toString().split('/').map(Number);
+          if (wkts > bestWkts || (wkts === bestWkts && runs < bestRuns)) {
+            return `${wkts}/${runs}`;
+          }
+          return best;
+        }, (legacyRow?.best_bowling ?? p.bowlingStats?.bestBowling ?? '0/0'))
+      };
+
+      return {
+        ...p,
+        battingStats: enrichedBatting as any,
+        bowlingStats: enrichedBowling as any,
+        runsScored: careerTotals.runs,
+        wicketsTaken: careerTotals.wickets,
+        matchesPlayed: careerTotals.matches,
+        average: careerTotals.average
+      };
+    });
+  }, [squadPlayers, allMatchStats, legacyStats]);
 
   const topRunScorers = [...enrichedPlayers]
     .sort((a, b) => (b.runsScored || 0) - (a.runsScored || 0))
@@ -347,13 +396,15 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const statsSyncHandler = async () => {
     setIsSyncing(true);
     try {
-      const [perf, legacy] = await Promise.all([
+      const [perf, legacy, clubStats] = await Promise.all([
         getTournamentPerformers(),
         getLegacyStats(),
+        getAllClubPlayerMatchStats(),
         fetchPlayers()
       ]);
       setPerformerData(perf);
       setLegacyStats(legacy || []);
+      setAllMatchStats(clubStats || []);
     } finally {
       setTimeout(() => setIsSyncing(false), 800);
     }
