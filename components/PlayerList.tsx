@@ -8,7 +8,7 @@ import { PlayerDetailedStats, TournamentStat, getPlayerDetailedStats, getAppUser
 import { useStore } from '../store/StoreProvider';
 import { useOpponentStore } from '../store/opponentStore';
 import { InitialsAvatar } from './Scorer/ScorerStyles';
-import { getInitials } from './Scorer/scorerUtils';
+import { getInitials, calculateCareerTotals } from './Scorer/scorerUtils';
 import styles from './PlayerList.module.css';
 
 interface PlayerListProps {
@@ -230,11 +230,11 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
       try {
         const [uList, perf, legacy] = await Promise.all([
           api.getAppUsers(),
-          api.getTournamentPerformers(),
+          api.getAllClubPlayerMatchStats(),
           getLegacyStats()
         ]);
         setUsers(uList);
-        setPerformerData(perf?.performers || []);
+        setPerformerData(perf || []);
         setLegacyStats(legacy || []);
       } catch (err) {
         console.error("Failed to load masters in PlayerList", err);
@@ -244,69 +244,57 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
   }, []);
 
   const enrichedPlayers = useMemo(() => {
+    console.log("[PlayerList] Enriching players. Performers:", performerData.length, "Legacy Rows:", legacyStats.length);
     if (!allPlayers) return [];
     return allPlayers.map(p => {
-      // Find ALL performances for this player to sum them up
+      const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
+      
+      // Use the shared utility to calculate Authoritative Career Totals
+      const careerTotals = calculateCareerTotals(p, performerData, legacyRow);
+
       const playerPerformances = performerData.filter(perf => 
         String(perf.playerId) === String(p.id) || 
         String(perf.id) === String(p.id)
       );
-
-      const totalMatchRuns = playerPerformances.reduce((sum, perf) => sum + (Number(perf.runs) || 0), 0);
-      const totalMatchWickets = playerPerformances.reduce((sum, perf) => sum + (Number(perf.wickets) || 0), 0);
-      const totalMatchMatches = playerPerformances.reduce((sum, perf) => sum + (Number(perf.matches) || 1), 0);
-      
-      const totalMatchInnings = playerPerformances.reduce((sum, perf) => {
-        const didBat = Number(perf.balls || 0) > 0;
-        return sum + (didBat ? 1 : 0);
-      }, 0);
-
-      const totalMatchBowlingInnings = playerPerformances.reduce((sum, perf) => {
-        return sum + (Number(perf.bowlingOvers || 0) > 0 ? 1 : 0);
-      }, 0);
-
-      const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
-
-      // NOTE: We trust the backend-provided summary columns (p.runsScored, p.matchesPlayed, etc.)
-      // as the Authoritative Career Totals (Legacy + All Tournaments).
-      // We only use playerPerformances for visual milestones (highestScore, bestBowling).
       
       const enrichedBatting = {
         ...(p.battingStats || {}),
-        // Do NOT add totalMatchMatches here if the backend already included them in the summary column
-        matches: p.matchesPlayed || 0,
-        runs: p.runsScored || 0,
-        innings: p.battingStats?.innings || 0,
+        matches: careerTotals.matches,
+        runs: careerTotals.runs,
+        innings: careerTotals.innings,
+        notOuts: careerTotals.notOuts,
+        average: careerTotals.average,
+        strikeRate: careerTotals.strikeRate,
         highestScore: playerPerformances.reduce((max, perf) => {
-          const runs = Number(perf.runs || 0);
+          const runs = Number(perf.runs ?? 0);
           const currentMax = parseInt(max.toString().replace('*','')) || 0;
           return runs > currentMax ? `${runs}${perf.isNotOut ? '*' : ''}` : max;
-        }, (legacyRow?.highest_score || p.battingStats?.highestScore || '0'))
+        }, (legacyRow?.highest_score ?? p.battingStats?.highestScore ?? '0'))
       };
 
       const enrichedBowling = {
         ...(p.bowlingStats || {}),
-        matches: p.matchesPlayed || 0,
-        wickets: p.wicketsTaken || 0,
+        matches: careerTotals.matches,
+        wickets: careerTotals.wickets,
         bestBowling: playerPerformances.reduce((best, perf) => {
-          const wkts = Number(perf.wickets || 0);
-          const runs = Number(perf.bowlingRuns || 0);
+          const wkts = Number(perf.wickets ?? 0);
+          const runs = Number(perf.bowlingRuns ?? 0);
           const [bestWkts, bestRuns] = best.toString().split('/').map(Number);
           if (wkts > bestWkts || (wkts === bestWkts && runs < bestRuns)) {
             return `${wkts}/${runs}`;
           }
           return best;
-        }, (legacyRow?.best_bowling || p.bowlingStats?.bestBowling || '0/0'))
+        }, (legacyRow?.best_bowling ?? p.bowlingStats?.bestBowling ?? '0/0'))
       };
 
       return {
         ...p,
         battingStats: enrichedBatting as any,
         bowlingStats: enrichedBowling as any,
-        // Ensure these properties match the enriched objects exactly for consistency
-        runsScored: enrichedBatting.runs,
-        wicketsTaken: enrichedBowling.wickets,
-        matchesPlayed: enrichedBatting.matches
+        runsScored: careerTotals.runs,
+        wicketsTaken: careerTotals.wickets,
+        matchesPlayed: careerTotals.matches,
+        average: careerTotals.average
       };
     });
   }, [allPlayers, performerData, legacyStats]);
@@ -701,7 +689,7 @@ const PlayerList: React.FC<PlayerListProps> = ({ userRole, currentUser }) => {
     ];
 
 
-    const rows = (allPlayers || []).map((p: Player) => {
+    const rows = (enrichedPlayers || []).map((p: any) => {
       const b = p.battingStats || defaultBattingStats;
       const w = p.bowlingStats || defaultBowlingStats;
       return [

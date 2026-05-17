@@ -136,10 +136,13 @@ export interface InningsExtras {
 export interface InningsData {
   batting: InningsBattingEntry[];
   bowling: InningsBowlingEntry[];
+  battingStats?: { [playerId: string]: any }; // Map for performance
+  bowlingStats?: { [playerId: string]: any }; // Map for performance
   extras: InningsExtras;
   totalRuns: number;
   totalWickets: number;
   totalOvers: number;
+  totalBalls?: number;
   fallOfWickets?: string;
   history: BallRecord[];
 }

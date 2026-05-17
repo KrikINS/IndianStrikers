@@ -2146,6 +2146,20 @@ app.post('/api/upload', authGuard(['admin', 'member']), upload.single('file'), a
 });
 
 // TOURNAMENT PERFORMERS ENGINE (Hybrid Selection)
+app.get('/api/player-match-stats/club', async (req, res) => {
+  const q = `
+    SELECT pms.*, m.date as match_date, m.status as match_status
+    FROM player_match_stats pms
+    JOIN matches m ON pms.match_id = m.id
+    JOIN players p ON pms.player_id = p.id
+    WHERE p.is_club_player = true
+    ORDER BY m.date DESC
+  `;
+  const { data, error } = await db.query(q);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
 app.get('/api/tournament-performers', async (req, res) => {
   try {
     // 1. Get tournaments to find latest for labeling
@@ -2154,8 +2168,12 @@ app.get('/api/tournament-performers', async (req, res) => {
 
     // Helper to fetch and filter Standout Performances from LAST 3 MATCHES
     const getSpotlightPerformers = async () => {
+      // Helper to identify Indian Strikers
+      const isStrikers = (id) => !id || id === '00000000-0000-0000-0000-000000000000' || id === 'IND_STRIKERS';
+
       const q = `
-        SELECT pms.*, m.id as m_id, m.date as m_date, m.status as m_status, m.tournament_id as m_t_id, m.ground_id as m_g_id, m.team2_id as m_o_id,
+        SELECT pms.*, m.id as m_id, m.date as m_date, m.status as m_status, m.tournament_id as m_t_id, m.ground_id as m_g_id, 
+               m.team1_id as m_t1_id, m.team2_id as m_t2_id,
                p.name as p_name, p.role as p_role, p.avatar_url as p_avatar_url, p.avatar_history as p_avatar_history
         FROM player_match_stats pms
         JOIN matches m ON pms.match_id = m.id
@@ -2199,32 +2217,48 @@ app.get('/api/tournament-performers', async (req, res) => {
         // Auto-Criteria: 40+ runs OR 2+ wickets
         return (runs >= 40) || (wkts >= 2);
       })
-      .sort((a,b) => {
-        if (a.is_hero && !b.is_hero) return -1;
-        if (!a.is_hero && b.is_hero) return 1;
-        const scoreA = (Number(a.runs || 0)) + (Number(a.wickets || 0) * 35);
-        const scoreB = (Number(b.runs || 0)) + (Number(b.wickets || 0) * 35);
-        return scoreB - scoreA;
+      .map(row => {
+        const runs = Number(row.runs || 0);
+        const wkts = Number(row.wickets || 0);
+        // Determine opponentId (checking which ID is not Indian Strikers)
+        const oppId = isStrikers(row.m_t1_id) ? row.m_t2_id : row.m_t1_id;
+
+        return {
+          id: row.id,
+          playerId: row.player_id,
+          name: row.p_name,
+          role: row.p_role,
+          avatarUrl: row.p_avatar_url,
+          avatarHistory: row.p_avatar_history,
+          runs,
+          balls: Number(row.balls || 0),
+          wickets: wkts,
+          bowlingRuns: Number(row.runs_conceded || 0),
+          bowlingOvers: Number(row.overs_bowled || 0),
+          isHero: !!row.is_hero,
+          isSuperStriker: row.player_id === superStrikerId,
+          type: (wkts >= 2 && wkts * 35 > runs) ? 'bowler' : 'batter',
+          matchDate: row.m_date,
+          matchId: row.m_id,
+          opponentId: oppId,
+          groundId: row.m_g_id
+        };
       })
-      .map(row => ({
-        id: row.id,
-        playerId: row.player_id,
-        name: row.p_name,
-        role: row.p_role,
-        avatarUrl: row.p_avatar_url,
-        avatarHistory: row.p_avatar_history,
-        runs: Number(row.runs || 0),
-        balls: Number(row.balls || 0),
-        wickets: Number(row.wickets || 0),
-        bowlingRuns: Number(row.runs_conceded || 0),
-        bowlingOvers: Number(row.overs_bowled || 0),
-        isHero: !!row.is_hero,
-        isSuperStriker: row.player_id === superStrikerId,
-        matchDate: row.m_date,
-        matchId: row.m_id,
-        opponentId: row.m_o_id,
-        groundId: row.m_g_id
-      }));
+      .sort((a, b) => {
+        // Sort by date DESC first
+        const dateA = new Date(a.matchDate).getTime();
+        const dateB = new Date(b.matchDate).getTime();
+        if (dateB !== dateA) return dateB - dateA;
+        
+        // Then by hero status
+        if (a.isHero && !b.isHero) return -1;
+        if (!a.isHero && b.isHero) return 1;
+        
+        // Then by score
+        const scoreA = a.runs + (a.wickets * 35);
+        const scoreB = b.runs + (b.wickets * 35);
+        return scoreB - scoreA;
+      });
 
       return results;
     };

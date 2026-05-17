@@ -59,3 +59,73 @@ export const getInitials = (name: string): string => {
   const last = parts[parts.length - 1].charAt(0).toUpperCase();
   return `${first}${last}`;
 };
+
+/**
+ * Calculates dynamic career totals by summing legacy baseline stats with recent match performances.
+ * Used to ensure consistency between Player Cards and Profile Modals.
+ */
+export const calculateCareerTotals = (
+  player: any,
+  performances: any[],
+  legacyRow?: any
+) => {
+  // Sum recent performances for this specific player
+  const playerPerformances = performances.filter(perf => 
+    String(perf.playerId ?? perf.id) === String(player.id)
+  );
+
+  const totalMatchRuns = playerPerformances.reduce((sum, perf) => sum + Number(perf.runs ?? 0), 0);
+  const totalMatchWickets = playerPerformances.reduce((sum, perf) => sum + Number(perf.wickets ?? 0), 0);
+  const totalMatchBalls = playerPerformances.reduce((sum, perf) => sum + Number(perf.balls ?? 0), 0);
+  
+  const totalMatchInnings = playerPerformances.reduce((sum, perf) => {
+    const didBat = Number(perf.balls ?? 0) > 0 || Number(perf.runs ?? 0) > 0;
+    return sum + (didBat ? 1 : 0);
+  }, 0);
+
+  const totalMatchNotOuts = playerPerformances.reduce((sum, perf) => {
+    return sum + (perf.isNotOut ? 1 : 0);
+  }, 0);
+
+  // Logic for matches: handle historical weightings if present
+  const totalMatchMatches = playerPerformances.reduce((sum, perf) => {
+    const status = String(perf.status ?? '');
+    if (status.startsWith('HISTORICAL:')) {
+      return sum + (parseInt(status.split(':')[1]) ?? 1);
+    }
+    return sum + 1;
+  }, 0);
+
+  const baseMatches = Number(legacyRow?.matches ?? legacyRow?.matches_played ?? 0);
+  const baseRuns = Number(legacyRow?.runs ?? legacyRow?.runs_scored ?? 0);
+  const baseWickets = Number(legacyRow?.wickets ?? legacyRow?.wickets_taken ?? 0);
+  const baseInnings = Number(legacyRow?.innings ?? 0);
+  const baseNotOuts = Number(legacyRow?.not_outs ?? legacyRow?.notOuts ?? 0);
+  const baseBalls = Number(legacyRow?.balls ?? 0);
+
+  const finalRuns = baseRuns + totalMatchRuns;
+  const finalInnings = baseInnings + totalMatchInnings;
+  const finalNotOuts = baseNotOuts + totalMatchNotOuts;
+  const finalBalls = baseBalls + totalMatchBalls;
+  const finalWickets = baseWickets + totalMatchWickets;
+
+  const outs = finalInnings - finalNotOuts;
+  const average = outs > 0 ? parseFloat((finalRuns / outs).toFixed(2)) : 0;
+  const strikeRate = finalBalls > 0 ? parseFloat(((finalRuns / finalBalls) * 100).toFixed(2)) : 0;
+
+  const finalStats = {
+    matches: baseMatches + totalMatchMatches,
+    runs: finalRuns,
+    wickets: finalWickets,
+    innings: finalInnings,
+    notOuts: finalNotOuts,
+    average,
+    strikeRate
+  };
+
+  if (playerPerformances.length > 0) {
+    console.log(`[calculateCareerTotals] ${player.name}: Found ${playerPerformances.length} matches. Final Runs: ${finalStats.runs} (Base: ${baseRuns})`);
+  }
+
+  return finalStats;
+};

@@ -180,16 +180,16 @@ function WeeklyPerformerCarousel({
               >
                 <div
                   onClick={() => {
-                    const hasMoreImpactFromBowling = (player.wickets || 0) * 35 > (player.runs || 0);
+                    const isBowler = player.type === 'bowler';
                     if (isActive) onSelectHero({
                       player,
-                      statsType: hasMoreImpactFromBowling ? 'bowling' : 'batting',
-                      statsValue: hasMoreImpactFromBowling
+                      statsType: isBowler ? 'bowling' : 'batting',
+                      statsValue: isBowler
                         ? `${player.wickets}/${player.bowlingRuns}`
                         : `${player.runs} (${player.balls})`,
                       matchDate: player.matchDate,
                       matchTime: player.matchTime || (player.matchDate ? new Date(player.matchDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined),
-                      opponentName: opponents.find((o: any) => o.id === player.team2Id)?.name || player.team2Name || 'TEAM',
+                      opponentName: opponents.find((o: any) => String(o.id) === String(player.opponentId))?.name || player.opponentName || 'TEAM',
                       groundName: player.groundName || grounds.find((g: any) => g.id === player.groundId)?.name || 'CRICKET GROUND',
                       fullStats: player,
                       isSuperStriker: player.isSuperStriker
@@ -209,18 +209,22 @@ function WeeklyPerformerCarousel({
                         </InitialsAvatar>
                       )}
                       <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${player.isSuperStriker ? 'bg-orange-500 text-white' : 'bg-sky-400 text-slate-950'} text-[8px] font-black px-4 py-1 rounded-full border-[1px] border-slate-950 uppercase z-20 whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.3)]`}>
-                        {player.isSuperStriker ? '🚀 Super' : (player.wickets > 0 ? 'Wicket Taker' : 'Run Scorer')}
+                        {player.isSuperStriker ? '🚀 Super' : (player.type === 'batter' ? 'RUN SCORER' : 'WICKET TAKER')}
                       </div>
                     </div>
                     <h4 className="font-black text-2xl uppercase tracking-[0.2rem] italic text-center mb-1 leading-none text-white">{player.name}</h4>
                     <p className="text-[10px] font-bold text-sky-400/60 uppercase tracking-[0.3em] mb-4 italic">
-                      vs {opponents.find((o: any) => String(o.id) === String(player.team2Id))?.name || player.team2Name || 'TEAM'}
+                      vs {(() => {
+                        const opp = opponents.find((o: any) => String(o.id) === String(player.opponentId));
+                        const name = opp?.name || player.opponentName || 'Team';
+                        return String(name).toUpperCase();
+                      })()}
                     </p>
                     <div className="mb-6 text-center">
                       <p className="text-4xl font-black text-sky-400 italic">
-                        {player.wickets * 35 > player.runs ? player.wickets : player.runs}
+                        {player.type === 'bowler' ? player.wickets : player.runs}
                         <span className="text-sm font-black text-sky-400/50 ml-1 uppercase">
-                          {player.wickets * 35 > player.runs ? 'Wickets' : 'Runs'}
+                          {player.type === 'bowler' ? 'Wickets' : 'Runs'}
                         </span>
                       </p>
 
@@ -275,8 +279,8 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
           getLegacyStats(),
           fetchPlayers()
         ]);
-        setOpponents(opp);
-        setPerformerData(perf);
+        setOpponents(opp || []);
+        setPerformerData(perf || { tournamentName: '', performers: [] });
         setLegacyStats(legacy || []);
 
         // Initial match sync
@@ -290,26 +294,32 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
   // REACTIVE DERIVATION: Automatically updates when store.matches changes
   const carouselMatches = useMemo(() => {
-    const live = (matches || []).filter(m => m.status === 'live' && !m.isNeutral);
+    const live = (matches || []).filter(m => m && m.status === 'live' && !m.isNeutral);
     const completed = (matches || [])
-      .filter(m => m.status === 'completed' && !m.isTest && !m.isNeutral)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .filter(m => m && m.status === 'completed' && !m.isTest && !m.isNeutral)
+      .sort((a, b) => {
+        const timeA = a.date ? new Date(a.date).getTime() : 0;
+        const timeB = b.date ? new Date(b.date).getTime() : 0;
+        return timeB - timeA;
+      })
       .slice(0, 5);
     return [...live, ...completed];
   }, [matches]);
 
   const nextMatch = useMemo(() => {
     const priorityMatch = (matches || [])
-      .filter(m => (m.status === 'live' || (m.status === 'upcoming' && !m.isTest)) && !m.isNeutral)
+      .filter(m => m && (m.status === 'live' || (m.status === 'upcoming' && !m.isTest)) && !m.isNeutral)
       .sort((a, b) => {
         if (a.status === 'live' && b.status !== 'live') return -1;
         if (b.status === 'live' && a.status !== 'live') return 1;
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
+        const timeA = a.date ? new Date(a.date).getTime() : 0;
+        const timeB = b.date ? new Date(b.date).getTime() : 0;
+        return timeA - timeB;
       })[0];
 
     if (!priorityMatch) return null;
 
-    const opponent = opponents.find(o => o.id === priorityMatch.team2Id);
+    const opponent = (opponents || []).find(o => o && o.id === priorityMatch.team2Id);
     return {
       ...priorityMatch,
       opponentName: priorityMatch.team2Name || (opponent ? opponent.name : 'Opponent')
@@ -377,23 +387,125 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
     .slice(0, 5);
 
   const filteredSpotlightPerformers = useMemo(() => {
-    // STRICT FIX: Any player present in our main roster (Indian Strikers) is eligible.
-    return performerData.performers
-      .filter(perf => {
-        const pId = String(perf.playerId || perf.id);
-        const player = squadPlayers.find(p => String(p.id) === pId);
-        return player && player.teamId === 'IND_STRIKERS';
-      })
-      .map(perf => {
-        // Randomize image from history if available for "Spotlight" freshness
-        let randomizedUrl = perf.avatarUrl;
-        if (perf.avatarHistory && Array.isArray(perf.avatarHistory) && perf.avatarHistory.length > 0) {
-          const randomIndex = Math.floor(Math.random() * perf.avatarHistory.length);
-          randomizedUrl = perf.avatarHistory[randomIndex];
-        }
-        return { ...perf, avatarUrl: randomizedUrl };
+    try {
+      // 4. Inject a Debug Log (Temporary)
+      console.log("Spotlight Matches Found:", matches);
+
+      if (!matches || !Array.isArray(matches) || matches.length === 0) return [];
+
+      const performers: any[] = [];
+      
+      // 1. Bulletproof the Date Sort & Filter for last 3 completed matches
+      const recentMatches = [...matches]
+        .filter(m => m && m.status === 'completed' && !m.isTest && !m.isNeutral)
+        .sort((a, b) => {
+          const timeA = a.date ? new Date(a.date).getTime() : 0;
+          const timeB = b.date ? new Date(b.date).getTime() : 0;
+          if (isNaN(timeA)) return 1;
+          if (isNaN(timeB)) return -1;
+          return timeB - timeA;
+        })
+        .slice(0, 3);
+
+      recentMatches.forEach(match => {
+        // 2. Check BOTH Innings for Stats (Scorecard JSONB)
+        // 3. Add Safety Guards (Optional Chaining)
+        if (!match || !match.scorecard) return;
+
+        const innings = [match.scorecard?.innings1, match.scorecard?.innings2];
+        
+        innings.forEach(inn => {
+          if (!inn) return;
+
+          // Identify opponent for this match
+          const isStrikers = (id: string | undefined | null) => !id || id === '00000000-0000-0000-0000-000000000000' || id === 'IND_STRIKERS';
+          const opponentId = isStrikers(match.team1Id) ? match.team2Id : match.team1Id;
+          const opponentName = isStrikers(match.team1Id) ? (match.team2Name || 'Opponent') : ((match as any).team1Name || 'Opponent');
+
+          // Check Batting Stats (Handle both Array and Object/Map formats)
+          const rawBatting = inn.battingStats || inn.batting || {};
+          const battingValues = Array.isArray(rawBatting) ? rawBatting : Object.values(rawBatting);
+
+          battingValues.forEach((stat: any) => {
+            if (!stat) return;
+            const runs = Number(stat.runs || 0);
+            const pId = String(stat.playerId || stat.id || '');
+            if (!pId) return;
+            const player = squadPlayers.find(p => String(p.id) === pId);
+
+            if (player && player.teamId === 'IND_STRIKERS' && runs >= 40) {
+              // Randomize image from history if available for "Spotlight" freshness
+              let randomizedUrl = player.avatarUrl;
+              if (player.avatarHistory && Array.isArray(player.avatarHistory) && player.avatarHistory.length > 0) {
+                const randomIndex = Math.floor(Math.random() * player.avatarHistory.length);
+                randomizedUrl = player.avatarHistory[randomIndex];
+              }
+
+              performers.push({
+                ...player,
+                avatarUrl: randomizedUrl,
+                runs,
+                balls: Number(stat.balls || 0),
+                wickets: 0,
+                type: 'batter',
+                matchDate: match.date,
+                matchId: match.id,
+                opponentId,
+                opponentName,
+                groundId: match.groundId
+              });
+            }
+          });
+
+          // Check Bowling Stats (Handle both Array and Object/Map formats)
+          const rawBowling = inn.bowlingStats || inn.bowling || {};
+          const bowlingValues = Array.isArray(rawBowling) ? rawBowling : Object.values(rawBowling);
+
+          bowlingValues.forEach((stat: any) => {
+            if (!stat) return;
+            const wickets = Number(stat.wickets || 0);
+            const pId = String(stat.playerId || stat.id || '');
+            if (!pId) return;
+            const player = squadPlayers.find(p => String(p.id) === pId);
+
+            if (player && player.teamId === 'IND_STRIKERS' && wickets >= 2) {
+              // Randomize image from history if available for "Spotlight" freshness
+              let randomizedUrl = player.avatarUrl;
+              if (player.avatarHistory && Array.isArray(player.avatarHistory) && player.avatarHistory.length > 0) {
+                const randomIndex = Math.floor(Math.random() * player.avatarHistory.length);
+                randomizedUrl = player.avatarHistory[randomIndex];
+              }
+
+              performers.push({
+                ...player,
+                avatarUrl: randomizedUrl,
+                runs: 0,
+                wickets,
+                bowlingRuns: Number(stat.runs || 0),
+                bowlingOvers: Number(stat.overs || 0),
+                type: 'bowler',
+                matchDate: match.date,
+                matchId: match.id,
+                opponentId,
+                opponentName,
+                groundId: match.groundId
+              });
+            }
+          });
+        });
       });
-  }, [performerData.performers, squadPlayers]);
+
+      // Final sort to keep latest match performers at the front
+      return performers.sort((a, b) => {
+        const timeA = a.matchDate ? new Date(a.matchDate).getTime() : 0;
+        const timeB = b.matchDate ? new Date(b.matchDate).getTime() : 0;
+        return timeB - timeA;
+      });
+    } catch (err) {
+      console.error("Critical Error in Performer Spotlight Extraction:", err);
+      return [];
+    }
+  }, [matches, squadPlayers]);
 
   const handleGenerateHeroPoster = async () => {
     if (!heroPosterRef.current || !selectedHero) return;

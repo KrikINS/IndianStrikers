@@ -898,6 +898,29 @@ export const updateLegacyStats = async (playerId: string, stats: Partial<PlayerL
   });
   return handleResponse(res);
 };
+/**
+ * Fetches all match statistics for club members to facilitate career total enrichment.
+ * This replaces the limited getTournamentPerformers call in the roster view.
+ */
+export const getAllClubPlayerMatchStats = async (): Promise<any[]> => {
+  const res = await fetch(`${API_URL}/player-match-stats/club`);
+  const data = await handleResponse(res);
+  
+  if (!data || !Array.isArray(data)) return [];
+
+  return data.map((p: any) => ({
+    ...p,
+    playerId: String(p.player_id || p.playerId),
+    matchDate: p.match_date || p.matchDate,
+    status: p.match_status || p.status,
+    runs: Number(p.runs ?? 0),
+    balls: Number(p.balls ?? p.balls_faced ?? 0),
+    wickets: Number(p.wickets ?? 0),
+    bowlingRuns: Number(p.runs_conceded ?? p.bowling_runs ?? 0),
+    bowlingOvers: Number(p.overs_bowled ?? p.bowling_overs ?? 0),
+    isNotOut: !!(p.is_not_out || p.status?.toLowerCase() === 'not out')
+  }));
+};
 export const getTournamentPerformers = async (): Promise<any> => {
   const res = await fetch(`${API_URL}/tournament-performers`);
   const data = await handleResponse(res);
