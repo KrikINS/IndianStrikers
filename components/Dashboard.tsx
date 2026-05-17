@@ -270,6 +270,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const [performerData, setPerformerData] = useState<{ tournamentName: string, performers: any[] }>({ tournamentName: '', performers: [] });
   const [legacyStats, setLegacyStats] = useState<any[]>([]);
   const [allMatchStats, setAllMatchStats] = useState<any[]>([]);
+  const [showTop20, setShowTop20] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -332,8 +333,8 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
   const enrichedPlayers = useMemo(() => {
     if (!squadPlayers) return [];
 
-    // STRICT FIX: Only Indian Strikers (Team 1) players should appear in Dashboard stats
-    const strikers = squadPlayers.filter(p => p.teamId === 'IND_STRIKERS');
+    // STRICT FIX: Only Indian Strikers (Team 1) players who are primary club members should appear
+    const strikers = squadPlayers.filter(p => p.teamId === 'IND_STRIKERS' && p.isClubPlayer);
     
     return strikers.map(p => {
       const legacyRow = legacyStats.find(l => String(l.player_id) === String(p.id));
@@ -387,11 +388,11 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
 
   const topRunScorers = [...enrichedPlayers]
     .sort((a, b) => (b.runsScored || 0) - (a.runsScored || 0))
-    .slice(0, 5);
+    .slice(0, showTop20 ? 20 : 5);
 
   const topWicketTakers = [...enrichedPlayers]
     .sort((a, b) => (b.wicketsTaken || 0) - (a.wicketsTaken || 0))
-    .slice(0, 5);
+    .slice(0, showTop20 ? 20 : 5);
 
   const statsSyncHandler = async () => {
     setIsSyncing(true);
@@ -417,7 +418,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       const valB = parseInt((b.battingStats?.highestScore || '0').toString().replace('*', '')) || 0;
       return valB - valA;
     })
-    .slice(0, 5);
+    .slice(0, showTop20 ? 20 : 5);
 
   const topInningsWickets = [...(enrichedPlayers || [])]
     .filter(p => p.bowlingStats?.bestBowling && p.bowlingStats.bestBowling !== '0/0')
@@ -427,15 +428,15 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
       if (wB !== wA) return wB - wA;
       return rA - rB;
     })
-    .slice(0, 5);
+    .slice(0, showTop20 ? 20 : 5);
 
   const topSixHitters = [...enrichedPlayers]
     .sort((a, b) => (b.battingStats?.sixes || 0) - (a.battingStats?.sixes || 0))
-    .slice(0, 5);
+    .slice(0, showTop20 ? 20 : 5);
 
   const topFourHitters = [...enrichedPlayers]
     .sort((a, b) => (b.battingStats?.fours || 0) - (a.battingStats?.fours || 0))
-    .slice(0, 5);
+    .slice(0, showTop20 ? 20 : 5);
 
   const filteredSpotlightPerformers = useMemo(() => {
     try {
@@ -1151,6 +1152,9 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
             </div>
           </div>
         </div>
+        <button onClick={() => setShowTop20(!showTop20)} className="w-full text-center text-sm font-semibold mt-4 py-2 text-blue-500 hover:text-blue-400 cursor-pointer transition-colors">
+          {showTop20 ? 'Hide Extended Rankings' : 'See Top 20 Players ▾'}
+        </button>
       </div>
 
       {/* Global Persistence/Wait State */}
