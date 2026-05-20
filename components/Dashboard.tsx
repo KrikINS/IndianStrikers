@@ -1014,7 +1014,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                           <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">AVG: {p.battingStats?.average}</span>
                         )}
                       </div>
-                      <span className="text-[11px] font-black text-blue-600 font-mono">{p.runsScored || 0}</span>
+                      <span className="text-[11px] font-black text-blue-600">{p.runsScored || 0}</span>
                     </div>
                   </div>
                 </div>
@@ -1094,7 +1094,7 @@ export default function Dashboard({ userRole = 'guest', teamLogo, currentUser }:
                           <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">ECON: {p.bowlingStats?.economy}</span>
                         )}
                       </div>
-                      <span className="text-[11px] font-black text-blue-600 font-mono">{p.wicketsTaken || 0}</span>
+                      <span className="text-[11px] font-black text-blue-600">{p.wicketsTaken || 0}</span>
                     </div>
                   </div>
                 </div>

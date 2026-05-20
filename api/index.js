@@ -2148,16 +2148,143 @@ app.post('/api/upload', authGuard(['admin', 'member']), upload.single('file'), a
 // TOURNAMENT PERFORMERS ENGINE (Hybrid Selection)
 app.get('/api/player-match-stats/club', async (req, res) => {
   const q = `
-    SELECT pms.*, m.date as match_date, m.status as match_status
-    FROM player_match_stats pms
-    JOIN matches m ON pms.match_id = m.id
-    JOIN players p ON pms.player_id = p.id
+    SELECT 
+        m.id as match_id, 
+        m.status as match_status, 
+        m.is_test, 
+        m.tournament_id, 
+        m.date as match_date, 
+        m.live_data, 
+        m.scorecard,
+        p.id as player_id,
+        pms.runs as pms_runs, 
+        pms.balls as pms_balls, 
+        pms.fours as pms_fours, 
+        pms.sixes as pms_sixes, 
+        pms.status as pms_player_status,
+        pms.wickets as pms_wickets, 
+        pms.runs_conceded as pms_runs_conceded, 
+        pms.overs_bowled as pms_overs_bowled, 
+        pms.maidens as pms_maidens,
+        pms.wides as pms_wides, 
+        pms.no_balls as pms_no_balls,
+        pms.is_hero as pms_is_hero
+    FROM matches m
+    CROSS JOIN players p
+    LEFT JOIN player_match_stats pms ON (m.id = pms.match_id AND p.id = pms.player_id)
     WHERE p.is_club_player = true
+      AND (m.is_test IS NOT TRUE)
+      AND (m.status != 'upcoming' AND m.status != 'Upcoming')
+      AND (
+         pms.player_id IS NOT NULL
+         OR m.team1_xi @> jsonb_build_array(p.id::text)
+         OR m.team1_xi @> jsonb_build_array(p.id::bigint)
+         OR m.team2_xi @> jsonb_build_array(p.id::text)
+         OR m.team2_xi @> jsonb_build_array(p.id::bigint)
+      )
     ORDER BY m.date DESC
   `;
+  
   const { data, error } = await db.query(q);
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data || []);
+
+  const enrichedData = (data || []).map(row => {
+    const playerId = String(row.player_id);
+    
+    // Baseline values from database performance row (if any)
+    let runs = Number(row.pms_runs) || 0;
+    let balls = Number(row.pms_balls) || 0;
+    let fours = Number(row.pms_fours) || 0;
+    let sixes = Number(row.pms_sixes) || 0;
+    let pStatus = row.pms_player_status?.toString().toLowerCase() || '';
+    let bOvers = Number(row.pms_overs_bowled) || 0;
+    let bMaidens = Number(row.pms_maidens) || 0;
+    let bRuns = Number(row.pms_runs_conceded) || 0;
+    let bWickets = Number(row.pms_wickets) || 0;
+    let bWides = Number(row.pms_wides) || 0;
+    let bNB = Number(row.pms_no_balls) || 0;
+    let isHero = !!row.pms_is_hero;
+
+    // Extract statistics from scorecard or live_data if present
+    if (row.scorecard || row.live_data) {
+      try {
+        const sc = row.scorecard ? (typeof row.scorecard === 'string' ? JSON.parse(row.scorecard) : row.scorecard) : null;
+        const ld = row.live_data ? (typeof row.live_data === 'string' ? JSON.parse(row.live_data) : row.live_data) : null;
+        
+        if (sc) {
+          const allBatting = [...(sc.innings1?.batting || []), ...(sc.innings2?.batting || [])];
+          const allBowling = [...(sc.innings1?.bowling || []), ...(sc.innings2?.bowling || [])];
+          
+          const bat = allBatting.find(b => String(b.playerId) === playerId);
+          const bowl = allBowling.find(b => String(b.playerId) === playerId);
+          
+          if (bat) {
+            runs = Number(bat.runs) || 0;
+            balls = Number(bat.balls) || 0;
+            fours = Number(bat.fours) || 0;
+            sixes = Number(bat.sixes) || 0;
+            pStatus = bat.outHow || (bat.isNotOut ? 'not out' : 'out');
+          }
+          if (bowl) {
+            bOvers = Number(bowl.overs) || Number(bowl.bowlingOvers) || 0;
+            bMaidens = Number(bowl.maidens) || 0;
+            bRuns = Number(bowl.runs) || Number(bowl.bowlingRuns) || Number(bowl.runsConceded) || 0;
+            bWickets = Number(bowl.wickets) || 0;
+            bWides = Number(bowl.wides) || 0;
+            bNB = Number(bowl.no_balls) || Number(bowl.noBalls) || 0;
+          }
+        }
+        
+        if (ld && (!runs && !bOvers)) {
+          const bat = (ld.innings1?.battingStats || {})[playerId] || (ld.innings2?.battingStats || {})[playerId];
+          const bowl = (ld.innings1?.bowlingStats || {})[playerId] || (ld.innings2?.bowlingStats || {})[playerId];
+          
+          if (bat) {
+            runs = Number(bat.runs) || 0;
+            balls = Number(bat.balls) || 0;
+            fours = Number(bat.fours) || 0;
+            sixes = Number(bat.sixes) || 0;
+            pStatus = bat.outHow || (bat.isNotOut ? 'not out' : (bat.isOut ? 'out' : 'batting'));
+          }
+          if (bowl) {
+            bOvers = Number(bowl.overs) || Number(bowl.bowlingOvers) || 0;
+            bMaidens = Number(bowl.maidens) || 0;
+            bRuns = Number(bowl.runs) || Number(bowl.bowlingRuns) || Number(bowl.runsConceded) || 0;
+            bWickets = Number(bowl.wickets) || 0;
+            bWides = Number(bowl.wides) || 0;
+            bNB = Number(bowl.no_balls) || Number(bowl.noBalls) || 0;
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing match data in club stats:", e);
+      }
+    }
+
+    const statusLower = pStatus.toLowerCase().trim();
+    const isNotOut = statusLower === 'not out' || statusLower === 'retired hurt' || pStatus === 'batting';
+
+    return {
+      player_id: row.player_id,
+      match_id: row.match_id,
+      match_date: row.match_date,
+      match_status: row.match_status,
+      runs,
+      balls,
+      fours,
+      sixes,
+      status: pStatus,
+      is_not_out: isNotOut,
+      wickets: bWickets,
+      runs_conceded: bRuns,
+      overs_bowled: bOvers,
+      maidens: bMaidens,
+      wides: bWides,
+      no_balls: bNB,
+      is_hero: isHero
+    };
+  });
+
+  res.json(enrichedData);
 });
 
 app.get('/api/tournament-performers', async (req, res) => {
